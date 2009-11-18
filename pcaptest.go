@@ -4,6 +4,7 @@ import (
 	"pcap";
 	"fmt";
 	"flag";
+	"time";
 )
 
 func min(x uint32, y uint32) uint32 {
@@ -40,15 +41,20 @@ func main() {
 	}
 
 	for pkt := h.Next() ; pkt != nil ; pkt = h.Next() {
-		fmt.Printf("time: %u.%06u caplen: %u len: %u\n\tData:\n", uint(pkt.Time.Sec), uint(pkt.Time.Usec), uint(pkt.Caplen), uint(pkt.Len));
+		fmt.Printf("time: %d.%06d (%s) caplen: %d len: %d\nData:", 
+				int64(pkt.Time.Sec), int64(pkt.Time.Usec), 
+				time.SecondsToLocalTime(int64(pkt.Time.Sec)).Asctime(), int64(pkt.Caplen), int64(pkt.Len));
 		for i:=uint32(0) ; i<pkt.Caplen ; i++ {
+			if i % 32 == 0 {
+				fmt.Printf("\n")
+			}
 			if 32 <= pkt.Data[i] && pkt.Data[i] <= 126 {
 				fmt.Printf("%c", pkt.Data[i]);
 			} else {
 				fmt.Printf(".");
 			}
 		}
-		fmt.Printf("\n");
+		fmt.Printf("\n\n");
 	}
 
 }

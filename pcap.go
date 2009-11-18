@@ -33,7 +33,7 @@ func Openlive(device string, snaplen int32, promisc bool, timeout_ms int32) (han
 	var pro int32;
 	if promisc { pro = 1 } else { pro = 0 }
 	h.cptr = C.pcap_open_live(C.CString(device), C.int(snaplen), C.int(pro), C.int(timeout_ms), C.CString(bytes.NewBuffer(buf).String()));
-	if nil != h.cptr {
+	if nil == h.cptr {
 		handle = nil;
 		err = bytes.NewBuffer(buf).String();
 		return;
