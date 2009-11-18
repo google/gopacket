@@ -28,30 +28,34 @@ type Packet struct {
 }
 
 func Openlive(device string, snaplen int32, promisc bool, timeout_ms int32) (handle *Pcap, err string) {
-	buf := make([]byte, ERRBUF_SIZE);
+	var buf *C.char;
+	buf = (*C.char)(C.malloc(ERRBUF_SIZE));
 	h := new(Pcap);
 	var pro int32;
 	if promisc { pro = 1 } else { pro = 0 }
-	h.cptr = C.pcap_open_live(C.CString(device), C.int(snaplen), C.int(pro), C.int(timeout_ms), C.CString(bytes.NewBuffer(buf).String()));
+	h.cptr = C.pcap_open_live(C.CString(device), C.int(snaplen), C.int(pro), C.int(timeout_ms), buf);
 	if nil == h.cptr {
 		handle = nil;
-		err = bytes.NewBuffer(buf).String();
-		return;
+		err = tostring(buf);
+	} else {
+		handle = h;
 	}
-	handle = h;
+	C.free(unsafe.Pointer(buf));
 	return;
 }
 
 func Openoffline(file string) (handle *Pcap, err string) {
-	buf := make([]byte, ERRBUF_SIZE);
+	var buf *C.char;
+	buf = (*C.char)(C.malloc(ERRBUF_SIZE));
 	h := new(Pcap);
-	h.cptr = C.pcap_open_offline(C.CString(file), C.CString(bytes.NewBuffer(buf).String()));
+	h.cptr = C.pcap_open_offline(C.CString(file), buf);
 	if nil == h.cptr {
 		handle = nil;
-		// err = bytes.NewBuffer(buf).String();
-		return;
+		err = tostring(buf);
+	} else {
+		handle = h;
 	}
-	handle = h;
+	C.free(unsafe.Pointer(buf));
 	return;
 }
 
@@ -74,4 +78,15 @@ func(p *Pcap) Next() (pkt *Packet) {
 	}
 
 	return;
+}
+
+func tostring(buf *C.char) string {
+	var i uint32;
+	for i = 0 ; *(*byte)(unsafe.Pointer(uintptr(unsafe.Pointer(buf)) + uintptr(i))) != 0 ; i++ { 
+	}
+	strbuf := make([]byte, i);
+	for j:=uint32(0) ; j<i; j++ {
+		strbuf[j] = *(*byte)(unsafe.Pointer(uintptr(unsafe.Pointer(buf)) + uintptr(j)));
+	}
+	return bytes.NewBuffer(strbuf).String();
 }
