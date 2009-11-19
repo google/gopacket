@@ -1,10 +1,9 @@
 include $(GOROOT)/src/Make.$(GOARCH)
 
 TARG=pcap
-
 CGOFILES=pcap.go
-
 CGO_LDFLAGS=-lpcap
+CLEANFILES=pcaptest
 
 include $(GOROOT)/src/Make.pkg
 
