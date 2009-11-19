@@ -106,9 +106,6 @@ func(p *Pcap) Getstats() (stat *Stat, err string) {
 }
 
 func(p *Pcap) Setfilter(expr string) (err string) {
-	// TODO: compile expression
-	// TODO: set filter
-
 	var bpf _Cstruct_bpf_program;
 
 	if -1 == C.pcap_compile(p.cptr, &bpf, C.CString(expr), 1, 0) {
