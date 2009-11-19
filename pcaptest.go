@@ -17,6 +17,7 @@ func min(x uint32, y uint32) uint32 {
 func main() {
 	var device *string = flag.String("d", "", "device");
 	var file *string = flag.String("r", "", "file");
+	var expr *string = flag.String("e", "", "filter expression");
 
 	flag.Parse();
 	
@@ -38,6 +39,16 @@ func main() {
 	} else {
 		fmt.Printf("usage: pcaptest [-d <device> | -r <file>]\n");
 		return
+	}
+
+	fmt.Printf("pcap version: %s\n", pcap.Version());
+
+	if *expr != "" {
+		fmt.Printf("Setting filter: %s\n", *expr);
+		err := h.Setfilter(*expr);
+		if err != "" {
+			fmt.Printf("Warning: setting filter failed: %s\n", err);
+		}
 	}
 
 	for pkt := h.Next() ; pkt != nil ; pkt = h.Next() {

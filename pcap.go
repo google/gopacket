@@ -27,6 +27,12 @@ type Packet struct {
 	Data []byte;
 }
 
+type Stat struct {
+	PacketsReceived uint32;
+	PacketsDropped uint32;
+	PacketsIfDropped uint32;
+}
+
 func Openlive(device string, snaplen int32, promisc bool, timeout_ms int32) (handle *Pcap, err string) {
 	var buf *C.char;
 	buf = (*C.char)(C.malloc(ERRBUF_SIZE));
@@ -78,6 +84,46 @@ func(p *Pcap) Next() (pkt *Packet) {
 	}
 
 	return;
+}
+
+func(p *Pcap) Geterror() string {
+	return C.GoString(C.pcap_geterr(p.cptr));
+}
+
+func(p *Pcap) Getstats() (stat *Stat, err string) {
+	var cstats _Cstruct_pcap_stat;
+	if -1 == C.pcap_stats(p.cptr, &cstats) {
+		return nil, p.Geterror()
+	}
+
+	stats := new(Stat);
+
+	stats.PacketsReceived = uint32(cstats.ps_recv);
+	stats.PacketsDropped = uint32(cstats.ps_drop);
+	stats.PacketsIfDropped = uint32(cstats.ps_ifdrop);
+
+	return stats, "";
+}
+
+func(p *Pcap) Setfilter(expr string) (err string) {
+	// TODO: compile expression
+	// TODO: set filter
+
+	var bpf _Cstruct_bpf_program;
+
+	if -1 == C.pcap_compile(p.cptr, &bpf, C.CString(expr), 1, 0) {
+		return p.Geterror()
+	}
+
+	if -1 == C.pcap_setfilter(p.cptr, &bpf) {
+		return p.Geterror()
+	}
+
+	return ""
+}
+
+func Version() string {
+	return C.GoString(C.pcap_lib_version());
 }
 
 func tostring(buf *C.char) string {
