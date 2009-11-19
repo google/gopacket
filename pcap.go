@@ -14,6 +14,33 @@ import (
 
 const (
 	ERRBUF_SIZE = 256;
+
+	// according to pcap-linktype(7)
+	LINKTYPE_NULL = 0;
+	LINKTYPE_ETHERNET = 1;
+	LINKTYPE_TOKEN_RING = 6;
+	LINKTYPE_ARCNET = 7;
+	LINKTYPE_SLIP = 8;
+	LINKTYPE_PPP = 9;
+	LINKTYPE_FDDI = 10;
+	LINKTYPE_ATM_RFC1483 = 100;
+	LINKTYPE_RAW = 101;
+	LINKTYPE_PPP_HDLC = 50;
+	LINKTYPE_PPP_ETHER = 51;
+	LINKTYPE_C_HDLC = 104;
+	LINKTYPE_IEEE802_11 = 105;
+	LINKTYPE_FRELAY = 107;
+	LINKTYPE_LOOP = 108;
+	LINKTYPE_LINUX_SLL = 113;
+	LINKTYPE_LTALK = 104;
+	LINKTYPE_PFLOG = 117;
+	LINKTYPE_PRISM_HEADER = 119;
+	LINKTYPE_IP_OVER_FC = 122;
+	LINKTYPE_SUNATM = 123;
+	LINKTYPE_IEEE802_11_RADIO = 127;
+	LINKTYPE_ARCNET_LINUX = 129;
+	LINKTYPE_LINUX_IRDA = 144;
+	LINKTYPE_LINUX_LAPD = 177;
 )
 
 type Pcap struct {
@@ -113,14 +140,43 @@ func(p *Pcap) Setfilter(expr string) (err string) {
 	}
 
 	if -1 == C.pcap_setfilter(p.cptr, &bpf) {
+		C.pcap_freecode(&bpf);
 		return p.Geterror()
 	}
 
+	C.pcap_freecode(&bpf);
 	return ""
 }
 
 func Version() string {
-	return C.GoString(C.pcap_lib_version());
+	return C.GoString(C.pcap_lib_version())
+}
+
+func(p *Pcap) Datalink() int {
+	return int(C.pcap_datalink(p.cptr))
+}
+
+func(p *Pcap) Setdatalink(dlt int) string {
+	if -1 == C.pcap_set_datalink(p.cptr, C.int(dlt)) {
+		return p.Geterror()
+	}
+	return ""
+}
+
+func DatalinkValueToName(dlt int) string {
+	name := C.pcap_datalink_val_to_name(C.int(dlt));
+	if nil != name {
+		return C.GoString(name)
+	}
+	return ""
+}
+
+func DatalinkValueToDescription(dlt int) string {
+	desc := C.pcap_datalink_val_to_description(C.int(dlt));
+	if nil != desc {
+		return C.GoString(desc)
+	}
+	return ""
 }
 
 func tostring(buf *C.char) string {
