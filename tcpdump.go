@@ -66,13 +66,14 @@ func Printpacket(pkt *pcap.Packet) {
 	pkttype := Decodeuint16(pkt.Data[12:14]);
 
 	t := time.SecondsToLocalTime(int64(pkt.Time.Sec));
-	fmt.Printf("%d:%d:%d.%06d ", t.Hour, t.Minute, t.Second, pkt.Time.Usec);
+	fmt.Printf("%02d:%02d:%02d.%06d ", t.Hour, t.Minute, t.Second, pkt.Time.Usec);
 
 	//fmt.Printf("%012x -> %012x ", srcmac, destmac);
 
-	switch (pkttype) {
+	switch pkttype {
 		case TYPE_IP: Decodeip(pkt.Data[14:])
 		case TYPE_ARP: Decodearp(pkt.Data[14:])
+		case TYPE_IP6: Decodeip6(pkt.Data[14:]);
 		default: Unsupported(pkttype)
 	}
 
@@ -99,8 +100,49 @@ func Unsupported(pkttype uint16) {
 	fmt.Printf("unsupported protocol %d", int(pkttype));
 }
 
+type Arphdr struct {
+	Addrtype uint16;
+	Protocol uint16;
+	HwAddressSize uint8;
+	ProtAddressSize uint8;
+	Operation uint16;
+	SourceHwAddress []byte;
+	SourceProtAddress []byte;
+	DestHwAddress []byte;
+	DestProtAddress []byte;
+}
+
+func Arpop(op uint16) string {
+	switch op {
+		case 1: return "Request"
+		case 2: return "Reply"
+	}
+	return ""
+}
+
 func Decodearp(pkt []byte) {
-	fmt.Printf("ARP: TODO");
+	arp := new(Arphdr);
+	arp.Addrtype = Decodeuint16(pkt[0:2]);
+	arp.Protocol = Decodeuint16(pkt[2:4]);
+	arp.HwAddressSize = pkt[4];
+	arp.ProtAddressSize = pkt[5];
+	arp.Operation = Decodeuint16(pkt[6:8]);
+	arp.SourceHwAddress = pkt[8:8+arp.HwAddressSize];
+	arp.SourceProtAddress = pkt[8+arp.HwAddressSize:8+arp.HwAddressSize+arp.ProtAddressSize];
+	arp.DestHwAddress = pkt[8+arp.HwAddressSize+arp.ProtAddressSize:8+2*arp.HwAddressSize+arp.ProtAddressSize];
+	arp.DestProtAddress = pkt[8+2*arp.HwAddressSize+arp.ProtAddressSize:8+2*arp.HwAddressSize+2*arp.ProtAddressSize];
+
+	fmt.Printf("ARP %s ", Arpop(arp.Operation));
+
+	if arp.Addrtype == pcap.LINKTYPE_ETHERNET && arp.Protocol == TYPE_IP {
+		fmt.Printf("%012x (", Decodemac(arp.SourceHwAddress));
+		Printip(arp.SourceProtAddress);
+		fmt.Printf(") > %012x (", Decodemac(arp.DestHwAddress));
+		Printip(arp.DestProtAddress);
+		fmt.Printf(")")
+	} else {
+		fmt.Printf("addrtype = %d protocol = %d", arp.Addrtype, arp.Protocol)
+	}
 }
 
 type Iphdr struct {
@@ -135,7 +177,7 @@ func Decodeip(pkt []byte) {
 	ip.SrcIp = pkt[12:16];
 	ip.DestIp = pkt[16:20];
 
-	switch (ip.Protocol) {
+	switch ip.Protocol {
 		case IP_TCP: Decodetcp(ip, pkt[ip.Ihl*4:])
 		case IP_UDP: Decodeudp(ip, pkt[ip.Ihl*4:])
 		case IP_ICMP: Decodeicmp(ip, pkt[ip.Ihl*4:])
@@ -158,7 +200,22 @@ type Tcphdr struct {
 	DestPort uint16;
 	Seq uint32;
 	Ack uint32;
+	DataOffset uint8;
+	Flags uint8;
+	Window uint16;
+	Checksum uint16;
+	Urgent uint16;
+	Data []byte;
 }
+
+const (
+	TCP_FIN = 1 << iota;
+	TCP_SYN;
+	TCP_RST;
+	TCP_PSH;
+	TCP_ACK;
+	TCP_URG;
+)
 
 func Decodetcp(ip *Iphdr, pkt []byte) {
 	tcp := new(Tcphdr);
@@ -166,6 +223,12 @@ func Decodetcp(ip *Iphdr, pkt []byte) {
 	tcp.DestPort = Decodeuint16(pkt[2:4]);
 	tcp.Seq = Decodeuint32(pkt[4:8]);
 	tcp.Ack = Decodeuint32(pkt[8:12]);
+	tcp.DataOffset = pkt[12] & 0x0F;
+	tcp.Flags = uint8(Decodeuint16(pkt[12:14]) & 0x3F);
+	tcp.Window = Decodeuint16(pkt[14:16]);
+	tcp.Checksum = Decodeuint16(pkt[16:18]);
+	tcp.Urgent = Decodeuint16(pkt[18:20]);
+	tcp.Data = pkt[tcp.DataOffset*4:];
 
 	Printtcp(ip, tcp);
 }
@@ -175,7 +238,32 @@ func Printtcp(ip *Iphdr, tcp *Tcphdr) {
 	Printip(ip.SrcIp);
 	fmt.Printf(":%d > ", int(tcp.SrcPort));
 	Printip(ip.DestIp);
-	fmt.Printf(":%d SEQ=%d ACK=%d", int(tcp.DestPort), int64(tcp.Seq), int64(tcp.Ack));
+	fmt.Printf(":%d ", int(tcp.DestPort));
+	Printflags(tcp.Flags);
+	fmt.Printf(" SEQ=%d ACK=%d", int64(tcp.Seq), int64(tcp.Ack))
+}
+
+func Printflags(flags uint8) {
+	fmt.Printf("[ ");
+	if 0 != (flags & TCP_SYN) {
+		fmt.Printf("syn ")
+	}
+	if 0 != (flags & TCP_FIN) {
+		fmt.Printf("fin ")
+	}
+	if 0 != (flags & TCP_ACK) {
+		fmt.Printf("ack ")
+	}
+	if 0 != (flags & TCP_PSH) {
+		fmt.Printf("psh ")
+	}
+	if 0 != (flags & TCP_RST) {
+		fmt.Printf("rst ")
+	}
+	if 0 != (flags & TCP_URG) {
+		fmt.Printf("urg ")
+	}
+	fmt.Printf("]")
 }
 
 func Printip(ip []byte) {
@@ -208,6 +296,48 @@ func Decodeudp(ip *Iphdr, pkt []byte) {
 	fmt.Printf(":%d LEN=%d CHKSUM=%d", int(udp.DestPort), int(udp.Length), int(udp.Checksum));
 }
 
+type Icmphdr struct {
+	Type uint8;
+	Code uint8;
+	Checksum uint16;
+	Id uint16;
+	Seq uint16;
+	Data []byte;
+}
+
 func Decodeicmp(ip *Iphdr, pkt []byte) {
-	fmt.Printf("TODO: ICMP")
+	icmp := new(Icmphdr);
+	icmp.Type = pkt[0];
+	icmp.Code = pkt[1];
+	icmp.Checksum = Decodeuint16(pkt[2:4]);
+	icmp.Id = Decodeuint16(pkt[4:6]);
+	icmp.Seq = Decodeuint16(pkt[6:8]);
+	icmp.Data = pkt[8:];
+
+	Printicmp(ip, icmp);
+}
+
+func Printicmp(ip *Iphdr, icmp *Icmphdr) {
+	fmt.Printf("ICMP ");
+	Printip(ip.SrcIp);
+	fmt.Printf(" > ");
+	Printip(ip.DestIp);
+	fmt.Printf(" Type = %d Code = %d ", icmp.Type, icmp.Code);
+	switch icmp.Type {
+		case 0: fmt.Printf("Echo reply ttl=%d seq=%d", ip.Ttl, icmp.Seq)
+		case 3:
+			switch icmp.Code {
+				case 0: fmt.Printf("Network unreachable")
+				case 1: fmt.Printf("Host unreachable")
+				case 2: fmt.Printf("Protocol unreachable")
+				case 3: fmt.Printf("Port unreachable")
+				default: fmt.Printf("Destination unreachable")
+			}
+		case 8: fmt.Printf("Echo request ttl=%d seq=%d", ip.Ttl, icmp.Seq)
+		case 30: fmt.Printf("Traceroute")
+	}
+}
+
+func Decodeip6(pkt []byte) {
+	fmt.Printf("TODO: IPv6")
 }
