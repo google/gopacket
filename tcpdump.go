@@ -26,7 +26,7 @@ func main() {
 	expr := "";
 
 	flag.Usage = func() {
-		fmt.Fprintf(os.Stderr, "usage: %s [ -d device ] [ -s snaplen ] [ expression ]\n", os.Args[0]);
+		fmt.Fprintf(os.Stderr, "usage: %s [ -i interface ] [ -s snaplen ] [ expression ]\n", os.Args[0]);
 		os.Exit(1);
 	};
 
