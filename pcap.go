@@ -7,7 +7,6 @@ struct pcap { int dummy; };
 */
 import "C";
 import (
-	"bytes";
 	"syscall";
 	"unsafe";
 )
@@ -60,16 +59,22 @@ type Stat struct {
 	PacketsIfDropped uint32;
 }
 
+type Interface struct {
+	Name string;
+	Description string;
+	// TODO: add more elements
+}
+
 func Openlive(device string, snaplen int32, promisc bool, timeout_ms int32) (handle *Pcap, err string) {
 	var buf *C.char;
-	buf = (*C.char)(C.malloc(ERRBUF_SIZE));
+	buf = (*C.char)(C.calloc(ERRBUF_SIZE, 1));
 	h := new(Pcap);
 	var pro int32;
 	if promisc { pro = 1 } else { pro = 0 }
 	h.cptr = C.pcap_open_live(C.CString(device), C.int(snaplen), C.int(pro), C.int(timeout_ms), buf);
 	if nil == h.cptr {
 		handle = nil;
-		err = tostring(buf);
+		err = C.GoString(buf);
 	} else {
 		handle = h;
 	}
@@ -79,12 +84,12 @@ func Openlive(device string, snaplen int32, promisc bool, timeout_ms int32) (han
 
 func Openoffline(file string) (handle *Pcap, err string) {
 	var buf *C.char;
-	buf = (*C.char)(C.malloc(ERRBUF_SIZE));
+	buf = (*C.char)(C.calloc(ERRBUF_SIZE, 1));
 	h := new(Pcap);
 	h.cptr = C.pcap_open_offline(C.CString(file), buf);
 	if nil == h.cptr {
 		handle = nil;
-		err = tostring(buf);
+		err = C.GoString(buf);
 	} else {
 		handle = h;
 	}
@@ -106,7 +111,7 @@ func(p *Pcap) Next() (pkt *Packet) {
 	pkt.Len = uint32(pkthdr.len);
 	pkt.Data = make([]byte, pkthdr.caplen);
 
-	for i := uint32(0) ; i < pkt.Len ; i++ {
+	for i := uint32(0) ; i < pkt.Caplen ; i++ {
 		pkt.Data[i] = *(*byte)(unsafe.Pointer(uintptr(buf) + uintptr(i)));
 	}
 
@@ -179,13 +184,32 @@ func DatalinkValueToDescription(dlt int) string {
 	return ""
 }
 
-func tostring(buf *C.char) string {
-	var i uint32;
-	for i = 0 ; *(*byte)(unsafe.Pointer(uintptr(unsafe.Pointer(buf)) + uintptr(i))) != 0 ; i++ { 
+func Findalldevs() (ifs []Interface, err string) {
+	var buf *C.char;
+	buf = (*C.char)(C.calloc(ERRBUF_SIZE, 1));
+	var alldevsp *_Cstruct_pcap_if;
+
+	if -1 == C.pcap_findalldevs((**C.pcap_if_t)(&alldevsp), buf) {
+		ifs = nil;
+		err = C.GoString(buf)
+	} else {
+		dev := alldevsp;
+		var i uint32;
+		for i = 0; dev != nil ; dev = dev.next {
+			i++;
+		}
+		ifs = make([]Interface, i);
+		dev = alldevsp;
+		for j := uint32(0) ; dev != nil ; dev = dev.next {
+			var iface Interface;
+			iface.Name = C.GoString(dev.name);
+			iface.Description = C.GoString(dev.description);
+			// TODO: add more elements
+			ifs[j] = iface;
+			j++;
+		}
+		C.pcap_freealldevs((*C.pcap_if_t)(alldevsp));
 	}
-	strbuf := make([]byte, i);
-	for j:=uint32(0) ; j<i; j++ {
-		strbuf[j] = *(*byte)(unsafe.Pointer(uintptr(unsafe.Pointer(buf)) + uintptr(j)));
-	}
-	return bytes.NewBuffer(strbuf).String();
+	C.free(unsafe.Pointer(buf));
+	return
 }

@@ -24,6 +24,15 @@ func main() {
 	var h *pcap.Pcap;
 	var err string;
 
+	ifs, err := pcap.Findalldevs();
+	if len(ifs) == 0 {
+		fmt.Printf("Warning: no devices found : %s\n", err)
+	} else {
+		for i := 0 ; i < len(ifs) ; i++ {
+			fmt.Printf("dev %d: %s (%s)\n", i+1, ifs[i].Name, ifs[i].Description)
+		}
+	}
+
 	if *device != "" {
 		h, err = pcap.Openlive(*device, 65535, true, 0);
 		if h == nil {
