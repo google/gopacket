@@ -7,7 +7,6 @@ struct pcap { int dummy; };
 */
 import "C";
 import (
-	"syscall";
 	"unsafe";
 )
 
@@ -47,7 +46,7 @@ type Pcap struct {
 }
 
 type Packet struct {
-	Time syscall.Timeval;
+	Time struct { Sec int32; Usec int32 };
 	Caplen uint32;
 	Len uint32;
 	Data []byte;
@@ -105,8 +104,8 @@ func(p *Pcap) Next() (pkt *Packet) {
 		return nil;
 	}
 	pkt = new(Packet);
-	pkt.Time.Sec = int64(pkthdr.ts.tv_sec);
-	pkt.Time.Usec = int64(pkthdr.ts.tv_usec);
+	pkt.Time.Sec = int32(pkthdr.ts.tv_sec);
+	pkt.Time.Usec = int32(pkthdr.ts.tv_usec);
 	pkt.Caplen = uint32(pkthdr.caplen);
 	pkt.Len = uint32(pkthdr.len);
 	pkt.Data = make([]byte, pkthdr.caplen);
