@@ -23,10 +23,11 @@ const (
 func main() {
 	var device *string = flag.String("i", "", "interface");
 	var snaplen *int = flag.Int("s", 65535, "snaplen");
+	var hexdump *bool = flag.Bool("X", false, "hexdump");
 	expr := "";
 
 	flag.Usage = func() {
-		fmt.Fprintf(os.Stderr, "usage: %s [ -i interface ] [ -s snaplen ] [ expression ]\n", os.Args[0]);
+		fmt.Fprintf(os.Stderr, "usage: %s [ -i interface ] [ -s snaplen ] [ -X ] [ expression ]\n", os.Args[0]);
 		os.Exit(1);
 	};
 
@@ -37,7 +38,14 @@ func main() {
 	}
 
 	if *device == "" {
-		flag.Usage();
+		devs, err := pcap.Findalldevs();
+		if err != "" {
+			fmt.Fprintf(os.Stderr, "tcpdump: couldn't find any devices: %s\n", err);
+		}
+		if 0 == len(devs) {
+			flag.Usage();
+		}
+		*device = devs[0].Name;
 	}
 
 	h, err := pcap.Openlive(*device, int32(*snaplen), true, 0);
@@ -55,6 +63,9 @@ func main() {
 
 	for pkt := h.Next() ; pkt != nil ; pkt = h.Next() {
 		Printpacket(pkt);
+		if *hexdump {
+			Hexdump(pkt);
+		}
 	}
 
 }
@@ -340,4 +351,43 @@ func Printicmp(ip *Iphdr, icmp *Icmphdr) {
 
 func Decodeip6(pkt []byte) {
 	fmt.Printf("TODO: IPv6")
+}
+
+func min(a, b int) int {
+	if a < b {
+		return a;
+	}
+	return b;
+}
+
+func Hexdump(pkt *pcap.Packet) {
+	for i := 0 ; i < len(pkt.Data) ; i += 16 {
+		Dumpline(uint32(i), pkt.Data[i:min(i+16,len(pkt.Data))]);
+	}
+}
+
+func Dumpline(addr uint32, line []byte) {
+	fmt.Printf("\t0x%04x: ", int32(addr));
+	var i uint16;
+	for i = 0 ; i < 16 && i < uint16(len(line)) ; i++ {
+		if i % 2 == 0 {
+			fmt.Printf(" ");
+		}
+		fmt.Printf("%02x", line[i]);
+	}
+	for j := i ; j <= 16 ; j++ {
+		if j % 2 == 0 {
+			fmt.Printf(" ");
+		}
+		fmt.Printf("  ");
+	}
+	fmt.Printf("  ");
+	for i = 0 ; i < 16 && i < uint16(len(line)) ; i++ {
+		if (line[i] >= 32 && line[i] <= 126) {
+			fmt.Printf("%c", line[i]);
+		} else {
+			fmt.Printf(".");
+		}
+	}
+	fmt.Printf("\n");
 }
