@@ -1,30 +1,30 @@
 package main
 
 import (
-	"pcap";
-	"fmt";
-	"flag";
-	"time";
+	"pcap"
+	"fmt"
+	"flag"
+	"time"
 )
 
 func min(x uint32, y uint32) uint32 {
 	if x < y {
-		return x;
+		return x
 	}
-	return y;
+	return y
 }
 
 func main() {
-	var device *string = flag.String("d", "", "device");
-	var file *string = flag.String("r", "", "file");
-	var expr *string = flag.String("e", "", "filter expression");
+	var device *string = flag.String("d", "", "device")
+	var file *string = flag.String("r", "", "file")
+	var expr *string = flag.String("e", "", "filter expression")
 
-	flag.Parse();
+	flag.Parse()
 	
-	var h *pcap.Pcap;
-	var err string;
+	var h *pcap.Pcap
+	var err string
 
-	ifs, err := pcap.Findalldevs();
+	ifs, err := pcap.Findalldevs()
 	if len(ifs) == 0 {
 		fmt.Printf("Warning: no devices found : %s\n", err)
 	} else {
@@ -34,47 +34,47 @@ func main() {
 	}
 
 	if *device != "" {
-		h, err = pcap.Openlive(*device, 65535, true, 0);
+		h, err = pcap.Openlive(*device, 65535, true, 0)
 		if h == nil {
-			fmt.Printf("Openlive(%s) failed: %s\n", *device, err);
+			fmt.Printf("Openlive(%s) failed: %s\n", *device, err)
 			return
 		}
 	} else if *file != "" {
-		h, err = pcap.Openoffline(*file);
+		h, err = pcap.Openoffline(*file)
 		if h == nil {
-			fmt.Printf("Openoffline(%s) failed: %s\n", *file, err);
+			fmt.Printf("Openoffline(%s) failed: %s\n", *file, err)
 			return
 		}
 	} else {
-		fmt.Printf("usage: pcaptest [-d <device> | -r <file>]\n");
+		fmt.Printf("usage: pcaptest [-d <device> | -r <file>]\n")
 		return
 	}
 
-	fmt.Printf("pcap version: %s\n", pcap.Version());
+	fmt.Printf("pcap version: %s\n", pcap.Version())
 
 	if *expr != "" {
-		fmt.Printf("Setting filter: %s\n", *expr);
-		err := h.Setfilter(*expr);
+		fmt.Printf("Setting filter: %s\n", *expr)
+		err := h.Setfilter(*expr)
 		if err != "" {
-			fmt.Printf("Warning: setting filter failed: %s\n", err);
+			fmt.Printf("Warning: setting filter failed: %s\n", err)
 		}
 	}
 
 	for pkt := h.Next() ; pkt != nil ; pkt = h.Next() {
 		fmt.Printf("time: %d.%06d (%s) caplen: %d len: %d\nData:", 
 				int64(pkt.Time.Sec), int64(pkt.Time.Usec), 
-				time.SecondsToLocalTime(int64(pkt.Time.Sec)).Asctime(), int64(pkt.Caplen), int64(pkt.Len));
+				time.SecondsToLocalTime(int64(pkt.Time.Sec)).String(), int64(pkt.Caplen), int64(pkt.Len))
 		for i:=uint32(0) ; i<pkt.Caplen ; i++ {
 			if i % 32 == 0 {
 				fmt.Printf("\n")
 			}
 			if 32 <= pkt.Data[i] && pkt.Data[i] <= 126 {
-				fmt.Printf("%c", pkt.Data[i]);
+				fmt.Printf("%c", pkt.Data[i])
 			} else {
-				fmt.Printf(".");
+				fmt.Printf(".")
 			}
 		}
-		fmt.Printf("\n\n");
+		fmt.Printf("\n\n")
 	}
 
 }
