@@ -10,19 +10,18 @@ import (
 )
 
 const (
-	TYPE_IP = 0x0800
+	TYPE_IP  = 0x0800
 	TYPE_ARP = 0x0806
 	TYPE_IP6 = 0x86DD
 
 	IP_ICMP = 1
 	IP_INIP = 4
-	IP_TCP = 6
-	IP_UDP = 17
-
+	IP_TCP  = 6
+	IP_UDP  = 17
 )
 
-var out *bufio.Writer;
-var errout *bufio.Writer;
+var out *bufio.Writer
+var errout *bufio.Writer
 
 func main() {
 	var device *string = flag.String("i", "", "interface")
@@ -36,11 +35,11 @@ func main() {
 	flag.Usage = func() {
 		fmt.Fprintf(errout, "usage: %s [ -i interface ] [ -s snaplen ] [ -X ] [ expression ]\n", os.Args[0])
 		os.Exit(1)
-	};
+	}
 
 	flag.Parse()
 
-	if (len(flag.Args()) > 0) {
+	if len(flag.Args()) > 0 {
 		expr = flag.Arg(0)
 	}
 
@@ -70,7 +69,7 @@ func main() {
 		}
 	}
 
-	for pkt := h.Next() ; pkt != nil ; pkt = h.Next() {
+	for pkt := h.Next(); pkt != nil; pkt = h.Next() {
 		Printpacket(pkt)
 		if *hexdump {
 			Hexdump(pkt)
@@ -92,10 +91,14 @@ func Printpacket(pkt *pcap.Packet) {
 	//fmt.Printf("%012x -> %012x ", srcmac, destmac)
 
 	switch pkttype {
-		case TYPE_IP: Decodeip(pkt.Data[14:])
-		case TYPE_ARP: Decodearp(pkt.Data[14:])
-		case TYPE_IP6: Decodeip6(pkt.Data[14:])
-		default: Unsupported(pkttype)
+	case TYPE_IP:
+		Decodeip(pkt.Data[14:])
+	case TYPE_ARP:
+		Decodearp(pkt.Data[14:])
+	case TYPE_IP6:
+		Decodeip6(pkt.Data[14:])
+	default:
+		Unsupported(pkttype)
 	}
 
 	out.WriteString("\n")
@@ -103,18 +106,18 @@ func Printpacket(pkt *pcap.Packet) {
 
 func Decodemac(pkt []byte) uint64 {
 	mac := uint64(0)
-	for i:= uint(0) ; i < 6 ; i++ {
+	for i := uint(0); i < 6; i++ {
 		mac = (mac << 8) + uint64(pkt[i])
 	}
 	return mac
 }
 
 func Decodeuint16(pkt []byte) uint16 {
-	return uint16(pkt[0]) << 8 + uint16(pkt[1])
+	return uint16(pkt[0])<<8 + uint16(pkt[1])
 }
 
 func Decodeuint32(pkt []byte) uint32 {
-	return uint32(pkt[0]) << 24 + uint32(pkt[1]) << 16 + uint32(pkt[2]) << 8 + uint32(pkt[3])
+	return uint32(pkt[0])<<24 + uint32(pkt[1])<<16 + uint32(pkt[2])<<8 + uint32(pkt[3])
 }
 
 func Unsupported(pkttype uint16) {
@@ -122,21 +125,23 @@ func Unsupported(pkttype uint16) {
 }
 
 type Arphdr struct {
-	Addrtype uint16
-	Protocol uint16
-	HwAddressSize uint8
-	ProtAddressSize uint8
-	Operation uint16
-	SourceHwAddress []byte
+	Addrtype          uint16
+	Protocol          uint16
+	HwAddressSize     uint8
+	ProtAddressSize   uint8
+	Operation         uint16
+	SourceHwAddress   []byte
 	SourceProtAddress []byte
-	DestHwAddress []byte
-	DestProtAddress []byte
+	DestHwAddress     []byte
+	DestProtAddress   []byte
 }
 
 func Arpop(op uint16) string {
 	switch op {
-		case 1: return "Request"
-		case 2: return "Reply"
+	case 1:
+		return "Request"
+	case 2:
+		return "Reply"
 	}
 	return ""
 }
@@ -148,10 +153,10 @@ func Decodearp(pkt []byte) {
 	arp.HwAddressSize = pkt[4]
 	arp.ProtAddressSize = pkt[5]
 	arp.Operation = Decodeuint16(pkt[6:8])
-	arp.SourceHwAddress = pkt[8:8+arp.HwAddressSize]
-	arp.SourceProtAddress = pkt[8+arp.HwAddressSize:8+arp.HwAddressSize+arp.ProtAddressSize]
-	arp.DestHwAddress = pkt[8+arp.HwAddressSize+arp.ProtAddressSize:8+2*arp.HwAddressSize+arp.ProtAddressSize]
-	arp.DestProtAddress = pkt[8+2*arp.HwAddressSize+arp.ProtAddressSize:8+2*arp.HwAddressSize+2*arp.ProtAddressSize]
+	arp.SourceHwAddress = pkt[8 : 8+arp.HwAddressSize]
+	arp.SourceProtAddress = pkt[8+arp.HwAddressSize : 8+arp.HwAddressSize+arp.ProtAddressSize]
+	arp.DestHwAddress = pkt[8+arp.HwAddressSize+arp.ProtAddressSize : 8+2*arp.HwAddressSize+arp.ProtAddressSize]
+	arp.DestProtAddress = pkt[8+2*arp.HwAddressSize+arp.ProtAddressSize : 8+2*arp.HwAddressSize+2*arp.ProtAddressSize]
 
 	fmt.Fprintf(out, "ARP %s ", Arpop(arp.Operation))
 
@@ -167,18 +172,18 @@ func Decodearp(pkt []byte) {
 }
 
 type Iphdr struct {
-	Version uint8
-	Ihl uint8
-	Tos uint8
-	Length uint16
-	Id uint16
-	Flags uint8
+	Version    uint8
+	Ihl        uint8
+	Tos        uint8
+	Length     uint16
+	Id         uint16
+	Flags      uint8
 	FragOffset uint16
-	Ttl uint8
-	Protocol uint8
-	Checksum uint16
-	SrcIp []byte
-	DestIp []byte
+	Ttl        uint8
+	Protocol   uint8
+	Checksum   uint16
+	SrcIp      []byte
+	DestIp     []byte
 }
 
 func Decodeip(pkt []byte) {
@@ -199,34 +204,37 @@ func Decodeip(pkt []byte) {
 	ip.DestIp = pkt[16:20]
 
 	switch ip.Protocol {
-		case IP_TCP: Decodetcp(ip, pkt[ip.Ihl*4:])
-		case IP_UDP: Decodeudp(ip, pkt[ip.Ihl*4:])
-		case IP_ICMP: Decodeicmp(ip, pkt[ip.Ihl*4:])
-		case IP_INIP:
-			Printip(ip.SrcIp)
-			fmt.Fprintf(out, " > ")
-			Printip(ip.DestIp)
-			fmt.Fprintf(out, " IP in IP: ")
-			Decodeip(pkt[ip.Ihl*4:])
-		default:
-			Printip(ip.SrcIp)
-			fmt.Fprintf(out, " > ")
-			Printip(ip.DestIp)
-			fmt.Fprintf(out, " unsupported protocol %d", int(ip.Protocol))
+	case IP_TCP:
+		Decodetcp(ip, pkt[ip.Ihl*4:])
+	case IP_UDP:
+		Decodeudp(ip, pkt[ip.Ihl*4:])
+	case IP_ICMP:
+		Decodeicmp(ip, pkt[ip.Ihl*4:])
+	case IP_INIP:
+		Printip(ip.SrcIp)
+		fmt.Fprintf(out, " > ")
+		Printip(ip.DestIp)
+		fmt.Fprintf(out, " IP in IP: ")
+		Decodeip(pkt[ip.Ihl*4:])
+	default:
+		Printip(ip.SrcIp)
+		fmt.Fprintf(out, " > ")
+		Printip(ip.DestIp)
+		fmt.Fprintf(out, " unsupported protocol %d", int(ip.Protocol))
 	}
 }
 
 type Tcphdr struct {
-	SrcPort uint16
-	DestPort uint16
-	Seq uint32
-	Ack uint32
+	SrcPort    uint16
+	DestPort   uint16
+	Seq        uint32
+	Ack        uint32
 	DataOffset uint8
-	Flags uint8
-	Window uint16
-	Checksum uint16
-	Urgent uint16
-	Data []byte
+	Flags      uint8
+	Window     uint16
+	Checksum   uint16
+	Urgent     uint16
+	Data       []byte
 }
 
 const (
@@ -288,7 +296,7 @@ func Printflags(flags uint8) {
 }
 
 func Printip(ip []byte) {
-	for i:=0;i<4;i++ {
+	for i := 0; i < 4; i++ {
 		fmt.Fprintf(out, "%d", int(ip[i]))
 		if i < 3 {
 			out.WriteString(".")
@@ -297,9 +305,9 @@ func Printip(ip []byte) {
 }
 
 type Udphdr struct {
-	SrcPort uint16
+	SrcPort  uint16
 	DestPort uint16
-	Length uint16
+	Length   uint16
 	Checksum uint16
 }
 
@@ -318,12 +326,12 @@ func Decodeudp(ip *Iphdr, pkt []byte) {
 }
 
 type Icmphdr struct {
-	Type uint8
-	Code uint8
+	Type     uint8
+	Code     uint8
 	Checksum uint16
-	Id uint16
-	Seq uint16
-	Data []byte
+	Id       uint16
+	Seq      uint16
+	Data     []byte
 }
 
 func Decodeicmp(ip *Iphdr, pkt []byte) {
@@ -345,17 +353,25 @@ func Printicmp(ip *Iphdr, icmp *Icmphdr) {
 	Printip(ip.DestIp)
 	fmt.Fprintf(out, " Type = %d Code = %d ", icmp.Type, icmp.Code)
 	switch icmp.Type {
-		case 0: fmt.Fprintf(out, "Echo reply ttl=%d seq=%d", ip.Ttl, icmp.Seq)
+	case 0:
+		fmt.Fprintf(out, "Echo reply ttl=%d seq=%d", ip.Ttl, icmp.Seq)
+	case 3:
+		switch icmp.Code {
+		case 0:
+			out.WriteString("Network unreachable")
+		case 1:
+			out.WriteString("Host unreachable")
+		case 2:
+			out.WriteString("Protocol unreachable")
 		case 3:
-			switch icmp.Code {
-				case 0: out.WriteString("Network unreachable")
-				case 1: out.WriteString("Host unreachable")
-				case 2: out.WriteString("Protocol unreachable")
-				case 3: out.WriteString("Port unreachable")
-				default: out.WriteString("Destination unreachable")
-			}
-		case 8: fmt.Fprintf(out, "Echo request ttl=%d seq=%d", ip.Ttl, icmp.Seq)
-		case 30: out.WriteString("Traceroute")
+			out.WriteString("Port unreachable")
+		default:
+			out.WriteString("Destination unreachable")
+		}
+	case 8:
+		fmt.Fprintf(out, "Echo request ttl=%d seq=%d", ip.Ttl, icmp.Seq)
+	case 30:
+		out.WriteString("Traceroute")
 	}
 }
 
@@ -371,29 +387,29 @@ func min(a, b int) int {
 }
 
 func Hexdump(pkt *pcap.Packet) {
-	for i := 0 ; i < len(pkt.Data) ; i += 16 {
-		Dumpline(uint32(i), pkt.Data[i:min(i+16,len(pkt.Data))])
+	for i := 0; i < len(pkt.Data); i += 16 {
+		Dumpline(uint32(i), pkt.Data[i:min(i+16, len(pkt.Data))])
 	}
 }
 
 func Dumpline(addr uint32, line []byte) {
 	fmt.Fprintf(out, "\t0x%04x: ", int32(addr))
 	var i uint16
-	for i = 0 ; i < 16 && i < uint16(len(line)) ; i++ {
-		if i % 2 == 0 {
+	for i = 0; i < 16 && i < uint16(len(line)); i++ {
+		if i%2 == 0 {
 			out.WriteString(" ")
 		}
-		fmt.Fprintf(out, "%02x", line[i]);
+		fmt.Fprintf(out, "%02x", line[i])
 	}
-	for j := i ; j <= 16 ; j++ {
-		if j % 2 == 0 {
+	for j := i; j <= 16; j++ {
+		if j%2 == 0 {
 			out.WriteString(" ")
 		}
 		out.WriteString("  ")
 	}
 	out.WriteString("  ")
-	for i = 0 ; i < 16 && i < uint16(len(line)) ; i++ {
-		if (line[i] >= 32 && line[i] <= 126) {
+	for i = 0; i < 16 && i < uint16(len(line)); i++ {
+		if line[i] >= 32 && line[i] <= 126 {
 			fmt.Fprintf(out, "%c", line[i])
 		} else {
 			out.WriteString(".")
