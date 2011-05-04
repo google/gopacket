@@ -104,7 +104,7 @@ func Openoffline(file string) (handle *Pcap, err string) {
 }
 
 func (p *Pcap) Next() (pkt *Packet) {
-	var pkthdr _Cstruct_pcap_pkthdr
+	var pkthdr _Ctype_struct_pcap_pkthdr
 	var buf unsafe.Pointer
 	buf = unsafe.Pointer(C.pcap_next(p.cptr, &pkthdr))
 	if nil == buf {
@@ -129,7 +129,7 @@ func (p *Pcap) Geterror() string {
 }
 
 func (p *Pcap) Getstats() (stat *Stat, err string) {
-	var cstats _Cstruct_pcap_stat
+	var cstats _Ctype_struct_pcap_stat
 	if -1 == C.pcap_stats(p.cptr, &cstats) {
 		return nil, p.Geterror()
 	}
@@ -144,7 +144,7 @@ func (p *Pcap) Getstats() (stat *Stat, err string) {
 }
 
 func (p *Pcap) Setfilter(expr string) (err string) {
-	var bpf _Cstruct_bpf_program
+	var bpf _Ctype_struct_bpf_program
 
 	if -1 == C.pcap_compile(p.cptr, &bpf, C.CString(expr), 1, 0) {
 		return p.Geterror()
@@ -193,7 +193,7 @@ func DatalinkValueToDescription(dlt int) string {
 func Findalldevs() (ifs []Interface, err string) {
 	var buf *C.char
 	buf = (*C.char)(C.calloc(ERRBUF_SIZE, 1))
-	var alldevsp *_Cstruct_pcap_if
+	var alldevsp *_Ctypedef_pcap_if_t
 
 	if -1 == C.pcap_findalldevs((**C.pcap_if_t)(&alldevsp), buf) {
 		ifs = nil
@@ -201,12 +201,12 @@ func Findalldevs() (ifs []Interface, err string) {
 	} else {
 		dev := alldevsp
 		var i uint32
-		for i = 0; dev != nil; dev = dev.next {
+		for i = 0; dev != nil; dev = (*_Ctypedef_pcap_if_t)(dev.next) {
 			i++
 		}
 		ifs = make([]Interface, i)
 		dev = alldevsp
-		for j := uint32(0); dev != nil; dev = dev.next {
+		for j := uint32(0); dev != nil; dev = (*_Ctypedef_pcap_if_t)(dev.next) {
 			var iface Interface
 			iface.Name = C.GoString(dev.name)
 			iface.Description = C.GoString(dev.description)
