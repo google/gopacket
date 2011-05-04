@@ -20,7 +20,7 @@ func main() {
 	var expr *string = flag.String("e", "", "filter expression")
 
 	flag.Parse()
-	
+
 	var h *pcap.Pcap
 	var err string
 
@@ -28,7 +28,7 @@ func main() {
 	if len(ifs) == 0 {
 		fmt.Printf("Warning: no devices found : %s\n", err)
 	} else {
-		for i := 0 ; i < len(ifs) ; i++ {
+		for i := 0; i < len(ifs); i++ {
 			fmt.Printf("dev %d: %s (%s)\n", i+1, ifs[i].Name, ifs[i].Description)
 		}
 	}
@@ -60,12 +60,12 @@ func main() {
 		}
 	}
 
-	for pkt := h.Next() ; pkt != nil ; pkt = h.Next() {
-		fmt.Printf("time: %d.%06d (%s) caplen: %d len: %d\nData:", 
-				int64(pkt.Time.Sec), int64(pkt.Time.Usec), 
-				time.SecondsToLocalTime(int64(pkt.Time.Sec)).String(), int64(pkt.Caplen), int64(pkt.Len))
-		for i:=uint32(0) ; i<pkt.Caplen ; i++ {
-			if i % 32 == 0 {
+	for pkt := h.Next(); pkt != nil; pkt = h.Next() {
+		fmt.Printf("time: %d.%06d (%s) caplen: %d len: %d\nData:",
+			int64(pkt.Time.Sec), int64(pkt.Time.Usec),
+			time.SecondsToLocalTime(int64(pkt.Time.Sec)).String(), int64(pkt.Caplen), int64(pkt.Len))
+		for i := uint32(0); i < pkt.Caplen; i++ {
+			if i%32 == 0 {
 				fmt.Printf("\n")
 			}
 			if 32 <= pkt.Data[i] && pkt.Data[i] <= 126 {
