@@ -103,7 +103,13 @@ func Openoffline(file string) (handle *Pcap, err string) {
 	return
 }
 
-func (p *Pcap) Next() (pkt *Packet, result int32) {
+func (p *Pcap) Next() (pkt *Packet) {
+	rv, _ := p.NextEx()
+
+	return rv
+}
+
+func (p *Pcap) NextEx() (pkt *Packet, result int32) {
 	var pkthdr_ptr *_Ctype_struct_pcap_pkthdr
 	var pkthdr _Ctype_struct_pcap_pkthdr
 
