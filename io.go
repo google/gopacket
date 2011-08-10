@@ -25,17 +25,17 @@ type PacketTime struct {
 
 // Packet is a single packet parsed from a pcap file.
 type Packet struct {
-	Time   PacketTime	// packet send/receive time
-	Caplen uint32	// bytes stored in the file (caplen <= len)
-	Len    uint32	// bytes sent/received
-	Data   []byte   // packet data
+	Time   PacketTime // packet send/receive time
+	Caplen uint32     // bytes stored in the file (caplen <= len)
+	Len    uint32     // bytes sent/received
+	Data   []byte     // packet data
 
-	Type    int		// protocol type, see LINKTYPE_*
+	Type    int // protocol type, see LINKTYPE_*
 	DestMac uint64
 	SrcMac  uint64
 
-	Headers []interface{}  // decoded headers, in order
-	Payload []byte  // remaining non-header bytes
+	Headers []interface{} // decoded headers, in order
+	Payload []byte        // remaining non-header bytes
 }
 
 // Reader parses pcap files.
@@ -100,8 +100,8 @@ func (r *Reader) Next() *Packet {
 			Usec: int32(timeUsec),
 		},
 		Caplen: capLen,
-		Len: origLen,
-		Data:    data,
+		Len:    origLen,
+		Data:   data,
 	}
 }
 
