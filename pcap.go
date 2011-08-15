@@ -13,49 +13,8 @@ import (
 	"syscall"
 )
 
-const (
-	ERRBUF_SIZE = 256
-
-	// according to pcap-linktype(7)
-	LINKTYPE_NULL             = 0
-	LINKTYPE_ETHERNET         = 1
-	LINKTYPE_TOKEN_RING       = 6
-	LINKTYPE_ARCNET           = 7
-	LINKTYPE_SLIP             = 8
-	LINKTYPE_PPP              = 9
-	LINKTYPE_FDDI             = 10
-	LINKTYPE_ATM_RFC1483      = 100
-	LINKTYPE_RAW              = 101
-	LINKTYPE_PPP_HDLC         = 50
-	LINKTYPE_PPP_ETHER        = 51
-	LINKTYPE_C_HDLC           = 104
-	LINKTYPE_IEEE802_11       = 105
-	LINKTYPE_FRELAY           = 107
-	LINKTYPE_LOOP             = 108
-	LINKTYPE_LINUX_SLL        = 113
-	LINKTYPE_LTALK            = 104
-	LINKTYPE_PFLOG            = 117
-	LINKTYPE_PRISM_HEADER     = 119
-	LINKTYPE_IP_OVER_FC       = 122
-	LINKTYPE_SUNATM           = 123
-	LINKTYPE_IEEE802_11_RADIO = 127
-	LINKTYPE_ARCNET_LINUX     = 129
-	LINKTYPE_LINUX_IRDA       = 144
-	LINKTYPE_LINUX_LAPD       = 177
-)
-
 type Pcap struct {
 	cptr *C.pcap_t
-}
-
-type Packet struct {
-	Time struct {
-		Sec  int32
-		Usec int32
-	}
-	Caplen uint32
-	Len    uint32
-	Data   []byte
 }
 
 type Stat struct {
@@ -67,12 +26,12 @@ type Stat struct {
 type Interface struct {
 	Name        string
 	Description string
-	Addresses []IFAddress
+	Addresses   []IFAddress
 	// TODO: add more elements
 }
 
 type IFAddress struct {
-	IP net.IP
+	IP      net.IP
 	Netmask net.IPMask
 	// TODO: add broadcast + PtP dst ?
 }
@@ -243,7 +202,7 @@ func Findalldevs() (ifs []Interface, err string) {
 	return
 }
 
-func findalladdresses(addresses *_Ctype_struct_pcap_addr)(retval []IFAddress){
+func findalladdresses(addresses *_Ctype_struct_pcap_addr) (retval []IFAddress) {
 	// TODO - make it support more than IPv4 and IPv6?
 	retval = make([]IFAddress, 0, 1)
 	for curaddr := addresses; curaddr != nil; curaddr = (*_Ctype_struct_pcap_addr)(curaddr.next) {
@@ -262,7 +221,7 @@ func findalladdresses(addresses *_Ctype_struct_pcap_addr)(retval []IFAddress){
 	return
 }
 
-func sockaddr_to_IP(rsa *syscall.RawSockaddr)(IP []byte, err os.Error){
+func sockaddr_to_IP(rsa *syscall.RawSockaddr) (IP []byte, err os.Error) {
 	switch rsa.Family {
 	case syscall.AF_INET:
 		pp := (*syscall.RawSockaddrInet4)(unsafe.Pointer(rsa))
