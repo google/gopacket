@@ -4,7 +4,6 @@ TARG=pcap
 GOFILES=decode.go\
 	io.go
 CGOFILES=pcap.go
-CGO_LDFLAGS=-lpcap
 CLEANFILES=pcaptest tcpdump
 
 include $(GOROOT)/src/Make.pkg
