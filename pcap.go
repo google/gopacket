@@ -47,7 +47,11 @@ func Openlive(device string, snaplen int32, promisc bool, timeout_ms int32) (han
 	} else {
 		pro = 0
 	}
-	h.cptr = C.pcap_open_live(C.CString(device), C.int(snaplen), C.int(pro), C.int(timeout_ms), buf)
+
+	dev := C.CString(device)
+	defer C.free(unsafe.Pointer(dev))
+
+	h.cptr = C.pcap_open_live(dev, C.int(snaplen), C.int(pro), C.int(timeout_ms), buf)
 	if nil == h.cptr {
 		handle = nil
 		err = C.GoString(buf)
@@ -62,7 +66,11 @@ func Openoffline(file string) (handle *Pcap, err string) {
 	var buf *C.char
 	buf = (*C.char)(C.calloc(ERRBUF_SIZE, 1))
 	h := new(Pcap)
-	h.cptr = C.pcap_open_offline(C.CString(file), buf)
+
+	cf := C.CString(file)
+	defer C.free(unsafe.Pointer(cf))
+
+	h.cptr = C.pcap_open_offline(cf, buf)
 	if nil == h.cptr {
 		handle = nil
 		err = C.GoString(buf)
@@ -130,7 +138,10 @@ func (p *Pcap) Getstats() (stat *Stat, err string) {
 func (p *Pcap) Setfilter(expr string) (err string) {
 	var bpf _Ctype_struct_bpf_program
 
-	if -1 == C.pcap_compile(p.cptr, &bpf, C.CString(expr), 1, 0) {
+	cexpr := C.CString(expr)
+	defer C.free(unsafe.Pointer(cexpr))
+
+	if -1 == C.pcap_compile(p.cptr, &bpf, cexpr, 1, 0) {
 		return p.Geterror()
 	}
 
