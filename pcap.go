@@ -2,7 +2,6 @@ package pcap
 
 /*
 #cgo LDFLAGS: -lpcap
-struct pcap { int dummy; };
 #include <stdlib.h>
 #include <pcap.h>
 */
