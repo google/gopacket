@@ -230,7 +230,11 @@ func (p *Packet) decodeIp() {
 	ip.Checksum = decodeuint16(pkt[10:12])
 	ip.SrcIp = pkt[12:16]
 	ip.DestIp = pkt[16:20]
-	p.Payload = pkt[ip.Ihl*4:]
+	pEnd := int(ip.Length)
+	if pEnd > len(pkt) {
+		pEnd = len(pkt)
+	}
+	p.Payload = pkt[ip.Ihl*4 : pEnd]
 	p.Headers = append(p.Headers, ip)
 
 	switch ip.Protocol {
