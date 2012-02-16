@@ -6,8 +6,10 @@ import (
 	"bufio"
 	"flag"
 	"fmt"
+	"io"
 	"os"
-	"pcap"
+
+	"github.com/dustin/gopcap"
 )
 
 var input *string = flag.String("input", "", "input file")
@@ -72,7 +74,7 @@ func check(dest, src string) {
 		fb, ferr := freader.ReadByte()
 		gb, gerr := greader.ReadByte()
 
-		if ferr == os.EOF && gerr == os.EOF {
+		if ferr == io.EOF && gerr == io.EOF {
 			break
 		}
 		if fb == gb {
