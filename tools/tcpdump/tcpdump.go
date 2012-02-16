@@ -60,6 +60,7 @@ func main() {
 		errout.Flush()
 		return
 	}
+	defer h.Close()
 
 	if expr != "" {
 		ferr := h.Setfilter(expr)

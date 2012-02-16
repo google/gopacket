@@ -121,6 +121,10 @@ func (p *Pcap) NextEx() (pkt *Packet, result int32) {
 	return
 }
 
+func (p *Pcap) Close() {
+	C.pcap_close(p.cptr)
+}
+
 func (p *Pcap) Geterror() string {
 	return C.GoString(C.pcap_geterr(p.cptr))
 }

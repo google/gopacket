@@ -50,6 +50,7 @@ func main() {
 		fmt.Printf("usage: pcaptest [-d <device> | -r <file>]\n")
 		return
 	}
+	defer h.Close()
 
 	fmt.Printf("pcap version: %s\n", pcap.Version())
 
