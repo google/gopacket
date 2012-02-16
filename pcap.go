@@ -4,13 +4,19 @@ package pcap
 #cgo LDFLAGS: -lpcap
 #include <stdlib.h>
 #include <pcap.h>
+
+// Workaround for not knowing how to cast to const u_char**
+int hack_pcap_next_ex(pcap_t *p, struct pcap_pkthdr **pkt_header,
+                      u_char **pkt_data) {
+    return pcap_next_ex(p, pkt_header, (const u_char **)pkt_data);
+}
 */
 import "C"
 import (
-	"unsafe"
-	"os"
+	"errors"
 	"net"
 	"syscall"
+	"unsafe"
 )
 
 type Pcap struct {
@@ -87,12 +93,12 @@ func (p *Pcap) Next() (pkt *Packet) {
 }
 
 func (p *Pcap) NextEx() (pkt *Packet, result int32) {
-	var pkthdr_ptr *_Ctype_struct_pcap_pkthdr
-	var pkthdr _Ctype_struct_pcap_pkthdr
+	var pkthdr_ptr *C.struct_pcap_pkthdr
+	var pkthdr C.struct_pcap_pkthdr
 
-	var buf_ptr *_Ctypedef_u_char
+	var buf_ptr *C.u_char
 	var buf unsafe.Pointer
-	result = int32(C.pcap_next_ex(p.cptr, &pkthdr_ptr, &buf_ptr))
+	result = int32(C.hack_pcap_next_ex(p.cptr, &pkthdr_ptr, &buf_ptr))
 
 	buf = unsafe.Pointer(buf_ptr)
 	pkthdr = *pkthdr_ptr
@@ -188,7 +194,7 @@ func Findalldevs() (ifs []Interface, err string) {
 	var buf *C.char
 	buf = (*C.char)(C.calloc(ERRBUF_SIZE, 1))
 	defer C.free(unsafe.Pointer(buf))
-	var alldevsp *_Ctypedef_pcap_if_t
+	var alldevsp *C.pcap_if_t
 
 	if -1 == C.pcap_findalldevs((**C.pcap_if_t)(&alldevsp), buf) {
 		return nil, C.GoString(buf)
@@ -196,12 +202,12 @@ func Findalldevs() (ifs []Interface, err string) {
 	defer C.pcap_freealldevs((*C.pcap_if_t)(alldevsp))
 	dev := alldevsp
 	var i uint32
-	for i = 0; dev != nil; dev = (*_Ctypedef_pcap_if_t)(dev.next) {
+	for i = 0; dev != nil; dev = (*C.pcap_if_t)(dev.next) {
 		i++
 	}
 	ifs = make([]Interface, i)
 	dev = alldevsp
-	for j := uint32(0); dev != nil; dev = (*_Ctypedef_pcap_if_t)(dev.next) {
+	for j := uint32(0); dev != nil; dev = (*C.pcap_if_t)(dev.next) {
 		var iface Interface
 		iface.Name = C.GoString(dev.name)
 		iface.Description = C.GoString(dev.description)
@@ -218,7 +224,7 @@ func findalladdresses(addresses *_Ctype_struct_pcap_addr) (retval []IFAddress) {
 	retval = make([]IFAddress, 0, 1)
 	for curaddr := addresses; curaddr != nil; curaddr = (*_Ctype_struct_pcap_addr)(curaddr.next) {
 		var a IFAddress
-		var err os.Error
+		var err error
 		a.IP, err = sockaddr_to_IP((*syscall.RawSockaddr)(unsafe.Pointer(curaddr.addr)))
 		if err != nil {
 			continue
@@ -232,7 +238,7 @@ func findalladdresses(addresses *_Ctype_struct_pcap_addr) (retval []IFAddress) {
 	return
 }
 
-func sockaddr_to_IP(rsa *syscall.RawSockaddr) (IP []byte, err os.Error) {
+func sockaddr_to_IP(rsa *syscall.RawSockaddr) (IP []byte, err error) {
 	switch rsa.Family {
 	case syscall.AF_INET:
 		pp := (*syscall.RawSockaddrInet4)(unsafe.Pointer(rsa))
@@ -249,7 +255,7 @@ func sockaddr_to_IP(rsa *syscall.RawSockaddr) (IP []byte, err os.Error) {
 		}
 		return
 	}
-	err = os.NewError("Unsupported address type")
+	err = errors.New("Unsupported address type")
 	return
 }
 
