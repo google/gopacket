@@ -3,9 +3,9 @@ package pcap
 import (
 	"fmt"
 	"net"
-	"time"
 	"reflect"
 	"strings"
+	"time"
 )
 
 const (
@@ -99,8 +99,8 @@ func (p *Packet) Decode() {
 
 // TimeString returns the packet time in a human-readable string.
 func (p *Packet) TimeString() string {
-	t := time.SecondsToLocalTime(int64(p.Time.Sec))
-	return fmt.Sprintf("%02d:%02d:%02d.%06d ", t.Hour, t.Minute, t.Second, p.Time.Usec)
+	t := time.Unix(int64(p.Time.Sec), 0)
+	return fmt.Sprintf("%02d:%02d:%02d.%06d ", t.Hour(), t.Minute(), t.Second(), p.Time.Usec)
 }
 
 func (p *Packet) headerString(headers []interface{}) string {

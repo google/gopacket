@@ -6,8 +6,10 @@ import (
 	"bufio"
 	"flag"
 	"fmt"
+	"io"
 	"os"
-	"pcap"
+
+	"github.com/dustin/gopcap"
 )
 
 var input *string = flag.String("input", "", "input file")
@@ -17,23 +19,25 @@ var decode *bool = flag.Bool("decode", false, "print decoded packets")
 func copyPcap(dest, src string) {
 	f, err := os.Open(src)
 	if err != nil {
-		fmt.Printf("couldn't open %q: %v", src, err)
+		fmt.Printf("couldn't open %q: %v\n", src, err)
 		return
 	}
+	defer f.Close()
 	reader, err := pcap.NewReader(bufio.NewReader(f))
 	if err != nil {
-		fmt.Printf("couldn't create reader: %v", err)
+		fmt.Printf("couldn't create reader: %v\n", err)
 		return
 	}
 	w, err := os.Create(dest)
 	if err != nil {
-		fmt.Printf("couldn't open %q: %v", dest, err)
+		fmt.Printf("couldn't open %q: %v\n", dest, err)
 		return
 	}
+	defer w.Close()
 	buf := bufio.NewWriter(w)
 	writer, err := pcap.NewWriter(buf, &reader.Header)
 	if err != nil {
-		fmt.Printf("couldn't create writer: %v", err)
+		fmt.Printf("couldn't create writer: %v\n", err)
 		return
 	}
 	for {
@@ -48,31 +52,30 @@ func copyPcap(dest, src string) {
 		writer.Write(pkt)
 	}
 	buf.Flush()
-	w.Close()
 }
 
 func check(dest, src string) {
 	f, err := os.Open(src)
-	defer f.Close()
 	if err != nil {
-		fmt.Printf("couldn't open %q: %v", src, err)
+		fmt.Printf("couldn't open %q: %v\n", src, err)
 		return
 	}
+	defer f.Close()
 	freader := bufio.NewReader(f)
 
 	g, err := os.Open(dest)
-	defer g.Close()
 	if err != nil {
-		fmt.Printf("couldn't open %q: %v", src, err)
+		fmt.Printf("couldn't open %q: %v\n", src, err)
 		return
 	}
+	defer g.Close()
 	greader := bufio.NewReader(g)
 
 	for {
 		fb, ferr := freader.ReadByte()
 		gb, gerr := greader.ReadByte()
 
-		if ferr == os.EOF && gerr == os.EOF {
+		if ferr == io.EOF && gerr == io.EOF {
 			break
 		}
 		if fb == gb {

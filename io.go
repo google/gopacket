@@ -3,7 +3,6 @@ package pcap
 import (
 	"fmt"
 	"io"
-	"os"
 )
 
 // FileHeader is the parsed header of a pcap file.
@@ -42,7 +41,7 @@ type Packet struct {
 type Reader struct {
 	flip         bool
 	buf          io.Reader
-	err          os.Error
+	err          error
 	fourBytes    []byte
 	twoBytes     []byte
 	sixteenBytes []byte
@@ -50,7 +49,7 @@ type Reader struct {
 }
 
 // NewReader reads pcap data from an os.Reader.
-func NewReader(reader io.Reader) (*Reader, os.Error) {
+func NewReader(reader io.Reader) (*Reader, error) {
 	r := &Reader{
 		buf:          reader,
 		fourBytes:    make([]byte, 4),
@@ -105,8 +104,8 @@ func (r *Reader) Next() *Packet {
 	}
 }
 
-func (r *Reader) read(data []byte) os.Error {
-	var err os.Error
+func (r *Reader) read(data []byte) error {
+	var err error
 	n, err := r.buf.Read(data)
 	for err == nil && n != len(data) {
 		var chunk int
@@ -146,7 +145,6 @@ func (r *Reader) readUint16() uint16 {
 	return asUint16(data, r.flip)
 }
 
-
 // Writer writes a pcap file.
 type Writer struct {
 	writer io.Writer
@@ -155,7 +153,7 @@ type Writer struct {
 
 // NewWriter creates a Writer that stores output in an io.Writer.
 // The FileHeader is written immediately.
-func NewWriter(writer io.Writer, header *FileHeader) (*Writer, os.Error) {
+func NewWriter(writer io.Writer, header *FileHeader) (*Writer, error) {
 	w := &Writer{
 		writer: writer,
 		buf:    make([]byte, 24),
@@ -176,7 +174,7 @@ func NewWriter(writer io.Writer, header *FileHeader) (*Writer, os.Error) {
 }
 
 // Writer writes a packet to the underlying writer.
-func (w *Writer) Write(pkt *Packet) os.Error {
+func (w *Writer) Write(pkt *Packet) error {
 	e := encoder{w.buf}
 	e.put4(uint32(pkt.Time.Sec))
 	e.put4(uint32(pkt.Time.Usec))

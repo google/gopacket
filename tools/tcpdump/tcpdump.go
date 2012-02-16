@@ -1,11 +1,12 @@
 package main
 
 import (
-	"pcap"
-	"fmt"
-	"flag"
-	"os"
 	"bufio"
+	"flag"
+	"fmt"
+	"os"
+
+	"github.com/dustin/gopcap"
 )
 
 const (
