@@ -43,7 +43,7 @@ type IFAddress struct {
 	// TODO: add broadcast + PtP dst ?
 }
 
-func Openlive(device string, snaplen int32, promisc bool, timeout_ms int32) (handle *Pcap, err string) {
+func Openlive(device string, snaplen int32, promisc bool, timeout_ms int32) (handle *Pcap, err error) {
 	var buf *C.char
 	buf = (*C.char)(C.calloc(ERRBUF_SIZE, 1))
 	h := new(Pcap)
@@ -60,7 +60,7 @@ func Openlive(device string, snaplen int32, promisc bool, timeout_ms int32) (han
 	h.cptr = C.pcap_open_live(dev, C.int(snaplen), C.int(pro), C.int(timeout_ms), buf)
 	if nil == h.cptr {
 		handle = nil
-		err = C.GoString(buf)
+		err = errors.New(C.GoString(buf))
 	} else {
 		handle = h
 	}
@@ -68,7 +68,7 @@ func Openlive(device string, snaplen int32, promisc bool, timeout_ms int32) (han
 	return
 }
 
-func Openoffline(file string) (handle *Pcap, err string) {
+func Openoffline(file string) (handle *Pcap, err error) {
 	var buf *C.char
 	buf = (*C.char)(C.calloc(ERRBUF_SIZE, 1))
 	h := new(Pcap)
@@ -79,7 +79,7 @@ func Openoffline(file string) (handle *Pcap, err string) {
 	h.cptr = C.pcap_open_offline(cf, buf)
 	if nil == h.cptr {
 		handle = nil
-		err = C.GoString(buf)
+		err = errors.New(C.GoString(buf))
 	} else {
 		handle = h
 	}
@@ -126,11 +126,11 @@ func (p *Pcap) Close() {
 	C.pcap_close(p.cptr)
 }
 
-func (p *Pcap) Geterror() string {
-	return C.GoString(C.pcap_geterr(p.cptr))
+func (p *Pcap) Geterror() error {
+	return errors.New(C.GoString(C.pcap_geterr(p.cptr)))
 }
 
-func (p *Pcap) Getstats() (stat *Stat, err string) {
+func (p *Pcap) Getstats() (stat *Stat, err error) {
 	var cstats _Ctype_struct_pcap_stat
 	if -1 == C.pcap_stats(p.cptr, &cstats) {
 		return nil, p.Geterror()
@@ -142,10 +142,10 @@ func (p *Pcap) Getstats() (stat *Stat, err string) {
 	stats.PacketsDropped = uint32(cstats.ps_drop)
 	stats.PacketsIfDropped = uint32(cstats.ps_ifdrop)
 
-	return stats, ""
+	return stats, nil
 }
 
-func (p *Pcap) Setfilter(expr string) (err string) {
+func (p *Pcap) Setfilter(expr string) (err error) {
 	var bpf _Ctype_struct_bpf_program
 
 	cexpr := C.CString(expr)
@@ -161,7 +161,7 @@ func (p *Pcap) Setfilter(expr string) (err string) {
 	}
 
 	C.pcap_freecode(&bpf)
-	return ""
+	return nil
 }
 
 func Version() string {
@@ -172,11 +172,11 @@ func (p *Pcap) Datalink() int {
 	return int(C.pcap_datalink(p.cptr))
 }
 
-func (p *Pcap) Setdatalink(dlt int) string {
+func (p *Pcap) Setdatalink(dlt int) error {
 	if -1 == C.pcap_set_datalink(p.cptr, C.int(dlt)) {
 		return p.Geterror()
 	}
-	return ""
+	return nil
 }
 
 func DatalinkValueToName(dlt int) string {
@@ -195,14 +195,14 @@ func DatalinkValueToDescription(dlt int) string {
 	return ""
 }
 
-func Findalldevs() (ifs []Interface, err string) {
+func Findalldevs() (ifs []Interface, err error) {
 	var buf *C.char
 	buf = (*C.char)(C.calloc(ERRBUF_SIZE, 1))
 	defer C.free(unsafe.Pointer(buf))
 	var alldevsp *C.pcap_if_t
 
 	if -1 == C.pcap_findalldevs((**C.pcap_if_t)(&alldevsp), buf) {
-		return nil, C.GoString(buf)
+		return nil, errors.New(C.GoString(buf))
 	}
 	defer C.pcap_freealldevs((*C.pcap_if_t)(alldevsp))
 	dev := alldevsp
@@ -264,7 +264,7 @@ func sockaddr_to_IP(rsa *syscall.RawSockaddr) (IP []byte, err error) {
 	return
 }
 
-func (p *Pcap) Inject(data []byte) (err string) {
+func (p *Pcap) Inject(data []byte) (err error) {
 	buf := (*C.char)(C.malloc((C.size_t)(len(data))))
 
 	for i := 0; i < len(data); i++ {

@@ -23,7 +23,7 @@ func main() {
 	flag.Parse()
 
 	var h *pcap.Pcap
-	var err string
+	var err error
 
 	ifs, err := pcap.Findalldevs()
 	if len(ifs) == 0 {
@@ -57,7 +57,7 @@ func main() {
 	if *expr != "" {
 		fmt.Printf("Setting filter: %s\n", *expr)
 		err := h.Setfilter(*expr)
-		if err != "" {
+		if err != nil {
 			fmt.Printf("Warning: setting filter failed: %s\n", err)
 		}
 	}
