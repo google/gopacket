@@ -35,6 +35,10 @@ type Packet struct {
 
 	Headers []interface{} // decoded headers, in order
 	Payload []byte        // remaining non-header bytes
+
+	IP  *Iphdr  // IP header (for IP packets, after decoding)
+	TCP *Tcphdr // TCP header (for TCP packets, after decoding)
+	UDP *Udphdr // UDP header (for UDP packets after decoding)
 }
 
 // Reader parses pcap files.
