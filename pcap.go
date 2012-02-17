@@ -1,3 +1,4 @@
+// Interface to both live and offline pcap parsing.
 package pcap
 
 /*
