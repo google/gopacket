@@ -42,6 +42,7 @@ type IFAddress struct {
 	// TODO: add broadcast + PtP dst ?
 }
 
+// Openlive opens a device and returns a *Pcap handler
 func Openlive(device string, snaplen int32, promisc bool, timeout_ms int32) (handle *Pcap, err string) {
 	var buf *C.char
 	buf = (*C.char)(C.calloc(ERRBUF_SIZE, 1))
@@ -49,8 +50,6 @@ func Openlive(device string, snaplen int32, promisc bool, timeout_ms int32) (han
 	var pro int32
 	if promisc {
 		pro = 1
-	} else {
-		pro = 0
 	}
 
 	dev := C.CString(device)
@@ -67,6 +66,7 @@ func Openlive(device string, snaplen int32, promisc bool, timeout_ms int32) (han
 	return
 }
 
+// Openoffline
 func Openoffline(file string) (handle *Pcap, err string) {
 	var buf *C.char
 	buf = (*C.char)(C.calloc(ERRBUF_SIZE, 1))
