@@ -48,7 +48,7 @@ type Reader struct {
 	Header       FileHeader
 }
 
-// NewReader reads pcap data from an os.Reader.
+// NewReader reads pcap data from an io.Reader.
 func NewReader(reader io.Reader) (*Reader, error) {
 	r := &Reader{
 		buf:          reader,
