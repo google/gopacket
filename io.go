@@ -1,6 +1,7 @@
 package pcap
 
 import (
+	"encoding/binary"
 	"fmt"
 	"io"
 )
@@ -89,8 +90,7 @@ func (r *Reader) Next() *Packet {
 	origLen := asUint32(d[12:16], r.flip)
 
 	data := make([]byte, capLen)
-	r.err = r.read(data)
-	if r.err != nil {
+	if r.err = r.read(data); r.err != nil {
 		return nil
 	}
 	return &Packet{
@@ -120,8 +120,7 @@ func (r *Reader) read(data []byte) error {
 
 func (r *Reader) readUint32() uint32 {
 	data := r.fourBytes
-	r.err = r.read(data)
-	if r.err != nil {
+	if r.err = r.read(data); r.err != nil {
 		return 0
 	}
 	return asUint32(data, r.flip)
@@ -129,17 +128,15 @@ func (r *Reader) readUint32() uint32 {
 
 func (r *Reader) readInt32() int32 {
 	data := r.fourBytes
-	r.err = r.read(data)
-	if r.err != nil {
+	if r.err = r.read(data); r.err != nil {
 		return 0
 	}
-	return asInt32(data, r.flip)
+	return int32(asUint32(data, r.flip))
 }
 
 func (r *Reader) readUint16() uint16 {
 	data := r.twoBytes
-	r.err = r.read(data)
-	if r.err != nil {
+	if r.err = r.read(data); r.err != nil {
 		return 0
 	}
 	return asUint16(data, r.flip)
@@ -208,18 +205,14 @@ func (e *encoder) put2(v uint16) {
 
 func asUint32(data []byte, flip bool) uint32 {
 	if flip {
-		return uint32(uint32(data[0])<<24 | uint32(data[1])<<16 | uint32(data[2])<<8 | uint32(data[3]))
+		return binary.BigEndian.Uint32(data)
 	}
-	return uint32(uint32(data[0]) | uint32(data[1])<<8 | uint32(data[2])<<16 | uint32(data[3])<<24)
-}
-
-func asInt32(data []byte, flip bool) int32 {
-	return int32(asUint32(data, flip))
+	return binary.LittleEndian.Uint32(data)
 }
 
 func asUint16(data []byte, flip bool) uint16 {
 	if flip {
-		return uint16(uint16(data[0])<<8 | uint16(data[1]))
+		return binary.BigEndian.Uint16(data)
 	}
-	return uint16(uint16(data[0]) | uint16(data[1])<<8)
+	return binary.LittleEndian.Uint16(data)
 }

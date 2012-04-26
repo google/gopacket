@@ -57,10 +57,6 @@ type addrHdr interface {
 	Len() int
 }
 
-type stringer interface {
-	String() string
-}
-
 type addrStringer interface {
 	String(addr addrHdr) string
 }
@@ -99,7 +95,7 @@ func (p *Packet) TimeString() string {
 func (p *Packet) headerString(headers []interface{}) string {
 	// If there's just one header, return that.
 	if len(headers) == 1 {
-		if hdr, ok := headers[0].(stringer); ok {
+		if hdr, ok := headers[0].(fmt.Stringer); ok {
 			return hdr.String()
 		}
 	}
