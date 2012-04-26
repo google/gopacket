@@ -57,12 +57,12 @@ func NewReader(reader io.Reader) (*Reader, error) {
 		twoBytes:     make([]byte, 2),
 		sixteenBytes: make([]byte, 16),
 	}
-	magic := r.readUint32()
-	if magic == 0xa1b2c3d4 {
+	switch magic := r.readUint32(); magic {
+	case 0xa1b2c3d4:
 		r.flip = false
-	} else if magic == 0xd4c3b2a1 {
+	case 0xd4c3b2a1:
 		r.flip = true
-	} else {
+	default:
 		return nil, fmt.Errorf("pcap: bad magic number: %0x", magic)
 	}
 	r.Header = FileHeader{
@@ -155,16 +155,14 @@ func NewWriter(writer io.Writer, header *FileHeader) (*Writer, error) {
 		writer: writer,
 		buf:    make([]byte, 24),
 	}
-	e := encoder{w.buf}
-	e.put4(header.MagicNumber)
-	e.put2(header.VersionMajor)
-	e.put2(header.VersionMinor)
-	e.put4(uint32(header.TimeZone))
-	e.put4(header.SigFigs)
-	e.put4(header.SnapLen)
-	e.put4(header.Network)
-	_, err := writer.Write(w.buf)
-	if err != nil {
+	binary.LittleEndian.PutUint32(w.buf, header.MagicNumber)
+	binary.LittleEndian.PutUint16(w.buf[4:], header.VersionMajor)
+	binary.LittleEndian.PutUint16(w.buf[6:], header.VersionMinor)
+	binary.LittleEndian.PutUint32(w.buf[8:], uint32(header.TimeZone))
+	binary.LittleEndian.PutUint32(w.buf[12:], header.SigFigs)
+	binary.LittleEndian.PutUint32(w.buf[16:], header.SnapLen)
+	binary.LittleEndian.PutUint32(w.buf[20:], header.Network)
+	if _, err := writer.Write(w.buf); err != nil {
 		return nil, err
 	}
 	return w, nil
@@ -172,35 +170,15 @@ func NewWriter(writer io.Writer, header *FileHeader) (*Writer, error) {
 
 // Writer writes a packet to the underlying writer.
 func (w *Writer) Write(pkt *Packet) error {
-	e := encoder{w.buf}
-	e.put4(uint32(pkt.Time.Sec))
-	e.put4(uint32(pkt.Time.Usec))
-	e.put4(pkt.Caplen)
-	e.put4(pkt.Len)
-	_, err := w.writer.Write(w.buf[:16])
-	if err != nil {
+	binary.LittleEndian.PutUint32(w.buf, uint32(pkt.Time.Sec))
+	binary.LittleEndian.PutUint32(w.buf[4:], uint32(pkt.Time.Usec))
+	binary.LittleEndian.PutUint32(w.buf[8:], uint32(pkt.Time.Sec))
+	binary.LittleEndian.PutUint32(w.buf[12:], pkt.Len)
+	if _, err := w.writer.Write(w.buf[:16]); err !=nil {
 		return err
 	}
-	_, err = w.writer.Write(pkt.Data)
+	_, err := w.writer.Write(pkt.Data)
 	return err
-}
-
-type encoder struct {
-	buf []byte
-}
-
-func (e *encoder) put4(v uint32) {
-	e.buf[0] = byte(v)
-	e.buf[1] = byte(v >> 8)
-	e.buf[2] = byte(v >> 16)
-	e.buf[3] = byte(v >> 24)
-	e.buf = e.buf[4:]
-}
-
-func (e *encoder) put2(v uint16) {
-	e.buf[0] = byte(v)
-	e.buf[1] = byte(v >> 8)
-	e.buf = e.buf[2:]
 }
 
 func asUint32(data []byte, flip bool) uint32 {
