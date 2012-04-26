@@ -23,6 +23,10 @@ type Pcap struct {
 	cptr *C.pcap_t
 }
 
+type pcapError struct{ string }
+
+func (e *pcapError) Error() string { return e.string }
+
 type Stat struct {
 	PacketsReceived  uint32
 	PacketsDropped   uint32
@@ -43,7 +47,7 @@ type IFAddress struct {
 }
 
 // Openlive opens a device and returns a *Pcap handler
-func OpenLive(device string, snaplen int32, promisc bool, timeout_ms int32) (handle *Pcap, err string) {
+func OpenLive(device string, snaplen int32, promisc bool, timeout_ms int32) (handle *Pcap, err error) {
 	var buf *C.char
 	buf = (*C.char)(C.calloc(ERRBUF_SIZE, 1))
 	h := new(Pcap)
@@ -58,7 +62,7 @@ func OpenLive(device string, snaplen int32, promisc bool, timeout_ms int32) (han
 	h.cptr = C.pcap_open_live(dev, C.int(snaplen), C.int(pro), C.int(timeout_ms), buf)
 	if nil == h.cptr {
 		handle = nil
-		err = C.GoString(buf)
+		err = &pcapError{C.GoString(buf)}
 	} else {
 		handle = h
 	}
@@ -67,7 +71,7 @@ func OpenLive(device string, snaplen int32, promisc bool, timeout_ms int32) (han
 }
 
 // Openoffline
-func OpenOffline(file string) (handle *Pcap, err string) {
+func OpenOffline(file string) (handle *Pcap, err error) {
 	var buf *C.char
 	buf = (*C.char)(C.calloc(ERRBUF_SIZE, 1))
 	h := new(Pcap)
@@ -78,7 +82,7 @@ func OpenOffline(file string) (handle *Pcap, err string) {
 	h.cptr = C.pcap_open_offline(cf, buf)
 	if nil == h.cptr {
 		handle = nil
-		err = C.GoString(buf)
+		err = &pcapError{C.GoString(buf)}
 	} else {
 		handle = h
 	}
