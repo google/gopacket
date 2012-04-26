@@ -125,26 +125,24 @@ func (p *Pcap) NextEx() (pkt *Packet, result int32) {
 	return
 }
 
-func (p *Pcap) Geterror() string {
-	return C.GoString(C.pcap_geterr(p.cptr))
+func (p *Pcap) Geterror() error {
+	return &pcapError{C.GoString(C.pcap_geterr(p.cptr))}
 }
 
-func (p *Pcap) Getstats() (stat *Stat, err string) {
+func (p *Pcap) Getstats() (stat *Stat, err error) {
 	var cstats _Ctype_struct_pcap_stat
 	if -1 == C.pcap_stats(p.cptr, &cstats) {
 		return nil, p.Geterror()
 	}
-
 	stats := new(Stat)
-
 	stats.PacketsReceived = uint32(cstats.ps_recv)
 	stats.PacketsDropped = uint32(cstats.ps_drop)
 	stats.PacketsIfDropped = uint32(cstats.ps_ifdrop)
 
-	return stats, ""
+	return stats, nil
 }
 
-func (p *Pcap) Setfilter(expr string) (err string) {
+func (p *Pcap) Setfilter(expr string) (err error) {
 	var bpf _Ctype_struct_bpf_program
 
 	cexpr := C.CString(expr)
@@ -160,7 +158,7 @@ func (p *Pcap) Setfilter(expr string) (err string) {
 	}
 
 	C.pcap_freecode(&bpf)
-	return ""
+	return nil
 }
 
 func Version() string {
@@ -171,11 +169,11 @@ func (p *Pcap) Datalink() int {
 	return int(C.pcap_datalink(p.cptr))
 }
 
-func (p *Pcap) Setdatalink(dlt int) string {
+func (p *Pcap) Setdatalink(dlt int) error {
 	if -1 == C.pcap_set_datalink(p.cptr, C.int(dlt)) {
 		return p.Geterror()
 	}
-	return ""
+	return nil
 }
 
 func DatalinkValueToName(dlt int) string {
@@ -263,7 +261,7 @@ func sockaddr_to_IP(rsa *syscall.RawSockaddr) (IP []byte, err error) {
 	return
 }
 
-func (p *Pcap) Inject(data []byte) (err string) {
+func (p *Pcap) Inject(data []byte) (err error) {
 	buf := (*C.char)(C.malloc((C.size_t)(len(data))))
 
 	for i := 0; i < len(data); i++ {
