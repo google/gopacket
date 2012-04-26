@@ -43,7 +43,7 @@ type IFAddress struct {
 }
 
 // Openlive opens a device and returns a *Pcap handler
-func Openlive(device string, snaplen int32, promisc bool, timeout_ms int32) (handle *Pcap, err string) {
+func OpenLive(device string, snaplen int32, promisc bool, timeout_ms int32) (handle *Pcap, err string) {
 	var buf *C.char
 	buf = (*C.char)(C.calloc(ERRBUF_SIZE, 1))
 	h := new(Pcap)
@@ -67,7 +67,7 @@ func Openlive(device string, snaplen int32, promisc bool, timeout_ms int32) (han
 }
 
 // Openoffline
-func Openoffline(file string) (handle *Pcap, err string) {
+func OpenOffline(file string) (handle *Pcap, err string) {
 	var buf *C.char
 	buf = (*C.char)(C.calloc(ERRBUF_SIZE, 1))
 	h := new(Pcap)
