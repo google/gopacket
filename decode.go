@@ -1,6 +1,7 @@
 package pcap
 
 import (
+	"encoding/binary"
 	"fmt"
 	"net"
 	"reflect"
@@ -72,17 +73,9 @@ func decodemac(pkt []byte) uint64 {
 	return mac
 }
 
-func decodeuint16(pkt []byte) uint16 {
-	return uint16(pkt[0])<<8 + uint16(pkt[1])
-}
-
-func decodeuint32(pkt []byte) uint32 {
-	return uint32(pkt[0])<<24 + uint32(pkt[1])<<16 + uint32(pkt[2])<<8 + uint32(pkt[3])
-}
-
 // Decode decodes the headers of a packet.
 func (p *Packet) Decode() {
-	p.Type = int(decodeuint16(p.Data[12:14]))
+	p.Type = int(binary.BigEndian.Uint16(p.Data[12:14]))
 	p.DestMac = decodemac(p.Data[0:6])
 	p.SrcMac = decodemac(p.Data[6:12])
 	p.Payload = p.Data[14:]
@@ -184,11 +177,11 @@ func (arp *Arphdr) String() string {
 func (p *Packet) decodeArp() {
 	pkt := p.Payload
 	arp := new(Arphdr)
-	arp.Addrtype = decodeuint16(pkt[0:2])
-	arp.Protocol = decodeuint16(pkt[2:4])
+	arp.Addrtype = binary.BigEndian.Uint16(pkt[0:2])
+	arp.Protocol = binary.BigEndian.Uint16(pkt[2:4])
 	arp.HwAddressSize = pkt[4]
 	arp.ProtAddressSize = pkt[5]
-	arp.Operation = decodeuint16(pkt[6:8])
+	arp.Operation = binary.BigEndian.Uint16(pkt[6:8])
 	arp.SourceHwAddress = pkt[8 : 8+arp.HwAddressSize]
 	arp.SourceProtAddress = pkt[8+arp.HwAddressSize : 8+arp.HwAddressSize+arp.ProtAddressSize]
 	arp.DestHwAddress = pkt[8+arp.HwAddressSize+arp.ProtAddressSize : 8+2*arp.HwAddressSize+arp.ProtAddressSize]
@@ -220,14 +213,14 @@ func (p *Packet) decodeIp() {
 	ip.Version = uint8(pkt[0]) >> 4
 	ip.Ihl = uint8(pkt[0]) & 0x0F
 	ip.Tos = pkt[1]
-	ip.Length = decodeuint16(pkt[2:4])
-	ip.Id = decodeuint16(pkt[4:6])
-	flagsfrags := decodeuint16(pkt[6:8])
+	ip.Length = binary.BigEndian.Uint16(pkt[2:4])
+	ip.Id = binary.BigEndian.Uint16(pkt[4:6])
+	flagsfrags := binary.BigEndian.Uint16(pkt[6:8])
 	ip.Flags = uint8(flagsfrags >> 13)
 	ip.FragOffset = flagsfrags & 0x1FFF
 	ip.Ttl = pkt[8]
 	ip.Protocol = pkt[9]
-	ip.Checksum = decodeuint16(pkt[10:12])
+	ip.Checksum = binary.BigEndian.Uint16(pkt[10:12])
 	ip.SrcIp = pkt[12:16]
 	ip.DestIp = pkt[16:20]
 	pEnd := int(ip.Length)
@@ -289,15 +282,15 @@ const (
 func (p *Packet) decodeTcp() {
 	pkt := p.Payload
 	tcp := new(Tcphdr)
-	tcp.SrcPort = decodeuint16(pkt[0:2])
-	tcp.DestPort = decodeuint16(pkt[2:4])
-	tcp.Seq = decodeuint32(pkt[4:8])
-	tcp.Ack = decodeuint32(pkt[8:12])
+	tcp.SrcPort = binary.BigEndian.Uint16(pkt[0:2])
+	tcp.DestPort = binary.BigEndian.Uint16(pkt[2:4])
+	tcp.Seq = binary.BigEndian.Uint32(pkt[4:8])
+	tcp.Ack = binary.BigEndian.Uint32(pkt[8:12])
 	tcp.DataOffset = (pkt[12] & 0xF0) >> 4
-	tcp.Flags = uint16(decodeuint16(pkt[12:14]) & 0x1FF)
-	tcp.Window = decodeuint16(pkt[14:16])
-	tcp.Checksum = decodeuint16(pkt[16:18])
-	tcp.Urgent = decodeuint16(pkt[18:20])
+	tcp.Flags = binary.BigEndian.Uint16(pkt[12:14]) & 0x1FF
+	tcp.Window = binary.BigEndian.Uint16(pkt[14:16])
+	tcp.Checksum = binary.BigEndian.Uint16(pkt[16:18])
+	tcp.Urgent = binary.BigEndian.Uint16(pkt[18:20])
 	p.Payload = pkt[tcp.DataOffset*4:]
 	p.Headers = append(p.Headers, tcp)
 }
@@ -350,10 +343,10 @@ type Udphdr struct {
 func (p *Packet) decodeUdp() {
 	pkt := p.Payload
 	udp := new(Udphdr)
-	udp.SrcPort = decodeuint16(pkt[0:2])
-	udp.DestPort = decodeuint16(pkt[2:4])
-	udp.Length = decodeuint16(pkt[4:6])
-	udp.Checksum = decodeuint16(pkt[6:8])
+	udp.SrcPort = binary.BigEndian.Uint16(pkt[0:2])
+	udp.DestPort = binary.BigEndian.Uint16(pkt[2:4])
+	udp.Length = binary.BigEndian.Uint16(pkt[4:6])
+	udp.Checksum = binary.BigEndian.Uint16(pkt[6:8])
 	p.Headers = append(p.Headers, udp)
 	p.Payload = pkt[8:]
 }
@@ -378,9 +371,9 @@ func (p *Packet) decodeIcmp() *Icmphdr {
 	icmp := new(Icmphdr)
 	icmp.Type = pkt[0]
 	icmp.Code = pkt[1]
-	icmp.Checksum = decodeuint16(pkt[2:4])
-	icmp.Id = decodeuint16(pkt[4:6])
-	icmp.Seq = decodeuint16(pkt[6:8])
+	icmp.Checksum = binary.BigEndian.Uint16(pkt[2:4])
+	icmp.Id = binary.BigEndian.Uint16(pkt[4:6])
+	icmp.Seq = binary.BigEndian.Uint16(pkt[6:8])
 	p.Payload = pkt[8:]
 	p.Headers = append(p.Headers, icmp)
 	return icmp
@@ -433,9 +426,9 @@ func (p *Packet) decodeIp6() {
 	pkt := p.Payload
 	ip6 := new(Ip6hdr)
 	ip6.Version = uint8(pkt[0]) >> 4
-	ip6.TrafficClass = uint8((decodeuint16(pkt[0:2]) >> 4) & 0x00FF)
-	ip6.FlowLabel = decodeuint32(pkt[0:4]) & 0x000FFFFF
-	ip6.Length = decodeuint16(pkt[4:6])
+	ip6.TrafficClass = uint8((binary.BigEndian.Uint16(pkt[0:2]) >> 4) & 0x00FF)
+	ip6.FlowLabel = binary.BigEndian.Uint32(pkt[0:4]) & 0x000FFFFF
+	ip6.Length = binary.BigEndian.Uint16(pkt[4:6])
 	ip6.NextHeader = pkt[6]
 	ip6.HopLimit = pkt[7]
 	ip6.SrcIp = pkt[8:24]
