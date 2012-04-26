@@ -69,7 +69,7 @@ func decodemac(pkt []byte) uint64 {
 	return mac
 }
 
-// Decode decodes the headers of a packet.
+// Decode decodes the headers of a Packet.
 func (p *Packet) Decode() {
 	p.Type = int(binary.BigEndian.Uint16(p.Data[12:14]))
 	p.DestMac = decodemac(p.Data[0:6])
@@ -136,6 +136,7 @@ func (p *Packet) String() string {
 	return fmt.Sprintf("%s %s", p.TimeString(), p.headerString(p.Headers))
 }
 
+// Arphdr is a ARP packet header.
 type Arphdr struct {
 	Addrtype          uint16
 	Protocol          uint16
@@ -148,26 +149,21 @@ type Arphdr struct {
 	DestProtAddress   []byte
 }
 
-func Arpop(op uint16) string {
-	switch op {
+func (arp *Arphdr) String() (s string) {
+	switch arp.Operation {
 	case 1:
-		return "Request"
+		s = "ARP request"
 	case 2:
-		return "Reply"
+		s = "ARP Reply"
 	}
-	return ""
-}
-
-func (arp *Arphdr) String() string {
-	result := fmt.Sprintf("ARP %s ", Arpop(arp.Operation))
 	if arp.Addrtype == LINKTYPE_ETHERNET && arp.Protocol == TYPE_IP {
-		result = fmt.Sprintf("%012x (%s) > %012x (%s)",
+		s = fmt.Sprintf("%012x (%s) > %012x (%s)",
 			decodemac(arp.SourceHwAddress), arp.SourceProtAddress,
 			decodemac(arp.DestHwAddress), arp.DestProtAddress)
 	} else {
-		result = fmt.Sprintf("addrtype = %d protocol = %d", arp.Addrtype, arp.Protocol)
+		s = fmt.Sprintf("addrtype = %d protocol = %d", arp.Addrtype, arp.Protocol)
 	}
-	return result
+	return
 }
 
 func (p *Packet) decodeArp() {
@@ -187,6 +183,7 @@ func (p *Packet) decodeArp() {
 	p.Payload = p.Payload[8+2*arp.HwAddressSize+2*arp.ProtAddressSize:]
 }
 
+// IPadr is the header of an IP packet.
 type Iphdr struct {
 	Version    uint8
 	Ihl        uint8
@@ -380,8 +377,7 @@ func (icmp *Icmphdr) String(hdr addrHdr) string {
 		hdr.SrcAddr(), hdr.DestAddr(), icmp.Type, icmp.Code)
 }
 
-func (icmp *Icmphdr) TypeString() string {
-	result := ""
+func (icmp *Icmphdr) TypeString() (result string) {
 	switch icmp.Type {
 	case 0:
 		result = fmt.Sprintf("Echo reply seq=%d", icmp.Seq)
@@ -403,7 +399,7 @@ func (icmp *Icmphdr) TypeString() string {
 	case 30:
 		result = "Traceroute"
 	}
-	return result
+	return
 }
 
 type Ip6hdr struct {
