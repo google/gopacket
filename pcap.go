@@ -25,8 +25,6 @@ type Pcap struct {
 
 type pcapError struct{ string }
 
-func (e *pcapError) Error() string { return e.string }
-
 type Stat struct {
 	PacketsReceived  uint32
 	PacketsDropped   uint32
@@ -45,6 +43,12 @@ type IFAddress struct {
 	Netmask net.IPMask
 	// TODO: add broadcast + PtP dst ?
 }
+
+func Version() string               { return C.GoString(C.pcap_lib_version()) }
+func (p *Pcap) Datalink() int       { return int(C.pcap_datalink(p.cptr)) }
+func (e *pcapError) Error() string  { return e.string }
+func (p *Pcap) Geterror() error     { return &pcapError{C.GoString(C.pcap_geterr(p.cptr))} }
+func (p *Pcap) Next() (pkt *Packet) { rv, _ := p.NextEx(); return rv }
 
 // Openlive opens a device and returns a *Pcap handler
 func OpenLive(device string, snaplen int32, promisc bool, timeout_ms int32) (handle *Pcap, err error) {
@@ -90,12 +94,6 @@ func OpenOffline(file string) (handle *Pcap, err error) {
 	return
 }
 
-func (p *Pcap) Next() (pkt *Packet) {
-	rv, _ := p.NextEx()
-
-	return rv
-}
-
 func (p *Pcap) NextEx() (pkt *Packet, result int32) {
 	var pkthdr_ptr *C.struct_pcap_pkthdr
 	var pkthdr C.struct_pcap_pkthdr
@@ -108,7 +106,6 @@ func (p *Pcap) NextEx() (pkt *Packet, result int32) {
 	pkthdr = *pkthdr_ptr
 
 	if nil == buf {
-		pkt = nil
 		return
 	}
 	pkt = new(Packet)
@@ -121,12 +118,7 @@ func (p *Pcap) NextEx() (pkt *Packet, result int32) {
 	for i := uint32(0); i < pkt.Caplen; i++ {
 		pkt.Data[i] = *(*byte)(unsafe.Pointer(uintptr(buf) + uintptr(i)))
 	}
-
 	return
-}
-
-func (p *Pcap) Geterror() error {
-	return &pcapError{C.GoString(C.pcap_geterr(p.cptr))}
 }
 
 func (p *Pcap) Getstats() (stat *Stat, err error) {
@@ -144,7 +136,6 @@ func (p *Pcap) Getstats() (stat *Stat, err error) {
 
 func (p *Pcap) Setfilter(expr string) (err error) {
 	var bpf _Ctype_struct_bpf_program
-
 	cexpr := C.CString(expr)
 	defer C.free(unsafe.Pointer(cexpr))
 
@@ -156,17 +147,8 @@ func (p *Pcap) Setfilter(expr string) (err error) {
 		C.pcap_freecode(&bpf)
 		return p.Geterror()
 	}
-
 	C.pcap_freecode(&bpf)
 	return nil
-}
-
-func Version() string {
-	return C.GoString(C.pcap_lib_version())
-}
-
-func (p *Pcap) Datalink() int {
-	return int(C.pcap_datalink(p.cptr))
 }
 
 func (p *Pcap) Setdatalink(dlt int) error {
@@ -177,16 +159,14 @@ func (p *Pcap) Setdatalink(dlt int) error {
 }
 
 func DatalinkValueToName(dlt int) string {
-	name := C.pcap_datalink_val_to_name(C.int(dlt))
-	if nil != name {
+	if name := C.pcap_datalink_val_to_name(C.int(dlt)); name != nil {
 		return C.GoString(name)
 	}
 	return ""
 }
 
 func DatalinkValueToDescription(dlt int) string {
-	desc := C.pcap_datalink_val_to_description(C.int(dlt))
-	if nil != desc {
+	if desc := C.pcap_datalink_val_to_description(C.int(dlt)); desc != nil {
 		return C.GoString(desc)
 	}
 	return ""
@@ -227,12 +207,10 @@ func findalladdresses(addresses *_Ctype_struct_pcap_addr) (retval []IFAddress) {
 	for curaddr := addresses; curaddr != nil; curaddr = (*_Ctype_struct_pcap_addr)(curaddr.next) {
 		var a IFAddress
 		var err error
-		a.IP, err = sockaddr_to_IP((*syscall.RawSockaddr)(unsafe.Pointer(curaddr.addr)))
-		if err != nil {
+		if a.IP, err = sockaddr_to_IP((*syscall.RawSockaddr)(unsafe.Pointer(curaddr.addr))); err != nil {
 			continue
 		}
-		a.Netmask, err = sockaddr_to_IP((*syscall.RawSockaddr)(unsafe.Pointer(curaddr.addr)))
-		if err != nil {
+		if a.Netmask, err = sockaddr_to_IP((*syscall.RawSockaddr)(unsafe.Pointer(curaddr.addr))); err != nil {
 			continue
 		}
 		retval = append(retval, a)
