@@ -23,7 +23,7 @@ const (
 const (
 	ERRBUF_SIZE = 256
 
-	// according to pcap-linktype(7)
+	// According to pcap-linktype(7).
 	LINKTYPE_NULL             = 0
 	LINKTYPE_ETHERNET         = 1
 	LINKTYPE_TOKEN_RING       = 6
@@ -235,17 +235,9 @@ func (p *Packet) decodeIp() {
 	}
 }
 
-func (ip *Iphdr) SrcAddr() string {
-	return net.IP(ip.SrcIp).String()
-}
-
-func (ip *Iphdr) DestAddr() string {
-	return net.IP(ip.DestIp).String()
-}
-
-func (ip *Iphdr) Len() int {
-	return int(ip.Length)
-}
+func (ip *Iphdr) SrcAddr() string  { return net.IP(ip.SrcIp).String() }
+func (ip *Iphdr) DestAddr() string { return net.IP(ip.DestIp).String() }
+func (ip *Iphdr) Len() int         { return int(ip.Length) }
 
 type Tcphdr struct {
 	SrcPort    uint16
@@ -440,14 +432,6 @@ func (p *Packet) decodeIp6() {
 	}
 }
 
-func (ip6 *Ip6hdr) SrcAddr() string {
-	return net.IP(ip6.SrcIp).String()
-}
-
-func (ip6 *Ip6hdr) DestAddr() string {
-	return net.IP(ip6.DestIp).String()
-}
-
-func (ip6 *Ip6hdr) Len() int {
-	return int(ip6.Length)
-}
+func (ip6 *Ip6hdr) SrcAddr() string  { return net.IP(ip6.SrcIp).String() }
+func (ip6 *Ip6hdr) DestAddr() string { return net.IP(ip6.DestIp).String() }
+func (ip6 *Ip6hdr) Len() int         { return int(ip6.Length) }
