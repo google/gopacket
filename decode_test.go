@@ -5,7 +5,7 @@ import (
 	"testing"
 )
 
-var testTcpPacket *Packet = &Packet{
+var testSimpleTcpPacket *Packet = &Packet{
 		Data: []byte{
 			0x00, 0x00, 0x0c, 0x9f, 0xf0, 0x20, 0xbc, 0x30, 0x5b, 0xe8, 0xd3, 0x49,
 			0x08, 0x00, 0x45, 0x00, 0x01, 0xa4, 0x39, 0xdf, 0x40, 0x00, 0x40, 0x06,
@@ -46,14 +46,14 @@ var testTcpPacket *Packet = &Packet{
 			0x0d, 0x0a,
 		}}
 
-func BenchmarkDecodeTcpPacket(b *testing.B) {
+func BenchmarkDecodeSimpleTcpPacket(b *testing.B) {
   for i := 0; i < b.N; i++ {
-    testTcpPacket.Decode()
+    testSimpleTcpPacket.Decode()
   }
 }
 
 func TestDecodeSimpleTcpPacket(t *testing.T) {
-        p := testTcpPacket
+        p := testSimpleTcpPacket
 	p.Decode()
 	if p.DestMac != 0x00000c9ff020 {
 		t.Error("Dest mac", p.DestMac)
