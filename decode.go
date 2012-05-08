@@ -236,6 +236,7 @@ func (p *Packet) decodeIp() {
 	}
 	p.Payload = pkt[ip.Ihl*4 : pEnd]
 	p.Headers = append(p.Headers, ip)
+	p.IP = ip
 
 	switch ip.Protocol {
 	case IP_TCP:
@@ -300,6 +301,7 @@ func (p *Packet) decodeTcp() {
 	tcp.Urgent = decodeuint16(pkt[18:20])
 	p.Payload = pkt[tcp.DataOffset*4:]
 	p.Headers = append(p.Headers, tcp)
+	p.TCP = tcp
 }
 
 func (tcp *Tcphdr) String(hdr addrHdr) string {
@@ -355,6 +357,7 @@ func (p *Packet) decodeUdp() {
 	udp.Length = decodeuint16(pkt[4:6])
 	udp.Checksum = decodeuint16(pkt[6:8])
 	p.Headers = append(p.Headers, udp)
+	p.UDP = udp
 	p.Payload = pkt[8:]
 }
 

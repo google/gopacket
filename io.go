@@ -3,6 +3,7 @@ package pcap
 import (
 	"fmt"
 	"io"
+	"time"
 )
 
 // FileHeader is the parsed header of a pcap file.
@@ -22,7 +23,15 @@ type PacketTime struct {
 	Usec int32
 }
 
+// Convert the PacketTime to a go Time struct.
+func (p *PacketTime) Time() time.Time {
+	return time.Unix(int64(p.Sec), int64(p.Usec)*1000)
+}
+
 // Packet is a single packet parsed from a pcap file.
+//
+// Convenient access to IP, TCP, and UDP headers is provided after Decode()
+// is called if the packet is of the appropriate type.
 type Packet struct {
 	Time   PacketTime // packet send/receive time
 	Caplen uint32     // bytes stored in the file (caplen <= len)
@@ -35,6 +44,10 @@ type Packet struct {
 
 	Headers []interface{} // decoded headers, in order
 	Payload []byte        // remaining non-header bytes
+
+	IP  *Iphdr  // IP header (for IP packets, after decoding)
+	TCP *Tcphdr // TCP header (for TCP packets, after decoding)
+	UDP *Udphdr // UDP header (for UDP packets after decoding)
 }
 
 // Reader parses pcap files.
