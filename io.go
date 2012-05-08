@@ -1,6 +1,7 @@
 package pcap
 
 import (
+	"encoding/binary"
 	"fmt"
 	"io"
 	"time"
@@ -61,7 +62,7 @@ type Reader struct {
 	Header       FileHeader
 }
 
-// NewReader reads pcap data from an os.Reader.
+// NewReader reads pcap data from an io.Reader.
 func NewReader(reader io.Reader) (*Reader, error) {
 	r := &Reader{
 		buf:          reader,
@@ -69,12 +70,12 @@ func NewReader(reader io.Reader) (*Reader, error) {
 		twoBytes:     make([]byte, 2),
 		sixteenBytes: make([]byte, 16),
 	}
-	magic := r.readUint32()
-	if magic == 0xa1b2c3d4 {
+	switch magic := r.readUint32(); magic {
+	case 0xa1b2c3d4:
 		r.flip = false
-	} else if magic == 0xd4c3b2a1 {
+	case 0xd4c3b2a1:
 		r.flip = true
-	} else {
+	default:
 		return nil, fmt.Errorf("pcap: bad magic number: %0x", magic)
 	}
 	r.Header = FileHeader{
@@ -102,8 +103,7 @@ func (r *Reader) Next() *Packet {
 	origLen := asUint32(d[12:16], r.flip)
 
 	data := make([]byte, capLen)
-	r.err = r.read(data)
-	if r.err != nil {
+	if r.err = r.read(data); r.err != nil {
 		return nil
 	}
 	return &Packet{
@@ -133,8 +133,7 @@ func (r *Reader) read(data []byte) error {
 
 func (r *Reader) readUint32() uint32 {
 	data := r.fourBytes
-	r.err = r.read(data)
-	if r.err != nil {
+	if r.err = r.read(data); r.err != nil {
 		return 0
 	}
 	return asUint32(data, r.flip)
@@ -142,17 +141,15 @@ func (r *Reader) readUint32() uint32 {
 
 func (r *Reader) readInt32() int32 {
 	data := r.fourBytes
-	r.err = r.read(data)
-	if r.err != nil {
+	if r.err = r.read(data); r.err != nil {
 		return 0
 	}
-	return asInt32(data, r.flip)
+	return int32(asUint32(data, r.flip))
 }
 
 func (r *Reader) readUint16() uint16 {
 	data := r.twoBytes
-	r.err = r.read(data)
-	if r.err != nil {
+	if r.err = r.read(data); r.err != nil {
 		return 0
 	}
 	return asUint16(data, r.flip)
@@ -171,16 +168,14 @@ func NewWriter(writer io.Writer, header *FileHeader) (*Writer, error) {
 		writer: writer,
 		buf:    make([]byte, 24),
 	}
-	e := encoder{w.buf}
-	e.put4(header.MagicNumber)
-	e.put2(header.VersionMajor)
-	e.put2(header.VersionMinor)
-	e.put4(uint32(header.TimeZone))
-	e.put4(header.SigFigs)
-	e.put4(header.SnapLen)
-	e.put4(header.Network)
-	_, err := writer.Write(w.buf)
-	if err != nil {
+	binary.LittleEndian.PutUint32(w.buf, header.MagicNumber)
+	binary.LittleEndian.PutUint16(w.buf[4:], header.VersionMajor)
+	binary.LittleEndian.PutUint16(w.buf[6:], header.VersionMinor)
+	binary.LittleEndian.PutUint32(w.buf[8:], uint32(header.TimeZone))
+	binary.LittleEndian.PutUint32(w.buf[12:], header.SigFigs)
+	binary.LittleEndian.PutUint32(w.buf[16:], header.SnapLen)
+	binary.LittleEndian.PutUint32(w.buf[20:], header.Network)
+	if _, err := writer.Write(w.buf); err != nil {
 		return nil, err
 	}
 	return w, nil
@@ -188,51 +183,27 @@ func NewWriter(writer io.Writer, header *FileHeader) (*Writer, error) {
 
 // Writer writes a packet to the underlying writer.
 func (w *Writer) Write(pkt *Packet) error {
-	e := encoder{w.buf}
-	e.put4(uint32(pkt.Time.Sec))
-	e.put4(uint32(pkt.Time.Usec))
-	e.put4(pkt.Caplen)
-	e.put4(pkt.Len)
-	_, err := w.writer.Write(w.buf[:16])
-	if err != nil {
+	binary.LittleEndian.PutUint32(w.buf, uint32(pkt.Time.Sec))
+	binary.LittleEndian.PutUint32(w.buf[4:], uint32(pkt.Time.Usec))
+	binary.LittleEndian.PutUint32(w.buf[8:], uint32(pkt.Time.Sec))
+	binary.LittleEndian.PutUint32(w.buf[12:], pkt.Len)
+	if _, err := w.writer.Write(w.buf[:16]); err !=nil {
 		return err
 	}
-	_, err = w.writer.Write(pkt.Data)
+	_, err := w.writer.Write(pkt.Data)
 	return err
-}
-
-type encoder struct {
-	buf []byte
-}
-
-func (e *encoder) put4(v uint32) {
-	e.buf[0] = byte(v)
-	e.buf[1] = byte(v >> 8)
-	e.buf[2] = byte(v >> 16)
-	e.buf[3] = byte(v >> 24)
-	e.buf = e.buf[4:]
-}
-
-func (e *encoder) put2(v uint16) {
-	e.buf[0] = byte(v)
-	e.buf[1] = byte(v >> 8)
-	e.buf = e.buf[2:]
 }
 
 func asUint32(data []byte, flip bool) uint32 {
 	if flip {
-		return uint32(uint32(data[0])<<24 | uint32(data[1])<<16 | uint32(data[2])<<8 | uint32(data[3]))
+		return binary.BigEndian.Uint32(data)
 	}
-	return uint32(uint32(data[0]) | uint32(data[1])<<8 | uint32(data[2])<<16 | uint32(data[3])<<24)
-}
-
-func asInt32(data []byte, flip bool) int32 {
-	return int32(asUint32(data, flip))
+	return binary.LittleEndian.Uint32(data)
 }
 
 func asUint16(data []byte, flip bool) uint16 {
 	if flip {
-		return uint16(uint16(data[0])<<8 | uint16(data[1]))
+		return binary.BigEndian.Uint16(data)
 	}
-	return uint16(uint16(data[0]) | uint16(data[1])<<8)
+	return binary.LittleEndian.Uint16(data)
 }
