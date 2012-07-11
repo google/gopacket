@@ -18,6 +18,7 @@ import (
 	"net"
 	"syscall"
 	"unsafe"
+	"time"
 )
 
 type Pcap struct {
@@ -106,8 +107,7 @@ func (p *Pcap) NextEx() (pkt *Packet, result int32) {
 		return
 	}
 	pkt = new(Packet)
-	pkt.Time.Sec = int32(pkthdr.ts.tv_sec)
-	pkt.Time.Usec = int32(pkthdr.ts.tv_usec)
+	pkt.Time = time.Unix(int64(pkthdr.ts.tv_sec), int64(pkthdr.ts.tv_usec))
 	pkt.Caplen = uint32(pkthdr.caplen)
 	pkt.Len = uint32(pkthdr.len)
 	pkt.Data = make([]byte, pkthdr.caplen)
