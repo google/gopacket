@@ -4,6 +4,7 @@ import (
 	"encoding/binary"
 	"fmt"
 	"io"
+	"time"
 )
 
 // FileHeader is the parsed header of a pcap file.
@@ -25,10 +26,10 @@ type PacketTime struct {
 
 // Packet is a single packet parsed from a pcap file.
 type Packet struct {
-	Time   PacketTime // packet send/receive time
-	Caplen uint32     // bytes stored in the file (caplen <= len)
-	Len    uint32     // bytes sent/received
-	Data   []byte     // packet data
+	Time   time.Time // packet send/receive time
+	Caplen uint32    // bytes stored in the file (caplen <= len)
+	Len    uint32    // bytes sent/received
+	Data   []byte    // packet data
 
 	Type    int // protocol type, see LINKTYPE_*
 	DestMac uint64
@@ -94,10 +95,7 @@ func (r *Reader) Next() *Packet {
 		return nil
 	}
 	return &Packet{
-		Time: PacketTime{
-			Sec:  int32(timeSec),
-			Usec: int32(timeUsec),
-		},
+		Time: time.Unix(int64(timeSec), int64(timeUsec)),
 		Caplen: capLen,
 		Len:    origLen,
 		Data:   data,
@@ -170,11 +168,11 @@ func NewWriter(writer io.Writer, header *FileHeader) (*Writer, error) {
 
 // Writer writes a packet to the underlying writer.
 func (w *Writer) Write(pkt *Packet) error {
-	binary.LittleEndian.PutUint32(w.buf, uint32(pkt.Time.Sec))
-	binary.LittleEndian.PutUint32(w.buf[4:], uint32(pkt.Time.Usec))
-	binary.LittleEndian.PutUint32(w.buf[8:], uint32(pkt.Time.Sec))
+	binary.LittleEndian.PutUint32(w.buf, uint32(pkt.Time.Unix()))
+	binary.LittleEndian.PutUint32(w.buf[4:], uint32(pkt.Time.Nanosecond()))
+	binary.LittleEndian.PutUint32(w.buf[8:], uint32(pkt.Time.Unix()))
 	binary.LittleEndian.PutUint32(w.buf[12:], pkt.Len)
-	if _, err := w.writer.Write(w.buf[:16]); err !=nil {
+	if _, err := w.writer.Write(w.buf[:16]); err != nil {
 		return err
 	}
 	_, err := w.writer.Write(pkt.Data)

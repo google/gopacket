@@ -6,7 +6,6 @@ import (
 	"net"
 	"reflect"
 	"strings"
-	"time"
 )
 
 const (
@@ -86,12 +85,6 @@ func (p *Packet) Decode() {
 	}
 }
 
-// TimeString returns the packet time in a human-readable string.
-func (p *Packet) TimeString() string {
-	t := time.Unix(int64(p.Time.Sec), 0)
-	return fmt.Sprintf("%02d:%02d:%02d.%06d ", t.Hour(), t.Minute(), t.Second(), p.Time.Usec)
-}
-
 func (p *Packet) headerString(headers []interface{}) string {
 	// If there's just one header, return that.
 	if len(headers) == 1 {
@@ -104,7 +97,7 @@ func (p *Packet) headerString(headers []interface{}) string {
 		// Commonly the first header is an address.
 		if addr, ok := p.Headers[0].(addrHdr); ok {
 			if hdr, ok := p.Headers[1].(addrStringer); ok {
-				return fmt.Sprintf("%s %s", p.TimeString(), hdr.String(addr))
+				return fmt.Sprintf("%s %s", p.Time, hdr.String(addr))
 			}
 		}
 	}
@@ -131,9 +124,9 @@ func (p *Packet) headerString(headers []interface{}) string {
 func (p *Packet) String() string {
 	// If there are no headers, print "unsupported protocol".
 	if len(p.Headers) == 0 {
-		return fmt.Sprintf("%s unsupported protocol %d", p.TimeString(), int(p.Type))
+		return fmt.Sprintf("%s unsupported protocol %d", p.Time, int(p.Type))
 	}
-	return fmt.Sprintf("%s %s", p.TimeString(), p.headerString(p.Headers))
+	return fmt.Sprintf("%s %s", p.Time, p.headerString(p.Headers))
 }
 
 // Arphdr is a ARP packet header.
