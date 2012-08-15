@@ -64,8 +64,8 @@ func main() {
 
 	for pkt := h.Next(); pkt != nil; pkt = h.Next() {
 		fmt.Printf("time: %d.%06d (%s) caplen: %d len: %d\nData:",
-			int64(pkt.Time.Sec), int64(pkt.Time.Usec),
-			time.Unix(int64(pkt.Time.Sec), 0).String(), int64(pkt.Caplen), int64(pkt.Len))
+			int64(pkt.Time.Second()), int64(pkt.Time.Nanosecond()),
+			time.Unix(int64(pkt.Time.Second()), 0).String(), int64(pkt.Caplen), int64(pkt.Len))
 		for i := uint32(0); i < pkt.Caplen; i++ {
 			if i%32 == 0 {
 				fmt.Printf("\n")
