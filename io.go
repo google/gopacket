@@ -107,7 +107,7 @@ func (r *Reader) Next() *Packet {
 		return nil
 	}
 	return &Packet{
-		Time: time.Unix(int64(timeSec), int64(timeUsec)),
+		Time:   time.Unix(int64(timeSec), int64(timeUsec)),
 		Caplen: capLen,
 		Len:    origLen,
 		Data:   data,

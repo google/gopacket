@@ -9,9 +9,10 @@ import (
 )
 
 const (
-	TYPE_IP  = 0x0800
-	TYPE_ARP = 0x0806
-	TYPE_IP6 = 0x86DD
+	TYPE_IP   = 0x0800
+	TYPE_ARP  = 0x0806
+	TYPE_IP6  = 0x86DD
+	TYPE_VLAN = 0x8100
 
 	IP_ICMP = 1
 	IP_INIP = 4
@@ -82,6 +83,8 @@ func (p *Packet) Decode() {
 		p.decodeIp6()
 	case TYPE_ARP:
 		p.decodeArp()
+	case TYPE_VLAN:
+		p.decodeVlan()
 	}
 }
 
@@ -232,6 +235,36 @@ func (p *Packet) decodeIp() {
 func (ip *Iphdr) SrcAddr() string  { return net.IP(ip.SrcIp).String() }
 func (ip *Iphdr) DestAddr() string { return net.IP(ip.DestIp).String() }
 func (ip *Iphdr) Len() int         { return int(ip.Length) }
+
+type Vlanhdr struct {
+	Priority       byte
+	DropEligible   bool
+	VlanIdentifier int
+	Type           int // Not actually part of the vlan header, but the type of the actual packet
+}
+
+func (v *Vlanhdr) String() {
+	fmt.Sprintf("VLAN Prioity:%d Drop:%v Tag:%d", v.Prioity, v.DropEligible, v.VlanIdentifier)
+}
+
+func (p *Packet) decodeVlan() {
+	pkt := p.Payload
+	vlan := new(Vlanhdr)
+	vlan.Priority = (pkt[2] & 0xE0) >> 13
+	vlan.DropEligible = pkt[2]&0x10 != 0
+	vlan.VlanIdentifier = int(binary.BigEndian.Uint16(pkt[:2])) & 0x0FFF
+	vlan.Type = int(binary.BigEndian.Uint16(p.Payload[2:4]))
+	p.Headers = append(p.Headers, vlan)
+	p.Payload = p.Payload[4:]
+	switch vlan.Type {
+	case TYPE_IP:
+		p.decodeIp()
+	case TYPE_IP6:
+		p.decodeIp6()
+	case TYPE_ARP:
+		p.decodeArp()
+	}
+}
 
 type Tcphdr struct {
 	SrcPort    uint16
