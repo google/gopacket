@@ -17,8 +17,8 @@ import (
 	"errors"
 	"net"
 	"syscall"
-	"unsafe"
 	"time"
+	"unsafe"
 )
 
 type Pcap struct {
@@ -44,7 +44,7 @@ type IFAddress struct {
 	// TODO: add broadcast + PtP dst ?
 }
 
-func (p *Pcap) Next() (pkt *Packet) { 
+func (p *Pcap) Next() (pkt *Packet) {
 	rv, _ := p.NextEx()
 	return rv
 }
