@@ -1,140 +1,336 @@
 // Copyright (c) 2012 Graeme Connell. All rights reserved.
 // Copyright (c) 2009-2012 Andreas Krennmair. All rights reserved.
 
-package pcap
+package gopacket
 
 import (
 	"encoding/binary"
-	"fmt"
-	"net"
-	"reflect"
-	"strings"
+	"errors"
 )
+
+type LayerType int
 
 const (
-	TYPE_IP   = 0x0800
-	TYPE_ARP  = 0x0806
-	TYPE_IP6  = 0x86DD
-	TYPE_VLAN = 0x8100
-
-	IP_ICMP = 1
-	IP_INIP = 4
-	IP_TCP  = 6
-	IP_UDP  = 17
+	TYPE_RAW            LayerType = iota // Contains raw bytes
+	TYPE_DECODE_FAILURE                  // We were unable to decode this layer
+	TYPE_ETHERNET
+	TYPE_IP4
+	TYPE_IP6
+	TYPE_TCP
+	TYPE_UDP
+	TYPE_ICMP
+	TYPE_DOT1Q
+	TYPE_ARP
 )
+
+type Layer interface {
+	Type() LayerType
+}
+
+type Payload struct {
+	Data []byte
+}
+
+func (p *Payload) Type() LayerType { return TYPE_RAW }
+func (p *Payload) Payload() []byte { return p.Data }
+
+// An address
+
+type Address interface {
+	Raw() []byte
+	String() string
+}
+type MacAddress []byte
+
+func (a MacAddress) Raw() []byte    { return a }
+func (a MacAddress) String() string { return string(a) }
+
+type IPv4Address []byte
+
+func (a IPv4Address) Raw() []byte    { return a }
+func (a IPv4Address) String() string { return string(a) }
+
+type IPv6Address []byte
+
+func (a IPv6Address) Raw() []byte    { return a }
+func (a IPv6Address) String() string { return string(a) }
+
+// These layers correspond to Internet Protocol Suite (TCP/IP) layers, and their
+// corresponding OSI layers, as best as possible.
+
+type LinkLayer interface {
+	Layer
+	SrcLinkAddr() Address
+	DstLinkAddr() Address
+}
+type NetworkLayer interface {
+	Layer
+	SrcHostAddr() Address
+	DstHostAddr() Address
+}
+type TransportLayer interface {
+	Layer
+	SrcAppAddr() Address
+	DstAppAddr() Address
+}
+type ApplicationLayer interface {
+	Layer
+	Payload() []byte
+}
+
+type LinkType int
+
+type Packet interface {
+	// Returns all data associated with this packet
+	Data() []byte
+	// Returns all layers in this packet, computing them as necessary
+	Layers() []Layer
+	// Returns the first layer in this packet of the given type, or nil
+	Layer(LayerType) Layer
+	// Returns the data layer type
+	LinkType() LinkType
+	// Printable
+	String() string
+	// Accessors to specific commonly-available layers, return nil if the layer
+	// doesn't exist.
+	LinkLayer() LinkLayer
+	NetworkLayer() NetworkLayer
+	TransportLayer() TransportLayer
+	ApplicationLayer() ApplicationLayer
+}
+
+type specificLayers struct {
+	// Pointers to the various important layers
+	link        LinkLayer
+	network     NetworkLayer
+	transport   TransportLayer
+	application ApplicationLayer
+}
+
+func (s *specificLayers) LinkLayer() LinkLayer {
+	return s.link
+}
+func (s *specificLayers) NetworkLayer() NetworkLayer {
+	return s.network
+}
+func (s *specificLayers) TransportLayer() TransportLayer {
+	return s.transport
+}
+func (s *specificLayers) ApplicationLayer() ApplicationLayer {
+	return s.application
+}
+
+type packet struct {
+	// data contains the entire packet data for a packet
+	data []byte
+	// encoded contains all the packet data we have yet to decode
+	encoded []byte
+	// layers contains each layer we've already decoded
+	layers []Layer
+	// linkType contains the link type for the underlying transport
+	linkType LinkType
+	// decoder is the next decoder we should call (lazily)
+	decoder decoder
+
+	// The set of specific layers we have pointers to.
+	specificLayers
+}
+
+func (p *packet) Data() []byte {
+	return p.data
+}
+func (p *packet) LinkType() LinkType {
+	return p.linkType
+}
+
+func (p *packet) appendLayer(l Layer) {
+	p.layers = append(p.layers, l)
+}
+
+type decodeResult struct {
+	// An error encountered in this decode call.  If this is set, everything else
+	// will be ignored.
+	err error
+	// The layer we've created with this decode call
+	layer Layer
+	// The next decoder to call
+	next decoder
+	// The bytes that are left to be decoded
+	left []byte
+}
+
+// decoder decodes the next layer in a packet.  It returns a set of useful
+// information, which is used by the packet decoding logic to update packet
+// state.  Optionally, the decode function may set any of the specificLayer
+// pointers to point to the new layer it has created.
+type decoder interface {
+	decode([]byte, *specificLayers) decodeResult
+}
+type decoderFunc func([]byte, *specificLayers) decodeResult
+
+func (d decoderFunc) decode(data []byte, s *specificLayers) decodeResult {
+	return d(data, s)
+}
+
+func NewPacket(data []byte, linkType LinkType) Packet {
+	return &packet{
+		data:     data,
+		encoded:  data,
+		linkType: linkType,
+		decoder:  topLevelDecoders[linkType],
+	}
+}
+
+// decodeNextLayer decodes the next layer, updates the payload, and returns it.
+// Returns nil if there are no more layers to decode.
+func (p *packet) decodeNextLayer() (out Layer) {
+	if p.decoder == nil || len(p.encoded) == 0 {
+		return nil
+	}
+	result := p.decoder.decode(p.encoded, &p.specificLayers)
+	if result.err != nil {
+		p.encoded = nil
+		p.decoder = nil
+		out = &DecodeFailure{data: p.encoded, Error: result.err}
+	} else {
+		p.encoded = result.left
+		p.decoder = result.next
+		out = result.layer
+	}
+	p.appendLayer(out)
+	return out
+}
+
+func (p *packet) Layers() []Layer {
+	for p.decodeNextLayer() != nil {
+	}
+	return p.layers
+}
+
+func (p *packet) Layer(t LayerType) Layer {
+	for _, l := range p.layers {
+		if l.Type() == t {
+			return l
+		}
+	}
+	for l := p.decodeNextLayer(); l != nil; l = p.decodeNextLayer() {
+		if l.Type() == t {
+			return l
+		}
+	}
+	return nil
+}
+
+func (p *packet) String() string {
+	return "PACKET!!!"
+}
 
 const (
 	ERRBUF_SIZE = 256
 
 	// According to pcap-linktype(7).
-	LINKTYPE_NULL             = 0
-	LINKTYPE_ETHERNET         = 1
-	LINKTYPE_TOKEN_RING       = 6
-	LINKTYPE_ARCNET           = 7
-	LINKTYPE_SLIP             = 8
-	LINKTYPE_PPP              = 9
-	LINKTYPE_FDDI             = 10
-	LINKTYPE_ATM_RFC1483      = 100
-	LINKTYPE_RAW              = 101
-	LINKTYPE_PPP_HDLC         = 50
-	LINKTYPE_PPP_ETHER        = 51
-	LINKTYPE_C_HDLC           = 104
-	LINKTYPE_IEEE802_11       = 105
-	LINKTYPE_FRELAY           = 107
-	LINKTYPE_LOOP             = 108
-	LINKTYPE_LINUX_SLL        = 113
-	LINKTYPE_LTALK            = 104
-	LINKTYPE_PFLOG            = 117
-	LINKTYPE_PRISM_HEADER     = 119
-	LINKTYPE_IP_OVER_FC       = 122
-	LINKTYPE_SUNATM           = 123
-	LINKTYPE_IEEE802_11_RADIO = 127
-	LINKTYPE_ARCNET_LINUX     = 129
-	LINKTYPE_LINUX_IRDA       = 144
-	LINKTYPE_LINUX_LAPD       = 177
+	LINKTYPE_NULL             LinkType = 0
+	LINKTYPE_ETHERNET         LinkType = 1
+	LINKTYPE_TOKEN_RING       LinkType = 6
+	LINKTYPE_ARCNET           LinkType = 7
+	LINKTYPE_SLIP             LinkType = 8
+	LINKTYPE_PPP              LinkType = 9
+	LINKTYPE_FDDI             LinkType = 10
+	LINKTYPE_ATM_RFC1483      LinkType = 100
+	LINKTYPE_RAW              LinkType = 101
+	LINKTYPE_PPP_HDLC         LinkType = 50
+	LINKTYPE_PPP_ETHER        LinkType = 51
+	LINKTYPE_C_HDLC           LinkType = 104
+	LINKTYPE_IEEE802_11       LinkType = 105
+	LINKTYPE_FRELAY           LinkType = 107
+	LINKTYPE_LOOP             LinkType = 108
+	LINKTYPE_LINUX_SLL        LinkType = 113
+	LINKTYPE_LTALK            LinkType = 104
+	LINKTYPE_PFLOG            LinkType = 117
+	LINKTYPE_PRISM_HEADER     LinkType = 119
+	LINKTYPE_IP_OVER_FC       LinkType = 122
+	LINKTYPE_SUNATM           LinkType = 123
+	LINKTYPE_IEEE802_11_RADIO LinkType = 127
+	LINKTYPE_ARCNET_LINUX     LinkType = 129
+	LINKTYPE_LINUX_IRDA       LinkType = 144
+	LINKTYPE_LINUX_LAPD       LinkType = 177
 )
 
-type addrHdr interface {
-	SrcAddr() string
-	DestAddr() string
-	Len() int
-}
+var topLevelDecoders [256]decoder
 
-type addrStringer interface {
-	String(addr addrHdr) string
-}
-
-func decodemac(pkt []byte) uint64 {
-	mac := uint64(0)
-	for i := uint(0); i < 6; i++ {
-		mac = (mac << 8) + uint64(pkt[i])
+func init() {
+	for i := 0; i < 256; i++ {
+		topLevelDecoders[i] = decodeUnknown
 	}
-	return mac
+	topLevelDecoders[LINKTYPE_ETHERNET] = decodeEthernet
+}
+
+type DecodeFailure struct {
+	data  []byte
+	Error error
+}
+
+func (e *DecodeFailure) Payload() []byte {
+	return e.data
+}
+
+func (e *DecodeFailure) Type() LayerType {
+	return TYPE_DECODE_FAILURE
+}
+
+type Ethernet struct {
+	sMac, dMac MacAddress
+	typ        uint16
+	payload    []byte
+}
+
+func (e *Ethernet) Type() LayerType { return TYPE_ETHERNET }
+
+func (e *Ethernet) SrcLinkAddr() Address {
+	return e.sMac
+}
+
+func (e *Ethernet) DstLinkAddr() Address {
+	return e.dMac
+}
+
+var decodeUnknown decoderFunc = func(data []byte, _ *specificLayers) (out decodeResult) {
+	out.err = errors.New("Link type not currently supported")
+	return
 }
 
 // Decode decodes the headers of a Packet.
-func (p *Packet) Decode() {
-	p.Type = int(binary.BigEndian.Uint16(p.Data[12:14]))
-	p.DestMac = decodemac(p.Data[0:6])
-	p.SrcMac = decodemac(p.Data[6:12])
-	p.Payload = p.Data[14:]
-
-	switch p.Type {
-	case TYPE_IP:
-		p.decodeIp()
-	case TYPE_IP6:
-		p.decodeIp6()
-	case TYPE_ARP:
-		p.decodeArp()
-	case TYPE_VLAN:
-		p.decodeVlan()
+var decodeEthernet decoderFunc = func(data []byte, s *specificLayers) (out decodeResult) {
+	if len(data) < 14 {
+		out.err = errors.New("Ethernet packet too small")
+		return
 	}
+	eth := &Ethernet{
+		typ:  binary.BigEndian.Uint16(data[12:14]),
+		dMac: MacAddress(data[0:6]),
+		sMac: MacAddress(data[6:12]),
+	}
+	out.layer = eth
+	out.left = data[14:]
+	out.next = eth
+	s.link = eth
+	return
 }
 
-func (p *Packet) headerString(headers []interface{}) string {
-	// If there's just one header, return that.
-	if len(headers) == 1 {
-		if hdr, ok := headers[0].(fmt.Stringer); ok {
-			return hdr.String()
-		}
-	}
-	// If there are two headers (IPv4/IPv6 -> TCP/UDP/IP..)
-	if len(headers) == 2 {
-		// Commonly the first header is an address.
-		if addr, ok := p.Headers[0].(addrHdr); ok {
-			if hdr, ok := p.Headers[1].(addrStringer); ok {
-				return fmt.Sprintf("%s %s", p.Time, hdr.String(addr))
-			}
-		}
-	}
-	// For IP in IP, we do a recursive call.
-	if len(headers) >= 2 {
-		if addr, ok := headers[0].(addrHdr); ok {
-			if _, ok := headers[1].(addrHdr); ok {
-				return fmt.Sprintf("%s > %s IP in IP: ",
-					addr.SrcAddr(), addr.DestAddr(), p.headerString(headers[1:]))
-			}
-		}
-	}
-
-	var typeNames []string
-	for _, hdr := range headers {
-		typeNames = append(typeNames, reflect.TypeOf(hdr).String())
-	}
-
-	return fmt.Sprintf("unknown [%s]", strings.Join(typeNames, ","))
+func decodePayload(data []byte, s *specificLayers) (out decodeResult) {
+	payload := &Payload{Data: data}
+	out.layer = payload
+	s.application = payload
+	return
 }
 
-// String prints a one-line representation of the packet header.
-// The output is suitable for use in a tcpdump program.
-func (p *Packet) String() string {
-	// If there are no headers, print "unsupported protocol".
-	if len(p.Headers) == 0 {
-		return fmt.Sprintf("%s unsupported protocol %d", p.Time, int(p.Type))
-	}
-	return fmt.Sprintf("%s %s", p.Time, p.headerString(p.Headers))
+func (e *Ethernet) decode(data []byte, s *specificLayers) (_ decodeResult) {
+	//switch e.typ {
+	//}
+	return
 }
 
+/*
 // Arphdr is a ARP packet header.
 type Arphdr struct {
 	Addrtype          uint16
@@ -467,3 +663,4 @@ func (p *Packet) decodeIp6() {
 func (ip6 *Ip6hdr) SrcAddr() string  { return net.IP(ip6.SrcIp).String() }
 func (ip6 *Ip6hdr) DestAddr() string { return net.IP(ip6.DestIp).String() }
 func (ip6 *Ip6hdr) Len() int         { return int(ip6.Length) }
+*/
