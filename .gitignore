@@ -20,3 +20,9 @@ _cgo_export.*
 _testmain.go
 
 *.exe
+=======
+#*
+*~
+/tools/pass/pass
+/tools/pcaptest/pcaptest
+/tools/tcpdump/tcpdump
