@@ -256,6 +256,15 @@ const (
 	LINKTYPE_LINUX_LAPD       LinkType = 177
 )
 
+type EthernetType uint16
+
+const (
+	ETHERTYPE_IP4  EthernetType = 0x0800
+	ETHERTYPE_ARP  EthernetType = 0x0806
+	ETHERTYPE_IP6  EthernetType = 0x86DD
+	ETHERTYPE_VLAN EthernetType = 0x8100
+)
+
 var topLevelDecoders [256]decoder
 
 func init() {
@@ -279,19 +288,18 @@ func (e *DecodeFailure) Type() LayerType {
 }
 
 type Ethernet struct {
-	sMac, dMac MacAddress
-	typ        uint16
-	payload    []byte
+	SrcMac, DstMac MacAddress
+	EthernetType   EthernetType
 }
 
 func (e *Ethernet) Type() LayerType { return TYPE_ETHERNET }
 
 func (e *Ethernet) SrcLinkAddr() Address {
-	return e.sMac
+	return e.SrcMac
 }
 
 func (e *Ethernet) DstLinkAddr() Address {
-	return e.dMac
+	return e.DstMac
 }
 
 var decodeUnknown decoderFunc = func(data []byte, _ *specificLayers) (out decodeResult) {
@@ -306,9 +314,9 @@ var decodeEthernet decoderFunc = func(data []byte, s *specificLayers) (out decod
 		return
 	}
 	eth := &Ethernet{
-		typ:  binary.BigEndian.Uint16(data[12:14]),
-		dMac: MacAddress(data[0:6]),
-		sMac: MacAddress(data[6:12]),
+		EthernetType: EthernetType(binary.BigEndian.Uint16(data[12:14])),
+		DstMac:       MacAddress(data[0:6]),
+		SrcMac:       MacAddress(data[6:12]),
 	}
 	out.layer = eth
 	out.left = data[14:]
@@ -317,24 +325,36 @@ var decodeEthernet decoderFunc = func(data []byte, s *specificLayers) (out decod
 	return
 }
 
-func decodePayload(data []byte, s *specificLayers) (out decodeResult) {
+var decodePayload decoderFunc = func(data []byte, s *specificLayers) (out decodeResult) {
 	payload := &Payload{Data: data}
 	out.layer = payload
 	s.application = payload
 	return
 }
 
-func (e *Ethernet) decode(data []byte, s *specificLayers) (_ decodeResult) {
-	//switch e.typ {
-	//}
+func (e *Ethernet) decode(data []byte, s *specificLayers) (out decodeResult) {
+	switch e.EthernetType {
+	/*
+	  case TYPE_IP:
+	    return decodeIp4(data, s)
+	  case TYPE_IP6:
+	    return decodeIp6(data, s)
+	*/
+	case ETHERTYPE_ARP:
+		return decodeArp(data, s)
+		/*
+		  case TYPE_VLAN:
+		    return decodeVlan(data, s)
+		*/
+	}
+	out.err = errors.New("Unsupported ethernet type")
 	return
 }
 
-/*
 // Arphdr is a ARP packet header.
-type Arphdr struct {
-	Addrtype          uint16
-	Protocol          uint16
+type Arp struct {
+	AddrType          LinkType
+	Protocol          EthernetType
 	HwAddressSize     uint8
 	ProtAddressSize   uint8
 	Operation         uint16
@@ -344,40 +364,40 @@ type Arphdr struct {
 	DestProtAddress   []byte
 }
 
-func (arp *Arphdr) String() (s string) {
+func (arp *Arp) String() (s string) {
 	switch arp.Operation {
 	case 1:
 		s = "ARP request"
 	case 2:
 		s = "ARP Reply"
 	}
-	if arp.Addrtype == LINKTYPE_ETHERNET && arp.Protocol == TYPE_IP {
-		s = fmt.Sprintf("%012x (%s) > %012x (%s)",
-			decodemac(arp.SourceHwAddress), arp.SourceProtAddress,
-			decodemac(arp.DestHwAddress), arp.DestProtAddress)
-	} else {
-		s = fmt.Sprintf("addrtype = %d protocol = %d", arp.Addrtype, arp.Protocol)
-	}
 	return
 }
 
-func (p *Packet) decodeArp() {
-	pkt := p.Payload
-	arp := new(Arphdr)
-	arp.Addrtype = binary.BigEndian.Uint16(pkt[0:2])
-	arp.Protocol = binary.BigEndian.Uint16(pkt[2:4])
-	arp.HwAddressSize = pkt[4]
-	arp.ProtAddressSize = pkt[5]
-	arp.Operation = binary.BigEndian.Uint16(pkt[6:8])
-	arp.SourceHwAddress = pkt[8 : 8+arp.HwAddressSize]
-	arp.SourceProtAddress = pkt[8+arp.HwAddressSize : 8+arp.HwAddressSize+arp.ProtAddressSize]
-	arp.DestHwAddress = pkt[8+arp.HwAddressSize+arp.ProtAddressSize : 8+2*arp.HwAddressSize+arp.ProtAddressSize]
-	arp.DestProtAddress = pkt[8+2*arp.HwAddressSize+arp.ProtAddressSize : 8+2*arp.HwAddressSize+2*arp.ProtAddressSize]
-
-	p.Headers = append(p.Headers, arp)
-	p.Payload = p.Payload[8+2*arp.HwAddressSize+2*arp.ProtAddressSize:]
+func (arp *Arp) Type() LayerType {
+	return TYPE_ARP
 }
 
+var decodeArp decoderFunc = func(data []byte, s *specificLayers) (out decodeResult) {
+	arp := &Arp{
+		AddrType:        LinkType(binary.BigEndian.Uint16(data[0:2])),
+		Protocol:        EthernetType(binary.BigEndian.Uint16(data[2:4])),
+		HwAddressSize:   data[4],
+		ProtAddressSize: data[5],
+		Operation:       binary.BigEndian.Uint16(data[6:8]),
+	}
+	arp.SourceHwAddress = data[8 : 8+arp.HwAddressSize]
+	arp.SourceProtAddress = data[8+arp.HwAddressSize : 8+arp.HwAddressSize+arp.ProtAddressSize]
+	arp.DestHwAddress = data[8+arp.HwAddressSize+arp.ProtAddressSize : 8+2*arp.HwAddressSize+arp.ProtAddressSize]
+	arp.DestProtAddress = data[8+2*arp.HwAddressSize+arp.ProtAddressSize : 8+2*arp.HwAddressSize+2*arp.ProtAddressSize]
+
+	out.layer = arp
+	out.left = data[8+2*arp.HwAddressSize+2*arp.ProtAddressSize:]
+	out.next = decodePayload
+	return
+}
+
+/*
 // IPadr is the header of an IP packet.
 type Iphdr struct {
 	Version    uint8
