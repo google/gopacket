@@ -6,6 +6,8 @@ package gopacket
 import (
 	"encoding/binary"
 	"errors"
+	"fmt"
+	"strings"
 )
 
 type LayerType int
@@ -65,13 +67,13 @@ type LinkLayer interface {
 }
 type NetworkLayer interface {
 	Layer
-	SrcHostAddr() Address
-	DstHostAddr() Address
+	SrcNetAddr() Address
+	DstNetAddr() Address
 }
 type TransportLayer interface {
 	Layer
-	SrcAppAddr() Address
-	DstAppAddr() Address
+	// SrcAppAddr() Address
+	// DstAppAddr() Address
 }
 type ApplicationLayer interface {
 	Layer
@@ -259,10 +261,18 @@ const (
 type EthernetType uint16
 
 const (
-	ETHERTYPE_IP4  EthernetType = 0x0800
-	ETHERTYPE_ARP  EthernetType = 0x0806
-	ETHERTYPE_IP6  EthernetType = 0x86DD
-	ETHERTYPE_VLAN EthernetType = 0x8100
+	ETHER_IP4  EthernetType = 0x0800
+	ETHER_ARP  EthernetType = 0x0806
+	ETHER_IP6  EthernetType = 0x86DD
+	ETHER_VLAN EthernetType = 0x8100
+)
+
+type IpProtocol uint8
+
+const (
+	IP_ICMP IpProtocol = 1
+	IP_TCP  IpProtocol = 6
+	IP_UDP  IpProtocol = 17
 )
 
 var topLevelDecoders [256]decoder
@@ -334,13 +344,13 @@ var decodePayload decoderFunc = func(data []byte, s *specificLayers) (out decode
 
 func (e *Ethernet) decode(data []byte, s *specificLayers) (out decodeResult) {
 	switch e.EthernetType {
+	case ETHER_IP4:
+		return decodeIp4(data, s)
 	/*
-	  case TYPE_IP:
-	    return decodeIp4(data, s)
 	  case TYPE_IP6:
 	    return decodeIp6(data, s)
 	*/
-	case ETHERTYPE_ARP:
+	case ETHER_ARP:
 		return decodeArp(data, s)
 		/*
 		  case TYPE_VLAN:
@@ -397,9 +407,8 @@ var decodeArp decoderFunc = func(data []byte, s *specificLayers) (out decodeResu
 	return
 }
 
-/*
-// IPadr is the header of an IP packet.
-type Iphdr struct {
+// IPv4 is the header of an IP packet.
+type IPv4 struct {
 	Version    uint8
 	Ihl        uint8
 	Tos        uint8
@@ -408,53 +417,59 @@ type Iphdr struct {
 	Flags      uint8
 	FragOffset uint16
 	Ttl        uint8
-	Protocol   uint8
+	Protocol   IpProtocol
 	Checksum   uint16
-	SrcIp      []byte
-	DestIp     []byte
+	SrcIp      IPv4Address
+	DstIp      IPv4Address
 }
 
-func (p *Packet) decodeIp() {
-	pkt := p.Payload
-	ip := new(Iphdr)
+func (i *IPv4) Type() LayerType     { return TYPE_IP4 }
+func (i *IPv4) SrcNetAddr() Address { return i.SrcIp }
+func (i *IPv4) DstNetAddr() Address { return i.DstIp }
 
-	ip.Version = uint8(pkt[0]) >> 4
-	ip.Ihl = uint8(pkt[0]) & 0x0F
-	ip.Tos = pkt[1]
-	ip.Length = binary.BigEndian.Uint16(pkt[2:4])
-	ip.Id = binary.BigEndian.Uint16(pkt[4:6])
-	flagsfrags := binary.BigEndian.Uint16(pkt[6:8])
-	ip.Flags = uint8(flagsfrags >> 13)
-	ip.FragOffset = flagsfrags & 0x1FFF
-	ip.Ttl = pkt[8]
-	ip.Protocol = pkt[9]
-	ip.Checksum = binary.BigEndian.Uint16(pkt[10:12])
-	ip.SrcIp = pkt[12:16]
-	ip.DestIp = pkt[16:20]
-	pEnd := int(ip.Length)
-	if pEnd > len(pkt) {
-		pEnd = len(pkt)
+var decodeIp4 decoderFunc = func(data []byte, s *specificLayers) (out decodeResult) {
+	flagsfrags := binary.BigEndian.Uint16(data[6:8])
+	ip := &IPv4{
+		Version:    uint8(data[0]) >> 4,
+		Ihl:        uint8(data[0]) & 0x0F,
+		Tos:        data[1],
+		Length:     binary.BigEndian.Uint16(data[2:4]),
+		Id:         binary.BigEndian.Uint16(data[4:6]),
+		Flags:      uint8(flagsfrags >> 13),
+		FragOffset: flagsfrags & 0x1FFF,
+		Ttl:        data[8],
+		Protocol:   IpProtocol(data[9]),
+		Checksum:   binary.BigEndian.Uint16(data[10:12]),
+		SrcIp:      data[12:16],
+		DstIp:      data[16:20],
 	}
-	p.Payload = pkt[ip.Ihl*4 : pEnd]
-	p.Headers = append(p.Headers, ip)
-	p.IP = ip
+	pEnd := int(ip.Length)
+	if pEnd > len(data) {
+		pEnd = len(data)
+	}
+	out.left = data[ip.Ihl*4 : pEnd]
+	out.layer = ip
+	out.next = ip
+	s.network = ip
+	return
+}
 
+func (ip *IPv4) decode(data []byte, s *specificLayers) (out decodeResult) {
 	switch ip.Protocol {
 	case IP_TCP:
-		p.decodeTcp()
-	case IP_UDP:
-		p.decodeUdp()
-	case IP_ICMP:
-		p.decodeIcmp()
-	case IP_INIP:
-		p.decodeIp()
+		return decodeTcp(data, s)
+		/*
+			case IP_UDP:
+				return decodeUdp(data, s)
+			case IP_ICMP:
+				return decodeIcmp(data, s)
+		*/
 	}
+	out.err = errors.New("Unsupported IP protocol")
+	return
 }
 
-func (ip *Iphdr) SrcAddr() string  { return net.IP(ip.SrcIp).String() }
-func (ip *Iphdr) DestAddr() string { return net.IP(ip.DestIp).String() }
-func (ip *Iphdr) Len() int         { return int(ip.Length) }
-
+/*
 type Vlanhdr struct {
 	Priority       byte
 	DropEligible   bool
@@ -484,22 +499,26 @@ func (p *Packet) decodeVlan() {
 		p.decodeArp()
 	}
 }
+*/
 
-type Tcphdr struct {
+type TCP struct {
 	SrcPort    uint16
 	DestPort   uint16
 	Seq        uint32
 	Ack        uint32
 	DataOffset uint8
-	Flags      uint16
+	Flags      TcpFlag
 	Window     uint16
 	Checksum   uint16
 	Urgent     uint16
-	Data       []byte
 }
 
+func (t *TCP) Type() LayerType { return TYPE_TCP }
+
+type TcpFlag uint16
+
 const (
-	TCP_FIN = 1 << iota
+	TCP_FIN TcpFlag = 1 << iota
 	TCP_SYN
 	TCP_RST
 	TCP_PSH
@@ -510,61 +529,58 @@ const (
 	TCP_NS
 )
 
-func (p *Packet) decodeTcp() {
-	pkt := p.Payload
-	tcp := new(Tcphdr)
-	tcp.SrcPort = binary.BigEndian.Uint16(pkt[0:2])
-	tcp.DestPort = binary.BigEndian.Uint16(pkt[2:4])
-	tcp.Seq = binary.BigEndian.Uint32(pkt[4:8])
-	tcp.Ack = binary.BigEndian.Uint32(pkt[8:12])
-	tcp.DataOffset = (pkt[12] & 0xF0) >> 4
-	tcp.Flags = binary.BigEndian.Uint16(pkt[12:14]) & 0x1FF
-	tcp.Window = binary.BigEndian.Uint16(pkt[14:16])
-	tcp.Checksum = binary.BigEndian.Uint16(pkt[16:18])
-	tcp.Urgent = binary.BigEndian.Uint16(pkt[18:20])
-	p.Payload = pkt[tcp.DataOffset*4:]
-	p.Headers = append(p.Headers, tcp)
-	p.TCP = tcp
+var decodeTcp decoderFunc = func(data []byte, s *specificLayers) (out decodeResult) {
+	tcp := &TCP{
+		SrcPort:    binary.BigEndian.Uint16(data[0:2]),
+		DestPort:   binary.BigEndian.Uint16(data[2:4]),
+		Seq:        binary.BigEndian.Uint32(data[4:8]),
+		Ack:        binary.BigEndian.Uint32(data[8:12]),
+		DataOffset: (data[12] & 0xF0) >> 4,
+		Flags:      TcpFlag(binary.BigEndian.Uint16(data[12:14]) & 0x1FF),
+		Window:     binary.BigEndian.Uint16(data[14:16]),
+		Checksum:   binary.BigEndian.Uint16(data[16:18]),
+		Urgent:     binary.BigEndian.Uint16(data[18:20]),
+	}
+	out.left = data[tcp.DataOffset*4:]
+	out.layer = tcp
+	out.next = decodePayload
+	s.transport = tcp
+	return
 }
 
-func (tcp *Tcphdr) String(hdr addrHdr) string {
-	return fmt.Sprintf("TCP %s:%d > %s:%d %s SEQ=%d ACK=%d LEN=%d",
-		hdr.SrcAddr(), int(tcp.SrcPort), hdr.DestAddr(), int(tcp.DestPort),
-		tcp.FlagsString(), int64(tcp.Seq), int64(tcp.Ack), hdr.Len())
-}
-
-func (tcp *Tcphdr) FlagsString() string {
+func (f TcpFlag) String() string {
 	var sflags []string
-	if 0 != (tcp.Flags & TCP_SYN) {
+	if 0 != (f & TCP_SYN) {
 		sflags = append(sflags, "syn")
 	}
-	if 0 != (tcp.Flags & TCP_FIN) {
+	if 0 != (f & TCP_FIN) {
 		sflags = append(sflags, "fin")
 	}
-	if 0 != (tcp.Flags & TCP_ACK) {
+	if 0 != (f & TCP_ACK) {
 		sflags = append(sflags, "ack")
 	}
-	if 0 != (tcp.Flags & TCP_PSH) {
+	if 0 != (f & TCP_PSH) {
 		sflags = append(sflags, "psh")
 	}
-	if 0 != (tcp.Flags & TCP_RST) {
+	if 0 != (f & TCP_RST) {
 		sflags = append(sflags, "rst")
 	}
-	if 0 != (tcp.Flags & TCP_URG) {
+	if 0 != (f & TCP_URG) {
 		sflags = append(sflags, "urg")
 	}
-	if 0 != (tcp.Flags & TCP_NS) {
+	if 0 != (f & TCP_NS) {
 		sflags = append(sflags, "ns")
 	}
-	if 0 != (tcp.Flags & TCP_CWR) {
+	if 0 != (f & TCP_CWR) {
 		sflags = append(sflags, "cwr")
 	}
-	if 0 != (tcp.Flags & TCP_ECE) {
+	if 0 != (f & TCP_ECE) {
 		sflags = append(sflags, "ece")
 	}
 	return fmt.Sprintf("[%s]", strings.Join(sflags, " "))
 }
 
+/*
 type Udphdr struct {
 	SrcPort  uint16
 	DestPort uint16
