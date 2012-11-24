@@ -4,6 +4,7 @@
 package gopacket
 
 import (
+	"fmt"
 	"testing"
 )
 
@@ -49,50 +50,64 @@ var testSimpleTcpPacket []byte = []byte{
 
 func BenchmarkCreatePacket(b *testing.B) {
 	for i := 0; i < b.N; i++ {
-		LINKTYPE_ETHERNET.Decode(testSimpleTcpPacket)
+		LINKTYPE_ETHERNET.Decode(testSimpleTcpPacket, Lazy)
 	}
 }
 
 func BenchmarkGetEthLayer(b *testing.B) {
 	for i := 0; i < b.N; i++ {
-		LINKTYPE_ETHERNET.Decode(testSimpleTcpPacket).Layer(TYPE_ETHERNET)
+		LINKTYPE_ETHERNET.Decode(testSimpleTcpPacket, Lazy).Layer(TYPE_ETHERNET)
 	}
 }
 
 func BenchmarkGetIpLayer(b *testing.B) {
 	for i := 0; i < b.N; i++ {
-		LINKTYPE_ETHERNET.Decode(testSimpleTcpPacket).Layer(TYPE_IP4)
+		LINKTYPE_ETHERNET.Decode(testSimpleTcpPacket, Lazy).Layer(TYPE_IP4)
 	}
 }
 
 func BenchmarkGetTcpLayer(b *testing.B) {
 	for i := 0; i < b.N; i++ {
-		LINKTYPE_ETHERNET.Decode(testSimpleTcpPacket).Layer(TYPE_TCP)
+		LINKTYPE_ETHERNET.Decode(testSimpleTcpPacket, Lazy).Layer(TYPE_TCP)
 	}
 }
 
 func BenchmarkGetAllLayers(b *testing.B) {
 	for i := 0; i < b.N; i++ {
-		LINKTYPE_ETHERNET.Decode(testSimpleTcpPacket).Layers()
+		LINKTYPE_ETHERNET.Decode(testSimpleTcpPacket, Lazy).Layers()
+	}
+}
+
+func BenchmarkDecodeNotLazy(b *testing.B) {
+	for i := 0; i < b.N; i++ {
+		LINKTYPE_ETHERNET.Decode(testSimpleTcpPacket, Eager)
+	}
+}
+
+func BenchmarkAlloc(b *testing.B) {
+	for i := 0; i < b.N; i++ {
+		_ = &TCP{}
 	}
 }
 
 func TestDecodeSimpleTcpPacket(t *testing.T) {
-	LINKTYPE_ETHERNET.Decode(testSimpleTcpPacket)
-}
-
-/*
-	if p.DestMac != 0x00000c9ff020 {
-		t.Error("Dest mac", p.DestMac)
+	Equal := func(desc, expected string, actual fmt.Stringer) {
+		if expected != actual.String() {
+			t.Errorf("%s: Expected %s Got %s", desc, expected, actual)
+		}
 	}
-	if p.SrcMac != 0xbc305be8d349 {
-		t.Error("Src mac", p.SrcMac)
+	p := LINKTYPE_ETHERNET.Decode(testSimpleTcpPacket, Lazy)
+	if eth, ok := p.Layer(TYPE_ETHERNET).(*Ethernet); eth == nil || !ok {
+		t.Error("No ethernet layer found")
+	} else {
+		Equal("Eth Src", "bc:30:5b:e8:d3:49", eth.SrcLinkAddr())
+		Equal("Eth Dst", "00:00:0c:9f:f0:20", eth.DstLinkAddr())
 	}
-	if len(p.Headers) != 2 {
-		t.Error("Incorrect number of headers", len(p.Headers))
-		return
-	}
-	if ip, ipOk := p.Headers[0].(*Iphdr); ipOk {
+	if ip, ok := p.Layer(TYPE_IP4).(*IPv4); ip == nil || !ok {
+		t.Error("No ip layer found")
+	} else {
+		Equal("IP Src", "172.17.81.73", ip.SrcNetAddr())
+		Equal("IP Dst", "173.222.254.225", ip.DstNetAddr())
 		if ip.Version != 4 {
 			t.Error("ip Version", ip.Version)
 		}
@@ -123,75 +138,65 @@ func TestDecodeSimpleTcpPacket(t *testing.T) {
 		if ip.Checksum != 0x555A {
 			t.Error("ip Checksum", ip.Checksum)
 		}
-		if !bytes.Equal(ip.SrcIp, []byte{172, 17, 81, 73}) {
-			t.Error("ip Src", ip.SrcIp)
-		}
-		if !bytes.Equal(ip.DestIp, []byte{173, 222, 254, 225}) {
-			t.Error("ip Dest", ip.DestIp)
-		}
-		if tcp, tcpOk := p.Headers[1].(*Tcphdr); tcpOk {
-			if tcp.SrcPort != 50679 {
-				t.Error("tcp srcport", tcp.SrcPort)
-			}
-			if tcp.DestPort != 80 {
-				t.Error("tcp destport", tcp.DestPort)
-			}
-			if tcp.Seq != 0xc57e0e48 {
-				t.Error("tcp seq", tcp.Seq)
-			}
-			if tcp.Ack != 0x49074232 {
-				t.Error("tcp ack", tcp.Ack)
-			}
-			if tcp.DataOffset != 8 {
-				t.Error("tcp dataoffset", tcp.DataOffset)
-			}
-			if tcp.Flags != 0x18 {
-				t.Error("tcp flags", tcp.Flags)
-			}
-			if tcp.Window != 0x73 {
-				t.Error("tcp window", tcp.Window)
-			}
-			if tcp.Checksum != 0xabb1 {
-				t.Error("tcp checksum", tcp.Checksum)
-			}
-			if tcp.Urgent != 0 {
-				t.Error("tcp urgent", tcp.Urgent)
-			}
-		} else {
-			t.Error("Second header is not TCP header")
-		}
-	} else {
-		t.Error("First header is not IP header")
 	}
-*/
-//if string(p.Payload) != "GET / HTTP/1.1\r\nHost: www.fish.com\r\nConnection: keep-alive\r\nUser-Agent: Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/535.2 (KHTML, like Gecko) Chrome/15.0.874.121 Safari/535.2\r\nAccept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8\r\nAccept-Encoding: gzip,deflate,sdch\r\nAccept-Language: en-US,en;q=0.8\r\nAccept-Charset: ISO-8859-1,utf-8;q=0.7,*;q=0.3\r\n\r\n" {
-/*
-		t.Error("--- PAYLOAD STRING ---\n", string(p.Payload), "\n--- PAYLOAD BYTES ---\n", p.Payload)
+	if tcp, ok := p.Layer(TYPE_TCP).(*TCP); tcp == nil || !ok {
+		t.Error("No TCP layer found")
+	} else {
+		if tcp.SrcPort != 50679 {
+			t.Error("tcp srcport", tcp.SrcPort)
+		}
+		if tcp.DstPort != 80 {
+			t.Error("tcp destport", tcp.DstPort)
+		}
+		if tcp.Seq != 0xc57e0e48 {
+			t.Error("tcp seq", tcp.Seq)
+		}
+		if tcp.Ack != 0x49074232 {
+			t.Error("tcp ack", tcp.Ack)
+		}
+		if tcp.DataOffset != 8 {
+			t.Error("tcp dataoffset", tcp.DataOffset)
+		}
+		if tcp.Flags != 0x18 {
+			t.Error("tcp flags", tcp.Flags)
+		}
+		if tcp.Window != 0x73 {
+			t.Error("tcp window", tcp.Window)
+		}
+		if tcp.Checksum != 0xabb1 {
+			t.Error("tcp checksum", tcp.Checksum)
+		}
+		if tcp.Urgent != 0 {
+			t.Error("tcp urgent", tcp.Urgent)
+		}
+	}
+	if payload, ok := p.Layer(TYPE_PAYLOAD).(*Payload); payload == nil || !ok {
+		t.Error("No payload layer found")
+	} else {
+		if string(payload.Data) != "GET / HTTP/1.1\r\nHost: www.fish.com\r\nConnection: keep-alive\r\nUser-Agent: Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/535.2 (KHTML, like Gecko) Chrome/15.0.874.121 Safari/535.2\r\nAccept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8\r\nAccept-Encoding: gzip,deflate,sdch\r\nAccept-Language: en-US,en;q=0.8\r\nAccept-Charset: ISO-8859-1,utf-8;q=0.7,*;q=0.3\r\n\r\n" {
+			t.Error("--- PAYLOAD STRING ---\n", string(payload.Data), "\n--- PAYLOAD BYTES ---\n", payload.Data)
+		}
 	}
 }
 
 // Makes sure packet payload doesn't display the 6 trailing null of this packet
 // as part of the payload.  They're actually the ethernet trailer.
 func TestDecodeSmallTcpPacketHasEmptyPayload(t *testing.T) {
-	p := &Packet{
-		// This packet is only 54 bits (an empty TCP RST), thus 6 trailing null
-		// bytes are added by the ethernet layer to make it the minimum packet size.
-		Data: []byte{
+	p := LINKTYPE_ETHERNET.Decode(
+		[]byte{
 			0xbc, 0x30, 0x5b, 0xe8, 0xd3, 0x49, 0xb8, 0xac, 0x6f, 0x92, 0xd5, 0xbf,
 			0x08, 0x00, 0x45, 0x00, 0x00, 0x28, 0x00, 0x00, 0x40, 0x00, 0x40, 0x06,
 			0x3f, 0x9f, 0xac, 0x11, 0x51, 0xc5, 0xac, 0x11, 0x51, 0x49, 0x00, 0x63,
 			0x9a, 0xef, 0x00, 0x00, 0x00, 0x00, 0x2e, 0xc1, 0x27, 0x83, 0x50, 0x14,
 			0x00, 0x00, 0xc3, 0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
-		}}
-	p.Decode()
-	if p.Payload == nil {
-		t.Error("Nil payload")
-	}
-	if len(p.Payload) != 0 {
-		t.Error("Non-empty payload:", p.Payload)
+		}, Eager)
+
+	if payload := p.Layer(TYPE_PAYLOAD); payload != nil {
+		t.Error("Payload found for empty TCP packet")
 	}
 }
 
+/*
 func TestDecodeVlanPacket(t *testing.T) {
 	p := &Packet{
 		Data: []byte{
