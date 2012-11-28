@@ -17,6 +17,7 @@ type ICMP struct {
 	Seq      uint16
 }
 
+// Returns TYPE_ICMP
 func (i *ICMP) LayerType() LayerType { return TYPE_ICMP }
 
 var decodeIcmp decoderFunc = func(data []byte, s *specificLayers) (out decodeResult) {

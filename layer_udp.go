@@ -16,6 +16,7 @@ type UDP struct {
 	sPort, dPort PortAddress
 }
 
+// Returns TYPE_UDP
 func (u *UDP) LayerType() LayerType { return TYPE_UDP }
 
 var decodeUdp decoderFunc = func(data []byte, s *specificLayers) (out decodeResult) {

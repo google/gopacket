@@ -20,6 +20,7 @@ type IPv6 struct {
 	DstIp        IPAddress  // 16 bytes
 }
 
+// Returns TYPE_IP6
 func (i *IPv6) LayerType() LayerType { return TYPE_IP6 }
 func (i *IPv6) SrcNetAddr() Address  { return i.SrcIp }
 func (i *IPv6) DstNetAddr() Address  { return i.DstIp }

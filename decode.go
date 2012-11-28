@@ -77,6 +77,7 @@ type Payload struct {
 	Data []byte
 }
 
+// Returns TYPE_PAYLOAD
 func (p *Payload) LayerType() LayerType { return TYPE_PAYLOAD }
 func (p *Payload) Payload() []byte      { return p.Data }
 
@@ -206,8 +207,10 @@ type DecodeFailure struct {
 	err  error
 }
 
-func (d *DecodeFailure) Payload() []byte      { return d.data }
-func (d *DecodeFailure) Error() error         { return d.err }
+func (d *DecodeFailure) Payload() []byte { return d.data }
+func (d *DecodeFailure) Error() error    { return d.err }
+
+// Returns TYPE_DECODE_FAILURE
 func (d *DecodeFailure) LayerType() LayerType { return TYPE_DECODE_FAILURE }
 
 // decodeUnknown "decodes" unsupported data types by returning an error.

@@ -14,6 +14,7 @@ type Ethernet struct {
 	EthernetType   EthernetType
 }
 
+// Returns TYPE_ETHERNET
 func (e *Ethernet) LayerType() LayerType { return TYPE_ETHERNET }
 
 func (e *Ethernet) SrcLinkAddr() Address {

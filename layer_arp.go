@@ -30,9 +30,8 @@ func (arp *ARP) String() (s string) {
 	return
 }
 
-func (arp *ARP) LayerType() LayerType {
-	return TYPE_ARP
-}
+// Returns TYPE_ARP
+func (arp *ARP) LayerType() LayerType { return TYPE_ARP }
 
 var decodeArp decoderFunc = func(data []byte, s *specificLayers) (out decodeResult) {
 	arp := &ARP{

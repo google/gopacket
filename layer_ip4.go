@@ -23,6 +23,7 @@ type IPv4 struct {
 	DstIp      IPAddress
 }
 
+// Returns TYPE_IP4
 func (i *IPv4) LayerType() LayerType { return TYPE_IP4 }
 func (i *IPv4) SrcNetAddr() Address  { return i.SrcIp }
 func (i *IPv4) DstNetAddr() Address  { return i.DstIp }

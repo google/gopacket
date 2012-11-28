@@ -23,6 +23,7 @@ type TCP struct {
 	sPort, dPort PortAddress
 }
 
+// Returns TYPE_TCP
 func (t *TCP) LayerType() LayerType { return TYPE_TCP }
 
 type TcpFlag uint16

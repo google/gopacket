@@ -24,16 +24,11 @@ func (p pppAddress) Raw() []byte {
 	return p
 }
 
-func (p *PPP) SrcLinkAddr() Address {
-	return singletonPppAddress
-}
-func (p *PPP) DstLinkAddr() Address {
-	return singletonPppAddress
-}
+func (p *PPP) SrcLinkAddr() Address { return singletonPppAddress }
+func (p *PPP) DstLinkAddr() Address { return singletonPppAddress }
 
-func (p *PPP) LayerType() LayerType {
-	return TYPE_PPP
-}
+// Returns TYPE_PPP
+func (p *PPP) LayerType() LayerType { return TYPE_PPP }
 
 var decodePpp decoderFunc = func(data []byte, s *specificLayers) (out decodeResult) {
 	ppp := &PPP{}

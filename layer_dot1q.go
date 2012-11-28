@@ -16,6 +16,7 @@ type Dot1Q struct {
 	Type           IpProtocol
 }
 
+// Returns TYPE_DOT1Q
 func (d *Dot1Q) LayerType() LayerType { return TYPE_DOT1Q }
 
 func (v *Dot1Q) String() {
