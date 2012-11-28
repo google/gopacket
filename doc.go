@@ -84,4 +84,8 @@
 //  packet := gopacket.LINKTYPE_ETHERNET.Decode(myPacketData, gopacket.Lazy)
 //  // Add the packet to a flow
 //  flows[packet.FlowKey()].addPacketToFlow(packet)
+//
+// If you're interested in contributing decoding logic for any protocol, take
+// a look at the comments in decoder.go, and look at layer_ip4.go and
+// enum_ipprotocol.go for example code.
 package gopacket
