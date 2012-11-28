@@ -5,6 +5,7 @@ package gopacket
 
 import (
 	"errors"
+	"fmt"
 )
 
 // IpProtocol is an enumeration of IP protocol values, and acts as a decoder
@@ -26,7 +27,7 @@ func (ip IpProtocol) decode(data []byte, s *specificLayers) (out decodeResult) {
 	case IP_ICMP:
 		return decodeIcmp(data, s)
 	}
-	out.err = errors.New("Unsupported IP protocol")
+	out.err = errors.New(fmt.Sprintf("Unsupported IP protocol %d", ip))
 	return
 }
 

@@ -13,7 +13,7 @@ type Dot1Q struct {
 	Priority       uint8
 	DropEligible   bool
 	VlanIdentifier uint16
-	Type           IpProtocol
+	Type           EthernetType
 }
 
 // Returns TYPE_DOT1Q
@@ -28,7 +28,7 @@ var decodeDot1Q decoderFunc = func(data []byte, s *specificLayers) (out decodeRe
 		Priority:       (data[2] & 0xE0) >> 13,
 		DropEligible:   data[2]&0x10 != 0,
 		VlanIdentifier: binary.BigEndian.Uint16(data[:2]) & 0x0FFF,
-		Type:           IpProtocol(binary.BigEndian.Uint16(data[2:4])),
+		Type:           EthernetType(binary.BigEndian.Uint16(data[2:4])),
 	}
 	out.layer = d
 	out.next = d.Type
