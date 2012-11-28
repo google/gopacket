@@ -3,6 +3,10 @@
 
 package gopacket
 
+import (
+	"encoding/binary"
+)
+
 type UDP struct {
 	SrcPort  uint16
 	DstPort  uint16
@@ -23,4 +27,3 @@ var decodeUdp decoderFunc = func(data []byte, s *specificLayers) (out decodeResu
 	out.left = data[8:]
 	return
 }
-

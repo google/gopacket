@@ -3,6 +3,10 @@
 
 package gopacket
 
+import (
+	"errors"
+)
+
 type LinkType int
 
 const (
@@ -113,4 +117,3 @@ func (p *packet) LinkType() LinkType {
 func (p *packet) appendLayer(l Layer) {
 	p.layers = append(p.layers, l)
 }
-

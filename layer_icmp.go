@@ -3,6 +3,11 @@
 
 package gopacket
 
+import (
+	"encoding/binary"
+	"fmt"
+)
+
 type ICMP struct {
 	Type     uint8
 	Code     uint8
@@ -51,4 +56,3 @@ func (icmp *ICMP) TypeString() (result string) {
 	}
 	return
 }
-

@@ -3,6 +3,12 @@
 
 package gopacket
 
+import (
+	"encoding/binary"
+	"fmt"
+	"strings"
+)
+
 type TCP struct {
 	SrcPort    uint16
 	DstPort    uint16
@@ -81,4 +87,3 @@ func (f TcpFlag) String() string {
 	}
 	return fmt.Sprintf("[%s]", strings.Join(sflags, " "))
 }
-

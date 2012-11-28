@@ -3,6 +3,11 @@
 
 package gopacket
 
+import (
+	"encoding/binary"
+	"fmt"
+)
+
 type Dot1Q struct {
 	Priority       uint8
 	DropEligible   bool
@@ -28,4 +33,3 @@ var decodeDot1Q decoderFunc = func(data []byte, s *specificLayers) (out decodeRe
 	out.left = data[4:]
 	return
 }
-

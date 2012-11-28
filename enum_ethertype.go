@@ -3,6 +3,10 @@
 
 package gopacket
 
+import (
+	"errors"
+)
+
 type EthernetType uint16
 
 const (
@@ -30,4 +34,3 @@ func (e EthernetType) decode(data []byte, s *specificLayers) (out decodeResult) 
 func (e EthernetType) Decode(data []byte, lazy DecodeMethod) Packet {
 	return newPacket(data, lazy, e)
 }
-

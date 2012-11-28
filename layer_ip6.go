@@ -3,6 +3,10 @@
 
 package gopacket
 
+import (
+	"encoding/binary"
+)
+
 type IPv6 struct {
 	// http://www.networksorcery.com/enp/protocol/ipv6.htm
 	Version      uint8      // 4 bits

@@ -3,6 +3,10 @@
 
 package gopacket
 
+import (
+	"encoding/binary"
+)
+
 // IPv4 is the header of an IP packet.
 type IPv4 struct {
 	Version    uint8
@@ -49,5 +53,3 @@ var decodeIp4 decoderFunc = func(data []byte, s *specificLayers) (out decodeResu
 	s.network = ip
 	return
 }
-
-

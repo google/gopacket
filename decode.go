@@ -4,11 +4,8 @@
 package gopacket
 
 import (
-	"encoding/binary"
 	"errors"
-	"fmt"
 	"net"
-	"strings"
 )
 
 type LayerType int
@@ -17,6 +14,7 @@ const (
 	TYPE_PAYLOAD        LayerType = iota // Contains raw bytes
 	TYPE_DECODE_FAILURE                  // We were unable to decode this layer
 	TYPE_ETHERNET
+	TYPE_PPP
 	TYPE_IP4
 	TYPE_IP6
 	TYPE_TCP

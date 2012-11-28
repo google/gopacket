@@ -3,6 +3,10 @@
 
 package gopacket
 
+import (
+	"errors"
+)
+
 type IpProtocol uint8
 
 const (
@@ -27,4 +31,3 @@ func (ip IpProtocol) decode(data []byte, s *specificLayers) (out decodeResult) {
 func (ip IpProtocol) Decode(data []byte, lazy DecodeMethod) Packet {
 	return newPacket(data, lazy, ip)
 }
-

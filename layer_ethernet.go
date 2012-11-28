@@ -3,6 +3,11 @@
 
 package gopacket
 
+import (
+	"encoding/binary"
+	"errors"
+)
+
 type Ethernet struct {
 	SrcMac, DstMac MacAddress
 	EthernetType   EthernetType
@@ -35,4 +40,3 @@ var decodeEthernet decoderFunc = func(data []byte, s *specificLayers) (out decod
 	s.link = eth
 	return
 }
-

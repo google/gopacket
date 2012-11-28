@@ -3,6 +3,12 @@
 
 package gopacket
 
+import (
+	"errors"
+	"fmt"
+	"strings"
+)
+
 func newPacket(data []byte, lazy DecodeMethod, d decoder) Packet {
 	p := &packet{
 		data:    data,
@@ -69,4 +75,3 @@ func (p *packet) String() string {
 	}
 	return fmt.Sprintf("PACKET [%s]", strings.Join(layers, ", "))
 }
-

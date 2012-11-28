@@ -3,6 +3,10 @@
 
 package gopacket
 
+import (
+	"encoding/binary"
+)
+
 // ARP is a ARP packet header.
 type ARP struct {
 	AddrType          LinkType
@@ -48,4 +52,3 @@ var decodeArp decoderFunc = func(data []byte, s *specificLayers) (out decodeResu
 	out.next = decodePayload
 	return
 }
-
