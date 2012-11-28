@@ -60,6 +60,16 @@ func BenchmarkGetEthLayer(b *testing.B) {
 	}
 }
 
+func BenchmarkTypeAssertion(b *testing.B) {
+	var eth LinkLayer = &Ethernet{}
+  c := 0
+	for i := 0; i < b.N; i++ {
+		if _, ok := eth.(*Ethernet); ok {
+			c++
+		}
+	}
+}
+
 func BenchmarkGetIpLayer(b *testing.B) {
 	for i := 0; i < b.N; i++ {
 		LINKTYPE_ETHERNET.Decode(testSimpleTcpPacket, Lazy).Layer(TYPE_IP4)
@@ -78,7 +88,7 @@ func BenchmarkGetAllLayers(b *testing.B) {
 	}
 }
 
-func BenchmarkDecodeNotLazy(b *testing.B) {
+func BenchmarkDecodeEager(b *testing.B) {
 	for i := 0; i < b.N; i++ {
 		LINKTYPE_ETHERNET.Decode(testSimpleTcpPacket, Eager)
 	}
@@ -96,6 +106,12 @@ func BenchmarkConnectionKey(b *testing.B) {
 	trans := p.TransportLayer()
 	for i := 0; i < b.N; i++ {
 		NewConnectionKey(net, trans)
+	}
+}
+
+func BenchmarkPacketConnectionKey(b *testing.B) {
+	for i := 0; i < b.N; i++ {
+		LINKTYPE_ETHERNET.Decode(testSimpleTcpPacket, Lazy).ConnectionKey()
 	}
 }
 

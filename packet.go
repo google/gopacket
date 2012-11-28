@@ -20,12 +20,16 @@ type Packet interface {
 	LinkType() LinkType
 	// Printable
 	String() string
+
 	// Accessors to specific commonly-available layers, return nil if the layer
 	// doesn't exist or hasn't been computed yet.
 	LinkLayer() LinkLayer
 	NetworkLayer() NetworkLayer
 	TransportLayer() TransportLayer
 	ApplicationLayer() ApplicationLayer
+
+	// Key for mapping packets to connections
+	ConnectionKey() (ConnectionKey, error)
 }
 
 type specificLayers struct {
@@ -159,4 +163,15 @@ func (p *packet) String() string {
 		layers = append(layers, fmt.Sprintf("%#v", l))
 	}
 	return fmt.Sprintf("PACKET [%s]", strings.Join(layers, ", "))
+}
+
+func (p *packet) ConnectionKey() (ConnectionKey, error) {
+	if net := p.NetworkLayer(); net == nil {
+		return ConnectionKey{}, errors.New("Packet has no network layer")
+	} else if trans := p.TransportLayer(); trans == nil {
+		return ConnectionKey{}, errors.New("Packet has no transport layer")
+	} else {
+		return NewConnectionKey(net, trans), nil
+	}
+	panic("Should never reach here")
 }
