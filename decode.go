@@ -23,6 +23,21 @@ type decodeResult struct {
 // information, which is used by the packet decoding logic to update packet
 // state.  Optionally, the decode function may set any of the specificLayer
 // pointers to point to the new layer it has created.
+//
+// This decoder interface is the internal interface used by gopacket to store
+// the next method to use for decoding the rest of the data available in the
+// packet.  It should exhibit the following behavior:
+// * if there's an error, set decodeResult.err.  All other fields will be
+//   ignored and a DecodeError layer will be created with that error.
+// * if there's NOT an error, set layer to the layer created by this decoder,
+//   next to the next decoder to run, and left to the bytes not yet processed.
+//   if either decoder is nil or left is empty, this packet's decoding is
+//   considered complete and nothing else is done.
+//
+// If the decoded layer is one of the specific layers in specificLayers, the
+// function should set specificLayers' pointer to the new layer.  For example,
+// note how decodeIp4 sets specificLayers' network pointer to the newly created
+// IPv4 layer object.
 type decoder interface {
 	decode([]byte, *specificLayers) decodeResult
 }
@@ -31,6 +46,7 @@ type decoder interface {
 type decoderFunc func([]byte, *specificLayers) decodeResult
 
 func (d decoderFunc) decode(data []byte, s *specificLayers) decodeResult {
+	// function, call thyself.
 	return d(data, s)
 }
 
@@ -73,6 +89,7 @@ func (d *DecodeFailure) Error() error { return d.err }
 func (d *DecodeFailure) LayerType() LayerType { return TYPE_DECODE_FAILURE }
 
 // decodeUnknown "decodes" unsupported data types by returning an error.
+// This decoder will thus always return a DecodeFailure layer.
 var decodeUnknown decoderFunc = func(data []byte, _ *specificLayers) (out decodeResult) {
 	out.err = errors.New("Link type not currently supported")
 	return
