@@ -8,13 +8,13 @@ import (
 	"fmt"
 )
 
+// ICMP is the layer for ICMP packet data.
 type ICMP struct {
 	Type     uint8
 	Code     uint8
 	Checksum uint16
 	Id       uint16
 	Seq      uint16
-	Data     []byte
 }
 
 func (i *ICMP) LayerType() LayerType { return TYPE_ICMP }

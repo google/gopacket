@@ -7,6 +7,8 @@ import (
 	"errors"
 )
 
+// IpProtocol is an enumeration of IP protocol values, and acts as a decoder
+// for any type it supports.
 type IpProtocol uint8
 
 const (

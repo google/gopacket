@@ -7,6 +7,8 @@ import (
 	"errors"
 )
 
+// LinkType is an enumeration of link types, and acts as a decoder for any
+// link type it supports.
 type LinkType int
 
 const (

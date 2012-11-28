@@ -62,7 +62,7 @@ func BenchmarkGetEthLayer(b *testing.B) {
 
 func BenchmarkTypeAssertion(b *testing.B) {
 	var eth LinkLayer = &Ethernet{}
-  c := 0
+	c := 0
 	for i := 0; i < b.N; i++ {
 		if _, ok := eth.(*Ethernet); ok {
 			c++
@@ -100,28 +100,28 @@ func BenchmarkAlloc(b *testing.B) {
 	}
 }
 
-func BenchmarkConnectionKey(b *testing.B) {
+func BenchmarkFlowKey(b *testing.B) {
 	p := LINKTYPE_ETHERNET.Decode(testSimpleTcpPacket, Lazy)
 	net := p.NetworkLayer()
 	trans := p.TransportLayer()
 	for i := 0; i < b.N; i++ {
-		NewConnectionKey(net, trans)
+		NewFlowKey(net, trans)
 	}
 }
 
-func BenchmarkPacketConnectionKey(b *testing.B) {
+func BenchmarkPacketFlowKey(b *testing.B) {
 	for i := 0; i < b.N; i++ {
-		LINKTYPE_ETHERNET.Decode(testSimpleTcpPacket, Lazy).ConnectionKey()
+		LINKTYPE_ETHERNET.Decode(testSimpleTcpPacket, Lazy).FlowKey()
 	}
 }
 
-func BenchmarkConnectionMapKey(b *testing.B) {
+func BenchmarkFlowMapKey(b *testing.B) {
 	p := LINKTYPE_ETHERNET.Decode(testSimpleTcpPacket, Lazy)
 	net := p.NetworkLayer()
 	trans := p.TransportLayer()
-	m := map[ConnectionKey]bool{}
+	m := map[FlowKey]bool{}
 	for i := 0; i < b.N; i++ {
-		m[NewConnectionKey(net, trans)] = true
+		m[NewFlowKey(net, trans)] = true
 	}
 }
 

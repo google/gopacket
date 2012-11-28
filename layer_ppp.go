@@ -8,6 +8,7 @@ import (
 	"errors"
 )
 
+// PPP is the layer for PPP encapsulation headers.
 type PPP struct {
 	PppType PppType
 }

@@ -7,6 +7,7 @@ import (
 	"encoding/binary"
 )
 
+// IPv6 is the layer for the IPv6 header.
 type IPv6 struct {
 	// http://www.networksorcery.com/enp/protocol/ipv6.htm
 	Version      uint8      // 4 bits

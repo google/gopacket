@@ -9,6 +9,7 @@ import (
 	"strings"
 )
 
+// TCP is the layer for TCP headers.
 type TCP struct {
 	SrcPort      uint16
 	DstPort      uint16
@@ -19,7 +20,7 @@ type TCP struct {
 	Window       uint16
 	Checksum     uint16
 	Urgent       uint16
-	sPort, dPort portAddress
+	sPort, dPort PortAddress
 }
 
 func (t *TCP) LayerType() LayerType { return TYPE_TCP }

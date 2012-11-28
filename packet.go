@@ -9,6 +9,9 @@ import (
 	"strings"
 )
 
+// Packet is the primary object used by gopacket.  Packets are created by a
+// PacketDecoder's Decode call.  A packet is made up of a set of Data(), which
+// is broken into a number of Layers as it is decoded.
 type Packet interface {
 	// Returns all data associated with this packet
 	Data() []byte
@@ -16,20 +19,22 @@ type Packet interface {
 	Layers() []Layer
 	// Returns the first layer in this packet of the given type, or nil
 	Layer(LayerType) Layer
-	// Returns the data layer type
-	LinkType() LinkType
 	// Printable
 	String() string
 
 	// Accessors to specific commonly-available layers, return nil if the layer
 	// doesn't exist or hasn't been computed yet.
-	LinkLayer() LinkLayer
-	NetworkLayer() NetworkLayer
-	TransportLayer() TransportLayer
-	ApplicationLayer() ApplicationLayer
+	LinkLayer() LinkLayer               // Returns the link layer
+	NetworkLayer() NetworkLayer         // Returns the network layer
+	TransportLayer() TransportLayer     // Returns the transport layer
+	ApplicationLayer() ApplicationLayer // Returns the application layer
+	// ErrorLayer is particularly useful, since it returns nil if the packet
+	// was fully decoded successfully, and non-nil if an error was encountered
+	// in decoding and the packet was only partially decoded.
+	ErrorLayer() ErrorLayer
 
 	// Key for mapping packets to connections
-	ConnectionKey() (ConnectionKey, error)
+	FlowKey() (FlowKey, error)
 }
 
 type specificLayers struct {
@@ -48,8 +53,6 @@ type packet struct {
 	encoded []byte
 	// layers contains each layer we've already decoded
 	layers []Layer
-	// linkType contains the link type for the underlying transport
-	linkType LinkType
 	// decoder is the next decoder we should call (lazily)
 	decoder decoder
 
@@ -77,12 +80,14 @@ func (p *packet) ApplicationLayer() ApplicationLayer {
 	}
 	return p.application
 }
+func (p *packet) ErrorLayer() ErrorLayer {
+	for p.failure == nil && p.decodeNextLayer() != nil {
+	}
+	return p.failure
+}
 
 func (p *packet) Data() []byte {
 	return p.data
-}
-func (p *packet) LinkType() LinkType {
-	return p.linkType
 }
 
 func (p *packet) appendLayer(l Layer) {
@@ -165,13 +170,13 @@ func (p *packet) String() string {
 	return fmt.Sprintf("PACKET [%s]", strings.Join(layers, ", "))
 }
 
-func (p *packet) ConnectionKey() (ConnectionKey, error) {
+func (p *packet) FlowKey() (FlowKey, error) {
 	if net := p.NetworkLayer(); net == nil {
-		return ConnectionKey{}, errors.New("Packet has no network layer")
+		return FlowKey{}, errors.New("Packet has no network layer")
 	} else if trans := p.TransportLayer(); trans == nil {
-		return ConnectionKey{}, errors.New("Packet has no transport layer")
+		return FlowKey{}, errors.New("Packet has no transport layer")
 	} else {
-		return NewConnectionKey(net, trans), nil
+		return NewFlowKey(net, trans), nil
 	}
 	panic("Should never reach here")
 }

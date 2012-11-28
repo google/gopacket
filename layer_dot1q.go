@@ -8,6 +8,7 @@ import (
 	"fmt"
 )
 
+// Dot1Q is the packet layer for 802.1Q VLAN headers.
 type Dot1Q struct {
 	Priority       uint8
 	DropEligible   bool

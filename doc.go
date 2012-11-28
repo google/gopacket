@@ -73,15 +73,15 @@
 // in multiple goroutines concurrently, use gopacket.Eager decoding to fully
 // decode the packet, then pass it around.
 //
-// === Connection Keys ===
+// === Flow Keys ===
 //
 // Since gopacket has abstract types for NetworkLayer and TransportLayer, and
 // both of these return addresses for their sources and destinations, it's able
-// to create a connection key to map a packet to a flow.
+// to create a flow key to map a packet to a flow.
 //  // Create a flow map
-//  flows := map[gopacket.ConnectionKey]*someFlowObject
+//  flows := map[gopacket.FlowKey]*someFlowObject
 //  // Create the packet
 //  packet := gopacket.LINKTYPE_ETHERNET.Decode(myPacketData, gopacket.Lazy)
 //  // Add the packet to a flow
-//  flows[packet.ConnectionKey()].addPacketToFlow(packet)
+//  flows[packet.FlowKey()].addPacketToFlow(packet)
 package gopacket

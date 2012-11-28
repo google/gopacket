@@ -7,6 +7,8 @@ import (
 	"errors"
 )
 
+// EthernetType is an enumeration of ethernet type values, and acts as a decoder
+// for any type it supports.
 type EthernetType uint16
 
 const (

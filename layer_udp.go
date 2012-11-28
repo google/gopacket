@@ -7,12 +7,13 @@ import (
 	"encoding/binary"
 )
 
+// UDP is the layer for UDP headers.
 type UDP struct {
 	SrcPort      uint16
 	DstPort      uint16
 	Length       uint16
 	Checksum     uint16
-	sPort, dPort portAddress
+	sPort, dPort PortAddress
 }
 
 func (u *UDP) LayerType() LayerType { return TYPE_UDP }

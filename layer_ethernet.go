@@ -8,6 +8,7 @@ import (
 	"errors"
 )
 
+// Ethernet is the layer for Ethernet frame headers.
 type Ethernet struct {
 	SrcMac, DstMac MacAddress
 	EthernetType   EthernetType

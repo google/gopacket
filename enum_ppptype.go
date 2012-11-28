@@ -7,6 +7,8 @@ import (
 	"errors"
 )
 
+// PppType is an enumeration of PPP type values, and acts as a decoder for any
+// type it supports.
 type PppType uint16
 
 const (
