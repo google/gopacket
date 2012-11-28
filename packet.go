@@ -9,6 +9,81 @@ import (
 	"strings"
 )
 
+type Packet interface {
+	// Returns all data associated with this packet
+	Data() []byte
+	// Returns all layers in this packet, computing them as necessary
+	Layers() []Layer
+	// Returns the first layer in this packet of the given type, or nil
+	Layer(LayerType) Layer
+	// Returns the data layer type
+	LinkType() LinkType
+	// Printable
+	String() string
+	// Accessors to specific commonly-available layers, return nil if the layer
+	// doesn't exist or hasn't been computed yet.
+	LinkLayer() LinkLayer
+	NetworkLayer() NetworkLayer
+	TransportLayer() TransportLayer
+	ApplicationLayer() ApplicationLayer
+}
+
+type specificLayers struct {
+	// Pointers to the various important layers
+	link        LinkLayer
+	network     NetworkLayer
+	transport   TransportLayer
+	application ApplicationLayer
+}
+
+type packet struct {
+	// data contains the entire packet data for a packet
+	data []byte
+	// encoded contains all the packet data we have yet to decode
+	encoded []byte
+	// layers contains each layer we've already decoded
+	layers []Layer
+	// linkType contains the link type for the underlying transport
+	linkType LinkType
+	// decoder is the next decoder we should call (lazily)
+	decoder decoder
+
+	// The set of specific layers we have pointers to.
+	specificLayers
+}
+
+func (p *packet) LinkLayer() LinkLayer {
+	for p.link == nil && p.decodeNextLayer() != nil {
+	}
+	return p.link
+}
+func (p *packet) NetworkLayer() NetworkLayer {
+	for p.network == nil && p.decodeNextLayer() != nil {
+	}
+	return p.network
+}
+func (p *packet) TransportLayer() TransportLayer {
+	for p.transport == nil && p.decodeNextLayer() != nil {
+	}
+	return p.transport
+}
+func (p *packet) ApplicationLayer() ApplicationLayer {
+	for p.application == nil && p.decodeNextLayer() != nil {
+	}
+	return p.application
+}
+
+func (p *packet) Data() []byte {
+	return p.data
+}
+func (p *packet) LinkType() LinkType {
+	return p.linkType
+}
+
+func (p *packet) appendLayer(l Layer) {
+	p.layers = append(p.layers, l)
+}
+
 func newPacket(data []byte, lazy DecodeMethod, d decoder) Packet {
 	p := &packet{
 		data:    data,

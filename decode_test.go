@@ -97,7 +97,7 @@ func TestDecodeSimpleTcpPacket(t *testing.T) {
 		}
 	}
 	p := LINKTYPE_ETHERNET.Decode(testSimpleTcpPacket, Lazy)
-	if eth, ok := p.Layer(TYPE_ETHERNET).(*Ethernet); eth == nil || !ok {
+	if eth := p.LinkLayer(); eth == nil {
 		t.Error("No ethernet layer found")
 	} else {
 		Equal("Eth Src", "bc:30:5b:e8:d3:49", eth.SrcLinkAddr())
