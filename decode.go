@@ -53,7 +53,7 @@ const (
 // PacketDecoder provides the functionality to decode a set of bytes into a
 // packet, and decode that packet into one or more layers.
 type PacketDecoder interface {
-	Decode(data []byte, lazy DecodeMethod) Packet
+	Decode(data []byte, method DecodeMethod) Packet
 }
 
 // DecodeFailure is a packet layer created if decoding of the packet data failed
@@ -63,8 +63,11 @@ type DecodeFailure struct {
 	err  error
 }
 
+// Returns the entire payload which failed to be decoded.
 func (d *DecodeFailure) Payload() []byte { return d.data }
-func (d *DecodeFailure) Error() error    { return d.err }
+
+// Returns the error encountered during decoding.
+func (d *DecodeFailure) Error() error { return d.err }
 
 // Returns TYPE_DECODE_FAILURE
 func (d *DecodeFailure) LayerType() LayerType { return TYPE_DECODE_FAILURE }
