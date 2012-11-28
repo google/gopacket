@@ -42,6 +42,8 @@ func (l LinkType) decode(data []byte, s *specificLayers) (out decodeResult) {
 	switch l {
 	case LINKTYPE_ETHERNET:
 		return decodeEthernet(data, s)
+	case LINKTYPE_PPP:
+		return decodePpp(data, s)
 	}
 	out.err = errors.New("Unsupported link-layer type")
 	return

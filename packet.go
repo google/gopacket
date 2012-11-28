@@ -14,6 +14,11 @@ func newPacket(data []byte, lazy DecodeMethod, d decoder) Packet {
 		data:    data,
 		encoded: data,
 		decoder: d,
+		// We start off with a size-4 slice since growing a size-zero slice actually
+		// can take us a large amount of time, and we expect most packets to give us
+		// 4 layers (link, network, transport, application).  This gives our 4-layer
+		// benchmark (DecodeNotLazy) a speedup of ~10% (2150ns -> 1922ns)
+		layers: make([]Layer, 0, 4),
 	}
 	if !lazy {
 		p.Layers()
