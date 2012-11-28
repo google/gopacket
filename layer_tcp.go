@@ -10,15 +10,16 @@ import (
 )
 
 type TCP struct {
-	SrcPort    uint16
-	DstPort    uint16
-	Seq        uint32
-	Ack        uint32
-	DataOffset uint8
-	Flags      TcpFlag
-	Window     uint16
-	Checksum   uint16
-	Urgent     uint16
+	SrcPort      uint16
+	DstPort      uint16
+	Seq          uint32
+	Ack          uint32
+	DataOffset   uint8
+	Flags        TcpFlag
+	Window       uint16
+	Checksum     uint16
+	Urgent       uint16
+	sPort, dPort portAddress
 }
 
 func (t *TCP) LayerType() LayerType { return TYPE_TCP }
@@ -40,7 +41,9 @@ const (
 var decodeTcp decoderFunc = func(data []byte, s *specificLayers) (out decodeResult) {
 	tcp := &TCP{
 		SrcPort:    binary.BigEndian.Uint16(data[0:2]),
+		sPort:      data[0:2],
 		DstPort:    binary.BigEndian.Uint16(data[2:4]),
+		dPort:      data[2:4],
 		Seq:        binary.BigEndian.Uint32(data[4:8]),
 		Ack:        binary.BigEndian.Uint32(data[8:12]),
 		DataOffset: (data[12] & 0xF0) >> 4,
@@ -87,3 +90,6 @@ func (f TcpFlag) String() string {
 	}
 	return fmt.Sprintf("[%s]", strings.Join(sflags, " "))
 }
+
+func (t *TCP) SrcAppAddr() Address { return t.sPort }
+func (t *TCP) DstAppAddr() Address { return t.dPort }

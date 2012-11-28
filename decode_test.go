@@ -90,6 +90,25 @@ func BenchmarkAlloc(b *testing.B) {
 	}
 }
 
+func BenchmarkConnectionKey(b *testing.B) {
+	p := LINKTYPE_ETHERNET.Decode(testSimpleTcpPacket, Lazy)
+	net := p.NetworkLayer()
+	trans := p.TransportLayer()
+	for i := 0; i < b.N; i++ {
+		NewConnectionKey(net, trans)
+	}
+}
+
+func BenchmarkConnectionMapKey(b *testing.B) {
+	p := LINKTYPE_ETHERNET.Decode(testSimpleTcpPacket, Lazy)
+	net := p.NetworkLayer()
+	trans := p.TransportLayer()
+	m := map[ConnectionKey]bool{}
+	for i := 0; i < b.N; i++ {
+		m[NewConnectionKey(net, trans)] = true
+	}
+}
+
 func TestDecodeSimpleTcpPacket(t *testing.T) {
 	Equal := func(desc, expected string, actual fmt.Stringer) {
 		if expected != actual.String() {
@@ -103,11 +122,13 @@ func TestDecodeSimpleTcpPacket(t *testing.T) {
 		Equal("Eth Src", "bc:30:5b:e8:d3:49", eth.SrcLinkAddr())
 		Equal("Eth Dst", "00:00:0c:9f:f0:20", eth.DstLinkAddr())
 	}
-	if ip, ok := p.Layer(TYPE_IP4).(*IPv4); ip == nil || !ok {
-		t.Error("No ip layer found")
+	if net := p.NetworkLayer(); net == nil {
+		t.Error("No net layer found")
+	} else if ip, ok := net.(*IPv4); !ok {
+		t.Error("Net layer is not IP layer")
 	} else {
-		Equal("IP Src", "172.17.81.73", ip.SrcNetAddr())
-		Equal("IP Dst", "173.222.254.225", ip.DstNetAddr())
+		Equal("IP Src", "172.17.81.73", net.SrcNetAddr())
+		Equal("IP Dst", "173.222.254.225", net.DstNetAddr())
 		if ip.Version != 4 {
 			t.Error("ip Version", ip.Version)
 		}
@@ -139,9 +160,13 @@ func TestDecodeSimpleTcpPacket(t *testing.T) {
 			t.Error("ip Checksum", ip.Checksum)
 		}
 	}
-	if tcp, ok := p.Layer(TYPE_TCP).(*TCP); tcp == nil || !ok {
-		t.Error("No TCP layer found")
+	if trans := p.TransportLayer(); trans == nil {
+		t.Error("No transport layer found")
+	} else if tcp, ok := trans.(*TCP); !ok {
+		t.Error("Transport layer is not TCP layer")
 	} else {
+		Equal("TCP Src", "50679", trans.SrcAppAddr())
+		Equal("TCP Dst", "80", trans.DstAppAddr())
 		if tcp.SrcPort != 50679 {
 			t.Error("tcp srcport", tcp.SrcPort)
 		}

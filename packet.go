@@ -34,6 +34,7 @@ type specificLayers struct {
 	network     NetworkLayer
 	transport   TransportLayer
 	application ApplicationLayer
+	failure     ErrorLayer
 }
 
 type packet struct {
@@ -106,9 +107,12 @@ func newPacket(data []byte, lazy DecodeMethod, d decoder) Packet {
 func (p *packet) decodeNextLayer() (out Layer) {
 	defer func() {
 		if r := recover(); r != nil {
-			p.appendLayer(&DecodeFailure{Data: p.encoded, Error: errors.New(fmt.Sprint("Decode failure:", r))})
+			fail := &DecodeFailure{data: p.encoded, err: errors.New(fmt.Sprint("Decode failure:", r))}
+			p.appendLayer(fail)
+			p.failure = fail
 			p.encoded = nil
 			p.decoder = nil
+			out = p.failure
 		}
 	}()
 	if p.decoder == nil || len(p.encoded) == 0 {
@@ -118,7 +122,8 @@ func (p *packet) decodeNextLayer() (out Layer) {
 	if result.err != nil {
 		p.encoded = nil
 		p.decoder = nil
-		out = &DecodeFailure{Data: p.encoded, Error: result.err}
+		p.failure = &DecodeFailure{data: p.encoded, err: result.err}
+		out = p.failure
 	} else {
 		p.encoded = result.left
 		p.decoder = result.next
