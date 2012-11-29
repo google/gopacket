@@ -12,27 +12,23 @@ import (
 type EthernetType uint16
 
 const (
-	ETHER_IP4   EthernetType = 0x0800
-	ETHER_ARP   EthernetType = 0x0806
-	ETHER_IP6   EthernetType = 0x86DD
-	ETHER_DOT1Q EthernetType = 0x8100
+	EthernetTypeIPv4  EthernetType = 0x0800
+	EthernetTypeARP   EthernetType = 0x0806
+	EthernetTypeIPv6  EthernetType = 0x86DD
+	EthernetTypeDot1Q EthernetType = 0x8100
 )
 
-func (e EthernetType) decode(data []byte, s *specificLayers) (out decodeResult) {
+func (e EthernetType) Decode(data []byte) (out DecodeResult, err error) {
 	switch e {
-	case ETHER_IP4:
-		return decodeIp4(data, s)
-	case ETHER_IP6:
-		return decodeIp6(data, s)
-	case ETHER_ARP:
-		return decodeArp(data, s)
-	case ETHER_DOT1Q:
-		return decodeDot1Q(data, s)
+	case EthernetTypeIPv4:
+		return decodeIp4(data)
+	case EthernetTypeIPv6:
+		return decodeIp6(data)
+	case EthernetTypeARP:
+		return decodeArp(data)
+	case EthernetTypeDot1Q:
+		return decodeDot1Q(data)
 	}
-	out.err = errors.New("Unsupported ethernet type")
+	err = errors.New("Unsupported ethernet type")
 	return
-}
-
-func (e EthernetType) Decode(data []byte, lazy DecodeMethod) Packet {
-	return newPacket(data, lazy, e)
 }

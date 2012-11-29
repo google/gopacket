@@ -17,18 +17,18 @@ type IPv4 struct {
 	Flags      uint8
 	FragOffset uint16
 	TTL        uint8
-	Protocol   IpProtocol
+	Protocol   IPProtocol
 	Checksum   uint16
 	SrcIp      IPAddress
 	DstIp      IPAddress
 }
 
-// Returns TYPE_IP4
-func (i *IPv4) LayerType() LayerType { return TYPE_IP4 }
+// Returns LayerTypeIPv4
+func (i *IPv4) LayerType() LayerType { return LayerTypeIPv4 }
 func (i *IPv4) SrcNetAddr() Address  { return i.SrcIp }
 func (i *IPv4) DstNetAddr() Address  { return i.DstIp }
 
-var decodeIp4 decoderFunc = func(data []byte, s *specificLayers) (out decodeResult) {
+var decodeIp4 decoderFunc = func(data []byte) (out DecodeResult, err error) {
 	flagsfrags := binary.BigEndian.Uint16(data[6:8])
 	ip := &IPv4{
 		Version:    uint8(data[0]) >> 4,
@@ -39,7 +39,7 @@ var decodeIp4 decoderFunc = func(data []byte, s *specificLayers) (out decodeResu
 		Flags:      uint8(flagsfrags >> 13),
 		FragOffset: flagsfrags & 0x1FFF,
 		TTL:        data[8],
-		Protocol:   IpProtocol(data[9]),
+		Protocol:   IPProtocol(data[9]),
 		Checksum:   binary.BigEndian.Uint16(data[10:12]),
 		SrcIp:      data[12:16],
 		DstIp:      data[16:20],
@@ -48,9 +48,9 @@ var decodeIp4 decoderFunc = func(data []byte, s *specificLayers) (out decodeResu
 	if pEnd > len(data) {
 		pEnd = len(data)
 	}
-	out.left = data[ip.Ihl*4 : pEnd]
-	out.layer = ip
-	out.next = ip.Protocol
-	s.network = ip
+	out.RemainingBytes = data[ip.Ihl*4 : pEnd]
+	out.DecodedLayer = ip
+	out.NextDecoder = ip.Protocol
+	out.NetworkLayer = ip
 	return
 }

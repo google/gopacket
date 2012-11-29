@@ -16,11 +16,11 @@ type UDP struct {
 	sPort, dPort PortAddress
 }
 
-// Returns TYPE_UDP
-func (u *UDP) LayerType() LayerType { return TYPE_UDP }
+// Returns LayerTypeUDP
+func (u *UDP) LayerType() LayerType { return LayerTypeUDP }
 
-var decodeUdp decoderFunc = func(data []byte, s *specificLayers) (out decodeResult) {
-	out.layer = &UDP{
+var decodeUdp decoderFunc = func(data []byte) (out DecodeResult, err error) {
+	udp := &UDP{
 		SrcPort:  binary.BigEndian.Uint16(data[0:2]),
 		sPort:    data[0:2],
 		DstPort:  binary.BigEndian.Uint16(data[2:4]),
@@ -28,8 +28,10 @@ var decodeUdp decoderFunc = func(data []byte, s *specificLayers) (out decodeResu
 		Length:   binary.BigEndian.Uint16(data[4:6]),
 		Checksum: binary.BigEndian.Uint16(data[6:8]),
 	}
-	out.next = decodePayload
-	out.left = data[8:]
+	out.DecodedLayer = udp
+	out.NextDecoder = decodePayload
+	out.RemainingBytes = data[8:]
+	out.TransportLayer = udp
 	return
 }
 

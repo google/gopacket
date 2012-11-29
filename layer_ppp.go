@@ -10,12 +10,12 @@ import (
 
 // PPP is the layer for PPP encapsulation headers.
 type PPP struct {
-	PppType PppType
+	PPPType PPPType
 }
 
 type pppAddress []byte
 
-var singletonPppAddress = pppAddress{}
+var singletonPPPAddress = pppAddress{}
 
 func (p pppAddress) String() string {
 	return "point"
@@ -24,27 +24,27 @@ func (p pppAddress) Raw() []byte {
 	return p
 }
 
-func (p *PPP) SrcLinkAddr() Address { return singletonPppAddress }
-func (p *PPP) DstLinkAddr() Address { return singletonPppAddress }
+func (p *PPP) SrcLinkAddr() Address { return singletonPPPAddress }
+func (p *PPP) DstLinkAddr() Address { return singletonPPPAddress }
 
-// Returns TYPE_PPP
-func (p *PPP) LayerType() LayerType { return TYPE_PPP }
+// Returns LayerTypePPP
+func (p *PPP) LayerType() LayerType { return LayerTypePPP }
 
-var decodePpp decoderFunc = func(data []byte, s *specificLayers) (out decodeResult) {
+var decodePPP decoderFunc = func(data []byte) (out DecodeResult, err error) {
 	ppp := &PPP{}
 	if data[0]&0x1 == 0 {
 		if data[1]&0x1 == 0 {
-			out.err = errors.New("PPP has invalid type")
+			err = errors.New("PPP has invalid type")
 			return
 		}
-		ppp.PppType = PppType(binary.BigEndian.Uint16(data[:2]))
-		out.left = data[2:]
+		ppp.PPPType = PPPType(binary.BigEndian.Uint16(data[:2]))
+		out.RemainingBytes = data[2:]
 	} else {
-		ppp.PppType = PppType(data[0])
-		out.left = data[1:]
+		ppp.PPPType = PPPType(data[0])
+		out.RemainingBytes = data[1:]
 	}
-	out.layer = ppp
-	out.next = ppp.PppType
-	s.link = ppp
+	out.DecodedLayer = ppp
+	out.NextDecoder = ppp.PPPType
+	out.LinkLayer = ppp
 	return
 }

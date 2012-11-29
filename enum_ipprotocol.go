@@ -8,29 +8,25 @@ import (
 	"fmt"
 )
 
-// IpProtocol is an enumeration of IP protocol values, and acts as a decoder
+// IPProtocol is an enumeration of IP protocol values, and acts as a decoder
 // for any type it supports.
-type IpProtocol uint8
+type IPProtocol uint8
 
 const (
-	IP_ICMP IpProtocol = 1
-	IP_TCP  IpProtocol = 6
-	IP_UDP  IpProtocol = 17
+	IPProtocolICMP IPProtocol = 1
+	IPProtocolTCP  IPProtocol = 6
+	IPProtocolUDP  IPProtocol = 17
 )
 
-func (ip IpProtocol) decode(data []byte, s *specificLayers) (out decodeResult) {
+func (ip IPProtocol) Decode(data []byte) (out DecodeResult, err error) {
 	switch ip {
-	case IP_TCP:
-		return decodeTcp(data, s)
-	case IP_UDP:
-		return decodeUdp(data, s)
-	case IP_ICMP:
-		return decodeIcmp(data, s)
+	case IPProtocolTCP:
+		return decodeTcp(data)
+	case IPProtocolUDP:
+		return decodeUdp(data)
+	case IPProtocolICMP:
+		return decodeIcmp(data)
 	}
-	out.err = errors.New(fmt.Sprintf("Unsupported IP protocol %d", ip))
+	err = errors.New(fmt.Sprintf("Unsupported IP protocol %d", ip))
 	return
-}
-
-func (ip IpProtocol) Decode(data []byte, lazy DecodeMethod) Packet {
-	return newPacket(data, lazy, ip)
 }

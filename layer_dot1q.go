@@ -12,26 +12,26 @@ import (
 type Dot1Q struct {
 	Priority       uint8
 	DropEligible   bool
-	VlanIdentifier uint16
+	VLANIdentifier uint16
 	Type           EthernetType
 }
 
-// Returns TYPE_DOT1Q
-func (d *Dot1Q) LayerType() LayerType { return TYPE_DOT1Q }
+// Returns LayerTypeDot1Q
+func (d *Dot1Q) LayerType() LayerType { return LayerTypeDot1Q }
 
 func (v *Dot1Q) String() {
-	fmt.Sprintf("VLAN Prioity:%d Drop:%v Tag:%d", v.Priority, v.DropEligible, v.VlanIdentifier)
+	fmt.Sprintf("VLAN Prioity:%d Drop:%v Tag:%d", v.Priority, v.DropEligible, v.VLANIdentifier)
 }
 
-var decodeDot1Q decoderFunc = func(data []byte, s *specificLayers) (out decodeResult) {
+var decodeDot1Q decoderFunc = func(data []byte) (out DecodeResult, err error) {
 	d := &Dot1Q{
 		Priority:       (data[2] & 0xE0) >> 13,
 		DropEligible:   data[2]&0x10 != 0,
-		VlanIdentifier: binary.BigEndian.Uint16(data[:2]) & 0x0FFF,
+		VLANIdentifier: binary.BigEndian.Uint16(data[:2]) & 0x0FFF,
 		Type:           EthernetType(binary.BigEndian.Uint16(data[2:4])),
 	}
-	out.layer = d
-	out.next = d.Type
-	out.left = data[4:]
+	out.DecodedLayer = d
+	out.NextDecoder = d.Type
+	out.RemainingBytes = data[4:]
 	return
 }

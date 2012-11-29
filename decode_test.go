@@ -50,13 +50,13 @@ var testSimpleTcpPacket []byte = []byte{
 
 func BenchmarkCreatePacket(b *testing.B) {
 	for i := 0; i < b.N; i++ {
-		LINKTYPE_ETHERNET.Decode(testSimpleTcpPacket, Lazy)
+		NewPacket(testSimpleTcpPacket, LinkTypeEthernet, Lazy)
 	}
 }
 
 func BenchmarkGetEthLayer(b *testing.B) {
 	for i := 0; i < b.N; i++ {
-		LINKTYPE_ETHERNET.Decode(testSimpleTcpPacket, Lazy).Layer(TYPE_ETHERNET)
+		NewPacket(testSimpleTcpPacket, LinkTypeEthernet, Lazy).Layer(LayerTypeEthernet)
 	}
 }
 
@@ -72,25 +72,25 @@ func BenchmarkTypeAssertion(b *testing.B) {
 
 func BenchmarkGetIpLayer(b *testing.B) {
 	for i := 0; i < b.N; i++ {
-		LINKTYPE_ETHERNET.Decode(testSimpleTcpPacket, Lazy).Layer(TYPE_IP4)
+		NewPacket(testSimpleTcpPacket, LinkTypeEthernet, Lazy).Layer(LayerTypeIPv4)
 	}
 }
 
 func BenchmarkGetTcpLayer(b *testing.B) {
 	for i := 0; i < b.N; i++ {
-		LINKTYPE_ETHERNET.Decode(testSimpleTcpPacket, Lazy).Layer(TYPE_TCP)
+		NewPacket(testSimpleTcpPacket, LinkTypeEthernet, Lazy).Layer(LayerTypeTCP)
 	}
 }
 
 func BenchmarkGetAllLayers(b *testing.B) {
 	for i := 0; i < b.N; i++ {
-		LINKTYPE_ETHERNET.Decode(testSimpleTcpPacket, Lazy).Layers()
+		NewPacket(testSimpleTcpPacket, LinkTypeEthernet, Lazy).Layers()
 	}
 }
 
 func BenchmarkDecodeEager(b *testing.B) {
 	for i := 0; i < b.N; i++ {
-		LINKTYPE_ETHERNET.Decode(testSimpleTcpPacket, Eager)
+		NewPacket(testSimpleTcpPacket, LinkTypeEthernet, Eager)
 	}
 }
 
@@ -101,7 +101,7 @@ func BenchmarkAlloc(b *testing.B) {
 }
 
 func BenchmarkFlowKey(b *testing.B) {
-	p := LINKTYPE_ETHERNET.Decode(testSimpleTcpPacket, Lazy)
+	p := NewPacket(testSimpleTcpPacket, LinkTypeEthernet, Lazy)
 	net := p.NetworkLayer()
 	trans := p.TransportLayer()
 	for i := 0; i < b.N; i++ {
@@ -111,12 +111,12 @@ func BenchmarkFlowKey(b *testing.B) {
 
 func BenchmarkPacketFlowKey(b *testing.B) {
 	for i := 0; i < b.N; i++ {
-		LINKTYPE_ETHERNET.Decode(testSimpleTcpPacket, Lazy).FlowKey()
+		NewPacket(testSimpleTcpPacket, LinkTypeEthernet, Lazy).FlowKey()
 	}
 }
 
 func BenchmarkFlowMapKey(b *testing.B) {
-	p := LINKTYPE_ETHERNET.Decode(testSimpleTcpPacket, Lazy)
+	p := NewPacket(testSimpleTcpPacket, LinkTypeEthernet, Lazy)
 	net := p.NetworkLayer()
 	trans := p.TransportLayer()
 	m := map[FlowKey]bool{}
@@ -131,7 +131,7 @@ func TestDecodeSimpleTcpPacket(t *testing.T) {
 			t.Errorf("%s: Expected %s Got %s", desc, expected, actual)
 		}
 	}
-	p := LINKTYPE_ETHERNET.Decode(testSimpleTcpPacket, Lazy)
+	p := NewPacket(testSimpleTcpPacket, LinkTypeEthernet, Lazy)
 	if eth := p.LinkLayer(); eth == nil {
 		t.Error("No ethernet layer found")
 	} else {
@@ -211,11 +211,11 @@ func TestDecodeSimpleTcpPacket(t *testing.T) {
 			t.Error("tcp urgent", tcp.Urgent)
 		}
 	}
-	if payload, ok := p.Layer(TYPE_PAYLOAD).(*Payload); payload == nil || !ok {
+	if payload, ok := p.Layer(LayerTypePayload).(*Payload); payload == nil || !ok {
 		t.Error("No payload layer found")
 	} else {
 		if string(payload.Data) != "GET / HTTP/1.1\r\nHost: www.fish.com\r\nConnection: keep-alive\r\nUser-Agent: Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/535.2 (KHTML, like Gecko) Chrome/15.0.874.121 Safari/535.2\r\nAccept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8\r\nAccept-Encoding: gzip,deflate,sdch\r\nAccept-Language: en-US,en;q=0.8\r\nAccept-Charset: ISO-8859-1,utf-8;q=0.7,*;q=0.3\r\n\r\n" {
-			t.Error("--- PAYLOAD STRING ---\n", string(payload.Data), "\n--- PAYLOAD BYTES ---\n", payload.Data)
+			t.Error("--- Payload STRING ---\n", string(payload.Data), "\n--- Payload BYTES ---\n", payload.Data)
 		}
 	}
 }
@@ -223,22 +223,22 @@ func TestDecodeSimpleTcpPacket(t *testing.T) {
 // Makes sure packet payload doesn't display the 6 trailing null of this packet
 // as part of the payload.  They're actually the ethernet trailer.
 func TestDecodeSmallTcpPacketHasEmptyPayload(t *testing.T) {
-	p := LINKTYPE_ETHERNET.Decode(
+	p := NewPacket(
 		[]byte{
 			0xbc, 0x30, 0x5b, 0xe8, 0xd3, 0x49, 0xb8, 0xac, 0x6f, 0x92, 0xd5, 0xbf,
 			0x08, 0x00, 0x45, 0x00, 0x00, 0x28, 0x00, 0x00, 0x40, 0x00, 0x40, 0x06,
 			0x3f, 0x9f, 0xac, 0x11, 0x51, 0xc5, 0xac, 0x11, 0x51, 0x49, 0x00, 0x63,
 			0x9a, 0xef, 0x00, 0x00, 0x00, 0x00, 0x2e, 0xc1, 0x27, 0x83, 0x50, 0x14,
 			0x00, 0x00, 0xc3, 0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
-		}, Eager)
+		}, LinkTypeEthernet, Eager)
 
-	if payload := p.Layer(TYPE_PAYLOAD); payload != nil {
+	if payload := p.Layer(LayerTypePayload); payload != nil {
 		t.Error("Payload found for empty TCP packet")
 	}
 }
 
 func TestDecodeVlanPacket(t *testing.T) {
-	p := LINKTYPE_ETHERNET.Decode(
+	p := NewPacket(
 		[]byte{
 			0x00, 0x10, 0xdb, 0xff, 0x10, 0x00, 0x00, 0x15, 0x2c, 0x9d, 0xcc, 0x00,
 			0x81, 0x00, 0x01, 0xf7, 0x08, 0x00, 0x45, 0x00, 0x00, 0x28, 0x29, 0x8d,
@@ -246,19 +246,19 @@ func TestDecodeVlanPacket(t *testing.T) {
 			0x94, 0xe2, 0xd4, 0x0a, 0x00, 0x50, 0xdf, 0xab, 0x9c, 0xc6, 0xcd, 0x1e,
 			0xe5, 0xd1, 0x50, 0x10, 0x01, 0x00, 0x5a, 0x74, 0x00, 0x00, 0x00, 0x00,
 			0x00, 0x00, 0x00, 0x00,
-		}, Eager)
+		}, LinkTypeEthernet, Eager)
 	if err := p.ErrorLayer(); err != nil {
 		t.Error("Error while parsing vlan packet:", err.Error())
 	}
-	if vlan := p.Layer(TYPE_DOT1Q); vlan == nil {
+	if vlan := p.Layer(LayerTypeDot1Q); vlan == nil {
 		t.Error("Didn't detect vlan")
 	} else if _, ok := vlan.(*Dot1Q); !ok {
-		t.Error("TYPE_DOT1Q layer is not a Dot1Q object")
+		t.Error("LayerTypeDot1Q layer is not a Dot1Q object")
 	}
 	for i, l := range p.Layers() {
 		t.Logf("Layer %d: %#v", i, l)
 	}
-	expected := []LayerType{TYPE_ETHERNET, TYPE_DOT1Q, TYPE_IP4, TYPE_TCP}
+	expected := []LayerType{LayerTypeEthernet, LayerTypeDot1Q, LayerTypeIPv4, LayerTypeTCP}
 	if len(p.Layers()) != len(expected) {
 		t.Error("Incorrect number of headers:", len(p.Layers()))
 		t.FailNow()

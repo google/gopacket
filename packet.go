@@ -46,6 +46,24 @@ type specificLayers struct {
 	failure     ErrorLayer
 }
 
+func (s *specificLayers) copyFrom(r *DecodeResult) {
+	if s.link == nil {
+		s.link = r.LinkLayer
+	}
+	if s.network == nil {
+		s.network = r.NetworkLayer
+	}
+	if s.transport == nil {
+		s.transport = r.TransportLayer
+	}
+	if s.application == nil {
+		s.application = r.ApplicationLayer
+	}
+	if s.failure == nil {
+		s.failure = r.ErrorLayer
+	}
+}
+
 type packet struct {
 	// data contains the entire packet data for a packet
 	data []byte
@@ -54,7 +72,7 @@ type packet struct {
 	// layers contains each layer we've already decoded
 	layers []Layer
 	// decoder is the next decoder we should call (lazily)
-	decoder decoder
+	decoder Decoder
 
 	// The set of specific layers we have pointers to.
 	specificLayers
@@ -94,18 +112,21 @@ func (p *packet) appendLayer(l Layer) {
 	p.layers = append(p.layers, l)
 }
 
-func newPacket(data []byte, lazy DecodeMethod, d decoder) Packet {
+// NewPacket creates a new Packet object from a set of bytes.  The
+// firstLayerDecoder tells it how to interpret the first layer from the bytes,
+// future layers will be generated from that first layer automatically.
+func NewPacket(data []byte, firstLayerDecoder Decoder, method DecodeMethod) Packet {
 	p := &packet{
 		data:    data,
 		encoded: data,
-		decoder: d,
+		decoder: firstLayerDecoder,
 		// We start off with a size-4 slice since growing a size-zero slice actually
 		// can take us a large amount of time, and we expect most packets to give us
 		// 4 layers (link, network, transport, application).  This gives our 4-layer
 		// benchmark (DecodeNotLazy) a speedup of ~10% (2150ns -> 1922ns)
 		layers: make([]Layer, 0, 4),
 	}
-	if !lazy {
+	if method != Lazy {
 		p.Layers()
 	}
 	return p
@@ -127,16 +148,17 @@ func (p *packet) decodeNextLayer() (out Layer) {
 	if p.decoder == nil || len(p.encoded) == 0 {
 		return nil
 	}
-	result := p.decoder.decode(p.encoded, &p.specificLayers)
-	if result.err != nil {
+	result, err := p.decoder.Decode(p.encoded)
+	if err != nil {
+		p.failure = &DecodeFailure{data: p.encoded, err: err}
 		p.encoded = nil
 		p.decoder = nil
-		p.failure = &DecodeFailure{data: p.encoded, err: result.err}
 		out = p.failure
 	} else {
-		p.encoded = result.left
-		p.decoder = result.next
-		out = result.layer
+		p.encoded = result.RemainingBytes
+		p.decoder = result.NextDecoder
+		out = result.DecodedLayer
+		p.specificLayers.copyFrom(&result)
 	}
 	p.appendLayer(out)
 	return out

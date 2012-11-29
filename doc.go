@@ -7,9 +7,9 @@
 // within the bytes.  Once a packet has been decoded, the layers of that packet
 // can be requested from the packet.
 //  // Decode a packet
-//  packet := gopacket.LINKTYPE_ETHERNET.Decode(myPacketData, gopacket.Eager)
+//  packet := gopacket.LinkTypeETHERNET.Decode(myPacketData, gopacket.Eager)
 //  // Get the TCP layer from this packet
-//  if tcpLayer := packet.Layer(gopacket.TYPE_TCP); tcpLayer != nil {
+//  if tcpLayer := packet.Layer(gopacket.LayerTypeTCP); tcpLayer != nil {
 //    fmt.Println("This is a TCP packet!")
 //    // Get actual TCP data from this layer
 //    tcp, _ := tcpLayer.(*gopacket.TCP)
@@ -23,7 +23,7 @@
 // types implement PacketDecoder, which allow us to decode packets for which
 // we don't have full data.
 //  // Decode an ethernet packet
-//  ethP := gopacket.LINKTYPE_ETHERNET.Decode(p1, gopacket.Eager)
+//  ethP := gopacket.LinkTypeETHERNET.Decode(p1, gopacket.Eager)
 //  // Decode an IPv6 header and everything it contains
 //  ipP := gopacket.ETHER_IP6.Decode(p2, gopacket.Eager)
 //  // Decode a TCP header and its payload
@@ -61,11 +61,11 @@
 // only decodes a packet layer when it needs to to handle a function call.
 //  // Create a packet, but don't actually decode anything yet (use
 //  // gopacket.Eager instead if you don't want lazy decoding)
-//  packet := gopacket.LINKTYPE_ETHERNET.Decode(myPacketData, gopacket.Lazy)
+//  packet := gopacket.LinkTypeETHERNET.Decode(myPacketData, gopacket.Lazy)
 //  // Now, decode the packet up to the first IPv4 layer found but no further.
 //  // If no IPv4 layer was found, the whole packet will be decoded looking for
 //  // it.
-//  ip4 := packet.Layer(gopacket.TYPE_IP4)
+//  ip4 := packet.Layer(gopacket.LayerTypeIP4)
 //  // Decode all layers and return them.  The layers up to the first IPv4 layer
 //  // are already decoded, and will not require decoding a second time.
 //  layers := packet.Layers()
@@ -81,7 +81,7 @@
 //  // Create a flow map
 //  flows := map[gopacket.FlowKey]*someFlowObject
 //  // Create the packet
-//  packet := gopacket.LINKTYPE_ETHERNET.Decode(myPacketData, gopacket.Lazy)
+//  packet := gopacket.LinkTypeETHERNET.Decode(myPacketData, gopacket.Lazy)
 //  // Add the packet to a flow
 //  flows[packet.FlowKey()].addPacketToFlow(packet)
 //

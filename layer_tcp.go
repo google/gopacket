@@ -23,24 +23,24 @@ type TCP struct {
 	sPort, dPort PortAddress
 }
 
-// Returns TYPE_TCP
-func (t *TCP) LayerType() LayerType { return TYPE_TCP }
+// Returns LayerTypeTCP
+func (t *TCP) LayerType() LayerType { return LayerTypeTCP }
 
 type TcpFlag uint16
 
 const (
-	TCP_FIN TcpFlag = 1 << iota
-	TCP_SYN
-	TCP_RST
-	TCP_PSH
-	TCP_ACK
-	TCP_URG
-	TCP_ECE
-	TCP_CWR
-	TCP_NS
+	TCPFlagFIN TcpFlag = 1 << iota
+	TCPFlagSYN
+	TCPFlagRST
+	TCPFlagPSH
+	TCPFlagACK
+	TCPFlagURG
+	TCPFlagECE
+	TCPFlagCWR
+	TCPFlagNS
 )
 
-var decodeTcp decoderFunc = func(data []byte, s *specificLayers) (out decodeResult) {
+var decodeTcp decoderFunc = func(data []byte) (out DecodeResult, err error) {
 	tcp := &TCP{
 		SrcPort:    binary.BigEndian.Uint16(data[0:2]),
 		sPort:      data[0:2],
@@ -54,43 +54,43 @@ var decodeTcp decoderFunc = func(data []byte, s *specificLayers) (out decodeResu
 		Checksum:   binary.BigEndian.Uint16(data[16:18]),
 		Urgent:     binary.BigEndian.Uint16(data[18:20]),
 	}
-	out.left = data[tcp.DataOffset*4:]
-	out.layer = tcp
-	out.next = decodePayload
-	s.transport = tcp
+	out.RemainingBytes = data[tcp.DataOffset*4:]
+	out.DecodedLayer = tcp
+	out.NextDecoder = decodePayload
+	out.TransportLayer = tcp
 	return
 }
 
 func (f TcpFlag) String() string {
 	var sflags []string
-	if 0 != (f & TCP_SYN) {
+	if 0 != (f & TCPFlagSYN) {
 		sflags = append(sflags, "syn")
 	}
-	if 0 != (f & TCP_FIN) {
+	if 0 != (f & TCPFlagFIN) {
 		sflags = append(sflags, "fin")
 	}
-	if 0 != (f & TCP_ACK) {
+	if 0 != (f & TCPFlagACK) {
 		sflags = append(sflags, "ack")
 	}
-	if 0 != (f & TCP_PSH) {
+	if 0 != (f & TCPFlagPSH) {
 		sflags = append(sflags, "psh")
 	}
-	if 0 != (f & TCP_RST) {
+	if 0 != (f & TCPFlagRST) {
 		sflags = append(sflags, "rst")
 	}
-	if 0 != (f & TCP_URG) {
+	if 0 != (f & TCPFlagURG) {
 		sflags = append(sflags, "urg")
 	}
-	if 0 != (f & TCP_NS) {
+	if 0 != (f & TCPFlagNS) {
 		sflags = append(sflags, "ns")
 	}
-	if 0 != (f & TCP_CWR) {
+	if 0 != (f & TCPFlagCWR) {
 		sflags = append(sflags, "cwr")
 	}
-	if 0 != (f & TCP_ECE) {
+	if 0 != (f & TCPFlagECE) {
 		sflags = append(sflags, "ece")
 	}
-	return fmt.Sprintf("[%s]", strings.Join(sflags, " "))
+	return fmt.Sprintf("[%s]", strings.Join(sflags, "|"))
 }
 
 func (t *TCP) SrcAppAddr() Address { return t.sPort }

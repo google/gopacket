@@ -17,42 +17,42 @@ import (
 type LayerType int
 
 const (
-	TYPE_PAYLOAD        LayerType = iota // Type: Payload
-	TYPE_DECODE_FAILURE                  // Type: DecodeFailure
-	TYPE_ETHERNET                        // Type: Ethernet
-	TYPE_PPP                             // Type: PPP
-	TYPE_IP4                             // Type: IPv4
-	TYPE_IP6                             // Type: IPv6
-	TYPE_TCP                             // Type: TCP
-	TYPE_UDP                             // Type: UDP
-	TYPE_ICMP                            // Type: ICMP
-	TYPE_DOT1Q                           // Type: Dot1Q
-	TYPE_ARP                             // Type: ARP
+	LayerTypePayload       LayerType = iota // Type: Payload
+	LayerTypeDecodeFailure                  // Type: DecodeFailure
+	LayerTypeEthernet                       // Type: Ethernet
+	LayerTypePPP                            // Type: PPP
+	LayerTypeIPv4                           // Type: IPv4
+	LayerTypeIPv6                           // Type: IPv6
+	LayerTypeTCP                            // Type: TCP
+	LayerTypeUDP                            // Type: UDP
+	LayerTypeICMP                           // Type: ICMP
+	LayerTypeDot1Q                          // Type: Dot1Q
+	LayerTypeARP                            // Type: ARP
 )
 
 func (l LayerType) String() string {
 	switch l {
-	case TYPE_PAYLOAD:
+	case LayerTypePayload:
 		return "Payload"
-	case TYPE_DECODE_FAILURE:
+	case LayerTypeDecodeFailure:
 		return "DecodeFailure"
-	case TYPE_ETHERNET:
+	case LayerTypeEthernet:
 		return "Ethernet"
-	case TYPE_PPP:
+	case LayerTypePPP:
 		return "PPP"
-	case TYPE_IP4:
+	case LayerTypeIPv4:
 		return "IPv4"
-	case TYPE_IP6:
+	case LayerTypeIPv6:
 		return "IPv6"
-	case TYPE_TCP:
+	case LayerTypeTCP:
 		return "TCP"
-	case TYPE_UDP:
+	case LayerTypeUDP:
 		return "UDP"
-	case TYPE_ICMP:
+	case LayerTypeICMP:
 		return "ICMP"
-	case TYPE_DOT1Q:
+	case LayerTypeDot1Q:
 		return "Dot1Q"
-	case TYPE_ARP:
+	case LayerTypeARP:
 		return "ARP"
 	}
 	return "<Unknown>"
@@ -76,8 +76,8 @@ type Payload struct {
 	Data []byte
 }
 
-// Returns TYPE_PAYLOAD
-func (p *Payload) LayerType() LayerType { return TYPE_PAYLOAD }
+// Returns LayerTypePayload
+func (p *Payload) LayerType() LayerType { return LayerTypePayload }
 func (p *Payload) Payload() []byte      { return p.Data }
 
 // Address is the set of bytes used to address packets at various layers.

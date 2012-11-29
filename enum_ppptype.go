@@ -7,26 +7,22 @@ import (
 	"errors"
 )
 
-// PppType is an enumeration of PPP type values, and acts as a decoder for any
+// PPPType is an enumeration of PPP type values, and acts as a decoder for any
 // type it supports.
-type PppType uint16
+type PPPType uint16
 
 const (
-	PPP_IP4 PppType = 0x0021
-	PPP_IP6 PppType = 0x0057
+	PPPTypeIPv4 PPPType = 0x0021
+	PPPTypeIPv6 PPPType = 0x0057
 )
 
-func (p PppType) decode(data []byte, s *specificLayers) (out decodeResult) {
+func (p PPPType) Decode(data []byte) (out DecodeResult, err error) {
 	switch p {
-	case PPP_IP4:
-		return decodeIp4(data, s)
-	case PPP_IP6:
-		return decodeIp6(data, s)
+	case PPPTypeIPv4:
+		return decodeIp4(data)
+	case PPPTypeIPv6:
+		return decodeIp6(data)
 	}
-	out.err = errors.New("Unsupported PPP type")
+	err = errors.New("Unsupported PPP type")
 	return
-}
-
-func (p PppType) Decode(data []byte, lazy DecodeMethod) Packet {
-	return newPacket(data, lazy, p)
 }

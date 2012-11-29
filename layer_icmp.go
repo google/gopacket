@@ -17,19 +17,19 @@ type ICMP struct {
 	Seq      uint16
 }
 
-// Returns TYPE_ICMP
-func (i *ICMP) LayerType() LayerType { return TYPE_ICMP }
+// Returns LayerTypeICMP
+func (i *ICMP) LayerType() LayerType { return LayerTypeICMP }
 
-var decodeIcmp decoderFunc = func(data []byte, s *specificLayers) (out decodeResult) {
-	out.layer = &ICMP{
+var decodeIcmp decoderFunc = func(data []byte) (out DecodeResult, err error) {
+	out.DecodedLayer = &ICMP{
 		Type:     data[0],
 		Code:     data[1],
 		Checksum: binary.BigEndian.Uint16(data[2:4]),
 		Id:       binary.BigEndian.Uint16(data[4:6]),
 		Seq:      binary.BigEndian.Uint16(data[6:8]),
 	}
-	out.left = data[8:]
-	out.next = decodePayload
+	out.RemainingBytes = data[8:]
+	out.NextDecoder = decodePayload
 	return
 }
 
