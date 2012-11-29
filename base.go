@@ -87,11 +87,11 @@ type Address interface {
 	Raw() []byte
 }
 
-// MacAddress is the set of bytes representing a MAC address
-type MacAddress net.HardwareAddr
+// MACAddress is the set of bytes representing a MAC address
+type MACAddress net.HardwareAddr
 
-func (a MacAddress) Raw() []byte    { return a }
-func (a MacAddress) String() string { return net.HardwareAddr(a).String() }
+func (a MACAddress) Raw() []byte    { return a }
+func (a MACAddress) String() string { return net.HardwareAddr(a).String() }
 
 // IPAddress is the set of bytes representing an IPv4 or IPv6 address
 type IPAddress net.IP

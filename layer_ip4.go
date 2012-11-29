@@ -16,7 +16,7 @@ type IPv4 struct {
 	Id         uint16
 	Flags      uint8
 	FragOffset uint16
-	Ttl        uint8
+	TTL        uint8
 	Protocol   IpProtocol
 	Checksum   uint16
 	SrcIp      IPAddress
@@ -38,7 +38,7 @@ var decodeIp4 decoderFunc = func(data []byte, s *specificLayers) (out decodeResu
 		Id:         binary.BigEndian.Uint16(data[4:6]),
 		Flags:      uint8(flagsfrags >> 13),
 		FragOffset: flagsfrags & 0x1FFF,
-		Ttl:        data[8],
+		TTL:        data[8],
 		Protocol:   IpProtocol(data[9]),
 		Checksum:   binary.BigEndian.Uint16(data[10:12]),
 		SrcIp:      data[12:16],

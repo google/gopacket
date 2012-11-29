@@ -166,8 +166,8 @@ func TestDecodeSimpleTcpPacket(t *testing.T) {
 		if ip.FragOffset != 0 {
 			t.Error("ip Fragoffset", ip.FragOffset)
 		}
-		if ip.Ttl != 64 {
-			t.Error("ip TTL", ip.Ttl)
+		if ip.TTL != 64 {
+			t.Error("ip TTL", ip.TTL)
 		}
 		if ip.Protocol != 6 {
 			t.Error("ip Protocol", ip.Protocol)
