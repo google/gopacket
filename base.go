@@ -55,7 +55,7 @@ func (l LayerType) String() string {
 	case LayerTypeARP:
 		return "ARP"
 	}
-	return "<Unknown>"
+	return strconv.Itoa(int(l))
 }
 
 // Layer represents a single decoded packet layer (using either the

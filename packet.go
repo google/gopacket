@@ -10,7 +10,7 @@ import (
 )
 
 // Packet is the primary object used by gopacket.  Packets are created by a
-// PacketDecoder's Decode call.  A packet is made up of a set of Data(), which
+// Decoder's Decode call.  A packet is made up of a set of Data(), which
 // is broken into a number of Layers as it is decoded.
 type Packet interface {
 	// Returns all data associated with this packet

@@ -15,7 +15,9 @@ type FlowKey struct {
 	srcNet, dstNet, srcApp, dstApp string
 }
 
-// One side of a flow key
+// FlowAddress represents one of the endpoints of a FlowKey.
+// Like FlowKey, FlowAddress is hashable (usable in map[]) and is not designed
+// to be human-readable.
 type FlowAddress struct {
 	netType, transType LayerType
 	net, app           string
