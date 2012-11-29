@@ -5,6 +5,7 @@ package gopacket
 
 import (
 	"fmt"
+	"reflect"
 	"testing"
 )
 
@@ -126,7 +127,7 @@ func BenchmarkFlowMapKey(b *testing.B) {
 }
 
 func TestDecodeSimpleTcpPacket(t *testing.T) {
-	Equal := func(desc, expected string, actual fmt.Stringer) {
+	equal := func(desc, expected string, actual fmt.Stringer) {
 		if expected != actual.String() {
 			t.Errorf("%s: Expected %s Got %s", desc, expected, actual)
 		}
@@ -135,45 +136,32 @@ func TestDecodeSimpleTcpPacket(t *testing.T) {
 	if eth := p.LinkLayer(); eth == nil {
 		t.Error("No ethernet layer found")
 	} else {
-		Equal("Eth Src", "bc:30:5b:e8:d3:49", eth.SrcLinkAddr())
-		Equal("Eth Dst", "00:00:0c:9f:f0:20", eth.DstLinkAddr())
+		equal("Eth Src", "bc:30:5b:e8:d3:49", eth.SrcLinkAddr())
+		equal("Eth Dst", "00:00:0c:9f:f0:20", eth.DstLinkAddr())
 	}
 	if net := p.NetworkLayer(); net == nil {
 		t.Error("No net layer found")
 	} else if ip, ok := net.(*IPv4); !ok {
 		t.Error("Net layer is not IP layer")
 	} else {
-		Equal("IP Src", "172.17.81.73", net.SrcNetAddr())
-		Equal("IP Dst", "173.222.254.225", net.DstNetAddr())
-		if ip.Version != 4 {
-			t.Error("ip Version", ip.Version)
+		equal("IP Src", "172.17.81.73", net.SrcNetAddr())
+		equal("IP Dst", "173.222.254.225", net.DstNetAddr())
+		expected := &IPv4{
+			Version:    4,
+			Ihl:        5,
+			Tos:        0,
+			Length:     420,
+			Id:         14815,
+			Flags:      0x02,
+			FragOffset: 0,
+			TTL:        64,
+			Protocol:   6,
+			Checksum:   0x555A,
+			SrcIP:      IPAddress{172, 17, 81, 73},
+			DstIP:      IPAddress{173, 222, 254, 225},
 		}
-		if ip.Ihl != 5 {
-			t.Error("ip header length", ip.Ihl)
-		}
-		if ip.Tos != 0 {
-			t.Error("ip TOS", ip.Tos)
-		}
-		if ip.Length != 420 {
-			t.Error("ip Length", ip.Length)
-		}
-		if ip.Id != 14815 {
-			t.Error("ip ID", ip.Id)
-		}
-		if ip.Flags != 0x02 {
-			t.Error("ip Flags", ip.Flags)
-		}
-		if ip.FragOffset != 0 {
-			t.Error("ip Fragoffset", ip.FragOffset)
-		}
-		if ip.TTL != 64 {
-			t.Error("ip TTL", ip.TTL)
-		}
-		if ip.Protocol != 6 {
-			t.Error("ip Protocol", ip.Protocol)
-		}
-		if ip.Checksum != 0x555A {
-			t.Error("ip Checksum", ip.Checksum)
+		if !reflect.DeepEqual(ip, expected) {
+			t.Errorf("IP layer mismatch, expected %#v got %#v", expected, ip)
 		}
 	}
 	if trans := p.TransportLayer(); trans == nil {
@@ -181,34 +169,23 @@ func TestDecodeSimpleTcpPacket(t *testing.T) {
 	} else if tcp, ok := trans.(*TCP); !ok {
 		t.Error("Transport layer is not TCP layer")
 	} else {
-		Equal("TCP Src", "50679", trans.SrcAppAddr())
-		Equal("TCP Dst", "80", trans.DstAppAddr())
-		if tcp.SrcPort != 50679 {
-			t.Error("tcp srcport", tcp.SrcPort)
+		equal("TCP Src", "50679", trans.SrcAppAddr())
+		equal("TCP Dst", "80", trans.DstAppAddr())
+		expected := &TCP{
+			SrcPort:    50679,
+			DstPort:    80,
+			Seq:        0xc57e0e48,
+			Ack:        0x49074232,
+			DataOffset: 8,
+			Flags:      0x18,
+			Window:     0x73,
+			Checksum:   0xabb1,
+			Urgent:     0,
+			sPort:      PortAddress{0xc5, 0xf7},
+			dPort:      PortAddress{0x0, 0x50},
 		}
-		if tcp.DstPort != 80 {
-			t.Error("tcp destport", tcp.DstPort)
-		}
-		if tcp.Seq != 0xc57e0e48 {
-			t.Error("tcp seq", tcp.Seq)
-		}
-		if tcp.Ack != 0x49074232 {
-			t.Error("tcp ack", tcp.Ack)
-		}
-		if tcp.DataOffset != 8 {
-			t.Error("tcp dataoffset", tcp.DataOffset)
-		}
-		if tcp.Flags != 0x18 {
-			t.Error("tcp flags", tcp.Flags)
-		}
-		if tcp.Window != 0x73 {
-			t.Error("tcp window", tcp.Window)
-		}
-		if tcp.Checksum != 0xabb1 {
-			t.Error("tcp checksum", tcp.Checksum)
-		}
-		if tcp.Urgent != 0 {
-			t.Error("tcp urgent", tcp.Urgent)
+		if !reflect.DeepEqual(tcp, expected) {
+			t.Errorf("TCP layer mismatch, expected %#v got %#v", expected, tcp)
 		}
 	}
 	if payload, ok := p.Layer(LayerTypePayload).(*Payload); payload == nil || !ok {
@@ -260,8 +237,7 @@ func TestDecodeVlanPacket(t *testing.T) {
 	}
 	expected := []LayerType{LayerTypeEthernet, LayerTypeDot1Q, LayerTypeIPv4, LayerTypeTCP}
 	if len(p.Layers()) != len(expected) {
-		t.Error("Incorrect number of headers:", len(p.Layers()))
-		t.FailNow()
+		t.Fatal("Incorrect number of headers:", len(p.Layers()))
 	}
 	for i, l := range p.Layers() {
 		if l.LayerType() != expected[i] {

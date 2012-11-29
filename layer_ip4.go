@@ -19,14 +19,14 @@ type IPv4 struct {
 	TTL        uint8
 	Protocol   IPProtocol
 	Checksum   uint16
-	SrcIp      IPAddress
-	DstIp      IPAddress
+	SrcIP      IPAddress
+	DstIP      IPAddress
 }
 
 // Returns LayerTypeIPv4
 func (i *IPv4) LayerType() LayerType { return LayerTypeIPv4 }
-func (i *IPv4) SrcNetAddr() Address  { return i.SrcIp }
-func (i *IPv4) DstNetAddr() Address  { return i.DstIp }
+func (i *IPv4) SrcNetAddr() Address  { return i.SrcIP }
+func (i *IPv4) DstNetAddr() Address  { return i.DstIP }
 
 var decodeIp4 decoderFunc = func(data []byte) (out DecodeResult, err error) {
 	flagsfrags := binary.BigEndian.Uint16(data[6:8])
@@ -41,8 +41,8 @@ var decodeIp4 decoderFunc = func(data []byte) (out DecodeResult, err error) {
 		TTL:        data[8],
 		Protocol:   IPProtocol(data[9]),
 		Checksum:   binary.BigEndian.Uint16(data[10:12]),
-		SrcIp:      data[12:16],
-		DstIp:      data[16:20],
+		SrcIP:      data[12:16],
+		DstIP:      data[16:20],
 	}
 	pEnd := int(ip.Length)
 	if pEnd > len(data) {
