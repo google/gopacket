@@ -148,8 +148,8 @@ func TestDecodeSimpleTcpPacket(t *testing.T) {
 		equal("IP Dst", "173.222.254.225", net.DstNetAddr())
 		expected := &IPv4{
 			Version:    4,
-			Ihl:        5,
-			Tos:        0,
+			IHL:        5,
+			TOS:        0,
 			Length:     420,
 			Id:         14815,
 			Flags:      0x02,
