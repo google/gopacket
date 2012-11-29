@@ -1,4 +1,4 @@
-// Copyright (c) 2012 Graeme Connell. All rights reserved.
+// Copyright (c) 2012 Google, Inc. All rights reserved.
 
 // Package gopacket provides packet decoding for the Go language.
 //
@@ -7,7 +7,7 @@
 // within the bytes.  Once a packet has been decoded, the layers of that packet
 // can be requested from the packet.
 //  // Decode a packet
-//  packet := gopacket.LinkTypeETHERNET.Decode(myPacketData, gopacket.Eager)
+//  packet := gopacket.NewPacket(myPacketData, gopacket.LinkTypeEthernet, gopacket.Eager)
 //  // Get the TCP layer from this packet
 //  if tcpLayer := packet.Layer(gopacket.LayerTypeTCP); tcpLayer != nil {
 //    fmt.Println("This is a TCP packet!")
@@ -23,11 +23,11 @@
 // types implement PacketDecoder, which allow us to decode packets for which
 // we don't have full data.
 //  // Decode an ethernet packet
-//  ethP := gopacket.LinkTypeETHERNET.Decode(p1, gopacket.Eager)
+//  ethP := gopacket.NewPacket(p1, gopacket.LinkTypeEthernet, gopacket.Eager)
 //  // Decode an IPv6 header and everything it contains
-//  ipP := gopacket.ETHER_IP6.Decode(p2, gopacket.Eager)
+//  ipP := gopacket.NewPacket(p2, gopacket.EthernetTypeIPv6, gopacket.Eager)
 //  // Decode a TCP header and its payload
-//  tcpP := gopacket.IP_TCP.Decode(p3, gopacket.Eager)
+//  tcpP := gopacket.NewPacket(p3, gopacket.IPProtocolTCP, gopacket.Eager)
 //
 // gopacket provides a number of features which users might find useful:
 //
@@ -61,11 +61,11 @@
 // only decodes a packet layer when it needs to to handle a function call.
 //  // Create a packet, but don't actually decode anything yet (use
 //  // gopacket.Eager instead if you don't want lazy decoding)
-//  packet := gopacket.LinkTypeETHERNET.Decode(myPacketData, gopacket.Lazy)
+//  packet := gopacket.NewPacket(myPacketData, gopacket.LinkTypeEthernet, gopacket.Lazy)
 //  // Now, decode the packet up to the first IPv4 layer found but no further.
 //  // If no IPv4 layer was found, the whole packet will be decoded looking for
 //  // it.
-//  ip4 := packet.Layer(gopacket.LayerTypeIP4)
+//  ip4 := packet.Layer(gopacket.LayerTypeIPv4)
 //  // Decode all layers and return them.  The layers up to the first IPv4 layer
 //  // are already decoded, and will not require decoding a second time.
 //  layers := packet.Layers()
@@ -81,11 +81,7 @@
 //  // Create a flow map
 //  flows := map[gopacket.FlowKey]*someFlowObject
 //  // Create the packet
-//  packet := gopacket.LinkTypeETHERNET.Decode(myPacketData, gopacket.Lazy)
+//  packet := gopacket.NewPacket(myPacketData, gopacket.LinkTypeEthernet, gopacket.Lazy)
 //  // Add the packet to a flow
 //  flows[packet.FlowKey()].addPacketToFlow(packet)
-//
-// If you're interested in contributing decoding logic for any protocol, take
-// a look at the comments in decoder.go, and look at layer_ip4.go and
-// enum_ipprotocol.go for example code.
 package gopacket

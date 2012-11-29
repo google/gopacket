@@ -1,4 +1,4 @@
-// Copyright (c) 2012 Graeme Connell. All rights reserved.
+// Copyright (c) 2012 Google, Inc. All rights reserved.
 // Copyright (c) 2009-2012 Andreas Krennmair. All rights reserved.
 
 package gopacket
@@ -9,13 +9,19 @@ import (
 
 // DecodeResult is returned from a Decode() call.
 type DecodeResult struct {
-	// The layer we've created with this decode call
+	// The layer we've created with this decode call.
 	DecodedLayer Layer
-	// The next decoder to call
+	// The next decoder to call.  When NextDecoder == nil, the packet considers
+	// itself fully decoded.
 	NextDecoder Decoder
-	// The bytes that are left to be decoded
+	// The bytes that are left to be decoded.  When len(RemainingBytes) is 0,
+	// the packet considers itself fully decoded.
 	RemainingBytes []byte
-	// The specific layers which should be set
+	// If the DecodedLayer is one of these layer types, also point to it here.
+	// The first of each of these will be returned by Packet.*Layer().  IE: if
+	// we've got an IPv4 packet encapsulated in another IPv4 packet, the decoder
+	// should point NetworkLayer at each of them, and packet will use the first
+	// (outermost) of these as its NetworkLayer().
 	LinkLayer
 	NetworkLayer
 	TransportLayer
