@@ -1,7 +1,7 @@
 // Copyright (c) 2012 Google, Inc. All rights reserved.
 
 // Package gopacket provides packet decoding for the Go language.
-// 
+//
 // Basic Usage
 //
 // gopacket takes in packet data as a []byte, and decodes it into a packet with
@@ -126,4 +126,20 @@
 //
 //  // Finally, decode your packets:
 //  p := gopacket.NewPacket(data, &MyDecoder{}, gopacket.Lazy)
+//
+// Currently Supported Protocols
+//
+// gopacket supports the following packet layers so far.  Each protocol is
+// encoded in the struct with the same name.
+//  Protocol                Type Name    Implements
+//  ---------------------------------------------------------------------------
+//  Ethernet                Ethernet     LinkLayer
+//  PPP                     PPP          LinkLayer
+//  ARP                     ARP
+//  802.11Q vlan tagging    Dot1Q
+//  IP version 4            IPv4         NetworkLayer
+//  IP version 6            IPv6         NetworkLayer
+//  ICMP                    ICMP
+//  TCP                     TCP          TransportLayer
+//  UDP                     UDP          TransportLayer
 package gopacket
