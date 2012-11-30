@@ -2,7 +2,10 @@
 
 // This binary pulls the list of known MAC prefixes from IEEE and writes them
 // out to a go file which is compiled into gopacket.  It should be run from the
-// gopacket directory.
+// gopacket directory:
+//  go run gopacket_mac_fetcher/mac_fetcher.go
+//  go fmt  # optional
+//  go build
 package main
 
 import (
