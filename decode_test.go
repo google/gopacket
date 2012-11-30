@@ -126,6 +126,13 @@ func BenchmarkFlowMapKey(b *testing.B) {
 	}
 }
 
+func BenchmarkCheckEthernetPrefix(b *testing.B) {
+	key := [3]byte{5, 5, 5}
+	for i := 0; i < b.N; i++ {
+		_ = ValidMACPrefixMap[key]
+	}
+}
+
 func TestDecodeSimpleTcpPacket(t *testing.T) {
 	equal := func(desc, expected string, actual fmt.Stringer) {
 		if expected != actual.String() {

@@ -28,6 +28,7 @@ const (
 	LayerTypeICMP                           // Type: ICMP
 	LayerTypeDot1Q                          // Type: Dot1Q
 	LayerTypeARP                            // Type: ARP
+	LayerTypeMPLS                           // Type: MPLS
 )
 
 func (l LayerType) String() string {

@@ -42,3 +42,8 @@ var decodeEthernet decoderFunc = func(data []byte) (out DecodeResult, err error)
 	out.LinkLayer = eth
 	return
 }
+
+func MACPrefixToOrganization(prefix [3]byte) (org string, found bool) {
+	org, found = validMACPrefixMap[prefix]
+	return
+}
