@@ -2,7 +2,8 @@
 
 package gopacket
 
-// This file is code-generated, don't edit it directly
+// Created by gopacket_mac_fetcher, don't edit manually
+// Generated at 2012-11-29 22:01:09.865406 -0700 MST
 
 // ValidMACPrefixMap maps a valid MAC address prefix to the name of the 
 // organization that owns the rights to use it.  We map it to a hidden 

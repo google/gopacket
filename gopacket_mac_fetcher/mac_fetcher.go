@@ -16,6 +16,7 @@ import (
 	"net/http"
 	"os"
 	"regexp"
+	"time"
 )
 
 var url = flag.String("url", "http://standards.ieee.org/develop/regauth/oui/oui.txt", "URL to fetch MACs from")
@@ -36,13 +37,14 @@ func main() {
 		panic(fErr)
 	}
 	for _, line := range []string{
-    "// Copyright (c) 2012 Google, Inc. All rights reserved.",
+		"// Copyright (c) 2012 Google, Inc. All rights reserved.",
 		"",
 		"package gopacket",
 		"",
-		"// This file is code-generated, don't edit it directly",
+		"// Created by gopacket_mac_fetcher, don't edit manually",
+		"// Generated at " + time.Now().String(),
 		"",
-    "// ValidMACPrefixMap maps a valid MAC address prefix to the name of the ",
+		"// ValidMACPrefixMap maps a valid MAC address prefix to the name of the ",
 		"// organization that owns the rights to use it.  We map it to a hidden ",
 		"// variable so it won't show up in godoc, since it's a very large map.",
 		"var ValidMACPrefixMap map[[3]byte]string = validMACPrefixMap",
