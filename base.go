@@ -28,6 +28,7 @@ const (
 	LayerTypeICMP
 	LayerTypeDot1Q
 	LayerTypeARP
+	LayerTypeMPLS
 )
 
 func (l LayerType) String() string {

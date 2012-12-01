@@ -14,30 +14,30 @@ type LinkType int
 const (
 	// According to pcap-linktype(7).
 	LinkTypeNull           LinkType = 0
-	LinkTypeEthernet       LinkType = 1
-	LinkTypeTokenRing      LinkType = 6
-	LinkTypeArcNet         LinkType = 7
-	LinkTypeSLIP           LinkType = 8
-	LinkTypePPP            LinkType = 9
-	LinkTypeFDDI           LinkType = 10
-	LinkTypeATM_RFC1483    LinkType = 100
-	LinkTypeRaw            LinkType = 101
-	LinkTypePPP_HDLC       LinkType = 50
-	LinkTypePPPEthernet    LinkType = 51
-	LinkTypeC_HDLC         LinkType = 104
-	LinkTypeIEEE802_11     LinkType = 105
-	LinkTypeFRelay         LinkType = 107
-	LinkTypeLoop           LinkType = 108
-	LinkTypeLinuxSLL       LinkType = 113
-	LinkTypeLTalk          LinkType = 104
-	LinkTypePFLog          LinkType = 117
-	LinkTypePrismHeader    LinkType = 119
-	LinkTypeIPOverFC       LinkType = 122
-	LinkTypeSunATM         LinkType = 123
-	LinkTypeIEEE80211Radio LinkType = 127
-	LinkTypeARCNetLinux    LinkType = 129
-	LinkTypeLinuxIRDA      LinkType = 144
-	LinkTypeLinuxLAPD      LinkType = 177
+	LinkTypeEthernet                = 1
+	LinkTypeTokenRing               = 6
+	LinkTypeArcNet                  = 7
+	LinkTypeSLIP                    = 8
+	LinkTypePPP                     = 9
+	LinkTypeFDDI                    = 10
+	LinkTypeATM_RFC1483             = 100
+	LinkTypeRaw                     = 101
+	LinkTypePPP_HDLC                = 50
+	LinkTypePPPEthernet             = 51
+	LinkTypeC_HDLC                  = 104
+	LinkTypeIEEE802_11              = 105
+	LinkTypeFRelay                  = 107
+	LinkTypeLoop                    = 108
+	LinkTypeLinuxSLL                = 113
+	LinkTypeLTalk                   = 104
+	LinkTypePFLog                   = 117
+	LinkTypePrismHeader             = 119
+	LinkTypeIPOverFC                = 122
+	LinkTypeSunATM                  = 123
+	LinkTypeIEEE80211Radio          = 127
+	LinkTypeARCNetLinux             = 129
+	LinkTypeLinuxIRDA               = 144
+	LinkTypeLinuxLAPD               = 177
 )
 
 func (l LinkType) Decode(data []byte) (out DecodeResult, err error) {

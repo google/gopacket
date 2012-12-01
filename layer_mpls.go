@@ -8,6 +8,7 @@ import (
 	"errors"
 )
 
+// MPLS is the MPLS packet header.
 type MPLS struct {
 	Label        uint32
 	TrafficClass uint8
@@ -15,14 +16,14 @@ type MPLS struct {
 	TTL          uint8
 }
 
-// Returns LayerTypeMPLS
+// LayerType returns LayerTypeMPLS.
 func (m *MPLS) LayerType() LayerType { return LayerTypeMPLS }
 
 // ProtocolGuessingDecoder attempts to guess the protocol of the bytes it's
 // given, then decode the packet accordingly.  Its algorithm for guessing is:
 //  If packet starts with 3 bytes that are a valid ethernet prefix: Ethernet
-//  If the packet starts with byte 0x4: IPv4
-//  If the packet starts with byte 0x6: IPv6
+//  If the packet starts with nibble 0x4: IPv4
+//  If the packet starts with nibble 0x6: IPv6
 type ProtocolGuessingDecoder struct{}
 
 func (_ ProtocolGuessingDecoder) Decode(data []byte) (_ DecodeResult, err error) {
@@ -30,11 +31,11 @@ func (_ ProtocolGuessingDecoder) Decode(data []byte) (_ DecodeResult, err error)
 	if _, ok := ValidMACPrefixMap[ethPrefix]; ok {
 		return decodeEthernet(data)
 	}
-	switch data[0] {
+	switch data[0] >> 4 {
 	case 4:
-		return decodeIp4(data)
+		return decodeIPv4(data)
 	case 6:
-		return decodeIp6(data)
+		return decodeIPv6(data)
 	}
 	err = errors.New("Unable to guess protocol of packet data")
 	return
@@ -48,7 +49,7 @@ func (_ ProtocolGuessingDecoder) Decode(data []byte) (_ DecodeResult, err error)
 // encapsulates a specific protocol, you may reset this.
 var MPLSPayloadDecoder Decoder = ProtocolGuessingDecoder{}
 
-var decodeMpls decoderFunc = func(data []byte) (out DecodeResult, err error) {
+var decodeMPLS decoderFunc = func(data []byte) (out DecodeResult, err error) {
 	decoded := binary.BigEndian.Uint32(data[:4])
 	out.DecodedLayer = &MPLS{
 		Label:        decoded >> 12,

@@ -5,10 +5,10 @@ package gopacket
 
 import (
 	"fmt"
+	"math/rand"
 	"reflect"
 	"testing"
-  "math/rand"
-  "time"
+	"time"
 )
 
 var testSimpleTcpPacket []byte = []byte{
@@ -116,7 +116,7 @@ func BenchmarkAlloc(b *testing.B) {
 }
 
 func BenchmarkFlowKey(b *testing.B) {
-	p := NewPacket(testSimpleTcpPacket, LinkTypeEthernet, DecodeOptions{true,true})
+	p := NewPacket(testSimpleTcpPacket, LinkTypeEthernet, DecodeOptions{true, true})
 	net := p.NetworkLayer()
 	trans := p.TransportLayer()
 	for i := 0; i < b.N; i++ {
@@ -131,7 +131,7 @@ func BenchmarkPacketFlowKey(b *testing.B) {
 }
 
 func BenchmarkFlowMapKey(b *testing.B) {
-	p := NewPacket(testSimpleTcpPacket, LinkTypeEthernet, DecodeOptions{true,true})
+	p := NewPacket(testSimpleTcpPacket, LinkTypeEthernet, DecodeOptions{true, true})
 	net := p.NetworkLayer()
 	trans := p.TransportLayer()
 	m := map[FlowKey]bool{}
@@ -153,7 +153,7 @@ func TestDecodeSimpleTcpPacket(t *testing.T) {
 			t.Errorf("%s: got %q want %q", desc, got.String(), want)
 		}
 	}
-	p := NewPacket(testSimpleTcpPacket, LinkTypeEthernet,DecodeOptions{true,true})
+	p := NewPacket(testSimpleTcpPacket, LinkTypeEthernet, DecodeOptions{true, true})
 	if eth := p.LinkLayer(); eth == nil {
 		t.Error("No ethernet layer found")
 	} else {
@@ -269,42 +269,42 @@ func TestDecodeVlanPacket(t *testing.T) {
 
 // generateRandomSlice generates a slice of random length with random bytes.
 func generateRandomSlice() (b []byte) {
-  for rand.Int() % 100 != 0 {
-    b = append(b, byte(rand.Int()))
-  }
-  return b
+	for rand.Int()%100 != 0 {
+		b = append(b, byte(rand.Int()))
+	}
+	return b
 }
 
 // securityTestRandomInput creates new packets with a decoder by feeding it
 // random input.  We're looking for actual program crashes caused by this
 // parsing... proper error detection (ErrorLayer() being set) is fine/expected.
 func securityTestRandomInput(d Decoder, t *testing.T) {
-  for i := 0; i < 1000; i++ {
-    NewPacket(generateRandomSlice(), d, Default)
-  }
+	for i := 0; i < 1000; i++ {
+		NewPacket(generateRandomSlice(), d, Default)
+	}
 }
 
 func TestDecoderSecurity(t *testing.T) {
-  seed := time.Now().UnixNano()
-  t.Log("If you see a crash here, it's serious business.  Report it!")
-  t.Log("Send this number with any crash reports:", seed)
-  rand.Seed(seed)
-  t.Log("ARP")
-  securityTestRandomInput(decodeARP, t)
-  t.Log("Dot1Q")
-  securityTestRandomInput(decodeDot1Q, t)
-  t.Log("Ethernet")
-  securityTestRandomInput(decodeEthernet, t)
-  t.Log("ICMP")
-  securityTestRandomInput(decodeICMP, t)
-  t.Log("IPv4")
-  securityTestRandomInput(decodeIPv4, t)
-  t.Log("IPv6")
-  securityTestRandomInput(decodeIPv6, t)
-  t.Log("PPP")
-  securityTestRandomInput(decodePPP, t)
-  t.Log("TCP")
-  securityTestRandomInput(decodeTCP, t)
-  t.Log("UDP")
-  securityTestRandomInput(decodeUDP, t)
+	seed := time.Now().UnixNano()
+	t.Log("If you see a crash here, it's serious business.  Report it!")
+	t.Log("Send this number with any crash reports:", seed)
+	rand.Seed(seed)
+	t.Log("ARP")
+	securityTestRandomInput(decodeARP, t)
+	t.Log("Dot1Q")
+	securityTestRandomInput(decodeDot1Q, t)
+	t.Log("Ethernet")
+	securityTestRandomInput(decodeEthernet, t)
+	t.Log("ICMP")
+	securityTestRandomInput(decodeICMP, t)
+	t.Log("IPv4")
+	securityTestRandomInput(decodeIPv4, t)
+	t.Log("IPv6")
+	securityTestRandomInput(decodeIPv6, t)
+	t.Log("PPP")
+	securityTestRandomInput(decodePPP, t)
+	t.Log("TCP")
+	securityTestRandomInput(decodeTCP, t)
+	t.Log("UDP")
+	securityTestRandomInput(decodeUDP, t)
 }
