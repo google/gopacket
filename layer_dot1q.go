@@ -16,7 +16,7 @@ type Dot1Q struct {
 	Type           EthernetType
 }
 
-// Returns LayerTypeDot1Q
+// LayerType returns LayerTypeDot1Q
 func (d *Dot1Q) LayerType() LayerType { return LayerTypeDot1Q }
 
 func (v *Dot1Q) String() {

@@ -7,6 +7,8 @@ import (
 	"fmt"
 	"reflect"
 	"testing"
+  "math/rand"
+  "time"
 )
 
 var testSimpleTcpPacket []byte = []byte{
@@ -49,18 +51,6 @@ var testSimpleTcpPacket []byte = []byte{
 	0x0d, 0x0a,
 }
 
-func BenchmarkCreatePacket(b *testing.B) {
-	for i := 0; i < b.N; i++ {
-		NewPacket(testSimpleTcpPacket, LinkTypeEthernet, Lazy)
-	}
-}
-
-func BenchmarkGetEthLayer(b *testing.B) {
-	for i := 0; i < b.N; i++ {
-		NewPacket(testSimpleTcpPacket, LinkTypeEthernet, Lazy).Layer(LayerTypeEthernet)
-	}
-}
-
 func BenchmarkTypeAssertion(b *testing.B) {
 	var eth LinkLayer = &Ethernet{}
 	c := 0
@@ -71,27 +61,51 @@ func BenchmarkTypeAssertion(b *testing.B) {
 	}
 }
 
-func BenchmarkGetIpLayer(b *testing.B) {
+func BenchmarkLazyNoCopyEthLayer(b *testing.B) {
 	for i := 0; i < b.N; i++ {
-		NewPacket(testSimpleTcpPacket, LinkTypeEthernet, Lazy).Layer(LayerTypeIPv4)
+		NewPacket(testSimpleTcpPacket, LinkTypeEthernet, DecodeOptions{true, true}).Layer(LayerTypeEthernet)
 	}
 }
 
-func BenchmarkGetTcpLayer(b *testing.B) {
+func BenchmarkLazyNoCopyIpLayer(b *testing.B) {
 	for i := 0; i < b.N; i++ {
-		NewPacket(testSimpleTcpPacket, LinkTypeEthernet, Lazy).Layer(LayerTypeTCP)
+		NewPacket(testSimpleTcpPacket, LinkTypeEthernet, DecodeOptions{true, true}).Layer(LayerTypeIPv4)
 	}
 }
 
-func BenchmarkGetAllLayers(b *testing.B) {
+func BenchmarkLazyNoCopyTcpLayer(b *testing.B) {
 	for i := 0; i < b.N; i++ {
-		NewPacket(testSimpleTcpPacket, LinkTypeEthernet, Lazy).Layers()
+		NewPacket(testSimpleTcpPacket, LinkTypeEthernet, DecodeOptions{true, true}).Layer(LayerTypeTCP)
 	}
 }
 
-func BenchmarkDecodeEager(b *testing.B) {
+func BenchmarkLazyNoCopyAllLayers(b *testing.B) {
 	for i := 0; i < b.N; i++ {
-		NewPacket(testSimpleTcpPacket, LinkTypeEthernet, Eager)
+		NewPacket(testSimpleTcpPacket, LinkTypeEthernet, DecodeOptions{true, true}).Layers()
+	}
+}
+
+func BenchmarkDefault(b *testing.B) {
+	for i := 0; i < b.N; i++ {
+		NewPacket(testSimpleTcpPacket, LinkTypeEthernet, Default)
+	}
+}
+
+func BenchmarkLazy(b *testing.B) {
+	for i := 0; i < b.N; i++ {
+		NewPacket(testSimpleTcpPacket, LinkTypeEthernet, Lazy)
+	}
+}
+
+func BenchmarkNoCopy(b *testing.B) {
+	for i := 0; i < b.N; i++ {
+		NewPacket(testSimpleTcpPacket, LinkTypeEthernet, NoCopy)
+	}
+}
+
+func BenchmarkLazyNoCopy(b *testing.B) {
+	for i := 0; i < b.N; i++ {
+		NewPacket(testSimpleTcpPacket, LinkTypeEthernet, DecodeOptions{true, true})
 	}
 }
 
@@ -102,7 +116,7 @@ func BenchmarkAlloc(b *testing.B) {
 }
 
 func BenchmarkFlowKey(b *testing.B) {
-	p := NewPacket(testSimpleTcpPacket, LinkTypeEthernet, Lazy)
+	p := NewPacket(testSimpleTcpPacket, LinkTypeEthernet, DecodeOptions{true,true})
 	net := p.NetworkLayer()
 	trans := p.TransportLayer()
 	for i := 0; i < b.N; i++ {
@@ -112,12 +126,12 @@ func BenchmarkFlowKey(b *testing.B) {
 
 func BenchmarkPacketFlowKey(b *testing.B) {
 	for i := 0; i < b.N; i++ {
-		NewPacket(testSimpleTcpPacket, LinkTypeEthernet, Lazy).FlowKey()
+		NewPacket(testSimpleTcpPacket, LinkTypeEthernet, DecodeOptions{true, true}).FlowKey()
 	}
 }
 
 func BenchmarkFlowMapKey(b *testing.B) {
-	p := NewPacket(testSimpleTcpPacket, LinkTypeEthernet, Lazy)
+	p := NewPacket(testSimpleTcpPacket, LinkTypeEthernet, DecodeOptions{true,true})
 	net := p.NetworkLayer()
 	trans := p.TransportLayer()
 	m := map[FlowKey]bool{}
@@ -127,12 +141,12 @@ func BenchmarkFlowMapKey(b *testing.B) {
 }
 
 func TestDecodeSimpleTcpPacket(t *testing.T) {
-	equal := func(desc, expected string, actual fmt.Stringer) {
-		if expected != actual.String() {
-			t.Errorf("%s: Expected %s Got %s", desc, expected, actual)
+	equal := func(desc, want string, got fmt.Stringer) {
+		if want != got.String() {
+			t.Errorf("%s: got %q want %q", desc, got.String(), want)
 		}
 	}
-	p := NewPacket(testSimpleTcpPacket, LinkTypeEthernet, Lazy)
+	p := NewPacket(testSimpleTcpPacket, LinkTypeEthernet,DecodeOptions{true,true})
 	if eth := p.LinkLayer(); eth == nil {
 		t.Error("No ethernet layer found")
 	} else {
@@ -146,7 +160,7 @@ func TestDecodeSimpleTcpPacket(t *testing.T) {
 	} else {
 		equal("IP Src", "172.17.81.73", net.SrcNetAddr())
 		equal("IP Dst", "173.222.254.225", net.DstNetAddr())
-		expected := &IPv4{
+		want := &IPv4{
 			Version:    4,
 			IHL:        5,
 			TOS:        0,
@@ -160,8 +174,8 @@ func TestDecodeSimpleTcpPacket(t *testing.T) {
 			SrcIP:      IPAddress{172, 17, 81, 73},
 			DstIP:      IPAddress{173, 222, 254, 225},
 		}
-		if !reflect.DeepEqual(ip, expected) {
-			t.Errorf("IP layer mismatch, expected %#v got %#v", expected, ip)
+		if !reflect.DeepEqual(ip, want) {
+			t.Errorf("IP layer mismatch, \ngot  %#v\nwant %#v\n", ip, want)
 		}
 	}
 	if trans := p.TransportLayer(); trans == nil {
@@ -171,7 +185,7 @@ func TestDecodeSimpleTcpPacket(t *testing.T) {
 	} else {
 		equal("TCP Src", "50679", trans.SrcAppAddr())
 		equal("TCP Dst", "80", trans.DstAppAddr())
-		expected := &TCP{
+		want := &TCP{
 			SrcPort:    50679,
 			DstPort:    80,
 			Seq:        0xc57e0e48,
@@ -184,8 +198,8 @@ func TestDecodeSimpleTcpPacket(t *testing.T) {
 			sPort:      PortAddress{0xc5, 0xf7},
 			dPort:      PortAddress{0x0, 0x50},
 		}
-		if !reflect.DeepEqual(tcp, expected) {
-			t.Errorf("TCP layer mismatch, expected %#v got %#v", expected, tcp)
+		if !reflect.DeepEqual(tcp, want) {
+			t.Errorf("TCP layer mismatch\ngot  %#v\nwant %#v", tcp, want)
 		}
 	}
 	if payload, ok := p.Layer(LayerTypePayload).(*Payload); payload == nil || !ok {
@@ -207,7 +221,7 @@ func TestDecodeSmallTcpPacketHasEmptyPayload(t *testing.T) {
 			0x3f, 0x9f, 0xac, 0x11, 0x51, 0xc5, 0xac, 0x11, 0x51, 0x49, 0x00, 0x63,
 			0x9a, 0xef, 0x00, 0x00, 0x00, 0x00, 0x2e, 0xc1, 0x27, 0x83, 0x50, 0x14,
 			0x00, 0x00, 0xc3, 0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
-		}, LinkTypeEthernet, Eager)
+		}, LinkTypeEthernet, Default)
 
 	if payload := p.Layer(LayerTypePayload); payload != nil {
 		t.Error("Payload found for empty TCP packet")
@@ -223,7 +237,7 @@ func TestDecodeVlanPacket(t *testing.T) {
 			0x94, 0xe2, 0xd4, 0x0a, 0x00, 0x50, 0xdf, 0xab, 0x9c, 0xc6, 0xcd, 0x1e,
 			0xe5, 0xd1, 0x50, 0x10, 0x01, 0x00, 0x5a, 0x74, 0x00, 0x00, 0x00, 0x00,
 			0x00, 0x00, 0x00, 0x00,
-		}, LinkTypeEthernet, Eager)
+		}, LinkTypeEthernet, Default)
 	if err := p.ErrorLayer(); err != nil {
 		t.Error("Error while parsing vlan packet:", err.Error())
 	}
@@ -235,13 +249,55 @@ func TestDecodeVlanPacket(t *testing.T) {
 	for i, l := range p.Layers() {
 		t.Logf("Layer %d: %#v", i, l)
 	}
-	expected := []LayerType{LayerTypeEthernet, LayerTypeDot1Q, LayerTypeIPv4, LayerTypeTCP}
-	if len(p.Layers()) != len(expected) {
+	want := []LayerType{LayerTypeEthernet, LayerTypeDot1Q, LayerTypeIPv4, LayerTypeTCP}
+	if len(p.Layers()) != len(want) {
 		t.Fatal("Incorrect number of headers:", len(p.Layers()))
 	}
 	for i, l := range p.Layers() {
-		if l.LayerType() != expected[i] {
-			t.Error("At index", i, "expected layer type", expected[i], ", received", l.LayerType())
+		if l.LayerType() != want[i] {
+			t.Error("At index", i, "got layer type", l.LayerType(), ", want", want[i])
 		}
 	}
+}
+
+// generateRandomSlice generates a slice of random length with random bytes.
+func generateRandomSlice() (b []byte) {
+  for rand.Int() % 100 != 0 {
+    b = append(b, byte(rand.Int()))
+  }
+  return b
+}
+
+// securityTestRandomInput creates new packets with a decoder by feeding it
+// random input.  We're looking for actual program crashes caused by this
+// parsing... proper error detection (ErrorLayer() being set) is fine/expected.
+func securityTestRandomInput(d Decoder, t *testing.T) {
+  for i := 0; i < 1000; i++ {
+    NewPacket(generateRandomSlice(), d, Default)
+  }
+}
+
+func TestDecoderSecurity(t *testing.T) {
+  seed := time.Now().UnixNano()
+  t.Log("If you see a crash here, it's serious business.  Report it!")
+  t.Log("Send this number with any crash reports:", seed)
+  rand.Seed(seed)
+  t.Log("ARP")
+  securityTestRandomInput(decodeARP, t)
+  t.Log("Dot1Q")
+  securityTestRandomInput(decodeDot1Q, t)
+  t.Log("Ethernet")
+  securityTestRandomInput(decodeEthernet, t)
+  t.Log("ICMP")
+  securityTestRandomInput(decodeICMP, t)
+  t.Log("IPv4")
+  securityTestRandomInput(decodeIPv4, t)
+  t.Log("IPv6")
+  securityTestRandomInput(decodeIPv6, t)
+  t.Log("PPP")
+  securityTestRandomInput(decodePPP, t)
+  t.Log("TCP")
+  securityTestRandomInput(decodeTCP, t)
+  t.Log("UDP")
+  securityTestRandomInput(decodeUDP, t)
 }

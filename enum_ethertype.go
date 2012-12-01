@@ -4,7 +4,7 @@
 package gopacket
 
 import (
-	"errors"
+	"fmt"
 )
 
 // EthernetType is an enumeration of ethernet type values, and acts as a decoder
@@ -21,14 +21,14 @@ const (
 func (e EthernetType) Decode(data []byte) (out DecodeResult, err error) {
 	switch e {
 	case EthernetTypeIPv4:
-		return decodeIp4(data)
+		return decodeIPv4(data)
 	case EthernetTypeIPv6:
-		return decodeIp6(data)
+		return decodeIPv6(data)
 	case EthernetTypeARP:
-		return decodeArp(data)
+		return decodeARP(data)
 	case EthernetTypeDot1Q:
 		return decodeDot1Q(data)
 	}
-	err = errors.New("Unsupported ethernet type")
+	err = fmt.Errorf("Unsupported ethernet type %d", e)
 	return
 }

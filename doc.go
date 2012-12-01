@@ -8,8 +8,9 @@
 // a non-zero number of "layers", with each layer corresponding a protocol
 // within the bytes.  Once a packet has been decoded, the layers of that packet
 // can be requested from the packet.
+//
 //  // Decode a packet
-//  packet := gopacket.NewPacket(myPacketData, gopacket.LinkTypeEthernet, gopacket.Eager)
+//  packet := gopacket.NewPacket(myPacketData, gopacket.LinkTypeEthernet, gopacket.Default)
 //  // Get the TCP layer from this packet
 //  if tcpLayer := packet.Layer(gopacket.LayerTypeTCP); tcpLayer != nil {
 //    fmt.Println("This is a TCP packet!")
@@ -21,22 +22,42 @@
 //  for layer := range packet.Layers() {
 //    fmt.Println("PACKET LAYER:", layer.LayerType())
 //  }
+//
 // Packets can be decoded from a number of starting points.  Many of our base
 // types implement Decoder, which allow us to decode packets for which
 // we don't have full data.
+//
 //  // Decode an ethernet packet
-//  ethP := gopacket.NewPacket(p1, gopacket.LinkTypeEthernet, gopacket.Eager)
+//  ethP := gopacket.NewPacket(p1, gopacket.LinkTypeEthernet, gopacket.Default)
 //  // Decode an IPv6 header and everything it contains
-//  ipP := gopacket.NewPacket(p2, gopacket.EthernetTypeIPv6, gopacket.Eager)
+//  ipP := gopacket.NewPacket(p2, gopacket.EthernetTypeIPv6, gopacket.Default)
 //  // Decode a TCP header and its payload
-//  tcpP := gopacket.NewPacket(p3, gopacket.IPProtocolTCP, gopacket.Eager)
+//  tcpP := gopacket.NewPacket(p3, gopacket.IPProtocolTCP, gopacket.Default)
+//
+// NOTE:  NewPacket takes in a byte slice as its first argument.  Changing the
+// data within that slice WILL invalidate the layers in the packet:
+//
+//  myData := [200]byte{...}
+//  p := gopacket.NewPacket(myData[:], ...)
+//  myData[10] = 3  // Invalidates p and all of its layers
+//
+// If you plan on using a slice multiple times for input, and you want to
+// keep packets around after it has been reused, you must copy out your data:
+//
+//  myInputBuffer := [200]byte{}
+//  for {
+//    bytesRead := readPacketDataInto(myInputBuffer[:])
+//    packetCopy := make([]byte, bytesRead)
+//    copy(packetCopy, myInputBuffer[:])
+//    p := gopacket.NewPacket(packetCopy, ...)
+//  }
 //
 // Lazy Decoding
 //
 // gopacket optionally decodes packet data lazily, meaning it
 // only decodes a packet layer when it needs to to handle a function call.
-//  // Create a packet, but don't actually decode anything yet (use
-//  // gopacket.Eager instead if you don't want lazy decoding)
+//
+//  // Create a packet, but don't actually decode anything yet
 //  packet := gopacket.NewPacket(myPacketData, gopacket.LinkTypeEthernet, gopacket.Lazy)
 //  // Now, decode the packet up to the first IPv4 layer found but no further.
 //  // If no IPv4 layer was found, the whole packet will be decoded looking for
@@ -45,9 +66,31 @@
 //  // Decode all layers and return them.  The layers up to the first IPv4 layer
 //  // are already decoded, and will not require decoding a second time.
 //  layers := packet.Layers()
+//
 // Lazily-decoded packets are not concurrency-safe.  If a packet is used
-// in multiple goroutines concurrently, use gopacket.Eager decoding to fully
-// decode the packet, then pass it around.
+// in multiple goroutines concurrently, don't use gopacket.Lazy.  Then gopacket
+// will decode the packet fully, and all future function calls won't mutate the
+// object.
+//
+// NoCopy Decoding
+//
+// By default, gopacket will copy the slice passed to NewPacket and store the
+// copy within the packet, so future mutations to the bytes underlying the slice
+// don't affect the packet and its layers.  If you can guarantee that the
+// underlying slice bytes won't be changed, you can use NoCopy to tell
+// gopacket.NewPacket, and it'll use the passed-in slice itself.
+//
+//  // This channel returns new byte slices, each of which points to a new
+//  // memory location that's guaranteed immutable for the duration of the
+//  // packet.
+//  for data := range myByteSliceChannel {
+//    p := gopacket.NewPacket(data, gopacket.LinkTypeEthernet, gopacket.NoCopy)
+//    doSomethingWithPacket(p)
+//  }
+//
+// The fastest method of decoding is to use both Lazy and NoCopy.  These flags
+// are both bits, so you can pass (gopacket.Lazy | gopacket.NoCopy) in as the
+// decode method to achieve the fastest creation of packets.
 //
 // Pointers To Known Layers
 //
@@ -74,7 +117,7 @@
 //  }
 // A particularly useful layer is ErrorLayer(), which is set whenever there's
 // an error parsing part of the packet.
-//  packet := gopacket.NewPacket(myPacketData, gopacket.LinkTypeEthernet, gopacket.Eager)
+//  packet := gopacket.NewPacket(myPacketData, gopacket.LinkTypeEthernet, gopacket.Default)
 //  if err := packet.ErrorLayer(); err != nil {
 //    fmt.Println("Error decoding some part of the packet:", err.Error())
 //  }
@@ -88,12 +131,14 @@
 // Since gopacket has abstract types for NetworkLayer and TransportLayer, and
 // both of these return addresses for their sources and destinations, it's able
 // to create a flow key to map a packet to a flow.
+//
 //  // Create a flow map
 //  flows := map[gopacket.FlowKey]*someFlowObject
 //  // Create the packet
 //  packet := gopacket.NewPacket(myPacketData, gopacket.LinkTypeEthernet, gopacket.Lazy)
 //  // Add the packet to a flow
 //  flows[packet.FlowKey()].addPacketToFlow(packet)
+//
 // A FlowKey can also be broken down into its Src and Dst FlowAddress.
 // FlowAddres is also map-able, if you just want to collect all packets going to
 // a particular server/port pair, or some-such.
@@ -103,6 +148,7 @@
 // If your network has some strange encapsulation, you can implement your own
 // decoder.  In this example, we handle Ethernet packets which are encapsulated
 // in a 4-byte header.
+//
 //  // Create a layer type, should be unique and high, so it doesn't conflict.
 //  const MyLayerType LayerType = 1354214661
 //
@@ -122,6 +168,7 @@
 //    out.RemainingBytes = data[4:]
 //    // Determine how to handle the rest of the packet
 //    out.NextDecoder = gopacket.LinkTypeEthernet
+//    return
 //  }
 //
 //  // Finally, decode your packets:

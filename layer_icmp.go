@@ -17,10 +17,10 @@ type ICMP struct {
 	Seq      uint16
 }
 
-// Returns LayerTypeICMP
+// LayerType returns LayerTypeICMP
 func (i *ICMP) LayerType() LayerType { return LayerTypeICMP }
 
-var decodeIcmp decoderFunc = func(data []byte) (out DecodeResult, err error) {
+var decodeICMP decoderFunc = func(data []byte) (out DecodeResult, err error) {
 	out.DecodedLayer = &ICMP{
 		Type:     data[0],
 		Code:     data[1],

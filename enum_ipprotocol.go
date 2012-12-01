@@ -4,7 +4,6 @@
 package gopacket
 
 import (
-	"errors"
 	"fmt"
 )
 
@@ -21,12 +20,12 @@ const (
 func (ip IPProtocol) Decode(data []byte) (out DecodeResult, err error) {
 	switch ip {
 	case IPProtocolTCP:
-		return decodeTcp(data)
+		return decodeTCP(data)
 	case IPProtocolUDP:
-		return decodeUdp(data)
+		return decodeUDP(data)
 	case IPProtocolICMP:
-		return decodeIcmp(data)
+		return decodeICMP(data)
 	}
-	err = errors.New(fmt.Sprintf("Unsupported IP protocol %d", ip))
+	err = fmt.Errorf("Unsupported IP protocol %d", ip)
 	return
 }

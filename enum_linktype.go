@@ -4,7 +4,7 @@
 package gopacket
 
 import (
-	"errors"
+	"fmt"
 )
 
 // LinkType is an enumeration of link types, and acts as a decoder for any
@@ -47,6 +47,6 @@ func (l LinkType) Decode(data []byte) (out DecodeResult, err error) {
 	case LinkTypePPP:
 		return decodePPP(data)
 	}
-	err = errors.New("Unsupported link-layer type")
+	err = fmt.Errorf("Unsupported link-layer type %d", l)
 	return
 }

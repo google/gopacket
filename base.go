@@ -17,17 +17,17 @@ import (
 type LayerType int
 
 const (
-	LayerTypePayload       LayerType = iota // Type: Payload
-	LayerTypeDecodeFailure                  // Type: DecodeFailure
-	LayerTypeEthernet                       // Type: Ethernet
-	LayerTypePPP                            // Type: PPP
-	LayerTypeIPv4                           // Type: IPv4
-	LayerTypeIPv6                           // Type: IPv6
-	LayerTypeTCP                            // Type: TCP
-	LayerTypeUDP                            // Type: UDP
-	LayerTypeICMP                           // Type: ICMP
-	LayerTypeDot1Q                          // Type: Dot1Q
-	LayerTypeARP                            // Type: ARP
+	LayerTypePayload LayerType = iota
+	LayerTypeDecodeFailure
+	LayerTypeEthernet
+	LayerTypePPP
+	LayerTypeIPv4
+	LayerTypeIPv6
+	LayerTypeTCP
+	LayerTypeUDP
+	LayerTypeICMP
+	LayerTypeDot1Q
+	LayerTypeARP
 )
 
 func (l LayerType) String() string {
@@ -76,7 +76,7 @@ type Payload struct {
 	Data []byte
 }
 
-// Returns LayerTypePayload
+// LayerType returns LayerTypePayload
 func (p *Payload) LayerType() LayerType { return LayerTypePayload }
 func (p *Payload) Payload() []byte      { return p.Data }
 

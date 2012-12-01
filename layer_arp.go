@@ -30,10 +30,10 @@ func (arp *ARP) String() (s string) {
 	return
 }
 
-// Returns LayerTypeARP
+// LayerType returns LayerTypeARP
 func (arp *ARP) LayerType() LayerType { return LayerTypeARP }
 
-var decodeArp decoderFunc = func(data []byte) (out DecodeResult, err error) {
+var decodeARP decoderFunc = func(data []byte) (out DecodeResult, err error) {
 	arp := &ARP{
 		AddrType:        LinkType(binary.BigEndian.Uint16(data[0:2])),
 		Protocol:        EthernetType(binary.BigEndian.Uint16(data[2:4])),

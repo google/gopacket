@@ -14,7 +14,7 @@ type Ethernet struct {
 	EthernetType   EthernetType
 }
 
-// Returns LayerTypeEthernet
+// LayerType returns LayerTypeEthernet
 func (e *Ethernet) LayerType() LayerType { return LayerTypeEthernet }
 
 func (e *Ethernet) SrcLinkAddr() Address {
@@ -25,7 +25,7 @@ func (e *Ethernet) DstLinkAddr() Address {
 	return e.DstMAC
 }
 
-// Decode decodes the headers of a Packet.
+// decodeEthernet decodes the headers of a Packet.
 var decodeEthernet decoderFunc = func(data []byte) (out DecodeResult, err error) {
 	if len(data) < 14 {
 		err = errors.New("Ethernet packet too small")
