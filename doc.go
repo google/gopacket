@@ -137,6 +137,7 @@
 //  PPP                     PPP          LinkLayer
 //  ARP                     ARP
 //  802.11Q vlan tagging    Dot1Q
+//  MPLS                    MPLS
 //  IP version 4            IPv4         NetworkLayer
 //  IP version 6            IPv6         NetworkLayer
 //  ICMP                    ICMP

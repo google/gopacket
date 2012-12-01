@@ -27,7 +27,7 @@ type ProtocolGuessingDecoder struct{}
 
 func (_ ProtocolGuessingDecoder) Decode(data []byte) (_ DecodeResult, err error) {
 	ethPrefix := [3]byte{data[0], data[1], data[2]}
-	if _, ok := MACPrefixToOrganization(ethPrefix); ok {
+	if _, ok := ValidMACPrefixMap[ethPrefix]; ok {
 		return decodeEthernet(data)
 	}
 	switch data[0] {
