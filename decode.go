@@ -7,15 +7,15 @@ import (
 	"errors"
 )
 
-// DecodeResult is returned from a Decode() call.
+// DecodeResult is returned from a Decode call.
 type DecodeResult struct {
-	// The layer we've created with this decode call.
+	// DecodedLayer is the layer we've created with this decode call.
 	DecodedLayer Layer
-	// The next decoder to call.  When NextDecoder == nil, the packet considers
-	// itself fully decoded.
+	// NextDecoder is the next decoder to call.  When NextDecoder == nil, the
+	// packet considers itself fully decoded.
 	NextDecoder Decoder
-	// The bytes that are left to be decoded.  When len(RemainingBytes) is 0,
-	// the packet considers itself fully decoded.
+	// RemainingBytes is the bytes that are left to be decoded.  When
+	// len(RemainingBytes) is 0, the packet considers itself fully decoded.
 	RemainingBytes []byte
 	// If the DecodedLayer is one of these layer types, also point to it here.
 	// The first of each of these will be returned by Packet.*Layer().  IE: if
@@ -49,22 +49,6 @@ func (d decoderFunc) Decode(data []byte) (DecodeResult, error) {
 	return d(data)
 }
 
-// DecodeMethod tells gopacket how to decode a packet.
-type DecodeMethod bool
-
-const (
-	// Lazy decoding decodes the minimum number of layers needed to return data
-	// for a packet at each function call.  Be careful using this with concurrent
-	// packet processors, as each call to packet.* could mutate the packet, and
-	// two concurrent function calls could interact poorly.
-	Lazy DecodeMethod = true
-	// Eager decoding decodes all layers of a packet immediately.  Slower than
-	// lazy decoding, but better if the packet is expected to be used concurrently
-	// at a later date, since after an eager Decode, the packet is guaranteed to
-	// not mutate itself on packet.* function calls.
-	Eager DecodeMethod = false
-)
-
 // DecodeFailure is a packet layer created if decoding of the packet data failed
 // for some reason.  It implements ErrorLayer.
 type DecodeFailure struct {
@@ -78,7 +62,7 @@ func (d *DecodeFailure) Payload() []byte { return d.data }
 // Returns the error encountered during decoding.
 func (d *DecodeFailure) Error() error { return d.err }
 
-// Returns LayerTypeDecodeFailure
+// LayerType returns LayerTypeDecodeFailure
 func (d *DecodeFailure) LayerType() LayerType { return LayerTypeDecodeFailure }
 
 // decodeUnknown "decodes" unsupported data types by returning an error.

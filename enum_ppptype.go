@@ -4,7 +4,7 @@
 package gopacket
 
 import (
-	"errors"
+	"fmt"
 )
 
 // PPPType is an enumeration of PPP type values, and acts as a decoder for any
@@ -19,10 +19,10 @@ const (
 func (p PPPType) Decode(data []byte) (out DecodeResult, err error) {
 	switch p {
 	case PPPTypeIPv4:
-		return decodeIp4(data)
+		return decodeIPv4(data)
 	case PPPTypeIPv6:
-		return decodeIp6(data)
+		return decodeIPv6(data)
 	}
-	err = errors.New("Unsupported PPP type")
+	err = fmt.Errorf("Unsupported PPP type %d", p)
 	return
 }

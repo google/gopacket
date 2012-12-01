@@ -13,21 +13,19 @@ type PPP struct {
 	PPPType PPPType
 }
 
-type pppAddress []byte
-
-var singletonPPPAddress = pppAddress{}
+type pppAddress struct{}
 
 func (p pppAddress) String() string {
 	return "point"
 }
 func (p pppAddress) Raw() []byte {
-	return p
+	return nil
 }
 
-func (p *PPP) SrcLinkAddr() Address { return singletonPPPAddress }
-func (p *PPP) DstLinkAddr() Address { return singletonPPPAddress }
+func (p *PPP) SrcLinkAddr() Address { return pppAddress{} }
+func (p *PPP) DstLinkAddr() Address { return pppAddress{} }
 
-// Returns LayerTypePPP
+// LayerType returns LayerTypePPP
 func (p *PPP) LayerType() LayerType { return LayerTypePPP }
 
 var decodePPP decoderFunc = func(data []byte) (out DecodeResult, err error) {

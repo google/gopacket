@@ -16,20 +16,20 @@ type TCP struct {
 	Seq          uint32
 	Ack          uint32
 	DataOffset   uint8
-	Flags        TcpFlag
+	Flags        TCPFlag
 	Window       uint16
 	Checksum     uint16
 	Urgent       uint16
 	sPort, dPort PortAddress
 }
 
-// Returns LayerTypeTCP
+// LayerType returns LayerTypeTCP
 func (t *TCP) LayerType() LayerType { return LayerTypeTCP }
 
-type TcpFlag uint16
+type TCPFlag uint16
 
 const (
-	TCPFlagFIN TcpFlag = 1 << iota
+	TCPFlagFIN TCPFlag = 1 << iota
 	TCPFlagSYN
 	TCPFlagRST
 	TCPFlagPSH
@@ -40,7 +40,7 @@ const (
 	TCPFlagNS
 )
 
-var decodeTcp decoderFunc = func(data []byte) (out DecodeResult, err error) {
+var decodeTCP decoderFunc = func(data []byte) (out DecodeResult, err error) {
 	tcp := &TCP{
 		SrcPort:    binary.BigEndian.Uint16(data[0:2]),
 		sPort:      data[0:2],
@@ -49,7 +49,7 @@ var decodeTcp decoderFunc = func(data []byte) (out DecodeResult, err error) {
 		Seq:        binary.BigEndian.Uint32(data[4:8]),
 		Ack:        binary.BigEndian.Uint32(data[8:12]),
 		DataOffset: (data[12] & 0xF0) >> 4,
-		Flags:      TcpFlag(binary.BigEndian.Uint16(data[12:14]) & 0x1FF),
+		Flags:      TCPFlag(binary.BigEndian.Uint16(data[12:14]) & 0x1FF),
 		Window:     binary.BigEndian.Uint16(data[14:16]),
 		Checksum:   binary.BigEndian.Uint16(data[16:18]),
 		Urgent:     binary.BigEndian.Uint16(data[18:20]),
@@ -61,7 +61,7 @@ var decodeTcp decoderFunc = func(data []byte) (out DecodeResult, err error) {
 	return
 }
 
-func (f TcpFlag) String() string {
+func (f TCPFlag) String() string {
 	var sflags []string
 	if 0 != (f & TCPFlagSYN) {
 		sflags = append(sflags, "syn")

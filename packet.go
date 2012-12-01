@@ -13,24 +13,27 @@ import (
 // Decoder's Decode call.  A packet is made up of a set of Data(), which
 // is broken into a number of Layers as it is decoded.
 type Packet interface {
-	// Returns all data associated with this packet
+	// Data returns all data associated with this packet
 	Data() []byte
-	// Returns all layers in this packet, computing them as necessary
+	// Layers returns all layers in this packet, computing them as necessary
 	Layers() []Layer
-	// Returns the first layer in this packet of the given type, or nil
+	// Layer returns the first layer in this packet of the given type, or nil
 	Layer(LayerType) Layer
 	// Printable
 	String() string
 
-	// Accessors to specific commonly-available layers, return nil if the layer
-	// doesn't exist or hasn't been computed yet.
-	LinkLayer() LinkLayer               // Returns the link layer
-	NetworkLayer() NetworkLayer         // Returns the network layer
-	TransportLayer() TransportLayer     // Returns the transport layer
-	ApplicationLayer() ApplicationLayer // Returns the application layer
+	// LinkLayer returns the first link layer in the packet
+	LinkLayer() LinkLayer
+	// NetworkLayer returns the first network layer in the packet
+	NetworkLayer() NetworkLayer
+	// TransportLayer returns the first transport layer in the packet
+	TransportLayer() TransportLayer
+	// ApplicationLayer returns the first application layer in the packet
+	ApplicationLayer() ApplicationLayer
 	// ErrorLayer is particularly useful, since it returns nil if the packet
 	// was fully decoded successfully, and non-nil if an error was encountered
-	// in decoding and the packet was only partially decoded.
+	// in decoding and the packet was only partially decoded.  Thus, its output
+	// can be used to determine if the entire packet was able to be decoded.
 	ErrorLayer() ErrorLayer
 
 	// Key for mapping packets to connections
@@ -112,10 +115,45 @@ func (p *packet) appendLayer(l Layer) {
 	p.layers = append(p.layers, l)
 }
 
+// DecodeOptions tells gopacket how to decode a packet.
+type DecodeOptions struct {
+	// Lazy decoding decodes the minimum number of layers needed to return data
+	// for a packet at each function call.  Be careful using this with concurrent
+	// packet processors, as each call to packet.* could mutate the packet, and
+	// two concurrent function calls could interact poorly.
+	Lazy bool
+	// NoCopy decoding doesn't copy its input buffer into storage that's owned by
+	// the packet.  If you can guarantee that the bytes underlying the slice
+	// passed into NewPacket aren't going to be modified, this can be faster.  If
+	// there's any chance that those bytes WILL be changed, this will invalidate
+	// your packets.
+	NoCopy bool
+}
+
+// Default decoding provides the safest (but slowest) method for decoding
+// packets.  It eagerly processes all layers (so it's concurrency-safe) and it
+// copies its input buffer upon creation of the packet (so the packet remains
+// valid if the underlying slice is modified.  Both of these take time,
+// though, so beware.  If you can guarantee that the packet will only be used
+// by one goroutine at a time, set Lazy decoding.  If you can guarantee that
+// the underlying slice won't change, set NoCopy decoding.
+var Default DecodeOptions = DecodeOptions{}
+
+// Lazy is a DecodeOptions with just Lazy set.
+var Lazy DecodeOptions = DecodeOptions{Lazy: true}
+
+// NoCopy is a DecodeOptions with just NoCopy set.
+var NoCopy DecodeOptions = DecodeOptions{NoCopy: true}
+
 // NewPacket creates a new Packet object from a set of bytes.  The
 // firstLayerDecoder tells it how to interpret the first layer from the bytes,
 // future layers will be generated from that first layer automatically.
-func NewPacket(data []byte, firstLayerDecoder Decoder, method DecodeMethod) Packet {
+func NewPacket(data []byte, firstLayerDecoder Decoder, options DecodeOptions) Packet {
+	if !options.NoCopy {
+		dataCopy := make([]byte, len(data))
+		copy(dataCopy, data)
+		data = dataCopy
+	}
 	p := &packet{
 		data:    data,
 		encoded: data,
@@ -126,7 +164,7 @@ func NewPacket(data []byte, firstLayerDecoder Decoder, method DecodeMethod) Pack
 		// benchmark (DecodeNotLazy) a speedup of ~10% (2150ns -> 1922ns)
 		layers: make([]Layer, 0, 4),
 	}
-	if method != Lazy {
+	if !options.Lazy {
 		p.Layers()
 	}
 	return p
@@ -137,7 +175,10 @@ func NewPacket(data []byte, firstLayerDecoder Decoder, method DecodeMethod) Pack
 func (p *packet) decodeNextLayer() (out Layer) {
 	defer func() {
 		if r := recover(); r != nil {
-			fail := &DecodeFailure{data: p.encoded, err: errors.New(fmt.Sprint("Decode failure:", r))}
+			fail := &DecodeFailure{
+				data: p.encoded,
+				err:  fmt.Errorf("Decode failure:", r),
+			}
 			p.appendLayer(fail)
 			p.failure = fail
 			p.encoded = nil
@@ -200,5 +241,5 @@ func (p *packet) FlowKey() (FlowKey, error) {
 	} else {
 		return NewFlowKey(net, trans), nil
 	}
-	panic("Should never reach here")
+	panic("unreachable")
 }
