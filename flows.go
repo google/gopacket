@@ -4,6 +4,7 @@
 package gopacket
 
 import (
+	"fmt"
 	"encoding/binary"
 	"net"
 	"strconv"
@@ -24,7 +25,8 @@ func EndpointFromIP(a net.IP) (_ Endpoint, err error) {
 	} else if len(a) == 16 {
 		return Endpoint{LayerTypeIPv6, string(a)}, nil
 	}
-	return nil, fmt.Errorf("Invalid IP byte string has size %d", len(a))
+	err = fmt.Errorf("Invalid IP byte string has size %d", len(a))
+	return
 }
 
 type Flow struct {
@@ -33,8 +35,8 @@ type Flow struct {
 }
 
 func NewFlow(src, dst Endpoint) (_ Flow, err error) {
-	if src.Type != dst.Type {
-		err = fmt.Errorf("Mismatched endpoint types: %s->%s", src.Type, dst.Type)
+	if src.typ != dst.typ {
+		err = fmt.Errorf("Mismatched endpoint types: %s->%s", src.typ, dst.typ)
 		return
 	}
 	return Flow{src.typ, src.raw, dst.raw}
@@ -44,7 +46,7 @@ func (f Flow) Endpoints() (src, dst Endpoint) {
 }
 
 func (a Endpoint) String() string {
-	switch a.Type {
+	switch a.typ {
 	case LayerTypeIPv4:
 		fallthrough
 	case LayerTypeIPv6:
