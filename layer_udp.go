@@ -13,7 +13,7 @@ type UDP struct {
 	DstPort      uint16
 	Length       uint16
 	Checksum     uint16
-	sPort, dPort PortAddress
+	sPort, dPort []byte
 }
 
 // LayerType returns LayerTypeUDP
@@ -35,5 +35,6 @@ var decodeUDP decoderFunc = func(data []byte) (out DecodeResult, err error) {
 	return
 }
 
-func (u *UDP) SrcAppAddr() Address { return u.sPort }
-func (u *UDP) DstAppAddr() Address { return u.dPort }
+func (u *UDP) AppFlow() Flow {
+	return Flow{LayerTypeUDP, string(u.sPort), string(u.dPort)}
+}

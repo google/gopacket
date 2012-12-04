@@ -20,7 +20,7 @@ type TCP struct {
 	Window       uint16
 	Checksum     uint16
 	Urgent       uint16
-	sPort, dPort PortAddress
+	sPort, dPort []byte
 }
 
 // LayerType returns LayerTypeTCP
@@ -93,5 +93,6 @@ func (f TCPFlag) String() string {
 	return fmt.Sprintf("[%s]", strings.Join(sflags, "|"))
 }
 
-func (t *TCP) SrcAppAddr() Address { return t.sPort }
-func (t *TCP) DstAppAddr() Address { return t.dPort }
+func (t *TCP) AppFlow() Flow {
+	return Flow{LayerTypeTCP, string(t.sPort), string(t.dPort)}
+}

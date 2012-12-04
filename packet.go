@@ -35,9 +35,6 @@ type Packet interface {
 	// in decoding and the packet was only partially decoded.  Thus, its output
 	// can be used to determine if the entire packet was able to be decoded.
 	ErrorLayer() ErrorLayer
-
-	// Key for mapping packets to connections
-	FlowKey() (FlowKey, error)
 }
 
 type specificLayers struct {
@@ -231,15 +228,4 @@ func (p *packet) String() string {
 		layers = append(layers, fmt.Sprintf("%#v", l))
 	}
 	return fmt.Sprintf("PACKET [%s]", strings.Join(layers, ", "))
-}
-
-func (p *packet) FlowKey() (FlowKey, error) {
-	if net := p.NetworkLayer(); net == nil {
-		return FlowKey{}, errors.New("Packet has no network layer")
-	} else if trans := p.TransportLayer(); trans == nil {
-		return FlowKey{}, errors.New("Packet has no transport layer")
-	} else {
-		return NewFlowKey(net, trans), nil
-	}
-	panic("unreachable")
 }

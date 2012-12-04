@@ -19,14 +19,15 @@ type IPv4 struct {
 	TTL        uint8
 	Protocol   IPProtocol
 	Checksum   uint16
-	SrcIP      IPAddress
-	DstIP      IPAddress
+	SrcIP      []byte
+	DstIP      []byte
 }
 
 // LayerType returns LayerTypeIPv4
 func (i *IPv4) LayerType() LayerType { return LayerTypeIPv4 }
-func (i *IPv4) SrcNetAddr() Address  { return i.SrcIP }
-func (i *IPv4) DstNetAddr() Address  { return i.DstIP }
+func (i *IPv4) NetFlow() Flow {
+	return Flow{LayerTypeIPv4, string(i.SrcIP), string(i.DstIP)}
+}
 
 var decodeIPv4 decoderFunc = func(data []byte) (out DecodeResult, err error) {
 	flagsfrags := binary.BigEndian.Uint16(data[6:8])

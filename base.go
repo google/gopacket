@@ -81,33 +81,55 @@ type Payload struct {
 func (p *Payload) LayerType() LayerType { return LayerTypePayload }
 func (p *Payload) Payload() []byte      { return p.Data }
 
-// Address is the set of bytes used to address packets at various layers.
+// Endpoint is the set of bytes used to address packets at various layers.
 // See LinkLayer, NetworkLayer, and TransportLayer specifications.
-type Address interface {
-	String() string
-	Raw() []byte
+type Endpoint struct {
+	typ LayerType
+	raw string
 }
 
-// MACAddress is the set of bytes representing a MAC address
-type MACAddress net.HardwareAddr
+func (e Endpoint) LayerType() LayerType { return e.typ }
+func (e Endpoint) Raw() []byte          { return []byte(e.raw) }
+func EndpointFromIP(a net.IP) (_ Endpoint, err error) {
+	if len(a) == 4 {
+		return Endpoint{LayerTypeIPv4, string(a)}, nil
+	} else if len(a) == 16 {
+		return Endpoint{LayerTypeIPv6, string(a)}, nil
+	}
+	return nil, fmt.Errorf("Invalid IP byte string has size %d", len(a))
+}
 
-func (a MACAddress) Raw() []byte    { return a }
-func (a MACAddress) String() string { return net.HardwareAddr(a).String() }
+type Flow struct {
+	typ      LayerType
+	src, dst string
+}
 
-// IPAddress is the set of bytes representing an IPv4 or IPv6 address
-type IPAddress net.IP
+func NewFlow(src, dst Endpoint) (_ Flow, err error) {
+	if src.Type != dst.Type {
+		err = fmt.Errorf("Mismatched endpoint types: %s->%s", src.Type, dst.Type)
+		return
+	}
+	return Flow{src.typ, src.raw, dst.raw}
+}
+func (f Flow) Endpoints() (src, dst Endpoint) {
+	return Endpoint{f.typ, f.src}, Endpoint{f.typ, f.dst}
+}
 
-func (a IPAddress) Raw() []byte    { return a }
-func (a IPAddress) String() string { return net.IP(a).String() }
-
-// PortAddress is the set of bytes representing a port number.  Users may
-// get the port number for TCP/UDP layers by requesting it directly from the
-// TCP or UDP layer (SrcPort/DstPort), but this address allows us to treat
-// the port as a protocol-agnostic address for an application on a system.
-type PortAddress []byte
-
-func (a PortAddress) Raw() []byte    { return a }
-func (a PortAddress) String() string { return strconv.Itoa(int(binary.BigEndian.Uint16(a))) }
+func (a Endpoint) String() string {
+	switch a.Type {
+	case LayerTypeIPv4:
+		fallthrough
+	case LayerTypeIPv6:
+		return net.IP([]byte(a.Raw)).String()
+	case LayerTypeEthernet:
+		return net.HardwareAddr([]byte(a.Raw)).String()
+	case LayerTypeTCP:
+		return strconv.Itoa(int(binary.BigEndian.Uint16([]byte(a.Raw))))
+	case LayerTypePPP:
+		return "point"
+	}
+	return "endpoint"
+}
 
 // These layers correspond to Internet Protocol Suite (TCP/IP) layers, and their
 // corresponding OSI layers, as best as possible.
@@ -115,24 +137,21 @@ func (a PortAddress) String() string { return strconv.Itoa(int(binary.BigEndian.
 // LinkLayer is the packet layer corresponding to TCP/IP layer 1 (OSI layer 2)
 type LinkLayer interface {
 	Layer
-	SrcLinkAddr() Address
-	DstLinkAddr() Address
+	LinkFlow() Flow
 }
 
 // NetworkLayer is the packet layer corresponding to TCP/IP layer 2 (OSI
 // layer 3)
 type NetworkLayer interface {
 	Layer
-	SrcNetAddr() Address
-	DstNetAddr() Address
+	NetFlow() Flow
 }
 
 // TransportLayer is the packet layer corresponding to the TCP/IP layer 3 (OSI
 // layer 4)
 type TransportLayer interface {
 	Layer
-	SrcAppAddr() Address
-	DstAppAddr() Address
+	AppFlow() Flow
 }
 
 // ApplicationLayer is the packet layer corresponding to the TCP/IP layer 4 (OSI

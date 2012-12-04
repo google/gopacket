@@ -10,19 +10,15 @@ import (
 
 // Ethernet is the layer for Ethernet frame headers.
 type Ethernet struct {
-	SrcMAC, DstMAC MACAddress
+	SrcMAC, DstMAC []byte
 	EthernetType   EthernetType
 }
 
 // LayerType returns LayerTypeEthernet
 func (e *Ethernet) LayerType() LayerType { return LayerTypeEthernet }
 
-func (e *Ethernet) SrcLinkAddr() Address {
-	return e.SrcMAC
-}
-
-func (e *Ethernet) DstLinkAddr() Address {
-	return e.DstMAC
+func (e *Ethernet) LinkFlow() Flow {
+	return Flow{LayerTypeEthernet, string(e.SrcMAC), string(e.DstMAC)}
 }
 
 // decodeEthernet decodes the headers of a Packet.
@@ -33,8 +29,8 @@ var decodeEthernet decoderFunc = func(data []byte) (out DecodeResult, err error)
 	}
 	eth := &Ethernet{
 		EthernetType: EthernetType(binary.BigEndian.Uint16(data[12:14])),
-		DstMAC:       MACAddress(data[0:6]),
-		SrcMAC:       MACAddress(data[6:12]),
+		DstMAC:       data[0:6],
+		SrcMAC:       data[6:12],
 	}
 	out.DecodedLayer = eth
 	out.RemainingBytes = data[14:]

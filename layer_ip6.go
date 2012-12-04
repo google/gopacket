@@ -16,14 +16,15 @@ type IPv6 struct {
 	Length       uint16     // 16 bits
 	NextHeader   IPProtocol // 8 bits, same as Protocol in Iphdr
 	HopLimit     uint8      // 8 bits
-	SrcIP        IPAddress  // 16 bytes
-	DstIP        IPAddress  // 16 bytes
+	SrcIP        []byte     // 16 bytes
+	DstIP        []byte     // 16 bytes
 }
 
 // LayerType returns LayerTypeIPv6
 func (i *IPv6) LayerType() LayerType { return LayerTypeIPv6 }
-func (i *IPv6) SrcNetAddr() Address  { return i.SrcIP }
-func (i *IPv6) DstNetAddr() Address  { return i.DstIP }
+func (i *IPv6) NetFlow() Flow {
+	return Flow{LayerTypeIPv6, string(i.SrcIP), string(i.DstIP)}
+}
 
 var decodeIPv6 decoderFunc = func(data []byte) (out DecodeResult, err error) {
 	ip6 := &IPv6{
