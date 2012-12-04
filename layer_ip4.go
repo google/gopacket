@@ -28,7 +28,7 @@ func (i *IPv4) LayerType() LayerType { return LayerTypeIPv4 }
 func (i *IPv4) SrcNetAddr() Address  { return i.SrcIP }
 func (i *IPv4) DstNetAddr() Address  { return i.DstIP }
 
-var decodeIPv4 decoderFunc = func(data []byte) (out DecodeResult, err error) {
+func decodeIPv4(data []byte) (out DecodeResult, err error) {
 	flagsfrags := binary.BigEndian.Uint16(data[6:8])
 	ip := &IPv4{
 		Version:    uint8(data[0]) >> 4,

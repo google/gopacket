@@ -25,7 +25,7 @@ func (i *IPv6) LayerType() LayerType { return LayerTypeIPv6 }
 func (i *IPv6) SrcNetAddr() Address  { return i.SrcIP }
 func (i *IPv6) DstNetAddr() Address  { return i.DstIP }
 
-var decodeIPv6 decoderFunc = func(data []byte) (out DecodeResult, err error) {
+func decodeIPv6(data []byte) (out DecodeResult, err error) {
 	ip6 := &IPv6{
 		Version:      uint8(data[0]) >> 4,
 		TrafficClass: uint8((binary.BigEndian.Uint16(data[0:2]) >> 4) & 0x00FF),

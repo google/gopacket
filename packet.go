@@ -234,12 +234,13 @@ func (p *packet) String() string {
 }
 
 func (p *packet) FlowKey() (FlowKey, error) {
-	if net := p.NetworkLayer(); net == nil {
+	net := p.NetworkLayer()
+	if net == nil {
 		return FlowKey{}, errors.New("Packet has no network layer")
-	} else if trans := p.TransportLayer(); trans == nil {
-		return FlowKey{}, errors.New("Packet has no transport layer")
-	} else {
-		return NewFlowKey(net, trans), nil
 	}
-	panic("unreachable")
+	trans := p.TransportLayer()
+	if trans == nil {
+		return FlowKey{}, errors.New("Packet has no transport layer")
+	}
+	return NewFlowKey(net, trans), nil
 }
