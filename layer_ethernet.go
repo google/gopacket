@@ -21,8 +21,7 @@ func (e *Ethernet) LinkFlow() Flow {
 	return Flow{LayerTypeEthernet, string(e.SrcMAC), string(e.DstMAC)}
 }
 
-// decodeEthernet decodes the headers of a Packet.
-var decodeEthernet decoderFunc = func(data []byte) (out DecodeResult, err error) {
+func decodeEthernet(data []byte) (out DecodeResult, err error) {
 	if len(data) < 14 {
 		err = errors.New("Ethernet packet too small")
 		return

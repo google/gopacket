@@ -19,7 +19,7 @@ type UDP struct {
 // LayerType returns LayerTypeUDP
 func (u *UDP) LayerType() LayerType { return LayerTypeUDP }
 
-var decodeUDP decoderFunc = func(data []byte) (out DecodeResult, err error) {
+func decodeUDP(data []byte) (out DecodeResult, err error) {
 	udp := &UDP{
 		SrcPort:  binary.BigEndian.Uint16(data[0:2]),
 		sPort:    data[0:2],

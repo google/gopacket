@@ -23,7 +23,7 @@ func (v *Dot1Q) String() {
 	fmt.Sprintf("VLAN Prioity:%d Drop:%v Tag:%d", v.Priority, v.DropEligible, v.VLANIdentifier)
 }
 
-var decodeDot1Q decoderFunc = func(data []byte) (out DecodeResult, err error) {
+func decodeDot1Q(data []byte) (out DecodeResult, err error) {
 	d := &Dot1Q{
 		Priority:       (data[2] & 0xE0) >> 13,
 		DropEligible:   data[2]&0x10 != 0,

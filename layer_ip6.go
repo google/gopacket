@@ -26,7 +26,7 @@ func (i *IPv6) NetFlow() Flow {
 	return Flow{LayerTypeIPv6, string(i.SrcIP), string(i.DstIP)}
 }
 
-var decodeIPv6 decoderFunc = func(data []byte) (out DecodeResult, err error) {
+func decodeIPv6(data []byte) (out DecodeResult, err error) {
 	ip6 := &IPv6{
 		Version:      uint8(data[0]) >> 4,
 		TrafficClass: uint8((binary.BigEndian.Uint16(data[0:2]) >> 4) & 0x00FF),

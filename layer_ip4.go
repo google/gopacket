@@ -29,7 +29,7 @@ func (i *IPv4) NetFlow() Flow {
 	return Flow{LayerTypeIPv4, string(i.SrcIP), string(i.DstIP)}
 }
 
-var decodeIPv4 decoderFunc = func(data []byte) (out DecodeResult, err error) {
+func decodeIPv4(data []byte) (out DecodeResult, err error) {
 	flagsfrags := binary.BigEndian.Uint16(data[6:8])
 	ip := &IPv4{
 		Version:    uint8(data[0]) >> 4,

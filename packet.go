@@ -229,3 +229,18 @@ func (p *packet) String() string {
 	}
 	return fmt.Sprintf("PACKET [%s]", strings.Join(layers, ", "))
 }
+<<<<<<< HEAD
+=======
+
+func (p *packet) FlowKey() (FlowKey, error) {
+	net := p.NetworkLayer()
+	if net == nil {
+		return FlowKey{}, errors.New("Packet has no network layer")
+	}
+	trans := p.TransportLayer()
+	if trans == nil {
+		return FlowKey{}, errors.New("Packet has no transport layer")
+	}
+	return NewFlowKey(net, trans), nil
+}
+>>>>>>> master

@@ -40,7 +40,7 @@ const (
 	TCPFlagNS
 )
 
-var decodeTCP decoderFunc = func(data []byte) (out DecodeResult, err error) {
+func decodeTCP(data []byte) (out DecodeResult, err error) {
 	tcp := &TCP{
 		SrcPort:    binary.BigEndian.Uint16(data[0:2]),
 		sPort:      data[0:2],
