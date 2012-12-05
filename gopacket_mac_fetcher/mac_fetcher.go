@@ -44,6 +44,7 @@ func main() {
 		"",
 		"// Created by gopacket_mac_fetcher, don't edit manually",
 		"// Generated at " + time.Now().String(),
+    "// Fetched from " + *url,
 		"",
 		"// ValidMACPrefixMap maps a valid MAC address prefix to the name of the ",
 		"// organization that owns the rights to use it.  We map it to a hidden ",
