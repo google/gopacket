@@ -13,9 +13,9 @@ type EthernetType uint16
 
 const (
 	EthernetTypeIPv4  EthernetType = 0x0800
-	EthernetTypeARP                = 0x0806
-	EthernetTypeIPv6               = 0x86DD
-	EthernetTypeDot1Q              = 0x8100
+	EthernetTypeARP               EthernetType= 0x0806
+	EthernetTypeIPv6              EthernetType= 0x86DD
+	EthernetTypeDot1Q             EthernetType= 0x8100
 )
 
 func (e EthernetType) Decode(data []byte) (out DecodeResult, err error) {

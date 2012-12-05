@@ -13,8 +13,8 @@ type IPProtocol uint8
 
 const (
 	IPProtocolICMP IPProtocol = 1
-	IPProtocolTCP             = 6
-	IPProtocolUDP             = 17
+	IPProtocolTCP            IPProtocol= 6
+	IPProtocolUDP            IPProtocol= 17
 )
 
 func (ip IPProtocol) Decode(data []byte) (out DecodeResult, err error) {

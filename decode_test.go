@@ -115,29 +115,26 @@ func BenchmarkAlloc(b *testing.B) {
 	}
 }
 
-func BenchmarkFlowKey(b *testing.B) {
+func BenchmarkFlow(b *testing.B) {
 	p := NewPacket(testSimpleTcpPacket, LinkTypeEthernet, DecodeOptions{true, true})
 	net := p.NetworkLayer()
-	trans := p.TransportLayer()
 	for i := 0; i < b.N; i++ {
-		NewFlowKey(net, trans)
+    net.NetFlow()
 	}
 }
 
-func BenchmarkPacketFlowKey(b *testing.B) {
+func BenchmarkEndpoints(b *testing.B) {
+	p := NewPacket(testSimpleTcpPacket, LinkTypeEthernet, DecodeOptions{true, true})
+	flow := p.NetworkLayer().NetFlow()
 	for i := 0; i < b.N; i++ {
-		NewPacket(testSimpleTcpPacket, LinkTypeEthernet, DecodeOptions{true, true}).FlowKey()
+		flow.Endpoints()
 	}
 }
 
-func BenchmarkFlowMapKey(b *testing.B) {
-	p := NewPacket(testSimpleTcpPacket, LinkTypeEthernet, DecodeOptions{true, true})
-	net := p.NetworkLayer()
-	trans := p.TransportLayer()
-	m := map[FlowKey]bool{}
-	for i := 0; i < b.N; i++ {
-		m[NewFlowKey(net, trans)] = true
-	}
+// TestFlowMapKey makes sure a flow and an endpoint can be used as map keys.
+func TestFlowMapKey(t *testing.T) {
+	_ = map[Flow]bool{}
+  _ = map[Endpoint]bool{}
 }
 
 func BenchmarkCheckEthernetPrefix(b *testing.B) {
@@ -157,16 +154,16 @@ func TestDecodeSimpleTcpPacket(t *testing.T) {
 	if eth := p.LinkLayer(); eth == nil {
 		t.Error("No ethernet layer found")
 	} else {
-		equal("Eth Src", "bc:30:5b:e8:d3:49", eth.SrcLinkAddr())
-		equal("Eth Dst", "00:00:0c:9f:f0:20", eth.DstLinkAddr())
+		equal("Eth Src", "bc:30:5b:e8:d3:49", eth.LinkFlow().Src())
+		equal("Eth Dst", "00:00:0c:9f:f0:20", eth.LinkFlow().Dst())
 	}
 	if net := p.NetworkLayer(); net == nil {
 		t.Error("No net layer found")
 	} else if ip, ok := net.(*IPv4); !ok {
 		t.Error("Net layer is not IP layer")
 	} else {
-		equal("IP Src", "172.17.81.73", net.SrcNetAddr())
-		equal("IP Dst", "173.222.254.225", net.DstNetAddr())
+		equal("IP Src", "172.17.81.73", net.NetFlow().Src())
+		equal("IP Dst", "173.222.254.225", net.NetFlow().Dst())
 		want := &IPv4{
 			Version:    4,
 			IHL:        5,
@@ -178,8 +175,8 @@ func TestDecodeSimpleTcpPacket(t *testing.T) {
 			TTL:        64,
 			Protocol:   6,
 			Checksum:   0x555A,
-			SrcIP:      IPAddress{172, 17, 81, 73},
-			DstIP:      IPAddress{173, 222, 254, 225},
+			SrcIP:      []byte{172, 17, 81, 73},
+			DstIP:      []byte{173, 222, 254, 225},
 		}
 		if !reflect.DeepEqual(ip, want) {
 			t.Errorf("IP layer mismatch, \ngot  %#v\nwant %#v\n", ip, want)
@@ -190,8 +187,8 @@ func TestDecodeSimpleTcpPacket(t *testing.T) {
 	} else if tcp, ok := trans.(*TCP); !ok {
 		t.Error("Transport layer is not TCP layer")
 	} else {
-		equal("TCP Src", "50679", trans.SrcAppAddr())
-		equal("TCP Dst", "80", trans.DstAppAddr())
+		equal("TCP Src", "50679", trans.AppFlow().Src())
+		equal("TCP Dst", "80", trans.AppFlow().Dst())
 		want := &TCP{
 			SrcPort:    50679,
 			DstPort:    80,
@@ -202,8 +199,8 @@ func TestDecodeSimpleTcpPacket(t *testing.T) {
 			Window:     0x73,
 			Checksum:   0xabb1,
 			Urgent:     0,
-			sPort:      PortAddress{0xc5, 0xf7},
-			dPort:      PortAddress{0x0, 0x50},
+			sPort:      []byte{0xc5, 0xf7},
+			dPort:      []byte{0x0, 0x50},
 		}
 		if !reflect.DeepEqual(tcp, want) {
 			t.Errorf("TCP layer mismatch\ngot  %#v\nwant %#v", tcp, want)

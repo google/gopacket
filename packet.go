@@ -4,7 +4,6 @@
 package gopacket
 
 import (
-	"errors"
 	"fmt"
 	"strings"
 )
