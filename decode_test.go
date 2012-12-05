@@ -136,7 +136,7 @@ func TestFlowMapKey(t *testing.T) {
 	_ = map[Flow]bool{}
 	_ = map[Endpoint]bool{}
 	_ = map[[2]Flow]bool{}
-	if NewEndpointFromUDPPort(53) != NewEndpointFromUDPPort(53) {
+	if NewUDPPortEndpoint(53) != NewUDPPortEndpoint(53) {
 		t.Error("Endpoint equality seems to be broken")
 	}
 }
@@ -276,36 +276,39 @@ func generateRandomSlice() (b []byte) {
 	return b
 }
 
-// securityTestRandomInput creates new packets with a decoder by feeding it
-// random input.  We're looking for actual program crashes caused by this
-// parsing... proper error detection (ErrorLayer() being set) is fine/expected.
-func securityTestRandomInput(d Decoder, t *testing.T) {
-	for i := 0; i < 1000; i++ {
-		NewPacket(generateRandomSlice(), d, Default)
-	}
-}
-
 func TestDecoderSecurity(t *testing.T) {
 	seed := time.Now().UnixNano()
-	fmt.Println("If you see a crash here, it's serious business.  Report it!")
-	fmt.Println("Send this number with any crash reports:", seed)
-	rand.Seed(seed)
-	t.Log("ARP")
-	securityTestRandomInput(decoderFunc(decodeARP), t)
-	t.Log("Dot1Q")
-	securityTestRandomInput(decoderFunc(decodeDot1Q), t)
-	t.Log("Ethernet")
-	securityTestRandomInput(decoderFunc(decodeEthernet), t)
-	t.Log("ICMP")
-	securityTestRandomInput(decoderFunc(decodeICMP), t)
-	t.Log("IPv4")
-	securityTestRandomInput(decoderFunc(decodeIPv4), t)
-	t.Log("IPv6")
-	securityTestRandomInput(decoderFunc(decodeIPv6), t)
-	t.Log("PPP")
-	securityTestRandomInput(decoderFunc(decodePPP), t)
-	t.Log("TCP")
-	securityTestRandomInput(decoderFunc(decodeTCP), t)
-	t.Log("UDP")
-	securityTestRandomInput(decoderFunc(decodeUDP), t)
+	fmt.Printf("If you see a crash here, it's serious business.  Report it!\n"+
+		"Send this number with any crash reports: %v\n", seed)
+	r := rand.New(rand.NewSource(seed))
+
+	testCases := []struct {
+		s string
+		d decoderFunc
+	}{
+		{"ARP", decodeARP},
+		{"Dot1Q", decodeDot1Q},
+		{"Ethernet", decodeEthernet},
+		{"ICMP", decodeICMP},
+		{"IPv4", decodeIPv4},
+		{"IPv6", decodeIPv6},
+		{"PPP", decodePPP},
+		{"TCP", decodeTCP},
+		{"UDP", decodeUDP},
+	}
+	for _, tc := range testCases {
+		// Fuzz-test the decoder tc.d by feeding it random inputs.
+		// We're fine with errors occurring here... what we're looking
+		// for is actual program crashes, which Shouldn't Happen (tm) due
+		// to golang slice range checking... but we're paranoid.
+		t.Logf("Testing %s", tc.s)
+		for i := 0; i < 1000; i++ {
+			b := make([]byte, 0, 256)
+			for r.Int()%100 != 0 {
+				b = append(b, byte(r.Int()))
+			}
+			NewPacket(b, tc.d, Default)
+		}
+	}
+	fmt.Println("No crash to see here... continuing with testing")
 }

@@ -56,10 +56,10 @@ type DecodeFailure struct {
 	err  error
 }
 
-// Returns the entire payload which failed to be decoded.
+// Payload returns the entire payload which failed to be decoded.
 func (d *DecodeFailure) Payload() []byte { return d.data }
 
-// Returns the error encountered during decoding.
+// Error eturns the error encountered during decoding.
 func (d *DecodeFailure) Error() error { return d.err }
 
 // LayerType returns LayerTypeDecodeFailure
@@ -67,7 +67,7 @@ func (d *DecodeFailure) LayerType() LayerType { return LayerTypeDecodeFailure }
 
 // decodeUnknown "decodes" unsupported data types by returning an error.
 // This decoder will thus always return a DecodeFailure layer.
-var decodeUnknown decoderFunc = func(data []byte) (out DecodeResult, err error) {
+func decodeUnknown(data []byte) (out DecodeResult, err error) {
 	err = errors.New("Link type not currently supported")
 	return
 }

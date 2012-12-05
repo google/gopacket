@@ -1,5 +1,4 @@
 // Copyright (c) 2012 Google, Inc. All rights reserved.
-// Copyright (c) 2009-2012 Andreas Krennmair. All rights reserved.
 
 package gopacket
 
@@ -21,19 +20,17 @@ type Endpoint struct {
 // LayerType returns the layer type associated with this endpoint.
 func (e Endpoint) LayerType() LayerType { return e.typ }
 
-// Raw returns the raw bytes of this endpoint.  These aren't human-readable most of the time, but they are fast.
+// Raw returns the raw bytes of this endpoint.  These aren't human-readable most of the time, but they are faster than calling String.
 func (e Endpoint) Raw() []byte { return []byte(e.raw) }
 
 // String returns the endpoint as a human-readable string.
 func (a Endpoint) String() string {
 	switch a.typ {
-	case LayerTypeIPv4:
-		fallthrough
-	case LayerTypeIPv6:
+	case LayerTypeIPv4, LayerTypeIPv6:
 		return net.IP([]byte(a.raw)).String()
 	case LayerTypeEthernet:
 		return net.HardwareAddr([]byte(a.raw)).String()
-	case LayerTypeTCP:
+	case LayerTypeTCP, LayerTypeUDP:
 		return strconv.Itoa(int(binary.BigEndian.Uint16([]byte(a.raw))))
 	case LayerTypePPP:
 		return "point"
@@ -41,8 +38,8 @@ func (a Endpoint) String() string {
 	return "endpoint"
 }
 
-// NewEndpointFromIP creates a new IPv4 or IPv6 endpoint from a net.IP address.
-func NewEndpointFromIP(a net.IP) (_ Endpoint, err error) {
+// NewIPEndpoint creates a new IPv4 or IPv6 endpoint from a net.IP address.
+func NewIPEndpoint(a net.IP) (_ Endpoint, err error) {
 	if len(a) == 4 {
 		return Endpoint{LayerTypeIPv4, string(a)}, nil
 	} else if len(a) == 16 {
@@ -52,8 +49,8 @@ func NewEndpointFromIP(a net.IP) (_ Endpoint, err error) {
 	return
 }
 
-// NewEndpointFromHardwareAddr creates a new Ethernet endpoint from a net.HardwareAddr address.
-func NewEndpointFromHardwareAddr(a net.HardwareAddr) (_ Endpoint, err error) {
+// NewMACEndpoint creates a new Ethernet endpoint from a net.HardwareAddr address.
+func NewMACEndpoint(a net.HardwareAddr) (_ Endpoint, err error) {
 	if len(a) == 6 {
 		return Endpoint{LayerTypeEthernet, string(a)}, nil
 	}
@@ -61,19 +58,19 @@ func NewEndpointFromHardwareAddr(a net.HardwareAddr) (_ Endpoint, err error) {
 	return
 }
 
-// NewEndpointFromTCPPort creates a new TCP endpoint.
-func NewEndpointFromTCPPort(a uint16) Endpoint {
-	return Endpoint{LayerTypeTCP, string([]byte{byte(a >> 8), byte(a & 0xff)})}
+// NewTCPPortEndpoint creates a new TCP endpoint.
+func NewTCPPortEndpoint(a uint16) Endpoint {
+	return Endpoint{LayerTypeTCP, string([]byte{byte(a >> 8), byte(a)})}
 }
 
-// NewEndpointFromTCPPort creates a new UDP endpoint.
-func NewEndpointFromUDPPort(a uint16) Endpoint {
-	return Endpoint{LayerTypeUDP, string([]byte{byte(a >> 8), byte(a & 0xff)})}
+// NewUDPPortEndpoint creates a new UDP endpoint.
+func NewUDPPortEndpoint(a uint16) Endpoint {
+	return Endpoint{LayerTypeUDP, string([]byte{byte(a >> 8), byte(a)})}
 }
 
 // PPPEndpoint is an "endpoint" for PPP flows.  Since PPP is "point to point", we have a single endpoint "point"
 // that we use in all cases for PPP.
-var PPPEndpoint Endpoint = Endpoint{typ: LayerTypePPP}
+var PPPEndpoint = Endpoint{typ: LayerTypePPP}
 
 // Flow represents the direction of traffic for a packet layer, as a source and destination Endpoint.
 // Flows are usable as map keys.
@@ -103,7 +100,7 @@ func (f Flow) LayerType() LayerType {
 	return f.typ
 }
 
-// Endpoints returns the two Endpoint objects for this flow.
+// Endpoints returns the two Endpoints for this flow.
 func (f Flow) Endpoints() (src, dst Endpoint) {
 	return Endpoint{f.typ, f.src}, Endpoint{f.typ, f.dst}
 }
@@ -121,4 +118,4 @@ func (f Flow) Dst() (dst Endpoint) {
 }
 
 // PPPFlow is a "flow" for PPP.  Since PPP is "point to point", we have a single constant flow "point"->"point".
-var PPPFlow Flow = Flow{typ: LayerTypePPP}
+var PPPFlow = Flow{typ: LayerTypePPP}

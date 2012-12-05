@@ -88,9 +88,9 @@
 //    doSomethingWithPacket(p)
 //  }
 //
-// The fastest method of decoding is to use both Lazy and NoCopy.  These flags
-// are both bits, so you can pass (gopacket.Lazy | gopacket.NoCopy) in as the
-// decode method to achieve the fastest creation of packets.
+// The fastest method of decoding is to use both Lazy and NoCopy, but note from
+// the many caveats above that for some implementations they may be dangerous
+// either or both may be dangerous.
 //
 // Pointers To Known Layers
 //
@@ -151,8 +151,9 @@
 //  src, dst := netFlow.Endpoints()
 //  reverseFlow := gopacket.NewFlow(dst, src)
 //
-// Both Endpoint and Flow objects can be used as map keys, and the euqality operator can
-// compare them, so you can easily group together all packets based on endpoint criteria:
+// Both Endpoint and Flow objects can be used as map keys, and the equality
+// operator can compare them, so you can easily group together all packets
+// based on endpoint criteria:
 //
 //  flows := map[gopacket.Endpoint]chan gopacket.Packet
 //  packet := gopacket.NewPacket(myPacketData, gopacket.LinkTypeEthernet, gopacket.Lazy)
@@ -168,11 +169,9 @@
 //    }
 //  }
 //  // Find all packets coming from UDP port 1000 to UDP port 500
-//  interestingFlow := gopacket.ewFlow(gopacket.ewEndpointFromUDPPort(1000), gopacket.ewEndpointFromUDPPort(500))
-//  if udp := packet.Layer(gopacket.LayerTypeUDP); udp != nil {
-//    if udp.TransportFlow() == interestingFlow {
-//      fmt.Println("Found that flow I was looking for!")
-//    }
+//  interestingFlow := gopacket.NewFlow(gopacket.NewUDPPortEndpoint(1000), gopacket.NewUDPPortEndpoint(500))
+//  if t := packet.NetworkLayer(); t != nil && t.TransportFlow() == interestingFlow {
+//    fmt.Println("Found that UDP flow I was looking for!")
 //  }
 //
 // Implementing Your Own Decoder
