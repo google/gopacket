@@ -107,6 +107,7 @@
 // while the final layer provides a Payload() function to get payload data.
 // This is helpful, for example, to get payloads for all packets regardless
 // of their underlying data type:
+//
 //  // Get packets from some source
 //  for packet := range someSource {
 //    if app := packet.ApplicationLayer(); app != nil {
@@ -115,33 +116,64 @@
 //      }
 //    }
 //  }
+//
 // A particularly useful layer is ErrorLayer(), which is set whenever there's
 // an error parsing part of the packet.
+//
 //  packet := gopacket.NewPacket(myPacketData, gopacket.LinkTypeEthernet, gopacket.Default)
 //  if err := packet.ErrorLayer(); err != nil {
 //    fmt.Println("Error decoding some part of the packet:", err.Error())
 //  }
+//
 // Note that we don't return an error from NewPacket because we may have decoded
 // a number of layers successfully before running into our erroneous layer.  You
 // may still be able to get your Ethernet and IPv4 layers correctly, even if
 // your TCP layer is malformed.
 //
-// Flow Keys
+// Flow And Endpoint
 //
-// Since gopacket has abstract types for NetworkLayer and TransportLayer, and
-// both of these return addresses for their sources and destinations, it's able
-// to create a flow key to map a packet to a flow.
+// gopacket has two useful objects, Flow and Endpoint, for communicating in a protocol
+// independent manner the fact that a packet is coming from A and going to B.
+// The general layer types LinkLayer, NetworkLayer, and TransportLayer all provide
+// methods for extracting their flow information, without worrying about the type
+// of the underlying Layer.
 //
-//  // Create a flow map
-//  flows := map[gopacket.FlowKey]*someFlowObject
-//  // Create the packet
+// A Flow is a simple object made up of a set of two Endpoints, one source and one
+// destination.  It details the sender and receiver of the Layer of the Packet.
+//
+// An Endpoint is a LayerType and an address associated with that type.  For
+// example, for LayerTypeIPv4, an Endpoint contains the IP address bytes for a v4
+// IP packet.  A Flow can be broken into Endpoints, and Endpoints can be combined
+// into Flows:
+//
 //  packet := gopacket.NewPacket(myPacketData, gopacket.LinkTypeEthernet, gopacket.Lazy)
-//  // Add the packet to a flow
-//  flows[packet.FlowKey()].addPacketToFlow(packet)
+//  netFlow := packet.NetworkLayer().NetFlow()
+//  src, dst := netFlow.Endpoints()
+//  reverseFlow := gopacket.NewFlow(dst, src)
 //
-// A FlowKey can also be broken down into its Src and Dst FlowAddress.
-// FlowAddres is also map-able, if you just want to collect all packets going to
-// a particular server/port pair, or some-such.
+// Both Endpoint and Flow objects can be used as map keys, and the euqality operator can
+// compare them, so you can easily group together all packets based on endpoint criteria:
+//
+//  flows := map[gopacket.Endpoint]chan gopacket.Packet
+//  packet := gopacket.NewPacket(myPacketData, gopacket.LinkTypeEthernet, gopacket.Lazy)
+//  // Send all TCP packets to channels based on their destination port.
+//  if tcp := packet.Layer(gopacket.LayerTypeTCP); tcp != nil {
+//    flows[tcp.TransportFlow().Dst()] <- packet
+//  }
+//  // Look for all packets with the same source and destination network address
+//  if net := packet.NetworkLayer(); net != nil {
+//    src, dst := net.NetFlow().Endpoints()
+//    if src == dst {
+//      fmt.Println("Fishy packet has same network source and dst: %s", src)
+//    }
+//  }
+//  // Find all packets coming from UDP port 1000 to UDP port 500
+//  interestingFlow := gopacket.ewFlow(gopacket.ewEndpointFromUDPPort(1000), gopacket.ewEndpointFromUDPPort(500))
+//  if udp := packet.Layer(gopacket.LayerTypeUDP); udp != nil {
+//    if udp.TransportFlow() == interestingFlow {
+//      fmt.Println("Found that flow I was looking for!")
+//    }
+//  }
 //
 // Implementing Your Own Decoder
 //

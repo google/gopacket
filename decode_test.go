@@ -119,7 +119,7 @@ func BenchmarkFlow(b *testing.B) {
 	p := NewPacket(testSimpleTcpPacket, LinkTypeEthernet, DecodeOptions{true, true})
 	net := p.NetworkLayer()
 	for i := 0; i < b.N; i++ {
-    net.NetFlow()
+		net.NetFlow()
 	}
 }
 
@@ -134,7 +134,11 @@ func BenchmarkEndpoints(b *testing.B) {
 // TestFlowMapKey makes sure a flow and an endpoint can be used as map keys.
 func TestFlowMapKey(t *testing.T) {
 	_ = map[Flow]bool{}
-  _ = map[Endpoint]bool{}
+	_ = map[Endpoint]bool{}
+	_ = map[[2]Flow]bool{}
+	if NewEndpointFromUDPPort(53) != NewEndpointFromUDPPort(53) {
+		t.Error("Endpoint equality seems to be broken")
+	}
 }
 
 func BenchmarkCheckEthernetPrefix(b *testing.B) {

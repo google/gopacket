@@ -13,7 +13,7 @@ type PPPType uint16
 
 const (
 	PPPTypeIPv4 PPPType = 0x0021
-	PPPTypeIPv6        PPPType =0x0057
+	PPPTypeIPv6 PPPType = 0x0057
 )
 
 func (p PPPType) Decode(data []byte) (out DecodeResult, err error) {

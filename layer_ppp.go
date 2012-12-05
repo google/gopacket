@@ -15,7 +15,7 @@ type PPP struct {
 
 // LayerType returns LayerTypePPP
 func (p *PPP) LayerType() LayerType { return LayerTypePPP }
-func (p *PPP) LinkFlow() Flow       { return Flow{typ: LayerTypePPP} }
+func (p *PPP) LinkFlow() Flow       { return PPPFlow }
 
 func decodePPP(data []byte) (out DecodeResult, err error) {
 	ppp := &PPP{}
