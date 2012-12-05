@@ -27,6 +27,7 @@ const (
 	LayerTypeDot1Q
 	LayerTypeARP
 	LayerTypeMPLS
+	LayerTypePPPoE
 )
 
 func (l LayerType) String() string {

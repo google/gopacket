@@ -6,6 +6,7 @@ package gopacket
 import (
 	"fmt"
 	"math/rand"
+	"os"
 	"reflect"
 	"testing"
 	"time"
@@ -278,7 +279,7 @@ func generateRandomSlice() (b []byte) {
 
 func TestDecoderSecurity(t *testing.T) {
 	seed := time.Now().UnixNano()
-	fmt.Printf("If you see a crash here, it's serious business.  Report it!\n"+
+	fmt.Fprintf(os.Stderr, "If you see a crash here, it's serious business.  Report it!\n"+
 		"Send this number with any crash reports: %v\n", seed)
 	r := rand.New(rand.NewSource(seed))
 
@@ -295,6 +296,8 @@ func TestDecoderSecurity(t *testing.T) {
 		{"PPP", decodePPP},
 		{"TCP", decodeTCP},
 		{"UDP", decodeUDP},
+		{"MPLS", decodeMPLS},
+		{"PPPoE", decodePPPoE},
 	}
 	for _, tc := range testCases {
 		// Fuzz-test the decoder tc.d by feeding it random inputs.
@@ -310,5 +313,5 @@ func TestDecoderSecurity(t *testing.T) {
 			NewPacket(b, tc.d, Default)
 		}
 	}
-	fmt.Println("No crash to see here... continuing with testing")
+	fmt.Fprintln(os.Stderr, "No crash to see here... continuing with testing")
 }
