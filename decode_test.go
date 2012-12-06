@@ -199,7 +199,7 @@ func BenchmarkTCPLayerClassFromDecodedPacket(b *testing.B) {
 	lc := NewLayerClass([]LayerType{LayerTypeTCP})
 	b.StartTimer()
 	for i := 0; i < b.N; i++ {
-		_ = p.LayerFromClass(lc)
+		_ = p.LayerClass(lc)
 	}
 }
 

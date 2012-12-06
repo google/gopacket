@@ -18,10 +18,10 @@ type Packet interface {
 	Layers() []Layer
 	// Layer returns the first layer in this packet of the given type, or nil
 	Layer(LayerType) Layer
-	// LayerFromClass returns the first layer in this packet of the given class,
+	// LayerClass returns the first layer in this packet of the given class,
 	// or nil.
-	LayerFromClass(LayerClass) Layer
-	// Printable
+	LayerClass(LayerClass) Layer
+	// String returns a human-readable string.
 	String() string
 
 	// LinkLayer returns the first link layer in the packet
@@ -219,7 +219,7 @@ func (p *packet) Layer(t LayerType) Layer {
 	return nil
 }
 
-func (p *packet) LayerFromClass(lc LayerClass) Layer {
+func (p *packet) LayerClass(lc LayerClass) Layer {
 	for _, l := range p.layers {
 		if lc.Contains(l.LayerType()) {
 			return l
