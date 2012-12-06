@@ -20,8 +20,17 @@ type Endpoint struct {
 // LayerType returns the layer type associated with this endpoint.
 func (e Endpoint) LayerType() LayerType { return e.typ }
 
-// Raw returns the raw bytes of this endpoint.  These aren't human-readable most of the time, but they are faster than calling String.
+// Raw returns the raw bytes of this endpoint.  These aren't human-readable
+// most of the time, but they are faster than calling String.
 func (e Endpoint) Raw() []byte { return []byte(e.raw) }
+
+// LessThan provides a stable ordering for all endpoints.  It sorts first based
+// on the LayerType of an endpoint, then based on the raw bytes of that endpoint.
+// For some endpoints, the actual comparison may not make sense, however this
+// ordering does provide useful information for most Endpoint types.
+func (a Endpoint) LessThan(b Endpoint) bool {
+	return a.typ < b.typ || (a.typ == b.typ && a.raw < b.raw)
+}
 
 // String returns the endpoint as a human-readable string.
 func (a Endpoint) String() string {
