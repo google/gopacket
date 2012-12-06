@@ -18,6 +18,9 @@ type Packet interface {
 	Layers() []Layer
 	// Layer returns the first layer in this packet of the given type, or nil
 	Layer(LayerType) Layer
+	// LayerFromClass returns the first layer in this packet of the given class,
+	// or nil.
+	LayerFromClass(LayerClass) Layer
 	// Printable
 	String() string
 
@@ -36,33 +39,6 @@ type Packet interface {
 	ErrorLayer() ErrorLayer
 }
 
-type specificLayers struct {
-	// Pointers to the various important layers
-	link        LinkLayer
-	network     NetworkLayer
-	transport   TransportLayer
-	application ApplicationLayer
-	failure     ErrorLayer
-}
-
-func (s *specificLayers) copyFrom(r *DecodeResult) {
-	if s.link == nil {
-		s.link = r.LinkLayer
-	}
-	if s.network == nil {
-		s.network = r.NetworkLayer
-	}
-	if s.transport == nil {
-		s.transport = r.TransportLayer
-	}
-	if s.application == nil {
-		s.application = r.ApplicationLayer
-	}
-	if s.failure == nil {
-		s.failure = r.ErrorLayer
-	}
-}
-
 type packet struct {
 	// data contains the entire packet data for a packet
 	data []byte
@@ -73,8 +49,30 @@ type packet struct {
 	// decoder is the next decoder we should call (lazily)
 	decoder Decoder
 
-	// The set of specific layers we have pointers to.
-	specificLayers
+	// Pointers to the various important layers
+	link        LinkLayer
+	network     NetworkLayer
+	transport   TransportLayer
+	application ApplicationLayer
+	failure     ErrorLayer
+}
+
+func (p *packet) copySpecificLayersFrom(r *DecodeResult) {
+	if p.link == nil {
+		p.link = r.LinkLayer
+	}
+	if p.network == nil {
+		p.network = r.NetworkLayer
+	}
+	if p.transport == nil {
+		p.transport = r.TransportLayer
+	}
+	if p.application == nil {
+		p.application = r.ApplicationLayer
+	}
+	if p.failure == nil {
+		p.failure = r.ErrorLayer
+	}
 }
 
 func (p *packet) LinkLayer() LinkLayer {
@@ -195,7 +193,7 @@ func (p *packet) decodeNextLayer() (out Layer) {
 		p.encoded = result.RemainingBytes
 		p.decoder = result.NextDecoder
 		out = result.DecodedLayer
-		p.specificLayers.copyFrom(&result)
+		p.copySpecificLayersFrom(&result)
 	}
 	p.appendLayer(out)
 	return out
@@ -209,12 +207,26 @@ func (p *packet) Layers() []Layer {
 
 func (p *packet) Layer(t LayerType) Layer {
 	for _, l := range p.layers {
-		if l.LayerType() == t {
+		if t == l.LayerType() {
 			return l
 		}
 	}
 	for l := p.decodeNextLayer(); l != nil; l = p.decodeNextLayer() {
-		if l.LayerType() == t {
+		if t == l.LayerType() {
+			return l
+		}
+	}
+	return nil
+}
+
+func (p *packet) LayerFromClass(lc LayerClass) Layer {
+	for _, l := range p.layers {
+		if lc.Contains(l.LayerType()) {
+			return l
+		}
+	}
+	for l := p.decodeNextLayer(); l != nil; l = p.decodeNextLayer() {
+		if lc.Contains(l.LayerType()) {
 			return l
 		}
 	}

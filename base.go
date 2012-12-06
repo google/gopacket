@@ -12,7 +12,7 @@ import (
 // usable/useful within this library as a means for requesting layer types
 // (see Packet.Layer) and determining which types of layers have been decoded.
 // A LayerType corresponds 1:1 to a struct type.
-type LayerType int
+type LayerType uint
 
 const (
 	LayerTypePayload LayerType = iota
@@ -24,12 +24,16 @@ const (
 	LayerTypeTCP
 	LayerTypeUDP
 	LayerTypeSCTP
-  LayerTypeSCTPData
+	LayerTypeSCTPData
 	LayerTypeICMP
 	LayerTypeDot1Q
 	LayerTypeARP
 	LayerTypeMPLS
 	LayerTypePPPoE
+	// MaximumLayerType should always be the largest layertype in gopacket.  Any
+	// layer types above this are assumed to be user layer types created outside
+	// of gopacket.
+	MaximumLayerType
 )
 
 func (l LayerType) String() string {

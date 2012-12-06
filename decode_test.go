@@ -52,6 +52,9 @@ var testSimpleTcpPacket []byte = []byte{
 	0x0d, 0x0a,
 }
 
+// A few benchmarks for figuring out exactly how fast some underlying Go
+// things are.
+
 func BenchmarkTypeAssertion(b *testing.B) {
 	var eth LinkLayer = &Ethernet{}
 	c := 0
@@ -59,6 +62,55 @@ func BenchmarkTypeAssertion(b *testing.B) {
 		if _, ok := eth.(*Ethernet); ok {
 			c++
 		}
+	}
+}
+
+func BenchmarkMapLookup(b *testing.B) {
+	m := map[LayerType]bool{
+		LayerTypeTCP:      true,
+		LayerTypeEthernet: true,
+	}
+	for i := 0; i < b.N; i++ {
+		_ = m[LayerTypeIPv4]
+	}
+}
+
+func BenchmarkNilMapLookup(b *testing.B) {
+	var m map[LayerType]bool
+	for i := 0; i < b.N; i++ {
+		_ = m[LayerTypeIPv4]
+	}
+}
+
+func BenchmarkNilMapLookupWithNilCheck(b *testing.B) {
+	var m map[LayerType]bool
+	for i := 0; i < b.N; i++ {
+		if m != nil {
+			_ = m[LayerTypeIPv4]
+		}
+	}
+}
+
+func BenchmarkArrayLookup(b *testing.B) {
+	m := make([]bool, 100)
+	for i := 0; i < b.N; i++ {
+		_ = m[LayerTypeIPv4]
+	}
+}
+
+// Benchmarks for actual gopacket code
+
+func BenchmarkLayerClassSliceContains(b *testing.B) {
+	lc := NewLayerClassSlice([]LayerType{LayerTypeTCP, LayerTypeEthernet})
+	for i := 0; i < b.N; i++ {
+		_ = lc.Contains(LayerTypeTCP)
+	}
+}
+
+func BenchmarkLayerClassMapContains(b *testing.B) {
+	lc := NewLayerClassMap([]LayerType{LayerTypeTCP, LayerTypeEthernet})
+	for i := 0; i < b.N; i++ {
+		_ = lc.Contains(LayerTypeTCP)
 	}
 }
 
@@ -129,6 +181,25 @@ func BenchmarkEndpoints(b *testing.B) {
 	flow := p.NetworkLayer().NetFlow()
 	for i := 0; i < b.N; i++ {
 		flow.Endpoints()
+	}
+}
+
+func BenchmarkTCPLayerFromDecodedPacket(b *testing.B) {
+	b.StopTimer()
+	p := NewPacket(testSimpleTcpPacket, LinkTypeEthernet, Default)
+	b.StartTimer()
+	for i := 0; i < b.N; i++ {
+		_ = p.Layer(LayerTypeTCP)
+	}
+}
+
+func BenchmarkTCPLayerClassFromDecodedPacket(b *testing.B) {
+	b.StopTimer()
+	p := NewPacket(testSimpleTcpPacket, LinkTypeEthernet, Default)
+	lc := NewLayerClass([]LayerType{LayerTypeTCP})
+	b.StartTimer()
+	for i := 0; i < b.N; i++ {
+		_ = p.LayerFromClass(lc)
 	}
 }
 
