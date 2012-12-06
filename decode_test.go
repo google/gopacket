@@ -11,7 +11,7 @@ import (
 	"time"
 )
 
-var testSimpleTcpPacket []byte = []byte{
+var testSimpleTCPPacket []byte = []byte{
 	0x00, 0x00, 0x0c, 0x9f, 0xf0, 0x20, 0xbc, 0x30, 0x5b, 0xe8, 0xd3, 0x49,
 	0x08, 0x00, 0x45, 0x00, 0x01, 0xa4, 0x39, 0xdf, 0x40, 0x00, 0x40, 0x06,
 	0x55, 0x5a, 0xac, 0x11, 0x51, 0x49, 0xad, 0xde, 0xfe, 0xe1, 0xc5, 0xf7,
@@ -63,49 +63,49 @@ func BenchmarkTypeAssertion(b *testing.B) {
 
 func BenchmarkLazyNoCopyEthLayer(b *testing.B) {
 	for i := 0; i < b.N; i++ {
-		NewPacket(testSimpleTcpPacket, LinkTypeEthernet, DecodeOptions{true, true}).Layer(LayerTypeEthernet)
+		NewPacket(testSimpleTCPPacket, LinkTypeEthernet, DecodeOptions{Lazy: true, NoCopy: true}).Layer(LayerTypeEthernet)
 	}
 }
 
-func BenchmarkLazyNoCopyIpLayer(b *testing.B) {
+func BenchmarkLazyNoCopyIPLayer(b *testing.B) {
 	for i := 0; i < b.N; i++ {
-		NewPacket(testSimpleTcpPacket, LinkTypeEthernet, DecodeOptions{true, true}).Layer(LayerTypeIPv4)
+		NewPacket(testSimpleTCPPacket, LinkTypeEthernet, DecodeOptions{Lazy: true, NoCopy: true}).Layer(LayerTypeIPv4)
 	}
 }
 
-func BenchmarkLazyNoCopyTcpLayer(b *testing.B) {
+func BenchmarkLazyNoCopyTCPLayer(b *testing.B) {
 	for i := 0; i < b.N; i++ {
-		NewPacket(testSimpleTcpPacket, LinkTypeEthernet, DecodeOptions{true, true}).Layer(LayerTypeTCP)
+		NewPacket(testSimpleTCPPacket, LinkTypeEthernet, DecodeOptions{Lazy: true, NoCopy: true}).Layer(LayerTypeTCP)
 	}
 }
 
 func BenchmarkLazyNoCopyAllLayers(b *testing.B) {
 	for i := 0; i < b.N; i++ {
-		NewPacket(testSimpleTcpPacket, LinkTypeEthernet, DecodeOptions{true, true}).Layers()
+		NewPacket(testSimpleTCPPacket, LinkTypeEthernet, DecodeOptions{Lazy: true, NoCopy: true}).Layers()
 	}
 }
 
 func BenchmarkDefault(b *testing.B) {
 	for i := 0; i < b.N; i++ {
-		NewPacket(testSimpleTcpPacket, LinkTypeEthernet, Default)
+		NewPacket(testSimpleTCPPacket, LinkTypeEthernet, Default)
 	}
 }
 
 func BenchmarkLazy(b *testing.B) {
 	for i := 0; i < b.N; i++ {
-		NewPacket(testSimpleTcpPacket, LinkTypeEthernet, Lazy)
+		NewPacket(testSimpleTCPPacket, LinkTypeEthernet, Lazy)
 	}
 }
 
 func BenchmarkNoCopy(b *testing.B) {
 	for i := 0; i < b.N; i++ {
-		NewPacket(testSimpleTcpPacket, LinkTypeEthernet, NoCopy)
+		NewPacket(testSimpleTCPPacket, LinkTypeEthernet, NoCopy)
 	}
 }
 
 func BenchmarkLazyNoCopy(b *testing.B) {
 	for i := 0; i < b.N; i++ {
-		NewPacket(testSimpleTcpPacket, LinkTypeEthernet, DecodeOptions{true, true})
+		NewPacket(testSimpleTCPPacket, LinkTypeEthernet, DecodeOptions{Lazy: true, NoCopy: true})
 	}
 }
 
@@ -116,7 +116,7 @@ func BenchmarkAlloc(b *testing.B) {
 }
 
 func BenchmarkFlow(b *testing.B) {
-	p := NewPacket(testSimpleTcpPacket, LinkTypeEthernet, DecodeOptions{true, true})
+	p := NewPacket(testSimpleTCPPacket, LinkTypeEthernet, DecodeOptions{Lazy: true, NoCopy: true})
 	net := p.NetworkLayer()
 	for i := 0; i < b.N; i++ {
 		net.NetFlow()
@@ -124,7 +124,7 @@ func BenchmarkFlow(b *testing.B) {
 }
 
 func BenchmarkEndpoints(b *testing.B) {
-	p := NewPacket(testSimpleTcpPacket, LinkTypeEthernet, DecodeOptions{true, true})
+	p := NewPacket(testSimpleTCPPacket, LinkTypeEthernet, DecodeOptions{Lazy: true, NoCopy: true})
 	flow := p.NetworkLayer().NetFlow()
 	for i := 0; i < b.N; i++ {
 		flow.Endpoints()
@@ -148,13 +148,13 @@ func BenchmarkCheckEthernetPrefix(b *testing.B) {
 	}
 }
 
-func TestDecodeSimpleTcpPacket(t *testing.T) {
+func TestDecodeSimpleTCPPacket(t *testing.T) {
 	equal := func(desc, want string, got fmt.Stringer) {
 		if want != got.String() {
 			t.Errorf("%s: got %q want %q", desc, got.String(), want)
 		}
 	}
-	p := NewPacket(testSimpleTcpPacket, LinkTypeEthernet, DecodeOptions{true, true})
+	p := NewPacket(testSimpleTCPPacket, LinkTypeEthernet, DecodeOptions{Lazy: true, NoCopy: true})
 	if eth := p.LinkLayer(); eth == nil {
 		t.Error("No ethernet layer found")
 	} else {
@@ -221,7 +221,7 @@ func TestDecodeSimpleTcpPacket(t *testing.T) {
 
 // Makes sure packet payload doesn't display the 6 trailing null of this packet
 // as part of the payload.  They're actually the ethernet trailer.
-func TestDecodeSmallTcpPacketHasEmptyPayload(t *testing.T) {
+func TestDecodeSmallTCPPacketHasEmptyPayload(t *testing.T) {
 	p := NewPacket(
 		[]byte{
 			0xbc, 0x30, 0x5b, 0xe8, 0xd3, 0x49, 0xb8, 0xac, 0x6f, 0x92, 0xd5, 0xbf,
@@ -236,7 +236,7 @@ func TestDecodeSmallTcpPacketHasEmptyPayload(t *testing.T) {
 	}
 }
 
-func TestDecodeVlanPacket(t *testing.T) {
+func TestDecodeVLANPacket(t *testing.T) {
 	p := NewPacket(
 		[]byte{
 			0x00, 0x10, 0xdb, 0xff, 0x10, 0x00, 0x00, 0x15, 0x2c, 0x9d, 0xcc, 0x00,
@@ -247,7 +247,7 @@ func TestDecodeVlanPacket(t *testing.T) {
 			0x00, 0x00, 0x00, 0x00,
 		}, LinkTypeEthernet, Default)
 	if err := p.ErrorLayer(); err != nil {
-		t.Error("Error while parsing vlan packet:", err.Error())
+		t.Error("Error while parsing vlan packet:", err)
 	}
 	if vlan := p.Layer(LayerTypeDot1Q); vlan == nil {
 		t.Error("Didn't detect vlan")
@@ -263,17 +263,9 @@ func TestDecodeVlanPacket(t *testing.T) {
 	}
 	for i, l := range p.Layers() {
 		if l.LayerType() != want[i] {
-			t.Error("At index", i, "got layer type", l.LayerType(), ", want", want[i])
+			t.Errorf("At index %d, got layer type %s, want %s", i, l.LayerType(), want[i])
 		}
 	}
-}
-
-// generateRandomSlice generates a slice of random length with random bytes.
-func generateRandomSlice() (b []byte) {
-	for rand.Int()%100 != 0 {
-		b = append(b, byte(rand.Int()))
-	}
-	return b
 }
 
 func TestDecoderSecurity(t *testing.T) {
