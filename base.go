@@ -23,7 +23,8 @@ const (
 	LayerTypeIPv6
 	LayerTypeTCP
 	LayerTypeUDP
-  LayerTypeSCTP
+	LayerTypeSCTP
+  LayerTypeSCTPData
 	LayerTypeICMP
 	LayerTypeDot1Q
 	LayerTypeARP

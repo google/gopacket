@@ -166,10 +166,10 @@ const (
 )
 
 func (s SCTPChunkType) Decode(data []byte) (_ DecodeResult, err error) {
-  switch s {
-    case SCTPChunkTypeData:
-    return decodeSCTPData(data)
-  }
-  err = fmt.Errorf("Unable to decode SCTP chunk type %s", s)
-  return
+	switch s {
+	case SCTPChunkTypeData:
+		return decodeSCTPData(data)
+	}
+	err = fmt.Errorf("Unable to decode SCTP chunk type %s", s)
+	return
 }
