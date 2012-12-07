@@ -46,9 +46,14 @@ var decodeWithSCTPChunkTypePrefix decoderFunc = func(data []byte) (DecodeResult,
 
 // SCTPChunk contains the common fields in all SCTP chunks.
 type SCTPChunk struct {
-	Type         SCTPChunkType
-	Flags        uint8
-	Length       uint16
+	Type   SCTPChunkType
+	Flags  uint8
+	Length uint16
+	// ActualLength is the total length of an SCTP chunk, including padding.
+	// SCTP chunks start and end on 4-byte boundaries.  So if a chunk has a length
+	// of 18, it means that it has data up to and including byte 18, then padding
+	// up to the next 4-byte boundary, 20.  In this case, Length would be 18, and
+	// ActualLength would be 20.
 	ActualLength int
 }
 
@@ -90,7 +95,7 @@ func decodeSCTPParameter(data []byte) SCTPParameter {
 // SCTPUnknownChunkType is the layer type returned when we don't recognize the
 // chunk type.  Since there's a length in a known location, we can skip over
 // it even if we don't know what it is, and continue parsing the rest of the
-// chunks.
+// chunks.  This chunk is stored as an ErrorLayer in the packet.
 type SCTPUnknownChunkType struct {
 	SCTPChunk
 	bytes []byte
@@ -113,6 +118,7 @@ func (s *SCTPUnknownChunkType) LayerType() LayerType { return LayerTypeSCTPUnkno
 // and Flags.
 func (s *SCTPUnknownChunkType) Payload() []byte { return s.bytes }
 
+// Error implements ErrorLayer.
 func (s *SCTPUnknownChunkType) Error() error {
 	return fmt.Errorf("No decode method available for SCTP chunk type %s", s.Type)
 }
@@ -156,6 +162,7 @@ func decodeSCTPData(data []byte) (out DecodeResult, _ error) {
 	return
 }
 
+// SCTPInitParameter is a parameter for an SCTP Init or InitAck packet.
 type SCTPInitParameter SCTPParameter
 
 // SCTPInit is used as the return value for both SCTPInit and SCTPInitAck

@@ -42,10 +42,13 @@ func (e EthernetType) Decode(data []byte) (out DecodeResult, err error) {
 type IPProtocol uint8
 
 const (
-	IPProtocolICMP IPProtocol = 1
-	IPProtocolTCP  IPProtocol = 6
-	IPProtocolUDP  IPProtocol = 17
-	IPProtocolSCTP IPProtocol = 132
+	IPProtocolICMP    IPProtocol = 1
+	IPProtocolTCP     IPProtocol = 6
+	IPProtocolUDP     IPProtocol = 17
+	IPProtocolSCTP    IPProtocol = 132
+	IPProtocolIPv6    IPProtocol = 41
+	IPProtocolIPIP    IPProtocol = 94
+	IPProtocolEtherIP IPProtocol = 97
 )
 
 func (ip IPProtocol) Decode(data []byte) (out DecodeResult, err error) {
@@ -58,6 +61,12 @@ func (ip IPProtocol) Decode(data []byte) (out DecodeResult, err error) {
 		return decodeICMP(data)
 	case IPProtocolSCTP:
 		return decodeSCTP(data)
+	case IPProtocolIPv6:
+		return decodeIPv6(data)
+	case IPProtocolIPIP:
+		return decodeIPv4(data)
+	case IPProtocolEtherIP:
+		return decodeEtherIP(data)
 	}
 	err = fmt.Errorf("Unsupported IP protocol %v", ip)
 	return
