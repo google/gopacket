@@ -13,8 +13,8 @@ import (
 	"bufio"
 	"encoding/hex"
 	"flag"
-  "io"
 	"fmt"
+	"io"
 	"net/http"
 	"os"
 	"regexp"
@@ -47,15 +47,15 @@ func main() {
 	defer resp.Body.Close()
 	buffered := bufio.NewReader(resp.Body)
 	finder := regexp.MustCompile(`^([0-9A-F]{6})\s+\(base 16\)\s+(.*)`)
-  fmt.Fprintln(os.Stderr, "Starting write to standard output")
-  fmt.Printf(header, time.Now(), *url);
-  for {
-    line, err := buffered.ReadString('\n')
-    if err == io.EOF {
-      break
-    } else if err != nil {
-      panic(err)
-    }
+	fmt.Fprintln(os.Stderr, "Starting write to standard output")
+	fmt.Printf(header, time.Now(), *url)
+	for {
+		line, err := buffered.ReadString('\n')
+		if err == io.EOF {
+			break
+		} else if err != nil {
+			panic(err)
+		}
 		if matches := finder.FindStringSubmatch(line); matches != nil {
 			bytes := make([]byte, 3)
 			hex.Decode(bytes, []byte(matches[1]))
@@ -63,7 +63,7 @@ func main() {
 			if company == "" {
 				company = "PRIVATE"
 			}
-      fmt.Printf("\t[3]byte{%d, %d, %d}: %q,\n", bytes[0], bytes[1], bytes[2], company)
+			fmt.Printf("\t[3]byte{%d, %d, %d}: %q,\n", bytes[0], bytes[1], bytes[2], company)
 		}
 	}
 	fmt.Println("}")

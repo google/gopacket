@@ -25,7 +25,7 @@ func (m *MPLS) LayerType() LayerType { return LayerTypeMPLS }
 //  If the packet starts with nibble 0x6: IPv6
 type ProtocolGuessingDecoder struct{}
 
-func (_ ProtocolGuessingDecoder) Decode(data []byte) (_ DecodeResult, err error) {
+func (ProtocolGuessingDecoder) Decode(data []byte) (_ DecodeResult, err error) {
 	ethPrefix := [3]byte{data[0], data[1], data[2]}
 	if _, ok := ValidMACPrefixMap[ethPrefix]; ok {
 		return decodeEthernet(data)
