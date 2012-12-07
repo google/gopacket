@@ -221,4 +221,5 @@
 //  ICMP                    ICMP
 //  TCP                     TCP          TransportLayer
 //  UDP                     UDP          TransportLayer
+//  SCTP                    SCTP         TransportLayer
 package gopacket

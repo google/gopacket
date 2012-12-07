@@ -45,7 +45,7 @@ func NewIPEndpoint(a net.IP) (_ Endpoint, err error) {
 	} else if len(a) == 16 {
 		return Endpoint{LayerTypeIPv6, string(a)}, nil
 	}
-	err = fmt.Errorf("Invalid IP byte string has size %d", len(a))
+	err = fmt.Errorf("Invalid IP byte string has size %v", len(a))
 	return
 }
 
@@ -54,7 +54,7 @@ func NewMACEndpoint(a net.HardwareAddr) (_ Endpoint, err error) {
 	if len(a) == 6 {
 		return Endpoint{LayerTypeEthernet, string(a)}, nil
 	}
-	err = fmt.Errorf("Invalid MAC byte string has size %d", len(a))
+	err = fmt.Errorf("Invalid MAC byte string has size %v", len(a))
 	return
 }
 
@@ -88,7 +88,7 @@ type Flow struct {
 // have the same LayerType, or this function will return an error.
 func NewFlow(src, dst Endpoint) (_ Flow, err error) {
 	if src.typ != dst.typ {
-		err = fmt.Errorf("Mismatched endpoint types: %s->%s", src.typ, dst.typ)
+		err = fmt.Errorf("Mismatched endpoint types: %v->%v", src.typ, dst.typ)
 		return
 	}
 	return Flow{src.typ, src.raw, dst.raw}, nil
@@ -97,7 +97,7 @@ func NewFlow(src, dst Endpoint) (_ Flow, err error) {
 // String returns a human-readable representation of this flow, in the form
 // "Src->Dst"
 func (f Flow) String() string {
-	return fmt.Sprintf("%s->%s", f.src, f.dst)
+	return fmt.Sprintf("%v->%v", f.src, f.dst)
 }
 
 // LayerType returns the LayerType for this Flow.

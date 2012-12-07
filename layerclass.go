@@ -30,7 +30,7 @@ func NewLayerClassSlice(types []LayerType) LayerClassSlice {
 			max = typ
 		}
 	}
-	t := make([]bool, int(max + 1))
+	t := make([]bool, int(max+1))
 	for typ := range types {
 		t[typ] = true
 	}

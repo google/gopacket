@@ -25,8 +25,22 @@ const (
 	LayerTypeTCP
 	LayerTypeUDP
 	LayerTypeSCTP
+	// <sctp chunk layers>
 	LayerTypeSCTPData
-  LayerTypeSCTPUnknownChunkType
+	LayerTypeSCTPInit
+	LayerTypeSCTPInitAck
+	LayerTypeSCTPSack
+	LayerTypeSCTPHeartbeat
+	LayerTypeSCTPHeartbeatAck
+	LayerTypeSCTPAbort
+	LayerTypeSCTPError
+	LayerTypeSCTPShutdown
+	LayerTypeSCTPShutdownAck
+	LayerTypeSCTPShutdownComplete
+	LayerTypeSCTPCookieEcho
+	LayerTypeSCTPCookieAck
+	// </sctp chunk layers>
+	LayerTypeSCTPUnknownChunkType
 	LayerTypeICMP
 	LayerTypeDot1Q
 	LayerTypeARP
@@ -56,6 +70,36 @@ func (l LayerType) String() string {
 		return "TCP"
 	case LayerTypeUDP:
 		return "UDP"
+	case LayerTypeSCTP:
+		return "SCTP"
+	case LayerTypeSCTPData:
+		return "SCTPData"
+	case LayerTypeSCTPInit:
+		return "SCTPInit"
+	case LayerTypeSCTPInitAck:
+		return "SCTPInitAck"
+	case LayerTypeSCTPSack:
+		return "SCTPSack"
+	case LayerTypeSCTPHeartbeat:
+		return "SCTPHeartbeat"
+	case LayerTypeSCTPHeartbeatAck:
+		return "SCTPHeartbeatAck"
+	case LayerTypeSCTPAbort:
+		return "SCTPAbort"
+	case LayerTypeSCTPError:
+		return "SCTPError"
+	case LayerTypeSCTPShutdown:
+		return "SCTPShutdown"
+	case LayerTypeSCTPShutdownAck:
+		return "SCTPShutdownAck"
+	case LayerTypeSCTPShutdownComplete:
+		return "SCTPShutdownComplete"
+	case LayerTypeSCTPCookieEcho:
+		return "SCTPCookieEcho"
+	case LayerTypeSCTPCookieAck:
+		return "SCTPCookieAck"
+	case LayerTypeSCTPUnknownChunkType:
+		return "SCTPUnknownChunkType"
 	case LayerTypeICMP:
 		return "ICMP"
 	case LayerTypeDot1Q:
@@ -85,4 +129,20 @@ var LayerClassError = NewLayerClass([]LayerType{LayerTypeDecodeFailure, LayerTyp
 var LayerClassIP = NewLayerClass([]LayerType{LayerTypeIPv4, LayerTypeIPv6})
 
 // LayerClassSCTPChunk contains all SCTP chunk type layers
-var LayerClassSCTPChunk = NewLayerClass([]LayerType{LayerTypeSCTPData, LayerTypeSCTPUnknownChunkType})
+var LayerClassSCTPChunk = NewLayerClass(
+	[]LayerType{
+		LayerTypeSCTPData,
+		LayerTypeSCTPInit,
+		LayerTypeSCTPInitAck,
+		LayerTypeSCTPSack,
+		LayerTypeSCTPHeartbeat,
+		LayerTypeSCTPHeartbeatAck,
+		LayerTypeSCTPAbort,
+		LayerTypeSCTPError,
+		LayerTypeSCTPShutdown,
+		LayerTypeSCTPShutdownAck,
+		LayerTypeSCTPShutdownComplete,
+		LayerTypeSCTPCookieEcho,
+		LayerTypeSCTPCookieAck,
+		LayerTypeSCTPUnknownChunkType,
+	})

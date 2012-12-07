@@ -33,7 +33,7 @@ func (e EthernetType) Decode(data []byte) (out DecodeResult, err error) {
 	case EthernetTypePPPoEDiscovery, EthernetTypePPPoESession:
 		return decodePPPoE(data)
 	}
-	err = fmt.Errorf("Unsupported ethernet type %d", e)
+	err = fmt.Errorf("Unsupported ethernet type %v", e)
 	return
 }
 
@@ -45,6 +45,7 @@ const (
 	IPProtocolICMP IPProtocol = 1
 	IPProtocolTCP  IPProtocol = 6
 	IPProtocolUDP  IPProtocol = 17
+	IPProtocolSCTP IPProtocol = 132
 )
 
 func (ip IPProtocol) Decode(data []byte) (out DecodeResult, err error) {
@@ -55,8 +56,10 @@ func (ip IPProtocol) Decode(data []byte) (out DecodeResult, err error) {
 		return decodeUDP(data)
 	case IPProtocolICMP:
 		return decodeICMP(data)
+	case IPProtocolSCTP:
+		return decodeSCTP(data)
 	}
-	err = fmt.Errorf("Unsupported IP protocol %d", ip)
+	err = fmt.Errorf("Unsupported IP protocol %v", ip)
 	return
 }
 
@@ -100,7 +103,7 @@ func (l LinkType) Decode(data []byte) (out DecodeResult, err error) {
 	case LinkTypePPP:
 		return decodePPP(data)
 	}
-	err = fmt.Errorf("Unsupported link-layer type %d", l)
+	err = fmt.Errorf("Unsupported link-layer type %v", l)
 	return
 }
 
@@ -122,7 +125,7 @@ func (p PPPoECode) Decode(data []byte) (_ DecodeResult, err error) {
 	case PPPoECodeSession:
 		return decodePPP(data)
 	}
-	err = fmt.Errorf("Cannot currently handle PPPoE error code %d", p)
+	err = fmt.Errorf("Cannot currently handle PPPoE error code %v", p)
 	return
 }
 
@@ -142,7 +145,7 @@ func (p PPPType) Decode(data []byte) (out DecodeResult, err error) {
 	case PPPTypeIPv6:
 		return decodeIPv6(data)
 	}
-	err = fmt.Errorf("Unsupported PPP type %d", p)
+	err = fmt.Errorf("Unsupported PPP type %v", p)
 	return
 }
 
@@ -153,7 +156,7 @@ const (
 	SCTPChunkTypeData             SCTPChunkType = 0
 	SCTPChunkTypeInit             SCTPChunkType = 1
 	SCTPChunkTypeInitAck          SCTPChunkType = 2
-	SCTPChunkTypeSelectiveAck     SCTPChunkType = 3
+	SCTPChunkTypeSack             SCTPChunkType = 3
 	SCTPChunkTypeHeartbeat        SCTPChunkType = 4
 	SCTPChunkTypeHeartbeatAck     SCTPChunkType = 5
 	SCTPChunkTypeAbort            SCTPChunkType = 6
@@ -162,14 +165,30 @@ const (
 	SCTPChunkTypeError            SCTPChunkType = 9
 	SCTPChunkTypeCookieEcho       SCTPChunkType = 10
 	SCTPChunkTypeCookieAck        SCTPChunkType = 11
-	SCTPChunkTypeShutdownComplete SCTPChunkType = 12
+	SCTPChunkTypeShutdownComplete SCTPChunkType = 14
 )
 
 func (s SCTPChunkType) Decode(data []byte) (_ DecodeResult, err error) {
 	switch s {
 	case SCTPChunkTypeData:
 		return decodeSCTPData(data)
+	case SCTPChunkTypeInit, SCTPChunkTypeInitAck:
+		return decodeSCTPInit(data)
+	case SCTPChunkTypeSack:
+		return decodeSCTPSack(data)
+	case SCTPChunkTypeHeartbeat, SCTPChunkTypeHeartbeatAck:
+		return decodeSCTPHeartbeat(data)
+	case SCTPChunkTypeAbort, SCTPChunkTypeError:
+		return decodeSCTPError(data)
+	case SCTPChunkTypeShutdown:
+		return decodeSCTPShutdown(data)
+	case SCTPChunkTypeShutdownAck:
+		return decodeSCTPShutdownAck(data)
+	case SCTPChunkTypeCookieEcho:
+		return decodeSCTPCookieEcho(data)
+	case SCTPChunkTypeCookieAck, SCTPChunkTypeShutdownComplete:
+		return decodeSCTPEmptyLayer(data)
 	}
-	err = fmt.Errorf("Unable to decode SCTP chunk type %s", s)
+	err = fmt.Errorf("Unable to decode SCTP chunk type %v", s)
 	return
 }
