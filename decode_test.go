@@ -186,7 +186,7 @@ func BenchmarkEndpoints(b *testing.B) {
 
 func BenchmarkTCPLayerFromDecodedPacket(b *testing.B) {
 	b.StopTimer()
-	p := NewPacket(testSimpleTcpPacket, LinkTypeEthernet, Default)
+	p := NewPacket(testSimpleTCPPacket, LinkTypeEthernet, Default)
 	b.StartTimer()
 	for i := 0; i < b.N; i++ {
 		_ = p.Layer(LayerTypeTCP)
@@ -195,7 +195,7 @@ func BenchmarkTCPLayerFromDecodedPacket(b *testing.B) {
 
 func BenchmarkTCPLayerClassFromDecodedPacket(b *testing.B) {
 	b.StopTimer()
-	p := NewPacket(testSimpleTcpPacket, LinkTypeEthernet, Default)
+	p := NewPacket(testSimpleTCPPacket, LinkTypeEthernet, Default)
 	lc := NewLayerClass([]LayerType{LayerTypeTCP})
 	b.StartTimer()
 	for i := 0; i < b.N; i++ {

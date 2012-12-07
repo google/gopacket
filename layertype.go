@@ -26,6 +26,7 @@ const (
 	LayerTypeUDP
 	LayerTypeSCTP
 	LayerTypeSCTPData
+  LayerTypeSCTPUnknownChunkType
 	LayerTypeICMP
 	LayerTypeDot1Q
 	LayerTypeARP
@@ -78,10 +79,10 @@ var LayerClassTransport = NewLayerClass([]LayerType{LayerTypeTCP, LayerTypeUDP})
 var LayerClassApplication = NewLayerClass([]LayerType{LayerTypePayload})
 
 // LayerClassError contains all error layers
-var LayerClassError = NewLayerClass([]LayerType{LayerTypeDecodeFailure})
+var LayerClassError = NewLayerClass([]LayerType{LayerTypeDecodeFailure, LayerTypeSCTPUnknownChunkType})
 
 // LayerClassIP contains all IP layers
 var LayerClassIP = NewLayerClass([]LayerType{LayerTypeIPv4, LayerTypeIPv6})
 
 // LayerClassSCTPChunk contains all SCTP chunk type layers
-var LayerClassSCTPChunk = NewLayerClass([]LayerType{LayerTypeSCTPData})
+var LayerClassSCTPChunk = NewLayerClass([]LayerType{LayerTypeSCTPData, LayerTypeSCTPUnknownChunkType})
