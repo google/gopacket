@@ -4,7 +4,6 @@ package gopacket
 
 import (
 	"encoding/binary"
-	"errors"
 )
 
 // EtherIP is the struct for storing RFC 3378 EtherIP packet headers.
@@ -21,6 +20,7 @@ func decodeEtherIP(data []byte) (out DecodeResult, _ error) {
 		Version:  data[0] >> 4,
 		Reserved: binary.BigEndian.Uint16(data[:2]) & 0x0fff,
 	}
-	out.NextDecoder = decodeEthernet
+	out.NextDecoder = decoderFunc(decodeEthernet)
 	out.RemainingBytes = data[2:]
+	return
 }

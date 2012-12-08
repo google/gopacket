@@ -25,6 +25,7 @@ const (
 	LayerTypeIPv6
 	LayerTypeTCP
 	LayerTypeUDP
+	LayerTypeRUDP
 	LayerTypeSCTP
 	// <sctp chunk layers>
 	LayerTypeSCTPData
@@ -120,7 +121,11 @@ var LayerClassLink = NewLayerClass([]LayerType{LayerTypePPP, LayerTypeEthernet})
 var LayerClassNetwork = NewLayerClass([]LayerType{LayerTypeIPv4, LayerTypeIPv6})
 
 // LayerClassTransport contains all transport layers
-var LayerClassTransport = NewLayerClass([]LayerType{LayerTypeTCP, LayerTypeUDP})
+var LayerClassTransport = NewLayerClass([]LayerType{
+	LayerTypeTCP,
+	LayerTypeUDP,
+	LayerTypeRUDP,
+})
 
 // LayerClassApplication contains all application layers
 var LayerClassApplication = NewLayerClass([]LayerType{LayerTypePayload})
@@ -132,20 +137,19 @@ var LayerClassError = NewLayerClass([]LayerType{LayerTypeDecodeFailure, LayerTyp
 var LayerClassIP = NewLayerClass([]LayerType{LayerTypeIPv4, LayerTypeIPv6})
 
 // LayerClassSCTPChunk contains all SCTP chunk type layers
-var LayerClassSCTPChunk = NewLayerClass(
-	[]LayerType{
-		LayerTypeSCTPData,
-		LayerTypeSCTPInit,
-		LayerTypeSCTPInitAck,
-		LayerTypeSCTPSack,
-		LayerTypeSCTPHeartbeat,
-		LayerTypeSCTPHeartbeatAck,
-		LayerTypeSCTPAbort,
-		LayerTypeSCTPError,
-		LayerTypeSCTPShutdown,
-		LayerTypeSCTPShutdownAck,
-		LayerTypeSCTPShutdownComplete,
-		LayerTypeSCTPCookieEcho,
-		LayerTypeSCTPCookieAck,
-		LayerTypeSCTPUnknownChunkType,
-	})
+var LayerClassSCTPChunk = NewLayerClass([]LayerType{
+	LayerTypeSCTPData,
+	LayerTypeSCTPInit,
+	LayerTypeSCTPInitAck,
+	LayerTypeSCTPSack,
+	LayerTypeSCTPHeartbeat,
+	LayerTypeSCTPHeartbeatAck,
+	LayerTypeSCTPAbort,
+	LayerTypeSCTPError,
+	LayerTypeSCTPShutdown,
+	LayerTypeSCTPShutdownAck,
+	LayerTypeSCTPShutdownComplete,
+	LayerTypeSCTPCookieEcho,
+	LayerTypeSCTPCookieAck,
+	LayerTypeSCTPUnknownChunkType,
+})

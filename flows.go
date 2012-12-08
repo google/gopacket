@@ -32,6 +32,8 @@ func (a Endpoint) String() string {
 		return net.HardwareAddr([]byte(a.raw)).String()
 	case LayerTypeTCP, LayerTypeUDP, LayerTypeSCTP:
 		return strconv.Itoa(int(binary.BigEndian.Uint16([]byte(a.raw))))
+	case LayerTypeRUDP:
+		return strconv.Itoa(int(a.raw[0]))
 	case LayerTypePPP:
 		return "point"
 	}
