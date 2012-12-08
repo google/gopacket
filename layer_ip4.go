@@ -25,7 +25,7 @@ type IPv4 struct {
 
 // LayerType returns LayerTypeIPv4
 func (i *IPv4) LayerType() LayerType { return LayerTypeIPv4 }
-func (i *IPv4) NetFlow() Flow {
+func (i *IPv4) NetworkFlow() Flow {
 	return Flow{LayerTypeIPv4, string(i.SrcIP), string(i.DstIP)}
 }
 

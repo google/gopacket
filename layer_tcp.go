@@ -93,6 +93,6 @@ func (f TCPFlag) String() string {
 	return fmt.Sprintf("[%s]", strings.Join(sflags, "|"))
 }
 
-func (t *TCP) AppFlow() Flow {
+func (t *TCP) TransportFlow() Flow {
 	return Flow{LayerTypeTCP, string(t.sPort), string(t.dPort)}
 }

@@ -94,6 +94,6 @@ func decodeRUDP(data []byte) (out DecodeResult, err error) {
 	return
 }
 
-func (r *RUDP) AppFlow() Flow {
+func (r *RUDP) TransportFlow() Flow {
 	return Flow{LayerTypeRUDP, string([]byte{r.SrcPort}), string([]byte{r.DstPort})}
 }

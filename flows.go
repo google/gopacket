@@ -133,5 +133,10 @@ func (f Flow) Dst() (dst Endpoint) {
 	return
 }
 
+// Reverse returns a new flow with endpoints reversed.
+func (f Flow) Reverse() Flow {
+	return Flow{f.typ, f.dst, f.src}
+}
+
 // PPPFlow is a "flow" for PPP.  Since PPP is "point to point", we have a single constant flow "point"->"point".
 var PPPFlow = Flow{typ: LayerTypePPP}

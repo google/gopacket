@@ -147,7 +147,7 @@
 // into Flows:
 //
 //  packet := gopacket.NewPacket(myPacketData, gopacket.LinkTypeEthernet, gopacket.Lazy)
-//  netFlow := packet.NetworkLayer().NetFlow()
+//  netFlow := packet.NetworkLayer().NetworkFlow()
 //  src, dst := netFlow.Endpoints()
 //  reverseFlow := gopacket.NewFlow(dst, src)
 //
@@ -163,7 +163,7 @@
 //  }
 //  // Look for all packets with the same source and destination network address
 //  if net := packet.NetworkLayer(); net != nil {
-//    src, dst := net.NetFlow().Endpoints()
+//    src, dst := net.NetworkFlow().Endpoints()
 //    if src == dst {
 //      fmt.Println("Fishy packet has same network source and dst: %s", src)
 //    }

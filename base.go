@@ -37,14 +37,14 @@ type LinkLayer interface {
 // layer 3)
 type NetworkLayer interface {
 	Layer
-	NetFlow() Flow
+	NetworkFlow() Flow
 }
 
 // TransportLayer is the packet layer corresponding to the TCP/IP layer 3 (OSI
 // layer 4)
 type TransportLayer interface {
 	Layer
-	AppFlow() Flow
+	TransportFlow() Flow
 }
 
 // ApplicationLayer is the packet layer corresponding to the TCP/IP layer 4 (OSI

@@ -34,8 +34,8 @@ func decodeSCTP(data []byte) (out DecodeResult, _ error) {
 	return
 }
 
-// AppFlow returns a flow based on the source and destination SCTP port.
-func (s *SCTP) AppFlow() Flow {
+// TransportFlow returns a flow based on the source and destination SCTP port.
+func (s *SCTP) TransportFlow() Flow {
 	return Flow{LayerTypeSCTP, string(s.sPort), string(s.dPort)}
 }
 

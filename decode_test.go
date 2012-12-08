@@ -172,13 +172,13 @@ func BenchmarkFlow(b *testing.B) {
 	p := NewPacket(testSimpleTCPPacket, LinkTypeEthernet, DecodeOptions{Lazy: true, NoCopy: true})
 	net := p.NetworkLayer()
 	for i := 0; i < b.N; i++ {
-		net.NetFlow()
+		net.NetworkFlow()
 	}
 }
 
 func BenchmarkEndpoints(b *testing.B) {
 	p := NewPacket(testSimpleTCPPacket, LinkTypeEthernet, DecodeOptions{Lazy: true, NoCopy: true})
-	flow := p.NetworkLayer().NetFlow()
+	flow := p.NetworkLayer().NetworkFlow()
 	for i := 0; i < b.N; i++ {
 		flow.Endpoints()
 	}
@@ -238,8 +238,8 @@ func TestDecodeSimpleTCPPacket(t *testing.T) {
 	} else if ip, ok := net.(*IPv4); !ok {
 		t.Error("Net layer is not IP layer")
 	} else {
-		equal("IP Src", "172.17.81.73", net.NetFlow().Src())
-		equal("IP Dst", "173.222.254.225", net.NetFlow().Dst())
+		equal("IP Src", "172.17.81.73", net.NetworkFlow().Src())
+		equal("IP Dst", "173.222.254.225", net.NetworkFlow().Dst())
 		want := &IPv4{
 			Version:    4,
 			IHL:        5,
@@ -263,8 +263,8 @@ func TestDecodeSimpleTCPPacket(t *testing.T) {
 	} else if tcp, ok := trans.(*TCP); !ok {
 		t.Error("Transport layer is not TCP layer")
 	} else {
-		equal("TCP Src", "50679", trans.AppFlow().Src())
-		equal("TCP Dst", "80", trans.AppFlow().Dst())
+		equal("TCP Src", "50679", trans.TransportFlow().Src())
+		equal("TCP Dst", "80", trans.TransportFlow().Dst())
 		want := &TCP{
 			SrcPort:    50679,
 			DstPort:    80,

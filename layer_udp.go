@@ -35,6 +35,6 @@ func decodeUDP(data []byte) (out DecodeResult, err error) {
 	return
 }
 
-func (u *UDP) AppFlow() Flow {
+func (u *UDP) TransportFlow() Flow {
 	return Flow{LayerTypeUDP, string(u.sPort), string(u.dPort)}
 }

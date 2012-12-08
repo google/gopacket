@@ -22,7 +22,7 @@ type IPv6 struct {
 
 // LayerType returns LayerTypeIPv6
 func (i *IPv6) LayerType() LayerType { return LayerTypeIPv6 }
-func (i *IPv6) NetFlow() Flow {
+func (i *IPv6) NetworkFlow() Flow {
 	return Flow{LayerTypeIPv6, string(i.SrcIP), string(i.DstIP)}
 }
 
