@@ -34,6 +34,9 @@ type RUDPHeaderEACK struct {
 type RUDPFlag uint8
 
 const (
+	// BUG(gconnell):  I'm not sure if these are supposed to be the most or least
+	// significant bits.  The RFC doesn't seem to mention.
+	// (http://tools.ietf.org/html/rfc908)
 	RUDPFlagSYN RUDPFlag = 1 << iota
 	RUDPFlagACK
 	RUDPFlagEACK

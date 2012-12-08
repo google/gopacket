@@ -50,6 +50,7 @@ const (
 	IPProtocolIPIP    IPProtocol = 94
 	IPProtocolEtherIP IPProtocol = 97
 	IPProtocolRUDP    IPProtocol = 27
+	IPProtocolGRE     IPProtocol = 47
 )
 
 func (ip IPProtocol) Decode(data []byte) (out DecodeResult, err error) {
@@ -70,6 +71,8 @@ func (ip IPProtocol) Decode(data []byte) (out DecodeResult, err error) {
 		return decodeEtherIP(data)
 	case IPProtocolRUDP:
 		return decodeRUDP(data)
+	case IPProtocolGRE:
+		return decodeGRE(data)
 	}
 	err = fmt.Errorf("Unsupported IP protocol %v", ip)
 	return

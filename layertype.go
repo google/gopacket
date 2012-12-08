@@ -21,6 +21,7 @@ const (
 	LayerTypeEthernet
 	LayerTypeEtherIP
 	LayerTypePPP
+	LayerTypeGRE
 	LayerTypeIPv4
 	LayerTypeIPv6
 	LayerTypeTCP
@@ -66,6 +67,8 @@ func (l LayerType) String() string {
 		return "EtherIP"
 	case LayerTypePPP:
 		return "PPP"
+	case LayerTypeGRE:
+		return "GRE"
 	case LayerTypeIPv4:
 		return "IPv4"
 	case LayerTypeIPv6:
@@ -74,6 +77,8 @@ func (l LayerType) String() string {
 		return "TCP"
 	case LayerTypeUDP:
 		return "UDP"
+	case LayerTypeRUDP:
+		return "RUDP"
 	case LayerTypeSCTP:
 		return "SCTP"
 	case LayerTypeSCTPData:
