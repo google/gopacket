@@ -39,8 +39,10 @@ func (a Endpoint) String() string {
 		return net.IP([]byte(a.raw)).String()
 	case LayerTypeEthernet:
 		return net.HardwareAddr([]byte(a.raw)).String()
-	case LayerTypeTCP, LayerTypeUDP:
+	case LayerTypeTCP, LayerTypeUDP, LayerTypeSCTP:
 		return strconv.Itoa(int(binary.BigEndian.Uint16([]byte(a.raw))))
+	case LayerTypeRUDP:
+		return strconv.Itoa(int(a.raw[0]))
 	case LayerTypePPP:
 		return "point"
 	}
@@ -54,7 +56,7 @@ func NewIPEndpoint(a net.IP) (_ Endpoint, err error) {
 	} else if len(a) == 16 {
 		return Endpoint{LayerTypeIPv6, string(a)}, nil
 	}
-	err = fmt.Errorf("Invalid IP byte string has size %d", len(a))
+	err = fmt.Errorf("Invalid IP byte string has size %v", len(a))
 	return
 }
 
@@ -63,7 +65,7 @@ func NewMACEndpoint(a net.HardwareAddr) (_ Endpoint, err error) {
 	if len(a) == 6 {
 		return Endpoint{LayerTypeEthernet, string(a)}, nil
 	}
-	err = fmt.Errorf("Invalid MAC byte string has size %d", len(a))
+	err = fmt.Errorf("Invalid MAC byte string has size %v", len(a))
 	return
 }
 
@@ -75,6 +77,11 @@ func NewTCPPortEndpoint(a uint16) Endpoint {
 // NewUDPPortEndpoint creates a new UDP endpoint.
 func NewUDPPortEndpoint(a uint16) Endpoint {
 	return Endpoint{LayerTypeUDP, string([]byte{byte(a >> 8), byte(a)})}
+}
+
+// NewSCTPPortEndpoint creates a new SCTP endpoint.
+func NewSCTPPortEndpoint(a uint16) Endpoint {
+	return Endpoint{LayerTypeSCTP, string([]byte{byte(a >> 8), byte(a)})}
 }
 
 // PPPEndpoint is an "endpoint" for PPP flows.  Since PPP is "point to point", we have a single endpoint "point"
@@ -92,7 +99,7 @@ type Flow struct {
 // have the same LayerType, or this function will return an error.
 func NewFlow(src, dst Endpoint) (_ Flow, err error) {
 	if src.typ != dst.typ {
-		err = fmt.Errorf("Mismatched endpoint types: %s->%s", src.typ, dst.typ)
+		err = fmt.Errorf("Mismatched endpoint types: %v->%v", src.typ, dst.typ)
 		return
 	}
 	return Flow{src.typ, src.raw, dst.raw}, nil
@@ -101,7 +108,7 @@ func NewFlow(src, dst Endpoint) (_ Flow, err error) {
 // String returns a human-readable representation of this flow, in the form
 // "Src->Dst"
 func (f Flow) String() string {
-	return fmt.Sprintf("%s->%s", f.src, f.dst)
+	return fmt.Sprintf("%v->%v", f.src, f.dst)
 }
 
 // LayerType returns the LayerType for this Flow.

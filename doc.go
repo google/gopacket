@@ -99,30 +99,30 @@
 // layers, while TCP and UDP are both TransportLayer layers.  We support 4
 // layers, corresponding to the 4 layers of the TCP/IP layering scheme (roughly
 // anagalous to layers 2, 3, 4, and 7 of the OSI model).  To access these,
-// you can use the packet.LinkLayer(), packet.NetworkLayer(),
-// packet.TransportLayer(), and packet.ApplicationLayer() functions.  Each of
+// you can use the packet.LinkLayer, packet.NetworkLayer,
+// packet.TransportLayer, and packet.ApplicationLayer functions.  Each of
 // these functions returns a corresponding interface
 // (gopacket.{Link,Network,Transport,Application}Layer).  The first three
 // provide methods for getting src/dst addresses for that particular layer,
-// while the final layer provides a Payload() function to get payload data.
+// while the final layer provides a Payload function to get payload data.
 // This is helpful, for example, to get payloads for all packets regardless
 // of their underlying data type:
 //
 //  // Get packets from some source
 //  for packet := range someSource {
 //    if app := packet.ApplicationLayer(); app != nil {
-//      if strings.Index(string(app.Payload()), "magic string") {
+//      if strings.Contains(string(app.Payload()), "magic string") {
 //        fmt.Println("Found magic string in a packet!")
 //      }
 //    }
 //  }
 //
-// A particularly useful layer is ErrorLayer(), which is set whenever there's
+// A particularly useful layer is ErrorLayer, which is set whenever there's
 // an error parsing part of the packet.
 //
 //  packet := gopacket.NewPacket(myPacketData, gopacket.LinkTypeEthernet, gopacket.Default)
 //  if err := packet.ErrorLayer(); err != nil {
-//    fmt.Println("Error decoding some part of the packet:", err.Error())
+//    fmt.Println("Error decoding some part of the packet:", err)
 //  }
 //
 // Note that we don't return an error from NewPacket because we may have decoded
@@ -221,4 +221,5 @@
 //  ICMP                    ICMP
 //  TCP                     TCP          TransportLayer
 //  UDP                     UDP          TransportLayer
+//  SCTP                    SCTP         TransportLayer
 package gopacket

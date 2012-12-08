@@ -1,61 +1,6 @@
 // Copyright (c) 2012 Google, Inc. All rights reserved.
-// Copyright (c) 2009-2012 Andreas Krennmair. All rights reserved.
 
 package gopacket
-
-import (
-	"strconv"
-)
-
-// LayerType is a unique identifier for each type of layer.  This enumeration
-// does not match with any externally available numbering scheme... it's solely
-// usable/useful within this library as a means for requesting layer types
-// (see Packet.Layer) and determining which types of layers have been decoded.
-// A LayerType corresponds 1:1 to a struct type.
-type LayerType int
-
-const (
-	LayerTypePayload LayerType = iota
-	LayerTypeDecodeFailure
-	LayerTypeEthernet
-	LayerTypePPP
-	LayerTypeIPv4
-	LayerTypeIPv6
-	LayerTypeTCP
-	LayerTypeUDP
-	LayerTypeICMP
-	LayerTypeDot1Q
-	LayerTypeARP
-	LayerTypeMPLS
-)
-
-func (l LayerType) String() string {
-	switch l {
-	case LayerTypePayload:
-		return "Payload"
-	case LayerTypeDecodeFailure:
-		return "DecodeFailure"
-	case LayerTypeEthernet:
-		return "Ethernet"
-	case LayerTypePPP:
-		return "PPP"
-	case LayerTypeIPv4:
-		return "IPv4"
-	case LayerTypeIPv6:
-		return "IPv6"
-	case LayerTypeTCP:
-		return "TCP"
-	case LayerTypeUDP:
-		return "UDP"
-	case LayerTypeICMP:
-		return "ICMP"
-	case LayerTypeDot1Q:
-		return "Dot1Q"
-	case LayerTypeARP:
-		return "ARP"
-	}
-	return strconv.Itoa(int(l))
-}
 
 // Layer represents a single decoded packet layer (using either the
 // OSI or TCP/IP definition of a layer).  When decoding, a packet's data is

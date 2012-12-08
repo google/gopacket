@@ -1,5 +1,4 @@
 // Copyright (c) 2012 Google, Inc. All rights reserved.
-// Copyright (c) 2009-2012 Andreas Krennmair. All rights reserved.
 
 package gopacket
 
@@ -59,7 +58,7 @@ type DecodeFailure struct {
 // Payload returns the entire payload which failed to be decoded.
 func (d *DecodeFailure) Payload() []byte { return d.data }
 
-// Error eturns the error encountered during decoding.
+// Error returns the error encountered during decoding.
 func (d *DecodeFailure) Error() error { return d.err }
 
 // LayerType returns LayerTypeDecodeFailure
