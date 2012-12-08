@@ -8,13 +8,13 @@ import (
 )
 
 type RUDP struct {
-	Flags              RUDPFlag
-	Version            uint8
-	HeaderLength       uint8
-	SrcPort, DstPort   uint8
-	DataLength         uint16
-	Seq, Ack, Checksum uint32
-	VariableHeaderArea []byte
+	SYN, ACK, EACK, RST, NUL bool
+	Version                  uint8
+	HeaderLength             uint8
+	SrcPort, DstPort         uint8
+	DataLength               uint16
+	Seq, Ack, Checksum       uint32
+	VariableHeaderArea       []byte
 	// RUDPSyn contains SYN information for the RUDP packet,
 	// if the SYN flag is set
 	*RUDPHeaderSYN
@@ -31,26 +31,17 @@ type RUDPHeaderEACK struct {
 	SeqsReceivedOK []uint32
 }
 
-type RUDPFlag uint8
-
-const (
-	// BUG(gconnell):  I'm not sure if these are supposed to be the most or least
-	// significant bits.  The RFC doesn't seem to mention.
-	// (http://tools.ietf.org/html/rfc908)
-	RUDPFlagSYN RUDPFlag = 1 << iota
-	RUDPFlagACK
-	RUDPFlagEACK
-	RUDPFlagRST
-	RUDPFlagNUL
-)
-
 // LayerType returns LayerTypeRUDP.
 func (r *RUDP) LayerType() LayerType { return LayerTypeRUDP }
 
 func decodeRUDP(data []byte) (out DecodeResult, err error) {
 	r := &RUDP{
-		Flags:        RUDPFlag(data[0] & 0x1F),
-		Version:      data[0] >> 6,
+		SYN:          data[0]&0x80 != 0,
+		ACK:          data[0]&0x40 != 0,
+		EACK:         data[0]&0x20 != 0,
+		RST:          data[0]&0x10 != 0,
+		NUL:          data[0]&0x08 != 0,
+		Version:      data[0] & 0x3,
 		HeaderLength: data[1],
 		SrcPort:      data[2],
 		DstPort:      data[3],
@@ -67,7 +58,7 @@ func decodeRUDP(data []byte) (out DecodeResult, err error) {
 	r.VariableHeaderArea = data[18:hlen]
 	headerData := r.VariableHeaderArea
 	switch {
-	case r.Flags&RUDPFlagSYN != 0:
+	case r.SYN:
 		if len(headerData) != 6 {
 			err = fmt.Errorf("RUDP packet invalid SYN header length: %d", len(headerData))
 			return
@@ -77,7 +68,7 @@ func decodeRUDP(data []byte) (out DecodeResult, err error) {
 			MaxSegmentSize:         binary.BigEndian.Uint16(headerData[2:4]),
 			OptionFlags:            binary.BigEndian.Uint16(headerData[4:6]),
 		}
-	case r.Flags&RUDPFlagEACK != 0:
+	case r.EACK:
 		if len(headerData)%4 != 0 {
 			err = fmt.Errorf("RUDP packet invalid EACK header length: %d", len(headerData))
 			return
