@@ -1,4 +1,4 @@
-// Copyright (c) 2012 Google, Inc. All rights reserved.
+// Copyright 2012 Google, Inc. All rights reserved.
 
 // Package gopacket provides packet decoding for the Go language.
 //

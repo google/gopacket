@@ -1,4 +1,4 @@
-// Copyright (c) 2012 Google, Inc. All rights reserved.
+// Copyright 2012 Google, Inc. All rights reserved.
 
 // +build ignore
 
@@ -21,7 +21,7 @@ import (
 	"time"
 )
 
-const header = `// Copyright (c) 2012 Google, Inc. All rights reserved.
+const header = `// Copyright 2012 Google, Inc. All rights reserved.
 
 package gopacket
 

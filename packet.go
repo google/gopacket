@@ -1,11 +1,17 @@
-// Copyright (c) 2012 Google, Inc. All rights reserved.
+// Copyright 2012 Google, Inc. All rights reserved.
 
 package gopacket
 
 import (
 	"fmt"
 	"strings"
+	"time"
 )
+
+type CaptureInfo struct {
+	Timestamp             time.Time
+	CaptureLength, Length int
+}
 
 // Packet is the primary object used by gopacket.  Packets are created by a
 // Decoder's Decode call.  A packet is made up of a set of Data, which
@@ -22,6 +28,10 @@ type Packet interface {
 	LayerClass(LayerClass) Layer
 	// String returns a human-readable string.
 	String() string
+	// CaptureInfo returns the caputure information for this packet.  This returns
+	// a pointer to the packet's struct, so it can be used both for reading and
+	// writing the information.
+	CaptureInfo() *CaptureInfo
 
 	// LinkLayer returns the first link layer in the packet
 	LinkLayer() LinkLayer
@@ -47,6 +57,8 @@ type packet struct {
 	layers []Layer
 	// decoder is the next decoder we should call (lazily)
 	decoder Decoder
+	// capInfo is the CaptureInfo for this packet
+	capInfo CaptureInfo
 
 	// Pointers to the various important layers
 	link        LinkLayer
@@ -54,6 +66,10 @@ type packet struct {
 	transport   TransportLayer
 	application ApplicationLayer
 	failure     ErrorLayer
+}
+
+func (p *packet) CaptureInfo() *CaptureInfo {
+	return &p.capInfo
 }
 
 func (p *packet) copySpecificLayersFrom(r *DecodeResult) {

@@ -1,5 +1,5 @@
-// Copyright (c) 2012 Google, Inc. All rights reserved.
-// Copyright (c) 2009-2012 Andreas Krennmair. All rights reserved.
+// Copyright 2012 Google, Inc. All rights reserved.
+// Copyright 2009-2012 Andreas Krennmair. All rights reserved.
 
 package gopacket
 
@@ -17,14 +17,19 @@ int hack_pcap_next_ex(pcap_t *p, struct pcap_pkthdr **pkt_header,
 import "C"
 import (
 	"errors"
+	"github.com/gconnell/gopacket"
 	"net"
 	"syscall"
 	"time"
 	"unsafe"
 )
 
+const ERRBUF_SIZE = 256
+
 type PcapHandle struct {
-	cptr *C.pcap_t
+	cptr  *C.pcap_t
+	ltype gopacket.LinkType
+	gopacket.DecodeOptions
 }
 
 type PcapStats struct {
@@ -46,7 +51,7 @@ type PcapIFAddress struct {
 	// TODO: add broadcast + PtP dst ?
 }
 
-func (p *PcapHandle) Next() (pkt *Packet) {
+func (p *PcapHandle) Next() (pkt *gopacket.Packet) {
 	rv, _ := p.NextEx()
 	return rv
 }
@@ -72,6 +77,7 @@ func OpenLivePcap(device string, snaplen int32, promisc bool, timeout_ms int32) 
 		handle = h
 	}
 	C.free(unsafe.Pointer(buf))
+	h.ltype = h.LinkType()
 	return
 }
 
@@ -92,20 +98,20 @@ func OpenOfflinePcap(file string) (handle *PcapHandle, err error) {
 		handle = h
 	}
 	C.free(unsafe.Pointer(buf))
+	h.ltype = h.LinkType()
 	return
 }
 
 type PcapResultCode int32
 
 const (
-  PcapResultOk PcapResultCode = 1
+	PcapResultOk             PcapResultCode = 1
 	PcapResultTimeoutExpired PcapResultCode = 0
-	PcapResultReadError = -1
-	PcapResultNoMorePackets = -2
+	PcapResultReadError                     = -1
+	PcapResultNoMorePackets                 = -2
 )
 
-
-func (p *PcapHandle) NextEx() (pkt *Packet, result PcapResultCode) {
+func (p *PcapHandle) NextEx() (pkt *gopacket.Packet, result PcapResultCode) {
 	var pkthdr *C.struct_pcap_pkthdr
 
 	var buf_ptr *C.u_char
@@ -117,11 +123,12 @@ func (p *PcapHandle) NextEx() (pkt *Packet, result PcapResultCode) {
 	if nil == buf {
 		return
 	}
-	pkt = new(Packet)
-	pkt.Time = time.Unix(int64(pkthdr.ts.tv_sec), int64(pkthdr.ts.tv_usec))
-	pkt.Caplen = uint32(pkthdr.caplen)
-	pkt.Len = uint32(pkthdr.len)
-	pkt.Data = C.GoBytes(buf, C.int(pcthdr.caplen))
+	data := C.GoBytes(buf, C.int(pkthdr.caplen))
+	pkt := gopacket.NewPacket(data, p.ltype, p.DecodeOptions)
+	capInfo := pkt.CaptureInfo()
+	capInfo.Timestamp = time.Unix(int64(pkthdr.ts.tv_sec), int64(pkthdr.ts.tv_usec))
+	capInfo.CaptureLength = int(pkthdr.caplen)
+	capInfo.Length = int(pkthdr.len)
 	return
 }
 
@@ -167,11 +174,11 @@ func Version() string {
 	return C.GoString(C.pcap_lib_version())
 }
 
-func (p *PcapHandle) LinkType() LinkType {
-	return LinkType(C.pcap_datalink(p.cptr))
+func (p *PcapHandle) LinkType() gopacket.LinkType {
+	return gopacket.LinkType(C.pcap_datalink(p.cptr))
 }
 
-func (p *PcapHandle) SetLinkType(dlt LinkType) error {
+func (p *PcapHandle) SetLinkType(dlt gopacket.LinkType) error {
 	if -1 == C.pcap_set_datalink(p.cptr, C.int(dlt)) {
 		return p.GetError()
 	}

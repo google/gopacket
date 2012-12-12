@@ -1,5 +1,5 @@
-// Copyright (c) 2012 Google, Inc. All rights reserved.
-// Copyright (c) 2009-2012 Andreas Krennmair. All rights reserved.
+// Copyright 2012 Google, Inc. All rights reserved.
+// Copyright 2009-2012 Andreas Krennmair. All rights reserved.
 
 package gopacket
 

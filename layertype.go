@@ -1,4 +1,4 @@
-// Copyright (c) 2012 Google, Inc. All rights reserved.
+// Copyright 2012 Google, Inc. All rights reserved.
 
 package gopacket
 
