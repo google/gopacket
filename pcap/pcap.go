@@ -225,6 +225,7 @@ func (p *Handle) SetLinkType(dlt gopacket.LinkType) error {
 	return nil
 }
 
+// FindAllDevs attempts to enumerate all interfaces on the current machine.
 func FindAllDevs() (ifs []Interface, err error) {
 	var buf *C.char
 	buf = (*C.char)(C.calloc(errorBufferSize, 1))

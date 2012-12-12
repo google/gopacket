@@ -8,12 +8,15 @@ Reading PCAP Files
 
 The following code can be used to read in data from a pcap file.
 
- h := pcap.OpenOffline(filename)
- for packet, err := h.NextEx(); err != pcap.NextExNoMorePackets; packet, err = h.NextEx() {
-   if err != nil {
-     fmt.Println("Error reading in packet:", err)
-   } else {
-     handlePacket(packet)
+ if h, err := pcap.OpenOffline(filename); err != nil {
+   panic(err)
+ } else {
+   for packet, err := h.Next(); err != pcap.NextErrorNoMorePackets; packet, err = h.Next() {
+     if err != nil {
+       fmt.Println("Error reading in packet:", err)
+     } else {
+       handlePacket(packet)
+     }
    }
  }
 
@@ -31,7 +34,7 @@ The following code can be used to read in data from a live device, in this case
    handle = h
  }
  for {
-   packet, err := handle.NextEx()
+   packet, err := handle.Next()
    if err != nil {
      fmt.Println("Error reading in packet:", err)
      continue
