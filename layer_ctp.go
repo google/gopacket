@@ -8,6 +8,8 @@ import (
 	"net"
 )
 
+// CTPFunction is the function code used by the CTP protocol to identify each
+// CTP layer.
 type CTPFunction uint16
 
 const (
@@ -16,7 +18,7 @@ const (
 )
 
 // CTP implements the CTP protocol, see http://www.mit.edu/people/jhawk/ctp.html.
-// We split CTP up into the top-level CTP, followed by zero or more
+// We split CTP up into the top-level CTP layer, followed by zero or more
 // CTPForwardData layers, followed by a final CTPReply layer.
 type CTP struct {
 	SkipCount uint16

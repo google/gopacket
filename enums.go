@@ -12,6 +12,7 @@ import (
 type EthernetType uint16
 
 const (
+  EthernetTypeCDP EthernetType = 0x0136
 	EthernetTypeIPv4           EthernetType = 0x0800
 	EthernetTypeARP            EthernetType = 0x0806
 	EthernetTypeIPv6           EthernetType = 0x86DD
@@ -35,6 +36,8 @@ func (e EthernetType) Decode(data []byte) (out DecodeResult, err error) {
 		return decodePPPoE(data)
 	case EthernetTypeCTP:
 		return decodeCTP(data)
+  case EthernetTypeCDP:
+  return decodeCDP(data)
 	}
 	err = fmt.Errorf("Unsupported ethernet type %v", e)
 	return

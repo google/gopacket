@@ -14,6 +14,7 @@ package main
 
 import (
 	"compress/gzip"
+  "encoding/hex"
 	"flag"
 	"fmt"
 	"github.com/gconnell/gopacket/pcap"
@@ -27,6 +28,7 @@ import (
 var decodeLazy *bool = flag.Bool("lazy", false, "If true, use lazy decoding")
 var decodeNoCopy *bool = flag.Bool("nocopy", false, "If true, avoid an extra copy when decoding packets")
 var printErrors *bool = flag.Bool("printErrors", false, "If true, check for and print error layers.")
+var printLayers *bool = flag.Bool("printLayers", false, "If true, print out the layers of each packet")
 var repeat *int = flag.Int("repeat", 1, "Read over the file N times")
 
 func main() {
@@ -81,8 +83,16 @@ func main() {
 				count++
 				if *printErrors && packet.ErrorLayer() != nil {
 					fmt.Println("Error decoding packet:", packet.ErrorLayer().Error())
+          fmt.Println(hex.Dump(packet.Data()))
 					errors++
 				}
+        if *printLayers {
+          fmt.Printf("=== PACKET %d ===\n", count)
+          for _, l := range packet.Layers() {
+            fmt.Printf("--- LAYER %v ---\n%#v\n", l.LayerType(), l)
+          }
+          fmt.Println()
+        }
 			}
 			duration := time.Since(start)
 			fmt.Printf("Read in %v packets in %v, %v per packet\n", count, duration, duration/time.Duration(count))
