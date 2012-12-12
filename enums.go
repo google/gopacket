@@ -18,6 +18,7 @@ const (
 	EthernetTypeDot1Q          EthernetType = 0x8100
 	EthernetTypePPPoEDiscovery EthernetType = 0x8863
 	EthernetTypePPPoESession   EthernetType = 0x8864
+	EthernetTypeCTP            EthernetType = 0x9000
 )
 
 func (e EthernetType) Decode(data []byte) (out DecodeResult, err error) {
@@ -32,6 +33,8 @@ func (e EthernetType) Decode(data []byte) (out DecodeResult, err error) {
 		return decodeDot1Q(data)
 	case EthernetTypePPPoEDiscovery, EthernetTypePPPoESession:
 		return decodePPPoE(data)
+	case EthernetTypeCTP:
+		return decodeCTP(data)
 	}
 	err = fmt.Errorf("Unsupported ethernet type %v", e)
 	return

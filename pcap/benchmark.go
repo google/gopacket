@@ -7,10 +7,14 @@
 // exist, it's pulled down from a publicly available location.  However, you can
 // feel free to substitute your own file at that location, in which case the
 // benchmark will run on your own data.
+// It's also useful for figuring out which packets may be causing errors.  Pass
+// in the --printErrors flag, and it'll print out error layers for each packet
+// that has them.
 package main
 
 import (
 	"compress/gzip"
+	"flag"
 	"fmt"
 	"github.com/gconnell/gopacket/pcap"
 	"io"
@@ -20,7 +24,13 @@ import (
 	"time"
 )
 
+var decodeLazy *bool = flag.Bool("lazy", false, "If true, use lazy decoding")
+var decodeNoCopy *bool = flag.Bool("nocopy", false, "If true, avoid an extra copy when decoding packets")
+var printErrors *bool = flag.Bool("printErrors", false, "If true, check for and print error layers.")
+var repeat *int = flag.Int("repeat", 1, "Read over the file N times")
+
 func main() {
+	flag.Parse()
 	filename := os.TempDir() + string(os.PathSeparator) + "gopacket_benchmark.pcap"
 	if _, err := os.Stat(filename); err != nil {
 		// This URL points to a publicly available packet data set from a DARPA
@@ -55,23 +65,30 @@ func main() {
 	} else {
 		fmt.Println("Read in file", filename, ", total of", n, "bytes")
 	}
-	fmt.Println("Opening file", filename, "for read")
-	if h, err := pcap.OpenOffline(filename); err != nil {
-		panic(err)
-	} else {
-		count, errors := 0, 0
-		start := time.Now()
-		for packet, err := h.Next(); err != pcap.NextErrorNoMorePackets; packet, err = h.Next() {
-			count++
-			if packet.ErrorLayer() != nil {
-				errors++
+	for i := 0; i < *repeat; i++ {
+		fmt.Println("Opening file", filename, "for read")
+		if h, err := pcap.OpenOffline(filename); err != nil {
+			panic(err)
+		} else {
+			h.DecodeOptions.Lazy = *decodeLazy
+			h.DecodeOptions.NoCopy = *decodeNoCopy
+			count, errors := 0, 0
+			start := time.Now()
+			for packet, err := h.Next(); err != pcap.NextErrorNoMorePackets; packet, err = h.Next() {
+				if err != nil {
+					fmt.Println("Error reading in packet:", err)
+				}
+				count++
+				if *printErrors && packet.ErrorLayer() != nil {
+					fmt.Println("Error decoding packet:", packet.ErrorLayer().Error())
+					errors++
+				}
 			}
-			if err != nil {
-				fmt.Println("Error reading in packet:", err)
+			duration := time.Since(start)
+			fmt.Printf("Read in %v packets in %v, %v per packet\n", count, duration, duration/time.Duration(count))
+			if *printErrors {
+				fmt.Printf("%v errors, successfully decoded %.02f%%\n", errors, float64(count-errors)*100.0/float64(count))
 			}
 		}
-		duration := time.Since(start)
-		fmt.Printf("Read in %v packets (%v errors) in %v, %v per packet\n", count, errors, duration, duration/time.Duration(count))
-		fmt.Printf("Successfully decoded %.02f%%\n", float64(count-errors)*100.0/float64(count))
 	}
 }
