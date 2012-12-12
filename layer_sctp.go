@@ -29,7 +29,7 @@ func decodeSCTP(data []byte) (out DecodeResult, _ error) {
 	}
 	out.DecodedLayer = sctp
 	out.TransportLayer = sctp
-	out.NextDecoder = decodeWithSCTPChunkTypePrefix
+	out.NextDecoder = decoderFunc(decodeWithSCTPChunkTypePrefix)
 	out.RemainingBytes = data[12:]
 	return
 }
@@ -39,7 +39,7 @@ func (s *SCTP) TransportFlow() Flow {
 	return Flow{LayerTypeSCTP, string(s.sPort), string(s.dPort)}
 }
 
-var decodeWithSCTPChunkTypePrefix decoderFunc = func(data []byte) (DecodeResult, error) {
+func decodeWithSCTPChunkTypePrefix(data []byte) (DecodeResult, error) {
 	chunkType := SCTPChunkType(data[0])
 	return chunkType.Decode(data)
 }
@@ -107,7 +107,7 @@ func decodeSCTPChunkTypeUnknown(data []byte) (out DecodeResult, err error) {
 	out.DecodedLayer = sc
 	out.RemainingBytes = data[sc.ActualLength:]
 	out.ErrorLayer = sc
-	out.NextDecoder = decodeWithSCTPChunkTypePrefix
+	out.NextDecoder = decoderFunc(decodeWithSCTPChunkTypePrefix)
 	return
 }
 
@@ -157,7 +157,7 @@ func decodeSCTPData(data []byte) (out DecodeResult, _ error) {
 	sc.PayloadData = data[16:sc.Length]
 	out.DecodedLayer = sc
 	out.ApplicationLayer = sc
-	out.NextDecoder = decodeWithSCTPChunkTypePrefix
+	out.NextDecoder = decoderFunc(decodeWithSCTPChunkTypePrefix)
 	out.RemainingBytes = data[sc.ActualLength:]
 	return
 }
@@ -201,7 +201,7 @@ func decodeSCTPInit(data []byte) (out DecodeResult, _ error) {
 		sc.Parameters = append(sc.Parameters, p)
 	}
 	out.DecodedLayer = sc
-	out.NextDecoder = decodeWithSCTPChunkTypePrefix
+	out.NextDecoder = decoderFunc(decodeWithSCTPChunkTypePrefix)
 	out.RemainingBytes = data[sc.ActualLength:]
 	return
 }
@@ -256,7 +256,7 @@ func decodeSCTPSack(data []byte) (out DecodeResult, _ error) {
 	}
 	out.DecodedLayer = sc
 	out.RemainingBytes = bytesRemaining
-	out.NextDecoder = decodeWithSCTPChunkTypePrefix
+	out.NextDecoder = decoderFunc(decodeWithSCTPChunkTypePrefix)
 	return
 }
 
@@ -291,7 +291,7 @@ func decodeSCTPHeartbeat(data []byte) (out DecodeResult, _ error) {
 	}
 	out.DecodedLayer = sc
 	out.RemainingBytes = data[sc.ActualLength:]
-	out.NextDecoder = decodeWithSCTPChunkTypePrefix
+	out.NextDecoder = decoderFunc(decodeWithSCTPChunkTypePrefix)
 	return
 }
 
@@ -325,7 +325,7 @@ func decodeSCTPError(data []byte) (out DecodeResult, _ error) {
 	}
 	out.DecodedLayer = sc
 	out.RemainingBytes = data[sc.ActualLength:]
-	out.NextDecoder = decodeWithSCTPChunkTypePrefix
+	out.NextDecoder = decoderFunc(decodeWithSCTPChunkTypePrefix)
 	return
 }
 
@@ -345,7 +345,7 @@ func decodeSCTPShutdown(data []byte) (out DecodeResult, _ error) {
 	}
 	out.DecodedLayer = sc
 	out.RemainingBytes = data[sc.ActualLength:]
-	out.NextDecoder = decodeWithSCTPChunkTypePrefix
+	out.NextDecoder = decoderFunc(decodeWithSCTPChunkTypePrefix)
 	return
 }
 
@@ -363,7 +363,7 @@ func decodeSCTPShutdownAck(data []byte) (out DecodeResult, _ error) {
 	}
 	out.DecodedLayer = sc
 	out.RemainingBytes = data[sc.ActualLength:]
-	out.NextDecoder = decodeWithSCTPChunkTypePrefix
+	out.NextDecoder = decoderFunc(decodeWithSCTPChunkTypePrefix)
 	return
 }
 
@@ -383,7 +383,7 @@ func decodeSCTPCookieEcho(data []byte) (out DecodeResult, _ error) {
 	sc.Cookie = data[4:sc.Length]
 	out.DecodedLayer = sc
 	out.RemainingBytes = data[sc.ActualLength:]
-	out.NextDecoder = decodeWithSCTPChunkTypePrefix
+	out.NextDecoder = decoderFunc(decodeWithSCTPChunkTypePrefix)
 	return
 }
 
@@ -409,6 +409,6 @@ func decodeSCTPEmptyLayer(data []byte) (out DecodeResult, _ error) {
 	}
 	out.DecodedLayer = sc
 	out.RemainingBytes = data[sc.ActualLength:]
-	out.NextDecoder = decodeWithSCTPChunkTypePrefix
+	out.NextDecoder = decoderFunc(decodeWithSCTPChunkTypePrefix)
 	return
 }
