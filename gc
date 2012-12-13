@@ -69,7 +69,8 @@ popd
 git commit "$@"
 
 if [ -z "$BENCH" ]; then
-  # If we're not benchmarking, we're done.
+  set +x
+  echo "We're not benchmarking and we've committed... we're done!"
   exit
 fi
 
@@ -82,8 +83,11 @@ BRANCH="$(git branch | grep '^*' | awk '{print $2}')"
 # File we're going to build our commit description in.
 COMMIT_FILE="$(mktemp)"
 
+# Add the word "BENCH" to the start of the git commit.
+echo -n "BENCH " > $COMMIT_FILE
+
 # Get the current description... there must be an easier way.
-git log -n 1 | grep '^ ' | sed 's/^    //' > $COMMIT_FILE
+git log -n 1 | grep '^ ' | sed 's/^    //' >> $COMMIT_FILE
 
 # Get the commit sha for the last benchmark commit
 PREV=$(git log -n 1 --grep='BENCHMARK_MARKER_DO_NOT_CHANGE' | head -n 1 | awk '{print $2}')
