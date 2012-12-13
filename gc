@@ -1,9 +1,18 @@
 #!/bin/bash
 # Copyright 2012 Google, Inc. All rights reserved.
 
-function GitCommit {
-  git log -n 1 --skip $1 | head -n 1 | awk '{print $2}'
-}
+BENCH=""
+if [ ! -z "$1" ]; then
+  case "$1" in
+    "--benchmark")
+      BENCH="yes"
+      ;;
+    *)
+      echo "USAGE: $0 [--benchmark]"
+      exit 1
+      ;;
+  esac
+fi
 
 set -e
 set -x
@@ -17,6 +26,11 @@ gofmt -w pcap/benchmark.go
 go build gen.go
 go build pcap/benchmark.go
 go test
+
+if [ -z "$BENCH" ]; then
+  git commit -a
+  exit
+fi
 
 # Now, we do magic...
 #  1) Run current benchmarks
