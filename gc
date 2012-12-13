@@ -10,6 +10,7 @@ set -x
 
 cd $(dirname $0)
 
+# First, make sure everything is formatted, compiles, and tests pass.
 go fmt
 gofmt -w gen.go
 gofmt -w pcap/benchmark.go
@@ -17,9 +18,23 @@ go build gen.go
 go build pcap/benchmark.go
 go test
 
+# Now, we do magic...
+#  1) Run current benchmarks
+#  2) Commit with temporary description
+#  3) Revert to state of the previous benchmark commit
+#  4) Run old benchmarks
+#  5) Reset to new state
+#  6) Modify head commit description, adding in benchmarks
+
+# File we're going to build our commit description in.
 COMMIT_FILE="$(mktemp)"
+
 cat >> $COMMIT_FILE <<EOF
 ...ENTER COMMIT MESSAGE HERE...
+----------------------------------------------------------
+BENCHMARK_MARKER_DO_NOT_CHANGE
+----------------------------------------------------------
+
 
 TEST BENCHMARKS
 EOF
@@ -31,14 +46,16 @@ PACKET BENCHMARK
 EOF
 go run pcap/benchmark.go 2>&1 | tee -a $COMMIT_FILE
 
-git commit -a -m "Temporary message"
+git commit -a -m "Commit at $(date), temporary message"
 
-CURRENT=$(GitCommit 0)
-PREV=$(GitCommit 1)
+CURRENT=$(git log -n 1 | head -n 1 | awk '{print $2}')
+PREV=$(git log -n 1 --grep='BENCHMARK_MARKER_DO_NOT_CHANGE' | head -n 1 | awk '{print $2}')
 
 git reset $PREV
 
 cat >> $COMMIT_FILE <<EOF
+----------------------------------------------------------
+
 
 OLD TEST BENCHMARKS
 EOF
