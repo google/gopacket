@@ -157,6 +157,7 @@ func (p *Handle) Next() (pkt gopacket.Packet, err error) {
 	data := C.GoBytes(buf, C.int(pkthdr.caplen))
 	pkt = gopacket.NewPacket(data, p.Decoder, p.DecodeOptions)
 	*pkt.CaptureInfo() = gopacket.CaptureInfo{
+		Populated:     true,
 		Timestamp:     time.Unix(int64(pkthdr.ts.tv_sec), int64(pkthdr.ts.tv_usec)),
 		CaptureLength: int(pkthdr.caplen),
 		Length:        int(pkthdr.len),

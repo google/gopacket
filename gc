@@ -56,10 +56,14 @@ cd $(dirname $0)
 # First, make sure everything is formatted, compiles, and tests pass.
 go fmt
 gofmt -w gen.go
-gofmt -w pcap/benchmark.go
 go build gen.go
-go build pcap/benchmark.go
 go test
+pushd pcap
+go fmt
+go test
+gofmt -w benchmark.go
+go build benchmark.go
+popd
 
 # Run our initial commit
 git commit "$@"

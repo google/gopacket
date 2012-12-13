@@ -8,7 +8,14 @@ import (
 	"time"
 )
 
+// CaptureInfo contains capture metadata for a packet.  If a packet was captured
+// off the wire or read from a pcap file (see the 'pcap' subdirectory), this
+// information will be attached to the packet.
 type CaptureInfo struct {
+	// Populated is set to true if the rest of the CaptureInfo has been populated
+	// with actual information.  If Populated is false, there's no point in
+	// reading any of the other fields.
+	Populated             bool
 	Timestamp             time.Time
 	CaptureLength, Length int
 }
