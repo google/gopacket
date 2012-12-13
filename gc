@@ -55,14 +55,15 @@ fi
 ### If we get here, we want to run benchmarks from current commit, and compare
 ### then to benchmarks from the last --benchmark commit.
 
+# Get our current branch.
+BRANCH="$(git branch | grep '^*' | awk '{print $2}')"
+
 # File we're going to build our commit description in.
 COMMIT_FILE="$(mktemp)"
 
 # Get the current description... there must be an easier way.
 git log -n 1 | grep '^ ' | sed 's/^    //' > $COMMIT_FILE
 
-# Get the current commit sha
-CURRENT=$(git log -n 1 | head -n 1 | awk '{print $2}')
 # Get the commit sha for the last benchmark commit
 PREV=$(git log -n 1 --grep='BENCHMARK_MARKER_DO_NOT_CHANGE' | head -n 1 | awk '{print $2}')
 
@@ -90,7 +91,7 @@ go run pcap/benchmark.go 2>&1 | tee -a $COMMIT_FILE
 
 ## Reset to last benchmark commit, run benchmarks
 
-git reset --hard $PREV
+git checkout $PREV
 
 cat >> $COMMIT_FILE <<EOF
 ----------------------------------------------------------
@@ -110,5 +111,5 @@ go run pcap/benchmark.go 2>&1 | tee -a $COMMIT_FILE
 
 ## Reset back to the most recent commit, edit the commit message by appending
 ## benchmark results.
-git reset --hard $CURRENT
+git checkout $BRANCH
 git commit --amend -F $COMMIT_FILE
