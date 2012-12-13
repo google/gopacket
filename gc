@@ -1,17 +1,25 @@
 #!/bin/bash
 # Copyright 2012 Google, Inc. All rights reserved.
 
+function GitCommit {
+  git log -n 1 --skip $1 | head -n 1 | awk '{print $2}'
+}
+
 set -e
-go fmt ...
+set -x
+
+cd $(dirname $0)
+
+go fmt
 gofmt -w gen.go
 gofmt -w pcap/benchmark.go
 go build gen.go
 go build pcap/benchmark.go
-go test ...
+go test
 
 COMMIT_FILE="$(mktemp)"
 cat >> $COMMIT_FILE <<EOF
-
+...ENTER COMMIT MESSAGE HERE...
 
 TEST BENCHMARKS
 EOF
@@ -22,3 +30,28 @@ cat >> $COMMIT_FILE <<EOF
 PACKET BENCHMARK
 EOF
 go run pcap/benchmark.go 2>&1 | tee -a $COMMIT_FILE
+
+git commit -a -m "Temporary message"
+
+CURRENT=$(GitCommit 0)
+PREV=$(GitCommit 1)
+
+git reset $PREV
+
+cat >> $COMMIT_FILE <<EOF
+
+OLD TEST BENCHMARKS
+EOF
+go test --test.bench=.* 2>&1 | tee -a $COMMIT_FILE
+cat >> $COMMIT_FILE <<EOF
+
+
+OLD PACKET BENCHMARK
+EOF
+go run pcap/benchmark.go 2>&1 | tee -a $COMMIT_FILE
+
+git checkout $CURRENT
+
+$EDITOR $COMMIT_FILE
+
+git commit --amend -F $COMMIT_FILE
