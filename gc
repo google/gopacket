@@ -50,7 +50,7 @@ OLD PACKET BENCHMARK
 EOF
 go run pcap/benchmark.go 2>&1 | tee -a $COMMIT_FILE
 
-git checkout $CURRENT
+git reset --hard $CURRENT
 
 $EDITOR $COMMIT_FILE
 
