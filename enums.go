@@ -12,7 +12,11 @@ import (
 type EthernetType uint16
 
 const (
-  EthernetTypeCDP EthernetType = 0x0136
+	// EthernetTypeLLC is not an actual ethernet type.  It is instead a
+	// placeholder we use in Ethernet frames that use the 802.3 standard of
+	// srcmac|dstmac|length|LLC instead of srcmac|dstmac|ethertype.
+	EthernetTypeLLC            EthernetType = 0
+	EthernetTypeCDP            EthernetType = 0x2000
 	EthernetTypeIPv4           EthernetType = 0x0800
 	EthernetTypeARP            EthernetType = 0x0806
 	EthernetTypeIPv6           EthernetType = 0x86DD
@@ -24,6 +28,8 @@ const (
 
 func (e EthernetType) Decode(data []byte) (out DecodeResult, err error) {
 	switch e {
+	case EthernetTypeLLC:
+		return decodeLLC(data)
 	case EthernetTypeIPv4:
 		return decodeIPv4(data)
 	case EthernetTypeIPv6:
@@ -36,8 +42,8 @@ func (e EthernetType) Decode(data []byte) (out DecodeResult, err error) {
 		return decodePPPoE(data)
 	case EthernetTypeCTP:
 		return decodeCTP(data)
-  case EthernetTypeCDP:
-  return decodeCDP(data)
+	case EthernetTypeCDP:
+		return decodeCDP(data)
 	}
 	err = fmt.Errorf("Unsupported ethernet type %v", e)
 	return

@@ -19,7 +19,9 @@ const (
 	LayerTypePayload LayerType = iota
 	LayerTypeDecodeFailure
 	LayerTypeEthernet
-  LayerTypeCDP
+	LayerTypeLLC
+	LayerTypeSNAP
+	LayerTypeCDP
 	LayerTypeCTP
 	// <ctp layers>
 	LayerTypeCTPForwardData
@@ -69,6 +71,10 @@ func (l LayerType) String() string {
 		return "DecodeFailure"
 	case LayerTypeEthernet:
 		return "Ethernet"
+	case LayerTypeLLC:
+		return "LLC"
+	case LayerTypeSNAP:
+		return "SNAP"
 	case LayerTypeCDP:
 		return "CDP"
 	case LayerTypeCTP:

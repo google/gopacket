@@ -81,12 +81,14 @@ func main() {
 					fmt.Println("Error reading in packet:", err)
 				}
 				count++
+        var hasError bool
 				if *printErrors && packet.ErrorLayer() != nil {
 					fmt.Println("Error decoding packet:", packet.ErrorLayer().Error())
           fmt.Println(hex.Dump(packet.Data()))
 					errors++
+          hasError = true
 				}
-        if *printLayers {
+        if *printLayers || hasError {
           fmt.Printf("=== PACKET %d ===\n", count)
           for _, l := range packet.Layers() {
             fmt.Printf("--- LAYER %v ---\n%#v\n", l.LayerType(), l)
