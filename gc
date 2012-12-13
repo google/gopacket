@@ -1,6 +1,23 @@
 #!/bin/bash
 # Copyright 2012 Google, Inc. All rights reserved.
 
+# This script provides a simple way to run benchmarks against previous code and
+# keep a log of how benchmarks change over time.  When used with the --benchmark
+# flag, it runs benchmarks from the current code and from the last commit run
+# with --benchmark, then stores the results in the git commit description.  We
+# rerun the old benchmarks along with the new ones, since there's no guarantee
+# that git commits will happen on the same machine, so machine differences could
+# cause wildly inaccurate results.
+#
+# If you're making changes to 'gopacket' which could cause performance changes,
+# you may be requested to use this commit script to make sure your changes don't
+# have large detrimental effects (or to show off how awesome your performance
+# improvements are).
+#
+# If not run with the --benchmark flag, this script is still very useful... it
+# makes sure all the correct go formatting, building, and testing work as
+# expected.
+
 function Usage {
   echo "USAGE:  $0 [--benchmark] <git commit flags...>"
   echo
