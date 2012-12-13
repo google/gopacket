@@ -1,17 +1,34 @@
 #!/bin/bash
 # Copyright 2012 Google, Inc. All rights reserved.
 
+function Usage {
+  echo "USAGE:  $0 [--benchmark] <git commit flags...>"
+  echo
+  echo "Note, some 'git commit' flags are necessary, if all else fails, pass in -a"
+  exit 1
+}
+
 BENCH=""
 if [ ! -z "$1" ]; then
   case "$1" in
     "--benchmark")
       BENCH="yes"
+      shift
       ;;
-    *)
-      echo "USAGE: $0 [--benchmark]"
-      exit 1
+    "--help")
+      Usage
+      ;;
+    "-h")
+      Usage
+      ;;
+    "help")
+      Usage
       ;;
   esac
+fi
+
+if [ "$#" -eq "0" ]; then
+  Usage
 fi
 
 set -e
@@ -27,24 +44,33 @@ go build gen.go
 go build pcap/benchmark.go
 go test
 
+# Run our initial commit
+git commit "$@"
+
 if [ -z "$BENCH" ]; then
-  git commit -a
+  # If we're not benchmarking, we're done.
   exit
 fi
 
-# Now, we do magic...
-#  1) Run current benchmarks
-#  2) Commit with temporary description
-#  3) Revert to state of the previous benchmark commit
-#  4) Run old benchmarks
-#  5) Reset to new state
-#  6) Modify head commit description, adding in benchmarks
+### If we get here, we want to run benchmarks from current commit, and compare
+### then to benchmarks from the last --benchmark commit.
 
 # File we're going to build our commit description in.
 COMMIT_FILE="$(mktemp)"
 
+# Get the current description... there must be an easier way.
+git log -n 1 | grep '^ ' | sed 's/^    //' > $COMMIT_FILE
+
+# Get the current commit sha
+CURRENT=$(git log -n 1 | head -n 1 | awk '{print $2}')
+# Get the commit sha for the last benchmark commit
+PREV=$(git log -n 1 --grep='BENCHMARK_MARKER_DO_NOT_CHANGE' | head -n 1 | awk '{print $2}')
+
+## Run current benchmarks
+
 cat >> $COMMIT_FILE <<EOF
-...ENTER COMMIT MESSAGE HERE...
+
+
 ----------------------------------------------------------
 BENCHMARK_MARKER_DO_NOT_CHANGE
 ----------------------------------------------------------
@@ -56,14 +82,13 @@ go test --test.bench=.* 2>&1 | tee -a $COMMIT_FILE
 cat >> $COMMIT_FILE <<EOF
 
 
-PACKET BENCHMARK
+PCAP BENCHMARK
 EOF
 go run pcap/benchmark.go 2>&1 | tee -a $COMMIT_FILE
 
-git commit -a -m "Commit at $(date), temporary message"
 
-CURRENT=$(git log -n 1 | head -n 1 | awk '{print $2}')
-PREV=$(git log -n 1 --grep='BENCHMARK_MARKER_DO_NOT_CHANGE' | head -n 1 | awk '{print $2}')
+
+## Reset to last benchmark commit, run benchmarks
 
 git reset $PREV
 
@@ -77,12 +102,13 @@ go test --test.bench=.* 2>&1 | tee -a $COMMIT_FILE
 cat >> $COMMIT_FILE <<EOF
 
 
-OLD PACKET BENCHMARK
+OLD PCAP BENCHMARK
 EOF
 go run pcap/benchmark.go 2>&1 | tee -a $COMMIT_FILE
 
+
+
+## Reset back to the most recent commit, edit the commit message by appending
+## benchmark results.
 git reset --hard $CURRENT
-
-$EDITOR $COMMIT_FILE
-
 git commit --amend -F $COMMIT_FILE

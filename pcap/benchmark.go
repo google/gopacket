@@ -32,6 +32,7 @@ var printErrors *bool = flag.Bool("printErrors", false, "If true, check for and 
 var printLayers *bool = flag.Bool("printLayers", false, "If true, print out the layers of each packet")
 var repeat *int = flag.Int("repeat", 1, "Read over the file N times")
 var cpuProfile *string = flag.String("cpuprofile", "", "If set, write CPU profile to filename")
+var url *string = flag.String("url", "http://www.ll.mit.edu/mission/communications/cyber/CSTcorpora/ideval/data/1999/training/week1/tuesday/inside.tcpdump.gz", "URL to gzip'd pcap file")
 
 func main() {
 	flag.Parse()
@@ -41,9 +42,8 @@ func main() {
 		// intrusion detection evaluation.  See
 		// http://www.ll.mit.edu/mission/communications/cyber/CSTcorpora/ideval/data/1999/training/week1/index.html
 		// for more details.
-		url := "http://www.ll.mit.edu/mission/communications/cyber/CSTcorpora/ideval/data/1999/training/week1/tuesday/inside.tcpdump.gz"
-		fmt.Println("Local pcap file", filename, "doesn't exist, reading from", url)
-		if resp, err := http.Get(url); err != nil {
+		fmt.Println("Local pcap file", filename, "doesn't exist, reading from", *url)
+		if resp, err := http.Get(*url); err != nil {
 			panic(err)
 		} else if out, err := os.Create(filename); err != nil {
 			panic(err)
