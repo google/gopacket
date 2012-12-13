@@ -14,7 +14,7 @@ package main
 
 import (
 	"compress/gzip"
-  "encoding/hex"
+	"encoding/hex"
 	"flag"
 	"fmt"
 	"github.com/gconnell/gopacket/pcap"
@@ -22,6 +22,7 @@ import (
 	"io/ioutil"
 	"net/http"
 	"os"
+	"runtime/pprof"
 	"time"
 )
 
@@ -30,6 +31,7 @@ var decodeNoCopy *bool = flag.Bool("nocopy", false, "If true, avoid an extra cop
 var printErrors *bool = flag.Bool("printErrors", false, "If true, check for and print error layers.")
 var printLayers *bool = flag.Bool("printLayers", false, "If true, print out the layers of each packet")
 var repeat *int = flag.Int("repeat", 1, "Read over the file N times")
+var cpuProfile *string = flag.String("cpuprofile", "", "If set, write CPU profile to filename")
 
 func main() {
 	flag.Parse()
@@ -67,6 +69,18 @@ func main() {
 	} else {
 		fmt.Println("Read in file", filename, ", total of", n, "bytes")
 	}
+	if *cpuProfile != "" {
+		if cpu, err := os.Create(*cpuProfile); err != nil {
+			panic(err)
+		} else if err := pprof.StartCPUProfile(cpu); err != nil {
+			panic(err)
+		} else {
+			defer func() {
+				pprof.StopCPUProfile()
+				cpu.Close()
+			}()
+		}
+	}
 	for i := 0; i < *repeat; i++ {
 		fmt.Println("Opening file", filename, "for read")
 		if h, err := pcap.OpenOffline(filename); err != nil {
@@ -81,20 +95,20 @@ func main() {
 					fmt.Println("Error reading in packet:", err)
 				}
 				count++
-        var hasError bool
+				var hasError bool
 				if *printErrors && packet.ErrorLayer() != nil {
 					fmt.Println("Error decoding packet:", packet.ErrorLayer().Error())
-          fmt.Println(hex.Dump(packet.Data()))
+					fmt.Println(hex.Dump(packet.Data()))
 					errors++
-          hasError = true
+					hasError = true
 				}
-        if *printLayers || hasError {
-          fmt.Printf("=== PACKET %d ===\n", count)
-          for _, l := range packet.Layers() {
-            fmt.Printf("--- LAYER %v ---\n%#v\n", l.LayerType(), l)
-          }
-          fmt.Println()
-        }
+				if *printLayers || hasError {
+					fmt.Printf("=== PACKET %d ===\n", count)
+					for _, l := range packet.Layers() {
+						fmt.Printf("--- LAYER %v ---\n%#v\n", l.LayerType(), l)
+					}
+					fmt.Println()
+				}
 			}
 			duration := time.Since(start)
 			fmt.Printf("Read in %v packets in %v, %v per packet\n", count, duration, duration/time.Duration(count))
