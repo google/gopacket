@@ -1,0 +1,24 @@
+#!/bin/bash
+# Copyright 2012 Google, Inc. All rights reserved.
+
+set -e
+go fmt ...
+gofmt -w gen.go
+gofmt -w pcap/benchmark.go
+go build gen.go
+go build pcap/benchmark.go
+go test ...
+
+COMMIT_FILE="$(mktemp)"
+cat >> $COMMIT_FILE <<EOF
+
+
+TEST BENCHMARKS
+EOF
+go test --test.bench=.* 2>&1 | tee -a $COMMIT_FILE
+cat >> $COMMIT_FILE <<EOF
+
+
+PACKET BENCHMARK
+EOF
+go run pcap/benchmark.go 2>&1 | tee -a $COMMIT_FILE
