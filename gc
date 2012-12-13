@@ -90,7 +90,7 @@ go run pcap/benchmark.go 2>&1 | tee -a $COMMIT_FILE
 
 ## Reset to last benchmark commit, run benchmarks
 
-git reset $PREV
+git reset --hard $PREV
 
 cat >> $COMMIT_FILE <<EOF
 ----------------------------------------------------------
