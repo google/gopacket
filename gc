@@ -64,6 +64,10 @@ go test
 gofmt -w benchmark.go
 go build benchmark.go
 popd
+pushd pfring
+go fmt
+go test
+popd
 
 # Run our initial commit
 git commit "$@"

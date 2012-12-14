@@ -1,0 +1,262 @@
+// Copyright 2012 Google, Inc. All rights reserved.
+// Copyright 2009-2012 Andreas Krennmair. All rights reserved.
+
+package pfring
+
+/*
+#cgo LDFLAGS: -lpfring -lpcap
+#include <stdlib.h>
+#include <pfring.h>
+*/
+import "C"
+
+import (
+	"errors"
+	"github.com/gconnell/gopacket"
+	"unsafe"
+)
+
+const errorBufferSize = 256
+
+// Ring provides a handle to a pf_ring.
+type Ring struct {
+	// DecodeOptions is used by the handle to determine how each packet should be
+	// decoded.  Once the handle is created, you may change DecodeOptions at any
+	// time, and the results will take affect on the next Next call.
+	DecodeOptions gopacket.DecodeOptions
+	// Decoder determines the algorithm used for decoding each packet.  It
+	// defaults to the gopacket.LinkType associated with this Handle.
+	Decoder gopacket.Decoder
+	// cptr is the handle for the actual pcap C object.
+	cptr *C.pfring
+}
+
+type PFRingFlag uint32
+
+const (
+	PFRingFlagReentrant       PFRingFlag = C.PF_RING_REENTRANT
+	PFRingFlagLongHeader      PFRingFlag = C.PF_RING_LONG_HEADER
+	PFRingFlagPromisc         PFRingFlag = C.PF_RING_PROMISC
+	PFRingFlagDNASymmetricRSS PFRingFlag = C.PF_RING_DNA_SYMMETRIC_RSS
+	PFRingFlagTimestamp       PFRingFlag = C.PF_RING_TIMESTAMP
+	PFRingFlagHWTimestamp     PFRingFlag = C.PF_RING_HW_TIMESTAMP
+)
+
+func Open(device string, snaplen uint32, flags PFRingFlag) (ring *Ring, _ error) {
+	dev := C.CString(device)
+	defer C.free(unsafe.Pointer(dev))
+
+	cptr := C.pfring_open(dev, C.u_int32_t(snaplen), C.u_int32_t(flags))
+	if cptr == nil {
+		return nil, errors.New("PFRing failure")
+	}
+	return &Ring{cptr: cptr}, nil
+}
+
+/*
+// OpenOffline opens a file and returns its contents as a *Handle.
+func OpenOffline(file string) (handle *Handle, err error) {
+	var buf *C.char
+	buf = (*C.char)(C.calloc(errorBufferSize, 1))
+	defer C.free(unsafe.Pointer(buf))
+	cf := C.CString(file)
+	defer C.free(unsafe.Pointer(cf))
+
+	cptr := C.pcap_open_offline(cf, buf)
+	if cptr == nil {
+		return nil, errors.New(C.GoString(buf))
+	}
+	return newHandle(cptr), nil
+}
+
+// NextError is the return code from a call to Next.
+type NextError int32
+
+// NextError implements the error interface.
+func (n NextError) Error() string {
+	switch n {
+	case NextErrorOk:
+		return "OK"
+	case NextErrorTimeoutExpired:
+		return "Timeout Expired"
+	case NextErrorReadError:
+		return "Read Error"
+	case NextErrorNoMorePackets:
+		return "No More Packets In File"
+	}
+	return strconv.Itoa(int(n))
+}
+
+const (
+	NextErrorOk             NextError = 1
+	NextErrorTimeoutExpired NextError = 0
+	NextErrorReadError      NextError = -1
+	// NextErrorNoMorePackets is returned when reading from a file (OpenOffline) and
+	// EOF is reached.
+	NextErrorNoMorePackets NextError = -2
+)
+
+// NextError returns the next packet read from the pcap handle, along with an error
+// code associated with that packet.  If the packet is read successfully, the
+// returned error is nil.
+func (p *Handle) internalNext() (data []byte, ci gopacket.CaptureInfo, err error) {
+	var pkthdr *C.struct_pcap_pkthdr
+
+	var buf_ptr *C.u_char
+	var buf unsafe.Pointer
+	result := NextError(C.hack_pcap_next_ex(p.cptr, &pkthdr, &buf_ptr))
+
+	buf = unsafe.Pointer(buf_ptr)
+
+	if nil == buf {
+		err = result
+		return
+	}
+	data = C.GoBytes(buf, C.int(pkthdr.caplen))
+	ci.Populated = true
+	ci.Timestamp = time.Unix(int64(pkthdr.ts.tv_sec), int64(pkthdr.ts.tv_usec))
+	ci.CaptureLength = int(pkthdr.caplen)
+	ci.Length = int(pkthdr.len)
+	return
+}
+
+// Close closes the underlying pcap handle.
+func (p *Handle) Close() {
+	C.pcap_close(p.cptr)
+}
+
+// Error returns the current error associated with a pcap handle (pcap_geterr).
+func (p *Handle) Error() error {
+	return errors.New(C.GoString(C.pcap_geterr(p.cptr)))
+}
+
+// Stats returns statistics on the underlying pcap handle.
+func (p *Handle) Stats() (stat *Stats, err error) {
+	var cstats _Ctype_struct_pcap_stat
+	if -1 == C.pcap_stats(p.cptr, &cstats) {
+		return nil, p.Error()
+	}
+	return &Stats{
+		PacketsReceived:  int(cstats.ps_recv),
+		PacketsDropped:   int(cstats.ps_drop),
+		PacketsIfDropped: int(cstats.ps_ifdrop),
+	}, nil
+}
+
+// SetFilter compiles and sets a BPF filter for the pcap handle.
+func (p *Handle) SetFilter(expr string) (err error) {
+	var bpf _Ctype_struct_bpf_program
+	cexpr := C.CString(expr)
+	defer C.free(unsafe.Pointer(cexpr))
+
+	if -1 == C.pcap_compile(p.cptr, &bpf, cexpr, 1, 0) {
+		return p.Error()
+	}
+
+	if -1 == C.pcap_setfilter(p.cptr, &bpf) {
+		C.pcap_freecode(&bpf)
+		return p.Error()
+	}
+	C.pcap_freecode(&bpf)
+	return nil
+}
+
+// Version returns pcap_lib_version.
+func Version() string {
+	return C.GoString(C.pcap_lib_version())
+}
+
+// LinkType returns pcap_datalink, as a gopacket.LinkType.
+func (p *Handle) LinkType() gopacket.LinkType {
+	return gopacket.LinkType(C.pcap_datalink(p.cptr))
+}
+
+// SetLinkType calls pcap_set_datalink on the pcap handle.  This call also
+// automatically sets the handle's Decoder to the given link type.
+func (p *Handle) SetLinkType(dlt gopacket.LinkType) error {
+	if -1 == C.pcap_set_datalink(p.cptr, C.int(dlt)) {
+		return p.Error()
+	}
+	p.Decoder = dlt
+	return nil
+}
+
+// FindAllDevs attempts to enumerate all interfaces on the current machine.
+func FindAllDevs() (ifs []Interface, err error) {
+	var buf *C.char
+	buf = (*C.char)(C.calloc(errorBufferSize, 1))
+	defer C.free(unsafe.Pointer(buf))
+	var alldevsp *C.pcap_if_t
+
+	if -1 == C.pcap_findalldevs((**C.pcap_if_t)(&alldevsp), buf) {
+		return nil, errors.New(C.GoString(buf))
+	}
+	defer C.pcap_freealldevs((*C.pcap_if_t)(alldevsp))
+	dev := alldevsp
+	var i uint32
+	for i = 0; dev != nil; dev = (*C.pcap_if_t)(dev.next) {
+		i++
+	}
+	ifs = make([]Interface, i)
+	dev = alldevsp
+	for j := uint32(0); dev != nil; dev = (*C.pcap_if_t)(dev.next) {
+		var iface Interface
+		iface.Name = C.GoString(dev.name)
+		iface.Description = C.GoString(dev.description)
+		iface.Addresses = findalladdresses(dev.addresses)
+		// TODO: add more elements
+		ifs[j] = iface
+		j++
+	}
+	return
+}
+
+func findalladdresses(addresses *_Ctype_struct_pcap_addr) (retval []InterfaceAddress) {
+	// TODO - make it support more than IPv4 and IPv6?
+	retval = make([]InterfaceAddress, 0, 1)
+	for curaddr := addresses; curaddr != nil; curaddr = (*_Ctype_struct_pcap_addr)(curaddr.next) {
+		var a InterfaceAddress
+		var err error
+		if a.IP, err = sockaddr_to_IP((*syscall.RawSockaddr)(unsafe.Pointer(curaddr.addr))); err != nil {
+			continue
+		}
+		if a.Netmask, err = sockaddr_to_IP((*syscall.RawSockaddr)(unsafe.Pointer(curaddr.addr))); err != nil {
+			continue
+		}
+		retval = append(retval, a)
+	}
+	return
+}
+
+func sockaddr_to_IP(rsa *syscall.RawSockaddr) (IP []byte, err error) {
+	switch rsa.Family {
+	case syscall.AF_INET:
+		pp := (*syscall.RawSockaddrInet4)(unsafe.Pointer(rsa))
+		IP = make([]byte, 4)
+		for i := 0; i < len(IP); i++ {
+			IP[i] = pp.Addr[i]
+		}
+		return
+	case syscall.AF_INET6:
+		pp := (*syscall.RawSockaddrInet6)(unsafe.Pointer(rsa))
+		IP = make([]byte, 16)
+		for i := 0; i < len(IP); i++ {
+			IP[i] = pp.Addr[i]
+		}
+		return
+	}
+	err = errors.New("Unsupported address type")
+	return
+}
+
+// Inject calls pcap_inject, injecting the given data into the pcap handle.
+func (p *Handle) Inject(data []byte) (err error) {
+	buf := C.CString(string(data))
+	defer C.free(unsafe.Pointer(buf))
+
+	if -1 == C.pcap_inject(p.cptr, unsafe.Pointer(buf), (C.size_t)(len(data))) {
+		err = p.Error()
+	}
+	return
+}
+*/
