@@ -7,9 +7,12 @@
 // exist, it's pulled down from a publicly available location.  However, you can
 // feel free to substitute your own file at that location, in which case the
 // benchmark will run on your own data.
+//
 // It's also useful for figuring out which packets may be causing errors.  Pass
 // in the --printErrors flag, and it'll print out error layers for each packet
-// that has them.
+// that has them.  This includes any packets that it's just unable to decode,
+// which is a great way to find new protocols to decode, and get test packets to
+// write tests for them.
 package main
 
 import (
@@ -97,15 +100,16 @@ func main() {
 				count++
 				var hasError bool
 				if *printErrors && packet.ErrorLayer() != nil {
-					fmt.Println("Error decoding packet:", packet.ErrorLayer().Error())
+					fmt.Println("\n\n\nError decoding packet:", packet.ErrorLayer().Error())
 					fmt.Println(hex.Dump(packet.Data()))
+					fmt.Printf("%#v\n", packet.Data())
 					errors++
 					hasError = true
 				}
 				if *printLayers || hasError {
-					fmt.Printf("=== PACKET %d ===\n", count)
+					fmt.Printf("\n=== PACKET %d ===\n", count)
 					for _, l := range packet.Layers() {
-						fmt.Printf("--- LAYER %v ---\n%#v\n", l.LayerType(), l)
+						fmt.Printf("--- LAYER %v ---\n%#v\n\n", l.LayerType(), l)
 					}
 					fmt.Println()
 				}
