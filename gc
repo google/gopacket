@@ -120,6 +120,8 @@ git checkout $PREV
 
 cat >> $COMMIT_FILE <<EOF
 ----------------------------------------------------------
+BENCHMARKING AGAINST COMMIT $PREV
+----------------------------------------------------------
 
 
 OLD TEST BENCHMARKS
