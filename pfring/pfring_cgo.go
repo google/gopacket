@@ -7,12 +7,16 @@ package pfring
 #cgo LDFLAGS: -lpfring -lpcap
 #include <stdlib.h>
 #include <pfring.h>
+#include <linux/pf_ring.h>
 */
 import "C"
 
 import (
 	"errors"
+	"fmt"
 	"github.com/gconnell/gopacket"
+	"strconv"
+	"time"
 	"unsafe"
 )
 
@@ -28,21 +32,22 @@ type Ring struct {
 	// defaults to the gopacket.LinkType associated with this Handle.
 	Decoder gopacket.Decoder
 	// cptr is the handle for the actual pcap C object.
-	cptr *C.pfring
+	cptr    *C.pfring
+	snaplen int
 }
 
-type PFRingFlag uint32
+type Flag uint32
 
 const (
-	PFRingFlagReentrant       PFRingFlag = C.PF_RING_REENTRANT
-	PFRingFlagLongHeader      PFRingFlag = C.PF_RING_LONG_HEADER
-	PFRingFlagPromisc         PFRingFlag = C.PF_RING_PROMISC
-	PFRingFlagDNASymmetricRSS PFRingFlag = C.PF_RING_DNA_SYMMETRIC_RSS
-	PFRingFlagTimestamp       PFRingFlag = C.PF_RING_TIMESTAMP
-	PFRingFlagHWTimestamp     PFRingFlag = C.PF_RING_HW_TIMESTAMP
+	FlagReentrant       Flag = C.PF_RING_REENTRANT
+	FlagLongHeader      Flag = C.PF_RING_LONG_HEADER
+	FlagPromisc         Flag = C.PF_RING_PROMISC
+	FlagDNASymmetricRSS Flag = C.PF_RING_DNA_SYMMETRIC_RSS
+	FlagTimestamp       Flag = C.PF_RING_TIMESTAMP
+	FlagHWTimestamp     Flag = C.PF_RING_HW_TIMESTAMP
 )
 
-func Open(device string, snaplen uint32, flags PFRingFlag) (ring *Ring, _ error) {
+func Open(device string, snaplen uint32, flags Flag) (ring *Ring, _ error) {
 	dev := C.CString(device)
 	defer C.free(unsafe.Pointer(dev))
 
@@ -50,68 +55,45 @@ func Open(device string, snaplen uint32, flags PFRingFlag) (ring *Ring, _ error)
 	if cptr == nil {
 		return nil, errors.New("PFRing failure")
 	}
-	return &Ring{cptr: cptr}, nil
+	return &Ring{cptr: cptr, snaplen: int(snaplen)}, nil
 }
 
-/*
-// OpenOffline opens a file and returns its contents as a *Handle.
-func OpenOffline(file string) (handle *Handle, err error) {
-	var buf *C.char
-	buf = (*C.char)(C.calloc(errorBufferSize, 1))
-	defer C.free(unsafe.Pointer(buf))
-	cf := C.CString(file)
-	defer C.free(unsafe.Pointer(cf))
-
-	cptr := C.pcap_open_offline(cf, buf)
-	if cptr == nil {
-		return nil, errors.New(C.GoString(buf))
-	}
-	return newHandle(cptr), nil
+func (r *Ring) Close() {
+	C.pfring_close(r.cptr)
 }
 
-// NextError is the return code from a call to Next.
-type NextError int32
+// NextResult is the return code from a call to Next.
+type NextResult int32
 
-// NextError implements the error interface.
-func (n NextError) Error() string {
-	switch n {
-	case NextErrorOk:
-		return "OK"
-	case NextErrorTimeoutExpired:
-		return "Timeout Expired"
-	case NextErrorReadError:
-		return "Read Error"
-	case NextErrorNoMorePackets:
-		return "No More Packets In File"
-	}
+const (
+	NextNoPacketNonblocking NextResult = 0
+	NextError               NextResult = -1
+	NextOk                  NextResult = 1
+)
+
+// NextResult implements the error interface.
+func (n NextResult) Error() string {
 	return strconv.Itoa(int(n))
 }
 
-const (
-	NextErrorOk             NextError = 1
-	NextErrorTimeoutExpired NextError = 0
-	NextErrorReadError      NextError = -1
-	// NextErrorNoMorePackets is returned when reading from a file (OpenOffline) and
-	// EOF is reached.
-	NextErrorNoMorePackets NextError = -2
-)
-
-// NextError returns the next packet read from the pcap handle, along with an error
+// NextResult returns the next packet read from the pcap handle, along with an error
 // code associated with that packet.  If the packet is read successfully, the
 // returned error is nil.
-func (p *Handle) internalNext() (data []byte, ci gopacket.CaptureInfo, err error) {
-	var pkthdr *C.struct_pcap_pkthdr
+func (r *Ring) internalNext() (data []byte, ci gopacket.CaptureInfo, err error) {
+	var pkthdr C.struct_pfring_pkthdr
 
-	var buf_ptr *C.u_char
-	var buf unsafe.Pointer
-	result := NextError(C.hack_pcap_next_ex(p.cptr, &pkthdr, &buf_ptr))
-
-	buf = unsafe.Pointer(buf_ptr)
-
-	if nil == buf {
+	var buf unsafe.Pointer = C.malloc(C.size_t(r.snaplen))
+	var buf_ptr *C.u_char = (*C.u_char)(buf)
+	defer C.free(buf)
+	result := NextResult(C.pfring_recv(r.cptr, &buf_ptr, C.u_int(r.snaplen), &pkthdr, 1))
+	if result != NextOk {
 		err = result
 		return
 	}
+	// BUG(gconnell):  This currently does an extra copy of packet data... if we
+	// can figure out a way to pass a pointer to a slice address space into
+	// pfring_recv above, the pfring will write into the slice, instead of us
+	// having to copy it.
 	data = C.GoBytes(buf, C.int(pkthdr.caplen))
 	ci.Populated = true
 	ci.Timestamp = time.Unix(int64(pkthdr.ts.tv_sec), int64(pkthdr.ts.tv_usec))
@@ -120,143 +102,104 @@ func (p *Handle) internalNext() (data []byte, ci gopacket.CaptureInfo, err error
 	return
 }
 
-// Close closes the underlying pcap handle.
-func (p *Handle) Close() {
-	C.pcap_close(p.cptr)
-}
+type ClusterType C.cluster_type
 
-// Error returns the current error associated with a pcap handle (pcap_geterr).
-func (p *Handle) Error() error {
-	return errors.New(C.GoString(C.pcap_geterr(p.cptr)))
-}
+const (
+	ClusterPerFlow          ClusterType = C.cluster_per_flow
+	ClusterRoundRobin       ClusterType = C.cluster_round_robin
+	ClusterPerFlow2Tuple    ClusterType = C.cluster_per_flow_2_tuple
+	ClusterPerFlow4Tuple    ClusterType = C.cluster_per_flow_4_tuple
+	ClusterPerFlow5Tuple    ClusterType = C.cluster_per_flow_5_tuple
+	ClusterPerFlowTCP5Tuple ClusterType = C.cluster_per_flow_tcp_5_tuple
+)
 
-// Stats returns statistics on the underlying pcap handle.
-func (p *Handle) Stats() (stat *Stats, err error) {
-	var cstats _Ctype_struct_pcap_stat
-	if -1 == C.pcap_stats(p.cptr, &cstats) {
-		return nil, p.Error()
+func (r *Ring) SetCluster(cluster int, typ ClusterType) error {
+	if rv := C.pfring_set_cluster(r.cptr, C.u_int(cluster), C.cluster_type(typ)); rv != 0 {
+		return fmt.Errorf("Unable to set cluster, got error code %d", rv)
 	}
-	return &Stats{
-		PacketsReceived:  int(cstats.ps_recv),
-		PacketsDropped:   int(cstats.ps_drop),
-		PacketsIfDropped: int(cstats.ps_ifdrop),
-	}, nil
-}
-
-// SetFilter compiles and sets a BPF filter for the pcap handle.
-func (p *Handle) SetFilter(expr string) (err error) {
-	var bpf _Ctype_struct_bpf_program
-	cexpr := C.CString(expr)
-	defer C.free(unsafe.Pointer(cexpr))
-
-	if -1 == C.pcap_compile(p.cptr, &bpf, cexpr, 1, 0) {
-		return p.Error()
-	}
-
-	if -1 == C.pcap_setfilter(p.cptr, &bpf) {
-		C.pcap_freecode(&bpf)
-		return p.Error()
-	}
-	C.pcap_freecode(&bpf)
 	return nil
 }
 
-// Version returns pcap_lib_version.
-func Version() string {
-	return C.GoString(C.pcap_lib_version())
-}
-
-// LinkType returns pcap_datalink, as a gopacket.LinkType.
-func (p *Handle) LinkType() gopacket.LinkType {
-	return gopacket.LinkType(C.pcap_datalink(p.cptr))
-}
-
-// SetLinkType calls pcap_set_datalink on the pcap handle.  This call also
-// automatically sets the handle's Decoder to the given link type.
-func (p *Handle) SetLinkType(dlt gopacket.LinkType) error {
-	if -1 == C.pcap_set_datalink(p.cptr, C.int(dlt)) {
-		return p.Error()
+func (r *Ring) RemoveFromCluster() error {
+	if rv := C.pfring_remove_from_cluster(r.cptr); rv != 0 {
+		return fmt.Errorf("Unable to remove from cluster, got error code %d", rv)
 	}
-	p.Decoder = dlt
 	return nil
 }
 
-// FindAllDevs attempts to enumerate all interfaces on the current machine.
-func FindAllDevs() (ifs []Interface, err error) {
-	var buf *C.char
-	buf = (*C.char)(C.calloc(errorBufferSize, 1))
-	defer C.free(unsafe.Pointer(buf))
-	var alldevsp *C.pcap_if_t
-
-	if -1 == C.pcap_findalldevs((**C.pcap_if_t)(&alldevsp), buf) {
-		return nil, errors.New(C.GoString(buf))
+func (r *Ring) SetSamplingRate(rate int) error {
+	if rv := C.pfring_set_sampling_rate(r.cptr, C.u_int32_t(rate)); rv != 0 {
+		return fmt.Errorf("Unable to set sampling rate, got error code %d", rv)
 	}
-	defer C.pcap_freealldevs((*C.pcap_if_t)(alldevsp))
-	dev := alldevsp
-	var i uint32
-	for i = 0; dev != nil; dev = (*C.pcap_if_t)(dev.next) {
-		i++
-	}
-	ifs = make([]Interface, i)
-	dev = alldevsp
-	for j := uint32(0); dev != nil; dev = (*C.pcap_if_t)(dev.next) {
-		var iface Interface
-		iface.Name = C.GoString(dev.name)
-		iface.Description = C.GoString(dev.description)
-		iface.Addresses = findalladdresses(dev.addresses)
-		// TODO: add more elements
-		ifs[j] = iface
-		j++
-	}
-	return
+	return nil
 }
 
-func findalladdresses(addresses *_Ctype_struct_pcap_addr) (retval []InterfaceAddress) {
-	// TODO - make it support more than IPv4 and IPv6?
-	retval = make([]InterfaceAddress, 0, 1)
-	for curaddr := addresses; curaddr != nil; curaddr = (*_Ctype_struct_pcap_addr)(curaddr.next) {
-		var a InterfaceAddress
-		var err error
-		if a.IP, err = sockaddr_to_IP((*syscall.RawSockaddr)(unsafe.Pointer(curaddr.addr))); err != nil {
-			continue
-		}
-		if a.Netmask, err = sockaddr_to_IP((*syscall.RawSockaddr)(unsafe.Pointer(curaddr.addr))); err != nil {
-			continue
-		}
-		retval = append(retval, a)
+func (r *Ring) SetBPFFilter(bpf_filter string) error {
+	filter := C.CString(bpf_filter)
+	defer C.free(unsafe.Pointer(filter))
+	if rv := C.pfring_set_bpf_filter(r.cptr, filter); rv != 0 {
+		return fmt.Errorf("Unable to set BPF filter, got error code %d", rv)
 	}
-	return
+	return nil
 }
 
-func sockaddr_to_IP(rsa *syscall.RawSockaddr) (IP []byte, err error) {
-	switch rsa.Family {
-	case syscall.AF_INET:
-		pp := (*syscall.RawSockaddrInet4)(unsafe.Pointer(rsa))
-		IP = make([]byte, 4)
-		for i := 0; i < len(IP); i++ {
-			IP[i] = pp.Addr[i]
-		}
-		return
-	case syscall.AF_INET6:
-		pp := (*syscall.RawSockaddrInet6)(unsafe.Pointer(rsa))
-		IP = make([]byte, 16)
-		for i := 0; i < len(IP); i++ {
-			IP[i] = pp.Addr[i]
-		}
-		return
+func (r *Ring) RemoveBPFFilter() error {
+	if rv := C.pfring_remove_bpf_filter(r.cptr); rv != 0 {
+		return fmt.Errorf("Unable to remove BPF filter, got error code %d", rv)
 	}
-	err = errors.New("Unsupported address type")
-	return
+	return nil
 }
 
-// Inject calls pcap_inject, injecting the given data into the pcap handle.
-func (p *Handle) Inject(data []byte) (err error) {
+func (r *Ring) Inject(data []byte) error {
 	buf := C.CString(string(data))
 	defer C.free(unsafe.Pointer(buf))
 
-	if -1 == C.pcap_inject(p.cptr, unsafe.Pointer(buf), (C.size_t)(len(data))) {
-		err = p.Error()
+	if rv := C.pfring_send(r.cptr, buf, C.u_int(len(data)), 1); rv != 0 {
+		return fmt.Errorf("Unable to send packet data, got error code %d", rv)
 	}
+	return nil
+}
+
+func (r *Ring) Enable() error {
+	if rv := C.pfring_enable_ring(r.cptr); rv != 0 {
+		return fmt.Errorf("Unable to enable ring, got error code %d", rv)
+	}
+	return nil
+}
+
+func (r *Ring) Disable() error {
+	if rv := C.pfring_disable_ring(r.cptr); rv != 0 {
+		return fmt.Errorf("Unable to disable ring, got error code %d", rv)
+	}
+	return nil
+}
+
+type Stats struct {
+	Received, Dropped uint64
+}
+
+func (r *Ring) Stats() (s Stats, err error) {
+	var stats C.pfring_stat
+	if rv := C.pfring_stats(r.cptr, &stats); rv != 0 {
+		err = fmt.Errorf("Unable to get ring stats, got error code %d", rv)
+		return
+	}
+	s.Received = uint64(stats.recv)
+	s.Dropped = uint64(stats.drop)
 	return
 }
-*/
+
+type Direction C.packet_direction
+
+const (
+	TXOnly  Direction = C.tx_only_direction
+	RXOnly  Direction = C.rx_only_direction
+	RXAndTX Direction = C.rx_and_tx_direction
+)
+
+func (r *Ring) SetDirection(d Direction) error {
+	if rv := C.pfring_set_direction(r.cptr, C.packet_direction(d)); rv != 0 {
+		return fmt.Errorf("Unable to set ring direction, got error code %d", rv)
+	}
+	return nil
+}

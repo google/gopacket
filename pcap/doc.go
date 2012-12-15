@@ -11,7 +11,7 @@ The following code can be used to read in data from a pcap file.
  if handle, err := pcap.OpenOffline(filename); err != nil {
    panic(err)
  } else {
-   for packet, err := handle.Next(); err != pcap.NextErrorNoMorePackets; packet, err = handle.Next() {
+   for packet, err := handle.Next(); err != io.EOF; packet, err = handle.Next() {
      if err != nil {
        fmt.Println("Error reading in packet:", err)
      } else {
@@ -27,7 +27,7 @@ The following code can be used to read in data from a live device, in this case
 
  if handle, err := pcap.OpenLive("eth0", 1600, true, 0); err != nil {
    panic(err)
- } else if err := handle.SetFilter("tcp and port 80"); err != nil {
+ } else if err := handle.SetBPFFilter("tcp and port 80"); err != nil {
    panic(err)
  } else {
    for {

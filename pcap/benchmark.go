@@ -93,7 +93,7 @@ func main() {
 			h.DecodeOptions.NoCopy = *decodeNoCopy
 			count, errors := 0, 0
 			start := time.Now()
-			for packet, err := h.Next(); err != pcap.NextErrorNoMorePackets; packet, err = h.Next() {
+			for packet, err := h.Next(); err != io.EOF; packet, err = h.Next() {
 				if err != nil {
 					fmt.Println("Error reading in packet:", err)
 				}

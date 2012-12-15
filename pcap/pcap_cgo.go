@@ -19,6 +19,7 @@ import "C"
 import (
 	"errors"
 	"github.com/gconnell/gopacket"
+	"io"
 	"net"
 	"strconv"
 	"syscall"
@@ -134,7 +135,7 @@ const (
 	NextErrorTimeoutExpired NextError = 0
 	NextErrorReadError      NextError = -1
 	// NextErrorNoMorePackets is returned when reading from a file (OpenOffline) and
-	// EOF is reached.
+	// EOF is reached.  When this happens, Next() returns io.EOF instead of this.
 	NextErrorNoMorePackets NextError = -2
 )
 
@@ -151,7 +152,11 @@ func (p *Handle) internalNext() (data []byte, ci gopacket.CaptureInfo, err error
 	buf = unsafe.Pointer(buf_ptr)
 
 	if nil == buf {
-		err = result
+		if result == NextErrorNoMorePackets {
+			err = io.EOF
+		} else {
+			err = result
+		}
 		return
 	}
 	data = C.GoBytes(buf, C.int(pkthdr.caplen))
@@ -185,8 +190,8 @@ func (p *Handle) Stats() (stat *Stats, err error) {
 	}, nil
 }
 
-// SetFilter compiles and sets a BPF filter for the pcap handle.
-func (p *Handle) SetFilter(expr string) (err error) {
+// SetBPFFilter compiles and sets a BPF filter for the pcap handle.
+func (p *Handle) SetBPFFilter(expr string) (err error) {
 	var bpf _Ctype_struct_bpf_program
 	cexpr := C.CString(expr)
 	defer C.free(unsafe.Pointer(cexpr))
