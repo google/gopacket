@@ -25,17 +25,16 @@ const errorBufferSize = 256
 
 // Ring provides a handle to a pf_ring.
 type Ring struct {
-	// DecodeOptions is used by the handle to determine how each packet should be
-	// decoded.  Once the handle is created, you may change DecodeOptions at any
-	// time, and the results will take affect on the next Next call.
-	DecodeOptions gopacket.DecodeOptions
 	// Decoder determines the algorithm used for decoding each packet.  It
 	// defaults to the gopacket.LinkType associated with this Handle.
-	Decoder gopacket.Decoder
+	decoder gopacket.Decoder
 	// cptr is the handle for the actual pcap C object.
 	cptr    *C.pfring
 	snaplen int
 }
+
+func (r *Ring) Decoder() gopacket.Decoder     { return r.decoder }
+func (r *Ring) SetDecoder(d gopacket.Decoder) { r.decoder = d }
 
 type Flag uint32
 
@@ -59,6 +58,8 @@ func NewRing(device string, snaplen uint32, flags Flag) (ring *Ring, _ error) {
 		return nil, errors.New("PFRing failure")
 	}
 	ring = &Ring{cptr: cptr, snaplen: int(snaplen)}
+	// TODO(gconnell):  Figure out a better way to set this...
+	ring.decoder = gopacket.LinkTypeEthernet
 	ring.SetApplicationName(os.Args[0])
 	return
 }
