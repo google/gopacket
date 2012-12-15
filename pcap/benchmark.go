@@ -85,17 +85,17 @@ func main() {
 			}()
 		}
 	}
-	var opts gopacket.DecodeOptions
 	for i := 0; i < *repeat; i++ {
 		fmt.Println("Opening file", filename, "for read")
 		if h, err := pcap.OpenOffline(filename); err != nil {
 			panic(err)
 		} else {
-			opts.Lazy = *decodeLazy
-			opts.NoCopy = *decodeNoCopy
+			packetSource := gopacket.NewPacketSource(h, h.LinkType())
+			packetSource.DecodeOptions.Lazy = *decodeLazy
+			packetSource.DecodeOptions.NoCopy = *decodeNoCopy
 			count, errors := 0, 0
 			start := time.Now()
-			for packet, err := gopacket.PacketFromSource(h, opts); err != io.EOF; packet, err = gopacket.PacketFromSource(h, opts) {
+			for packet, err := packetSource.NextPacket(); err != io.EOF; packet, err = packetSource.NextPacket() {
 				if err != nil {
 					fmt.Println("Error reading in packet:", err)
 				}

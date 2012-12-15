@@ -33,15 +33,9 @@ const errorBufferSize = 256
 // off the wire (Next), inject packets onto the wire (Inject), and
 // perform a number of other functions to affect and understand packet output.
 type Handle struct {
-	// decoder determines the algorithm used for decoding each packet.  It
-	// defaults to the gopacket.LinkType associated with this Handle.
-	decoder gopacket.Decoder
 	// cptr is the handle for the actual pcap C object.
 	cptr *C.pcap_t
 }
-
-func (h *Handle) Decoder() gopacket.Decoder     { return h.decoder }
-func (h *Handle) SetDecoder(d gopacket.Decoder) { h.decoder = d }
 
 // Stats contains statistics on how many packets were handled by a pcap handle,
 // and what was done with those packets.
@@ -92,7 +86,6 @@ func OpenLive(device string, snaplen int32, promisc bool, timeout time.Duration)
 
 func newHandle(cptr *C.pcap_t) (handle *Handle) {
 	handle = &Handle{cptr: cptr}
-	handle.decoder = handle.LinkType()
 	return
 }
 
@@ -141,7 +134,7 @@ const (
 // NextError returns the next packet read from the pcap handle, along with an error
 // code associated with that packet.  If the packet is read successfully, the
 // returned error is nil.
-func (p *Handle) NextPacket() (data []byte, ci gopacket.CaptureInfo, err error) {
+func (p *Handle) NextPacketData() (data []byte, ci gopacket.CaptureInfo, err error) {
 	var pkthdr *C.struct_pcap_pkthdr
 
 	var buf_ptr *C.u_char
@@ -217,13 +210,11 @@ func (p *Handle) LinkType() gopacket.LinkType {
 	return gopacket.LinkType(C.pcap_datalink(p.cptr))
 }
 
-// SetLinkType calls pcap_set_datalink on the pcap handle.  This call also
-// automatically sets the handle's Decoder to the given link type.
+// SetLinkType calls pcap_set_datalink on the pcap handle.
 func (p *Handle) SetLinkType(dlt gopacket.LinkType) error {
 	if -1 == C.pcap_set_datalink(p.cptr, C.int(dlt)) {
 		return p.Error()
 	}
-	p.decoder = dlt
 	return nil
 }
 

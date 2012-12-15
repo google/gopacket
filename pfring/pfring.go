@@ -25,16 +25,10 @@ const errorBufferSize = 256
 
 // Ring provides a handle to a pf_ring.
 type Ring struct {
-	// Decoder determines the algorithm used for decoding each packet.  It
-	// defaults to the gopacket.LinkType associated with this Handle.
-	decoder gopacket.Decoder
 	// cptr is the handle for the actual pcap C object.
 	cptr    *C.pfring
 	snaplen int
 }
-
-func (r *Ring) Decoder() gopacket.Decoder     { return r.decoder }
-func (r *Ring) SetDecoder(d gopacket.Decoder) { r.decoder = d }
 
 type Flag uint32
 
@@ -58,8 +52,6 @@ func NewRing(device string, snaplen uint32, flags Flag) (ring *Ring, _ error) {
 		return nil, errors.New("PFRing failure")
 	}
 	ring = &Ring{cptr: cptr, snaplen: int(snaplen)}
-	// TODO(gconnell):  Figure out a better way to set this...
-	ring.decoder = gopacket.LinkTypeEthernet
 	ring.SetApplicationName(os.Args[0])
 	return
 }
@@ -85,7 +77,7 @@ func (n NextResult) Error() string {
 // NextResult returns the next packet read from the pcap handle, along with an error
 // code associated with that packet.  If the packet is read successfully, the
 // returned error is nil.
-func (r *Ring) NextPacket() (data []byte, ci gopacket.CaptureInfo, err error) {
+func (r *Ring) NextPacketData() (data []byte, ci gopacket.CaptureInfo, err error) {
 	var pkthdr C.struct_pfring_pkthdr
 
 	var buf unsafe.Pointer = C.malloc(C.size_t(r.snaplen))

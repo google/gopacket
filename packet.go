@@ -4,6 +4,7 @@ package gopacket
 
 import (
 	"fmt"
+	"io"
 	"strings"
 	"time"
 )
@@ -263,19 +264,45 @@ func (p *packet) String() string {
 	return fmt.Sprintf("PACKET [%s]", strings.Join(layers, ", "))
 }
 
-type PacketSource interface {
+type PacketDataSource interface {
 	// NextPacket returns the next packet available from this data source.
-	NextPacket() (data []byte, ci CaptureInfo, err error)
-	// The decoder to use for packets received from this source.
-	Decoder() Decoder
+	NextPacketData() (data []byte, ci CaptureInfo, err error)
 }
 
-func PacketFromSource(ds PacketSource, o DecodeOptions) (Packet, error) {
-	data, ci, err := ds.NextPacket()
+type PacketSource struct {
+	source PacketDataSource
+	Decoder
+	DecodeOptions
+}
+
+func NewPacketSource(source PacketDataSource, decoder Decoder) *PacketSource {
+	return &PacketSource{
+		source:  source,
+		Decoder: decoder,
+	}
+}
+
+func (p *PacketSource) NextPacket() (Packet, error) {
+	data, ci, err := p.source.NextPacketData()
 	if err != nil {
 		return nil, err
 	}
-	p := NewPacket(data, ds.Decoder(), o)
-	*p.CaptureInfo() = ci
-	return p, nil
+	packet := NewPacket(data, p.Decoder, p.DecodeOptions)
+	*packet.CaptureInfo() = ci
+	return packet, nil
+}
+
+func (p *PacketSource) PacketChannel() <-chan Packet {
+	c := make(chan Packet, 100)
+	go func() {
+		for {
+			packet, err := p.NextPacket()
+			if err == io.EOF {
+				close(c)
+			} else if err == nil {
+				c <- packet
+			}
+		}
+	}()
+	return c
 }
