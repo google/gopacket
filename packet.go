@@ -262,3 +262,20 @@ func (p *packet) String() string {
 	}
 	return fmt.Sprintf("PACKET [%s]", strings.Join(layers, ", "))
 }
+
+type PacketSource interface {
+	// NextPacket returns the next packet available from this data source.
+	NextPacket() (data []byte, ci CaptureInfo, err error)
+	// The decoder to use for packets received from this source.
+	Decoder() Decoder
+}
+
+func PacketFromSource(ds PacketSource, o DecodeOptions) (Packet, error) {
+	data, ci, err := ds.NextPacket()
+	if err != nil {
+		return nil, err
+	}
+	p := NewPacket(data, ds.Decoder(), o)
+	*p.CaptureInfo() = ci
+	return p, nil
+}

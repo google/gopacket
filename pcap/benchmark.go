@@ -20,6 +20,7 @@ import (
 	"encoding/hex"
 	"flag"
 	"fmt"
+	"github.com/gconnell/gopacket"
 	"github.com/gconnell/gopacket/pcap"
 	"io"
 	"io/ioutil"
@@ -84,16 +85,17 @@ func main() {
 			}()
 		}
 	}
+	var opts gopacket.DecodeOptions
 	for i := 0; i < *repeat; i++ {
 		fmt.Println("Opening file", filename, "for read")
 		if h, err := pcap.OpenOffline(filename); err != nil {
 			panic(err)
 		} else {
-			h.DecodeOptions.Lazy = *decodeLazy
-			h.DecodeOptions.NoCopy = *decodeNoCopy
+			opts.Lazy = *decodeLazy
+			opts.NoCopy = *decodeNoCopy
 			count, errors := 0, 0
 			start := time.Now()
-			for packet, err := h.Next(); err != io.EOF; packet, err = h.Next() {
+			for packet, err := gopacket.PacketFromSource(h, opts); err != io.EOF; packet, err = gopacket.PacketFromSource(h, opts) {
 				if err != nil {
 					fmt.Println("Error reading in packet:", err)
 				}
