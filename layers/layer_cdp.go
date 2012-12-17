@@ -3,6 +3,7 @@
 package gopacket
 
 import (
+"github.com/gconnell/gopacket"
 	"encoding/binary"
 	"fmt"
 )
@@ -19,8 +20,8 @@ type CDP struct {
 	Values   []CDPValue
 }
 
-// LayerType returns LayerTypeCDP.
-func (c *CDP) LayerType() LayerType { return LayerTypeCDP }
+// LayerType returns gopacket.LayerTypeCDP.
+func (c *CDP) LayerType() gopacket.LayerType { return gopacket.LayerTypeCDP }
 
 // CDPValue is a TLV value inside a CDP packet layer.
 type CDPValue struct {
@@ -29,7 +30,7 @@ type CDPValue struct {
 	Value  []byte
 }
 
-func decodeCDP(data []byte) (out DecodeResult, err error) {
+func decodeCDP(data []byte) (out gopacket.DecodeResult, err error) {
 	c := &CDP{
 		Version:  data[0],
 		TTL:      data[1],

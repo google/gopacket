@@ -3,6 +3,7 @@
 package gopacket
 
 import (
+"github.com/gconnell/gopacket"
 	"encoding/binary"
 	"fmt"
 )
@@ -31,10 +32,10 @@ type RUDPHeaderEACK struct {
 	SeqsReceivedOK []uint32
 }
 
-// LayerType returns LayerTypeRUDP.
-func (r *RUDP) LayerType() LayerType { return LayerTypeRUDP }
+// LayerType returns gopacket.LayerTypeRUDP.
+func (r *RUDP) LayerType() gopacket.LayerType { return gopacket.LayerTypeRUDP }
 
-func decodeRUDP(data []byte) (out DecodeResult, err error) {
+func decodeRUDP(data []byte) (out gopacket.DecodeResult, err error) {
 	r := &RUDP{
 		SYN:          data[0]&0x80 != 0,
 		ACK:          data[0]&0x40 != 0,
@@ -85,6 +86,6 @@ func decodeRUDP(data []byte) (out DecodeResult, err error) {
 	return
 }
 
-func (r *RUDP) TransportFlow() Flow {
-	return Flow{LayerTypeRUDP, string([]byte{r.SrcPort}), string([]byte{r.DstPort})}
+func (r *RUDP) TransportFlow() gopacket.Flow {
+	return gopacket.Flow{gopacket.LayerTypeRUDP, string([]byte{r.SrcPort}), string([]byte{r.DstPort})}
 }

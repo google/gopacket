@@ -4,6 +4,7 @@
 package gopacket
 
 import (
+"github.com/gconnell/gopacket"
 	"encoding/binary"
 )
 
@@ -20,13 +21,13 @@ type IPv6 struct {
 	DstIP        []byte     // 16 bytes
 }
 
-// LayerType returns LayerTypeIPv6
-func (i *IPv6) LayerType() LayerType { return LayerTypeIPv6 }
-func (i *IPv6) NetworkFlow() Flow {
-	return Flow{LayerTypeIPv6, string(i.SrcIP), string(i.DstIP)}
+// LayerType returns gopacket.LayerTypeIPv6
+func (i *IPv6) LayerType() gopacket.LayerType { return gopacket.LayerTypeIPv6 }
+func (i *IPv6) NetworkFlow() gopacket.Flow {
+	return gopacket.Flow{gopacket.LayerTypeIPv6, string(i.SrcIP), string(i.DstIP)}
 }
 
-func decodeIPv6(data []byte) (out DecodeResult, err error) {
+func decodeIPv6(data []byte) (out gopacket.DecodeResult, err error) {
 	ip6 := &IPv6{
 		Version:      uint8(data[0]) >> 4,
 		TrafficClass: uint8((binary.BigEndian.Uint16(data[0:2]) >> 4) & 0x00FF),

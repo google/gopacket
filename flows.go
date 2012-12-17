@@ -3,10 +3,10 @@
 package gopacket
 
 import (
-	"encoding/binary"
+	//"encoding/binary"
 	"fmt"
-	"net"
-	"strconv"
+	//"net"
+	//"strconv"
 )
 
 // Endpoint is the set of bytes used to address packets at various layers.
@@ -34,21 +34,10 @@ func (a Endpoint) LessThan(b Endpoint) bool {
 
 // String returns the endpoint as a human-readable string.
 func (a Endpoint) String() string {
-	switch a.typ {
-	case LayerTypeIPv4, LayerTypeIPv6:
-		return net.IP([]byte(a.raw)).String()
-	case LayerTypeEthernet:
-		return net.HardwareAddr([]byte(a.raw)).String()
-	case LayerTypeTCP, LayerTypeUDP, LayerTypeSCTP:
-		return strconv.Itoa(int(binary.BigEndian.Uint16([]byte(a.raw))))
-	case LayerTypeRUDP:
-		return strconv.Itoa(int(a.raw[0]))
-	case LayerTypePPP:
-		return "point"
-	}
-	return "endpoint"
+	return fmt.Sprintf("%v:%v", a.typ, a.raw)
 }
 
+/*
 // NewIPEndpoint creates a new IPv4 or IPv6 endpoint from a net.IP address.
 func NewIPEndpoint(a net.IP) (_ Endpoint, err error) {
 	if len(a) == 4 {
@@ -87,7 +76,7 @@ func NewSCTPPortEndpoint(a uint16) Endpoint {
 // PPPEndpoint is an "endpoint" for PPP flows.  Since PPP is "point to point", we have a single endpoint "point"
 // that we use in all cases for PPP.
 var PPPEndpoint = Endpoint{typ: LayerTypePPP}
-
+*/
 // Flow represents the direction of traffic for a packet layer, as a source and destination Endpoint.
 // Flows are usable as map keys.
 type Flow struct {
@@ -138,5 +127,7 @@ func (f Flow) Reverse() Flow {
 	return Flow{f.typ, f.dst, f.src}
 }
 
+/*
 // PPPFlow is a "flow" for PPP.  Since PPP is "point to point", we have a single constant flow "point"->"point".
 var PPPFlow = Flow{typ: LayerTypePPP}
+*/

@@ -4,6 +4,7 @@
 package gopacket
 
 import (
+"github.com/gconnell/gopacket"
 	"encoding/binary"
 )
 
@@ -23,13 +24,13 @@ type IPv4 struct {
 	DstIP      []byte
 }
 
-// LayerType returns LayerTypeIPv4
-func (i *IPv4) LayerType() LayerType { return LayerTypeIPv4 }
-func (i *IPv4) NetworkFlow() Flow {
-	return Flow{LayerTypeIPv4, string(i.SrcIP), string(i.DstIP)}
+// LayerType returns gopacket.LayerTypeIPv4
+func (i *IPv4) LayerType() gopacket.LayerType { return gopacket.LayerTypeIPv4 }
+func (i *IPv4) NetworkFlow() gopacket.Flow {
+	return gopacket.Flow{gopacket.LayerTypeIPv4, string(i.SrcIP), string(i.DstIP)}
 }
 
-func decodeIPv4(data []byte) (out DecodeResult, err error) {
+func decodeIPv4(data []byte) (out gopacket.DecodeResult, err error) {
 	flagsfrags := binary.BigEndian.Uint16(data[6:8])
 	ip := &IPv4{
 		Version:    uint8(data[0]) >> 4,

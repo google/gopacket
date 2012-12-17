@@ -3,6 +3,7 @@
 package gopacket
 
 import (
+"fmt"
 	"strconv"
 )
 
@@ -11,170 +12,76 @@ import (
 // usable/useful within this library as a means for requesting layer types
 // (see Packet.Layer) and determining which types of layers have been decoded.
 // A LayerType corresponds 1:1 to a struct type.
-type LayerType uint
+type LayerType int
 
-// When you add a new type here, make sure to also update the LayerClass objects
-// below.
-const (
-	LayerTypePayload LayerType = iota
-	LayerTypeDecodeFailure
-	LayerTypeEthernet
-	LayerTypeLLC
-	LayerTypeSNAP
-	LayerTypeCDP
-	LayerTypeCTP
-	// <ctp layers>
-	LayerTypeCTPForwardData
-	LayerTypeCTPReply
-	// </ctp layers>
-	LayerTypeEtherIP
-	LayerTypePPP
-	LayerTypeGRE
-	LayerTypeIPv4
-	LayerTypeIPv6
-	LayerTypeTCP
-	LayerTypeUDP
-	LayerTypeRUDP
-	LayerTypeSCTP
-	// <sctp chunk layers>
-	LayerTypeSCTPData
-	LayerTypeSCTPInit
-	LayerTypeSCTPInitAck
-	LayerTypeSCTPSack
-	LayerTypeSCTPHeartbeat
-	LayerTypeSCTPHeartbeatAck
-	LayerTypeSCTPAbort
-	LayerTypeSCTPError
-	LayerTypeSCTPShutdown
-	LayerTypeSCTPShutdownAck
-	LayerTypeSCTPShutdownComplete
-	LayerTypeSCTPCookieEcho
-	LayerTypeSCTPCookieAck
-	// </sctp chunk layers>
-	LayerTypeSCTPUnknownChunkType
-	LayerTypeICMP
-	LayerTypeDot1Q
-	LayerTypeARP
-	LayerTypeMPLS
-	LayerTypePPPoE
-	// MaximumLayerType should always be the largest layertype in gopacket.  Any
-	// layer types above this are assumed to be user layer types created outside
-	// of gopacket.
-	MaximumLayerType
-)
-
-func (l LayerType) String() string {
-	switch l {
-	case LayerTypePayload:
-		return "Payload"
-	case LayerTypeDecodeFailure:
-		return "DecodeFailure"
-	case LayerTypeEthernet:
-		return "Ethernet"
-	case LayerTypeLLC:
-		return "LLC"
-	case LayerTypeSNAP:
-		return "SNAP"
-	case LayerTypeCDP:
-		return "CDP"
-	case LayerTypeCTP:
-		return "CTP"
-	case LayerTypeCTPForwardData:
-		return "CTPForwardData"
-	case LayerTypeCTPReply:
-		return "CTPReply"
-	case LayerTypeEtherIP:
-		return "EtherIP"
-	case LayerTypePPP:
-		return "PPP"
-	case LayerTypeGRE:
-		return "GRE"
-	case LayerTypeIPv4:
-		return "IPv4"
-	case LayerTypeIPv6:
-		return "IPv6"
-	case LayerTypeTCP:
-		return "TCP"
-	case LayerTypeUDP:
-		return "UDP"
-	case LayerTypeRUDP:
-		return "RUDP"
-	case LayerTypeSCTP:
-		return "SCTP"
-	case LayerTypeSCTPData:
-		return "SCTPData"
-	case LayerTypeSCTPInit:
-		return "SCTPInit"
-	case LayerTypeSCTPInitAck:
-		return "SCTPInitAck"
-	case LayerTypeSCTPSack:
-		return "SCTPSack"
-	case LayerTypeSCTPHeartbeat:
-		return "SCTPHeartbeat"
-	case LayerTypeSCTPHeartbeatAck:
-		return "SCTPHeartbeatAck"
-	case LayerTypeSCTPAbort:
-		return "SCTPAbort"
-	case LayerTypeSCTPError:
-		return "SCTPError"
-	case LayerTypeSCTPShutdown:
-		return "SCTPShutdown"
-	case LayerTypeSCTPShutdownAck:
-		return "SCTPShutdownAck"
-	case LayerTypeSCTPShutdownComplete:
-		return "SCTPShutdownComplete"
-	case LayerTypeSCTPCookieEcho:
-		return "SCTPCookieEcho"
-	case LayerTypeSCTPCookieAck:
-		return "SCTPCookieAck"
-	case LayerTypeSCTPUnknownChunkType:
-		return "SCTPUnknownChunkType"
-	case LayerTypeICMP:
-		return "ICMP"
-	case LayerTypeDot1Q:
-		return "Dot1Q"
-	case LayerTypeARP:
-		return "ARP"
-	}
-	return strconv.Itoa(int(l))
+type layerTypeMetadata struct {
+  inUse bool
+  name string
+  dec Decoder
 }
 
-// LayerClassLink contains all link layers
-var LayerClassLink = NewLayerClass([]LayerType{LayerTypePPP, LayerTypeEthernet})
+const maxLayerType = 2000;
 
-// LayerClassNetwork contains all network layers
-var LayerClassNetwork = NewLayerClass([]LayerType{LayerTypeIPv4, LayerTypeIPv6})
+var ltMeta [maxLayerType]layerTypeMetadata
+var ltMetaMap map[LayerType]layerTypeMetadata
 
-// LayerClassTransport contains all transport layers
-var LayerClassTransport = NewLayerClass([]LayerType{
-	LayerTypeTCP,
-	LayerTypeUDP,
-	LayerTypeRUDP,
-})
+// RegisterLayerType creates a new layer type and registers it globally.
+// The number passed in must be unique, or a runtime panic will occur.  Numbers
+// 0-999 are reserved for the gopacket library.  Numbers 1000-1999 should be
+// used for common application-specific types, and are very fast.  Any other
+// number (negative or >= 2000) may be used for uncommon application-specific
+// types, and are somewhat slower (they require a map lookup over an array
+// index).
+func RegisterLayerType(num int, name string, dec Decoder) LayerType {
+  if 0 <= num && num < maxLayerType {
+    if ltMeta[num].inUse {
+      panic("Layer type already exists")
+    }
+    ltMeta[num] = layerTypeMetadata{
+      inUse: true,
+      name: name,
+      dec: dec,
+    }
+  } else {
+    if ltMetaMap[LayerType(num)].inUse {
+      panic("Layer type already exists")
+    }
+    ltMetaMap[LayerType(num)] = layerTypeMetadata{
+      inUse: true,
+      name: name,
+      dec: dec,
+    }
+  }
+  return LayerType(num)
+}
 
-// LayerClassApplication contains all application layers
-var LayerClassApplication = NewLayerClass([]LayerType{LayerTypePayload})
+// Decoder returns the decoder associated with this layer type, if there is one.
+func (t LayerType) Decoder() Decoder {
+  if 0 <= int(t) && int(t) < maxLayerType {
+    return ltMeta[int(t)].dec
+  }
+  return ltMetaMap[t].dec
+}
 
-// LayerClassError contains all error layers
-var LayerClassError = NewLayerClass([]LayerType{LayerTypeDecodeFailure, LayerTypeSCTPUnknownChunkType})
+// Decode decodes the given data using the decoder registered with the layer
+// type.
+func (t LayerType) Decode(data []byte) (_ DecodeResult, err error) {
+  if d := t.Decoder(); d != nil {
+    return d.Decode(data)
+  }
+  err = fmt.Errorf("Layer type %v has no associated decoder", t)
+  return
+}
 
-// LayerClassIP contains all IP layers
-var LayerClassIP = NewLayerClass([]LayerType{LayerTypeIPv4, LayerTypeIPv6})
-
-// LayerClassSCTPChunk contains all SCTP chunk type layers
-var LayerClassSCTPChunk = NewLayerClass([]LayerType{
-	LayerTypeSCTPData,
-	LayerTypeSCTPInit,
-	LayerTypeSCTPInitAck,
-	LayerTypeSCTPSack,
-	LayerTypeSCTPHeartbeat,
-	LayerTypeSCTPHeartbeatAck,
-	LayerTypeSCTPAbort,
-	LayerTypeSCTPError,
-	LayerTypeSCTPShutdown,
-	LayerTypeSCTPShutdownAck,
-	LayerTypeSCTPShutdownComplete,
-	LayerTypeSCTPCookieEcho,
-	LayerTypeSCTPCookieAck,
-	LayerTypeSCTPUnknownChunkType,
-})
+// String returns the string associated with this layer type.
+func (t LayerType) String() (s string) {
+  if 0 <= int(t) && int(t) < maxLayerType {
+    s = ltMeta[int(t)].name
+  } else {
+    s = ltMetaMap[t].name
+  }
+  if s == "" {
+    s = strconv.Itoa(int(t))
+  }
+  return
+}

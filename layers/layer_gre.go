@@ -3,6 +3,7 @@
 package gopacket
 
 import (
+"github.com/gconnell/gopacket"
 	"encoding/binary"
 )
 
@@ -24,10 +25,10 @@ type GRERouting struct {
 	RoutingInformation   []byte
 }
 
-// LayerType returns LayerTypeGRE.
-func (g *GRE) LayerType() LayerType { return LayerTypeGRE }
+// LayerType returns gopacket.LayerTypeGRE.
+func (g *GRE) LayerType() gopacket.LayerType { return gopacket.LayerTypeGRE }
 
-func decodeGRE(data []byte) (out DecodeResult, err error) {
+func decodeGRE(data []byte) (out gopacket.DecodeResult, err error) {
 	g := &GRE{
 		ChecksumPresent:   data[0]&0x80 != 0,
 		RoutingPresent:    data[0]&0x40 != 0,

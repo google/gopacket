@@ -4,6 +4,7 @@
 package gopacket
 
 import (
+"github.com/gconnell/gopacket"
 	"encoding/binary"
 )
 
@@ -21,10 +22,10 @@ type TCP struct {
 	sPort, dPort                               []byte
 }
 
-// LayerType returns LayerTypeTCP
-func (t *TCP) LayerType() LayerType { return LayerTypeTCP }
+// LayerType returns gopacket.LayerTypeTCP
+func (t *TCP) LayerType() gopacket.LayerType { return gopacket.LayerTypeTCP }
 
-func decodeTCP(data []byte) (out DecodeResult, err error) {
+func decodeTCP(data []byte) (out gopacket.DecodeResult, err error) {
 	tcp := &TCP{
 		SrcPort:    binary.BigEndian.Uint16(data[0:2]),
 		sPort:      data[0:2],
@@ -53,6 +54,6 @@ func decodeTCP(data []byte) (out DecodeResult, err error) {
 	return
 }
 
-func (t *TCP) TransportFlow() Flow {
-	return Flow{LayerTypeTCP, string(t.sPort), string(t.dPort)}
+func (t *TCP) TransportFlow() gopacket.Flow {
+	return gopacket.Flow{gopacket.LayerTypeTCP, string(t.sPort), string(t.dPort)}
 }

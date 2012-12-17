@@ -4,8 +4,11 @@
 package gopacket
 
 import (
+"github.com/gconnell/gopacket"
 	"encoding/binary"
 )
+
+var LayerTypeARP = gopacket.RegisterLayerType(10, "ARP", gopacket.DecoderFunc(decodeARP))
 
 // ARP is a ARP packet header.
 type ARP struct {
@@ -31,9 +34,9 @@ func (arp *ARP) String() (s string) {
 }
 
 // LayerType returns LayerTypeARP
-func (arp *ARP) LayerType() LayerType { return LayerTypeARP }
+func (arp *ARP) LayerType() gopacket.LayerType { return LayerTypeARP }
 
-func decodeARP(data []byte) (out DecodeResult, err error) {
+func decodeARP(data []byte) (out gopacket.DecodeResult, err error) {
 	arp := &ARP{
 		AddrType:        LinkType(binary.BigEndian.Uint16(data[0:2])),
 		Protocol:        EthernetType(binary.BigEndian.Uint16(data[2:4])),
@@ -48,6 +51,6 @@ func decodeARP(data []byte) (out DecodeResult, err error) {
 
 	out.DecodedLayer = arp
 	out.RemainingBytes = data[8+2*arp.HwAddressSize+2*arp.ProtAddressSize:]
-	out.NextDecoder = decodePayload
+	out.NextDecoder = gopacket.LayerTypePayload
 	return
 }

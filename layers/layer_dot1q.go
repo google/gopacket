@@ -4,6 +4,7 @@
 package gopacket
 
 import (
+"github.com/gconnell/gopacket"
 	"encoding/binary"
 	"fmt"
 )
@@ -16,14 +17,14 @@ type Dot1Q struct {
 	Type           EthernetType
 }
 
-// LayerType returns LayerTypeDot1Q
-func (d *Dot1Q) LayerType() LayerType { return LayerTypeDot1Q }
+// LayerType returns gopacket.LayerTypeDot1Q
+func (d *Dot1Q) LayerType() gopacket.LayerType { return gopacket.LayerTypeDot1Q }
 
 func (v *Dot1Q) String() {
 	fmt.Sprintf("VLAN Prioity:%d Drop:%v Tag:%d", v.Priority, v.DropEligible, v.VLANIdentifier)
 }
 
-func decodeDot1Q(data []byte) (out DecodeResult, err error) {
+func decodeDot1Q(data []byte) (out gopacket.DecodeResult, err error) {
 	d := &Dot1Q{
 		Priority:       (data[2] & 0xE0) >> 13,
 		DropEligible:   data[2]&0x10 != 0,

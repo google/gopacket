@@ -3,6 +3,7 @@
 package gopacket
 
 import (
+"github.com/gconnell/gopacket"
 	"encoding/binary"
 	"fmt"
 )
@@ -15,10 +16,10 @@ type SCTP struct {
 	sPort, dPort     []byte
 }
 
-// LayerType returns LayerTypeSCTP
-func (s *SCTP) LayerType() LayerType { return LayerTypeSCTP }
+// LayerType returns gopacket.LayerTypeSCTP
+func (s *SCTP) LayerType() gopacket.LayerType { return gopacket.LayerTypeSCTP }
 
-func decodeSCTP(data []byte) (out DecodeResult, _ error) {
+func decodeSCTP(data []byte) (out gopacket.DecodeResult, _ error) {
 	sctp := &SCTP{
 		SrcPort:         binary.BigEndian.Uint16(data[:2]),
 		DstPort:         binary.BigEndian.Uint16(data[2:4]),
@@ -35,11 +36,11 @@ func decodeSCTP(data []byte) (out DecodeResult, _ error) {
 }
 
 // TransportFlow returns a flow based on the source and destination SCTP port.
-func (s *SCTP) TransportFlow() Flow {
-	return Flow{LayerTypeSCTP, string(s.sPort), string(s.dPort)}
+func (s *SCTP) TransportFlow() gopacket.Flow {
+	return gopacket.Flow{gopacket.LayerTypeSCTP, string(s.sPort), string(s.dPort)}
 }
 
-func decodeWithSCTPChunkTypePrefix(data []byte) (DecodeResult, error) {
+func decodeWithSCTPChunkTypePrefix(data []byte) (gopacket.DecodeResult, error) {
 	chunkType := SCTPChunkType(data[0])
 	return chunkType.Decode(data)
 }
@@ -101,7 +102,7 @@ type SCTPUnknownChunkType struct {
 	bytes []byte
 }
 
-func decodeSCTPChunkTypeUnknown(data []byte) (out DecodeResult, err error) {
+func decodeSCTPChunkTypeUnknown(data []byte) (out gopacket.DecodeResult, err error) {
 	sc := &SCTPUnknownChunkType{SCTPChunk: decodeSCTPChunk(data)}
 	sc.bytes = data[:sc.ActualLength]
 	out.DecodedLayer = sc
@@ -111,8 +112,8 @@ func decodeSCTPChunkTypeUnknown(data []byte) (out DecodeResult, err error) {
 	return
 }
 
-// LayerType returns LayerTypeSCTPUnknownChunkType.
-func (s *SCTPUnknownChunkType) LayerType() LayerType { return LayerTypeSCTPUnknownChunkType }
+// LayerType returns gopacket.LayerTypeSCTPUnknownChunkType.
+func (s *SCTPUnknownChunkType) LayerType() gopacket.LayerType { return gopacket.LayerTypeSCTPUnknownChunkType }
 
 // Payload returns all bytes in this header, including the decoded Type, Length,
 // and Flags.
@@ -134,15 +135,15 @@ type SCTPData struct {
 	PayloadData                           []byte
 }
 
-// LayerType returns LayerTypeSCTPData.
-func (s *SCTPData) LayerType() LayerType { return LayerTypeSCTPData }
+// LayerType returns gopacket.LayerTypeSCTPData.
+func (s *SCTPData) LayerType() gopacket.LayerType { return gopacket.LayerTypeSCTPData }
 
 // Payload returns the data payload of the SCTP data chunk.
 func (s *SCTPData) Payload() []byte {
 	return s.PayloadData
 }
 
-func decodeSCTPData(data []byte) (out DecodeResult, _ error) {
+func decodeSCTPData(data []byte) (out gopacket.DecodeResult, _ error) {
 	sc := &SCTPData{
 		SCTPChunk:       decodeSCTPChunk(data),
 		Unordered:       data[1]&0x4 != 0,
@@ -176,16 +177,16 @@ type SCTPInit struct {
 	Parameters                      []SCTPInitParameter
 }
 
-// LayerType returns either LayerTypeSCTPInit or LayerTypeSCTPInitAck.
-func (sc *SCTPInit) LayerType() LayerType {
+// LayerType returns either gopacket.LayerTypeSCTPInit or gopacket.LayerTypeSCTPInitAck.
+func (sc *SCTPInit) LayerType() gopacket.LayerType {
 	if sc.Type == SCTPChunkTypeInitAck {
-		return LayerTypeSCTPInitAck
+		return gopacket.LayerTypeSCTPInitAck
 	}
 	// sc.Type == SCTPChunkTypeInit
-	return LayerTypeSCTPInit
+	return gopacket.LayerTypeSCTPInit
 }
 
-func decodeSCTPInit(data []byte) (out DecodeResult, _ error) {
+func decodeSCTPInit(data []byte) (out gopacket.DecodeResult, _ error) {
 	sc := &SCTPInit{
 		SCTPChunk:                      decodeSCTPChunk(data),
 		InitiateTag:                    binary.BigEndian.Uint32(data[4:8]),
@@ -216,12 +217,12 @@ type SCTPSack struct {
 	DuplicateTSNs                  []uint32
 }
 
-// LayerType return LayerTypeSCTPSack
-func (sc *SCTPSack) LayerType() LayerType {
-	return LayerTypeSCTPSack
+// LayerType return gopacket.LayerTypeSCTPSack
+func (sc *SCTPSack) LayerType() gopacket.LayerType {
+	return gopacket.LayerTypeSCTPSack
 }
 
-func decodeSCTPSack(data []byte) (out DecodeResult, _ error) {
+func decodeSCTPSack(data []byte) (out gopacket.DecodeResult, _ error) {
 	sc := &SCTPSack{
 		SCTPChunk:                      decodeSCTPChunk(data),
 		CumulativeTSNAck:               binary.BigEndian.Uint32(data[4:8]),
@@ -270,16 +271,16 @@ type SCTPHeartbeat struct {
 	Parameters []SCTPHeartbeatParameter
 }
 
-// LayerType returns LayerTypeSCTPHeartbeat.
-func (sc *SCTPHeartbeat) LayerType() LayerType {
+// LayerType returns gopacket.LayerTypeSCTPHeartbeat.
+func (sc *SCTPHeartbeat) LayerType() gopacket.LayerType {
 	if sc.Type == SCTPChunkTypeHeartbeatAck {
-		return LayerTypeSCTPHeartbeatAck
+		return gopacket.LayerTypeSCTPHeartbeatAck
 	}
 	// sc.Type == SCTPChunkTypeHeartbeat
-	return LayerTypeSCTPHeartbeat
+	return gopacket.LayerTypeSCTPHeartbeat
 }
 
-func decodeSCTPHeartbeat(data []byte) (out DecodeResult, _ error) {
+func decodeSCTPHeartbeat(data []byte) (out gopacket.DecodeResult, _ error) {
 	sc := &SCTPHeartbeat{
 		SCTPChunk: decodeSCTPChunk(data),
 	}
@@ -304,15 +305,15 @@ type SCTPError struct {
 	Parameters []SCTPErrorParameter
 }
 
-func (sc *SCTPError) LayerType() LayerType {
+func (sc *SCTPError) LayerType() gopacket.LayerType {
 	if sc.Type == SCTPChunkTypeAbort {
-		return LayerTypeSCTPAbort
+		return gopacket.LayerTypeSCTPAbort
 	}
 	// sc.Type == SCTPChunkTypeError
-	return LayerTypeSCTPError
+	return gopacket.LayerTypeSCTPError
 }
 
-func decodeSCTPError(data []byte) (out DecodeResult, _ error) {
+func decodeSCTPError(data []byte) (out gopacket.DecodeResult, _ error) {
 	// remarkably similarot decodeSCTPHeartbeat ;)
 	sc := &SCTPError{
 		SCTPChunk: decodeSCTPChunk(data),
@@ -335,10 +336,10 @@ type SCTPShutdown struct {
 	CumulativeTSNAck uint32
 }
 
-// LayerType returns LayerTypeSCTPShutdown.
-func (sc *SCTPShutdown) LayerType() LayerType { return LayerTypeSCTPShutdown }
+// LayerType returns gopacket.LayerTypeSCTPShutdown.
+func (sc *SCTPShutdown) LayerType() gopacket.LayerType { return gopacket.LayerTypeSCTPShutdown }
 
-func decodeSCTPShutdown(data []byte) (out DecodeResult, _ error) {
+func decodeSCTPShutdown(data []byte) (out gopacket.DecodeResult, _ error) {
 	sc := &SCTPShutdown{
 		SCTPChunk:        decodeSCTPChunk(data),
 		CumulativeTSNAck: binary.BigEndian.Uint32(data[4:8]),
@@ -354,10 +355,10 @@ type SCTPShutdownAck struct {
 	SCTPChunk
 }
 
-// LayerType returns LayerTypeSCTPShutdownAck.
-func (sc *SCTPShutdownAck) LayerType() LayerType { return LayerTypeSCTPShutdownAck }
+// LayerType returns gopacket.LayerTypeSCTPShutdownAck.
+func (sc *SCTPShutdownAck) LayerType() gopacket.LayerType { return gopacket.LayerTypeSCTPShutdownAck }
 
-func decodeSCTPShutdownAck(data []byte) (out DecodeResult, _ error) {
+func decodeSCTPShutdownAck(data []byte) (out gopacket.DecodeResult, _ error) {
 	sc := &SCTPShutdownAck{
 		SCTPChunk: decodeSCTPChunk(data),
 	}
@@ -373,10 +374,10 @@ type SCTPCookieEcho struct {
 	Cookie []byte
 }
 
-// LayerType returns LayerTypeSCTPCookieEcho.
-func (sc *SCTPCookieEcho) LayerType() LayerType { return LayerTypeSCTPCookieEcho }
+// LayerType returns gopacket.LayerTypeSCTPCookieEcho.
+func (sc *SCTPCookieEcho) LayerType() gopacket.LayerType { return gopacket.LayerTypeSCTPCookieEcho }
 
-func decodeSCTPCookieEcho(data []byte) (out DecodeResult, _ error) {
+func decodeSCTPCookieEcho(data []byte) (out gopacket.DecodeResult, _ error) {
 	sc := &SCTPCookieEcho{
 		SCTPChunk: decodeSCTPChunk(data),
 	}
@@ -393,17 +394,17 @@ type SCTPEmptyLayer struct {
 	SCTPChunk
 }
 
-// LayerType returns either LayerTypeSCTPShutdownComplete or
+// LayerType returns either gopacket.LayerTypeSCTPShutdownComplete or
 // LayerTypeSCTPCookieAck.
-func (sc *SCTPEmptyLayer) LayerType() LayerType {
+func (sc *SCTPEmptyLayer) LayerType() gopacket.LayerType {
 	if sc.Type == SCTPChunkTypeShutdownComplete {
-		return LayerTypeSCTPShutdownComplete
+		return gopacket.LayerTypeSCTPShutdownComplete
 	}
 	// sc.Type == SCTPChunkTypeCookieAck
-	return LayerTypeSCTPCookieAck
+	return gopacket.LayerTypeSCTPCookieAck
 }
 
-func decodeSCTPEmptyLayer(data []byte) (out DecodeResult, _ error) {
+func decodeSCTPEmptyLayer(data []byte) (out gopacket.DecodeResult, _ error) {
 	sc := &SCTPEmptyLayer{
 		SCTPChunk: decodeSCTPChunk(data),
 	}

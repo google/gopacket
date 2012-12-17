@@ -4,6 +4,7 @@
 package gopacket
 
 import (
+"github.com/gconnell/gopacket"
 	"fmt"
 )
 
@@ -26,7 +27,7 @@ const (
 	EthernetTypeCTP            EthernetType = 0x9000
 )
 
-func (e EthernetType) Decode(data []byte) (out DecodeResult, err error) {
+func (e EthernetType) Decode(data []byte) (out gopacket.DecodeResult, err error) {
 	switch e {
 	case EthernetTypeLLC:
 		return decodeLLC(data)
@@ -65,7 +66,7 @@ const (
 	IPProtocolGRE     IPProtocol = 47
 )
 
-func (ip IPProtocol) Decode(data []byte) (out DecodeResult, err error) {
+func (ip IPProtocol) Decode(data []byte) (out gopacket.DecodeResult, err error) {
 	switch ip {
 	case IPProtocolTCP:
 		return decodeTCP(data)
@@ -123,7 +124,7 @@ const (
 	LinkTypeLinuxLAPD      LinkType = 177
 )
 
-func (l LinkType) Decode(data []byte) (out DecodeResult, err error) {
+func (l LinkType) Decode(data []byte) (out gopacket.DecodeResult, err error) {
 	switch l {
 	case LinkTypeEthernet:
 		return decodeEthernet(data)
@@ -147,7 +148,7 @@ const (
 )
 
 // Decode decodes a PPPoE payload, based on the PPPoECode.
-func (p PPPoECode) Decode(data []byte) (_ DecodeResult, err error) {
+func (p PPPoECode) Decode(data []byte) (_ gopacket.DecodeResult, err error) {
 	switch p {
 	case PPPoECodeSession:
 		return decodePPP(data)
@@ -165,7 +166,7 @@ const (
 	PPPTypeIPv6 PPPType = 0x0057
 )
 
-func (p PPPType) Decode(data []byte) (out DecodeResult, err error) {
+func (p PPPType) Decode(data []byte) (out gopacket.DecodeResult, err error) {
 	switch p {
 	case PPPTypeIPv4:
 		return decodeIPv4(data)
@@ -195,7 +196,7 @@ const (
 	SCTPChunkTypeShutdownComplete SCTPChunkType = 14
 )
 
-func (s SCTPChunkType) Decode(data []byte) (_ DecodeResult, err error) {
+func (s SCTPChunkType) Decode(data []byte) (_ gopacket.DecodeResult, err error) {
 	switch s {
 	case SCTPChunkTypeData:
 		return decodeSCTPData(data)

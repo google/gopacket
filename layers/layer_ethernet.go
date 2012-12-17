@@ -4,6 +4,7 @@
 package gopacket
 
 import (
+"github.com/gconnell/gopacket"
 	"encoding/binary"
 	"errors"
 )
@@ -20,14 +21,14 @@ type Ethernet struct {
 	Length uint16
 }
 
-// LayerType returns LayerTypeEthernet
-func (e *Ethernet) LayerType() LayerType { return LayerTypeEthernet }
+// LayerType returns gopacket.LayerTypeEthernet
+func (e *Ethernet) LayerType() gopacket.LayerType { return gopacket.LayerTypeEthernet }
 
-func (e *Ethernet) LinkFlow() Flow {
-	return Flow{LayerTypeEthernet, string(e.SrcMAC), string(e.DstMAC)}
+func (e *Ethernet) LinkFlow() gopacket.Flow {
+	return gopacket.Flow{gopacket.LayerTypeEthernet, string(e.SrcMAC), string(e.DstMAC)}
 }
 
-func decodeEthernet(data []byte) (out DecodeResult, err error) {
+func decodeEthernet(data []byte) (out gopacket.DecodeResult, err error) {
 	if len(data) < 14 {
 		err = errors.New("Ethernet packet too small")
 		return

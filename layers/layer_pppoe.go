@@ -3,6 +3,7 @@
 package gopacket
 
 import (
+"github.com/gconnell/gopacket"
 	"encoding/binary"
 )
 
@@ -15,13 +16,13 @@ type PPPoE struct {
 	Length    uint16
 }
 
-// LayerType returns LayerTypePPPoE.
-func (p *PPPoE) LayerType() LayerType {
-	return LayerTypePPPoE
+// LayerType returns gopacket.LayerTypePPPoE.
+func (p *PPPoE) LayerType() gopacket.LayerType {
+	return gopacket.LayerTypePPPoE
 }
 
 // decodePPPoE decodes the PPPoE header (see http://tools.ietf.org/html/rfc2516).
-func decodePPPoE(data []byte) (out DecodeResult, err error) {
+func decodePPPoE(data []byte) (out gopacket.DecodeResult, err error) {
 	pppoe := &PPPoE{
 		Version:   data[0] >> 4,
 		Type:      data[0] & 0x0F,

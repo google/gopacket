@@ -3,6 +3,7 @@
 package gopacket
 
 import (
+"github.com/gconnell/gopacket"
 	"encoding/binary"
 )
 
@@ -16,8 +17,8 @@ type LLC struct {
 	Control uint16
 }
 
-// LayerType returns LayerTypeLLC.
-func (l *LLC) LayerType() LayerType { return LayerTypeLLC }
+// LayerType returns gopacket.LayerTypeLLC.
+func (l *LLC) LayerType() gopacket.LayerType { return gopacket.LayerTypeLLC }
 
 // SNAP is used inside LLC.  See
 // http://standards.ieee.org/getieee802/download/802-2001.pdf.
@@ -30,10 +31,10 @@ type SNAP struct {
 	Type               EthernetType
 }
 
-// LayerType returns LayerTypeSNAP.
-func (s *SNAP) LayerType() LayerType { return LayerTypeSNAP }
+// LayerType returns gopacket.LayerTypeSNAP.
+func (s *SNAP) LayerType() gopacket.LayerType { return gopacket.LayerTypeSNAP }
 
-func decodeLLC(data []byte) (out DecodeResult, err error) {
+func decodeLLC(data []byte) (out gopacket.DecodeResult, err error) {
 	l := &LLC{
 		DSAP:    data[0] & 0xFE,
 		IG:      data[0]&0x1 != 0,
@@ -56,7 +57,7 @@ func decodeLLC(data []byte) (out DecodeResult, err error) {
 	return
 }
 
-func decodeSNAP(data []byte) (out DecodeResult, err error) {
+func decodeSNAP(data []byte) (out gopacket.DecodeResult, err error) {
 	s := &SNAP{
 		OrganizationalCode: data[:3],
 		Type:               EthernetType(binary.BigEndian.Uint16(data[3:5])),

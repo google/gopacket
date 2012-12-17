@@ -4,6 +4,7 @@
 package gopacket
 
 import (
+"github.com/gconnell/gopacket"
 	"encoding/binary"
 )
 
@@ -16,10 +17,10 @@ type UDP struct {
 	sPort, dPort []byte
 }
 
-// LayerType returns LayerTypeUDP
-func (u *UDP) LayerType() LayerType { return LayerTypeUDP }
+// LayerType returns gopacket.LayerTypeUDP
+func (u *UDP) LayerType() gopacket.LayerType { return gopacket.LayerTypeUDP }
 
-func decodeUDP(data []byte) (out DecodeResult, err error) {
+func decodeUDP(data []byte) (out gopacket.DecodeResult, err error) {
 	udp := &UDP{
 		SrcPort:  binary.BigEndian.Uint16(data[0:2]),
 		sPort:    data[0:2],
@@ -35,6 +36,6 @@ func decodeUDP(data []byte) (out DecodeResult, err error) {
 	return
 }
 
-func (u *UDP) TransportFlow() Flow {
-	return Flow{LayerTypeUDP, string(u.sPort), string(u.dPort)}
+func (u *UDP) TransportFlow() gopacket.Flow {
+	return gopacket.Flow{gopacket.LayerTypeUDP, string(u.sPort), string(u.dPort)}
 }

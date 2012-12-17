@@ -40,10 +40,10 @@ type Decoder interface {
 	Decode([]byte) (DecodeResult, error)
 }
 
-// decoderFunc is an implementation of decoder that's a simple function.
-type decoderFunc func([]byte) (DecodeResult, error)
+// DecoderFunc is an implementation of decoder that's a simple function.
+type DecoderFunc func([]byte) (DecodeResult, error)
 
-func (d decoderFunc) Decode(data []byte) (DecodeResult, error) {
+func (d DecoderFunc) Decode(data []byte) (DecodeResult, error) {
 	// function, call thyself.
 	return d(data)
 }
@@ -61,6 +61,9 @@ func (d *DecodeFailure) Payload() []byte { return d.data }
 // Error returns the error encountered during decoding.
 func (d *DecodeFailure) Error() error { return d.err }
 
+var LayerTypeDecodeFailure = RegisterLayerType(0, "Decode Failure", DecoderFunc(decodeUnknown))
+var LayerTypePayload = RegisterLayerType(1, "Payload", DecoderFunc(decodePayload))
+
 // LayerType returns LayerTypeDecodeFailure
 func (d *DecodeFailure) LayerType() LayerType { return LayerTypeDecodeFailure }
 
@@ -72,7 +75,7 @@ func decodeUnknown(data []byte) (out DecodeResult, err error) {
 }
 
 // decodePayload decodes data by returning it all in a Payload layer.
-var decodePayload decoderFunc = func(data []byte) (out DecodeResult, err error) {
+func decodePayload(data []byte) (out DecodeResult, err error) {
 	payload := &Payload{Data: data}
 	out.DecodedLayer = payload
 	out.ApplicationLayer = payload

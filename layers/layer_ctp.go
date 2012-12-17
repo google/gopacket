@@ -3,6 +3,7 @@
 package gopacket
 
 import (
+"github.com/gconnell/gopacket"
 	"encoding/binary"
 	"fmt"
 	"net"
@@ -24,8 +25,8 @@ type CTP struct {
 	SkipCount uint16
 }
 
-// LayerType returns LayerTypeCTP.
-func (c *CTP) LayerType() LayerType { return LayerTypeCTP }
+// LayerType returns gopacket.LayerTypeCTP.
+func (c *CTP) LayerType() gopacket.LayerType { return gopacket.LayerTypeCTP }
 
 // CTPForwardData is the ForwardData layer inside CTP.  See CTP's docs for more
 // details.
@@ -34,8 +35,8 @@ type CTPForwardData struct {
 	ForwardAddress []byte
 }
 
-// LayerType returns LayerTypeCTPForwardData.
-func (c *CTPForwardData) LayerType() LayerType { return LayerTypeCTPForwardData }
+// LayerType returns gopacket.LayerTypeCTPForwardData.
+func (c *CTPForwardData) LayerType() gopacket.LayerType { return gopacket.LayerTypeCTPForwardData }
 
 // ForwardEndpoint returns the CTPForwardData ForwardAddress as an endpoint.
 func (c *CTPForwardData) ForwardEndpoint() (e Endpoint) {
@@ -50,13 +51,13 @@ type CTPReply struct {
 	Data          []byte
 }
 
-// LayerType returns LayerTypeCTPReply.
-func (c *CTPReply) LayerType() LayerType { return LayerTypeCTPReply }
+// LayerType returns gopacket.LayerTypeCTPReply.
+func (c *CTPReply) LayerType() gopacket.LayerType { return gopacket.LayerTypeCTPReply }
 
 // Payload returns the CTP reply's Data bytes.
 func (c *CTPReply) Payload() []byte { return c.Data }
 
-func decodeCTP(data []byte) (out DecodeResult, err error) {
+func decodeCTP(data []byte) (out gopacket.DecodeResult, err error) {
 	c := &CTP{
 		SkipCount: binary.LittleEndian.Uint16(data[:2]),
 	}
@@ -72,7 +73,7 @@ func decodeCTP(data []byte) (out DecodeResult, err error) {
 
 // decodeCTPFromFunctionType reads in the first 2 bytes to determine the CTP
 // layer type to decode next, then decodes based on that.
-func decodeCTPFromFunctionType(data []byte) (out DecodeResult, err error) {
+func decodeCTPFromFunctionType(data []byte) (out gopacket.DecodeResult, err error) {
 	function := CTPFunction(binary.LittleEndian.Uint16(data[:2]))
 	switch function {
 	case CTPFunctionReply:

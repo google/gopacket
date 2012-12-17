@@ -3,6 +3,7 @@
 package gopacket
 
 import (
+"github.com/gconnell/gopacket"
 	"encoding/binary"
 	"errors"
 )
@@ -15,8 +16,8 @@ type MPLS struct {
 	TTL          uint8
 }
 
-// LayerType returns LayerTypeMPLS.
-func (m *MPLS) LayerType() LayerType { return LayerTypeMPLS }
+// LayerType returns gopacket.LayerTypeMPLS.
+func (m *MPLS) LayerType() gopacket.LayerType { return gopacket.LayerTypeMPLS }
 
 // ProtocolGuessingDecoder attempts to guess the protocol of the bytes it's
 // given, then decode the packet accordingly.  Its algorithm for guessing is:
@@ -25,7 +26,7 @@ func (m *MPLS) LayerType() LayerType { return LayerTypeMPLS }
 //  If the packet starts with nibble 0x6: IPv6
 type ProtocolGuessingDecoder struct{}
 
-func (ProtocolGuessingDecoder) Decode(data []byte) (_ DecodeResult, err error) {
+func (ProtocolGuessingDecoder) Decode(data []byte) (_ gopacket.DecodeResult, err error) {
 	ethPrefix := [3]byte{data[0], data[1], data[2]}
 	if _, ok := ValidMACPrefixMap[ethPrefix]; ok {
 		return decodeEthernet(data)
@@ -48,7 +49,7 @@ func (ProtocolGuessingDecoder) Decode(data []byte) (_ DecodeResult, err error) {
 // encapsulates a specific protocol, you may reset this.
 var MPLSPayloadDecoder Decoder = ProtocolGuessingDecoder{}
 
-var decodeMPLS decoderFunc = func(data []byte) (out DecodeResult, err error) {
+var decodeMPLS decoderFunc = func(data []byte) (out gopacket.DecodeResult, err error) {
 	decoded := binary.BigEndian.Uint32(data[:4])
 	out.DecodedLayer = &MPLS{
 		Label:        decoded >> 12,

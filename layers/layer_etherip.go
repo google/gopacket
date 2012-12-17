@@ -3,6 +3,7 @@
 package gopacket
 
 import (
+"github.com/gconnell/gopacket"
 	"encoding/binary"
 )
 
@@ -12,10 +13,10 @@ type EtherIP struct {
 	Reserved uint16
 }
 
-// LayerType returns LayerTypeEtherIP.
-func (e *EtherIP) LayerType() LayerType { return LayerTypeEtherIP }
+// LayerType returns gopacket.LayerTypeEtherIP.
+func (e *EtherIP) LayerType() gopacket.LayerType { return gopacket.LayerTypeEtherIP }
 
-func decodeEtherIP(data []byte) (out DecodeResult, _ error) {
+func decodeEtherIP(data []byte) (out gopacket.DecodeResult, _ error) {
 	out.DecodedLayer = &EtherIP{
 		Version:  data[0] >> 4,
 		Reserved: binary.BigEndian.Uint16(data[:2]) & 0x0fff,

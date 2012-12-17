@@ -60,7 +60,7 @@ func NewLayerClassMap(types []LayerType) LayerClassMap {
 // it creates based on which types are passed in.
 func NewLayerClass(types []LayerType) LayerClass {
 	for _, typ := range types {
-		if typ > MaximumLayerType {
+		if typ > maxLayerType {
 			// NewLayerClassSlice could create a very large object, so instead create
 			// a map.
 			return NewLayerClassMap(types)

@@ -4,6 +4,7 @@
 package gopacket
 
 import (
+"github.com/gconnell/gopacket"
 	"encoding/binary"
 	"fmt"
 )
@@ -17,10 +18,10 @@ type ICMP struct {
 	Seq      uint16
 }
 
-// LayerType returns LayerTypeICMP
-func (i *ICMP) LayerType() LayerType { return LayerTypeICMP }
+// LayerType returns gopacket.LayerTypeICMP
+func (i *ICMP) LayerType() gopacket.LayerType { return gopacket.LayerTypeICMP }
 
-func decodeICMP(data []byte) (out DecodeResult, err error) {
+func decodeICMP(data []byte) (out gopacket.DecodeResult, err error) {
 	out.DecodedLayer = &ICMP{
 		Type:     data[0],
 		Code:     data[1],

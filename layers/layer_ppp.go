@@ -3,6 +3,7 @@
 package gopacket
 
 import (
+"github.com/gconnell/gopacket"
 	"encoding/binary"
 	"errors"
 )
@@ -12,11 +13,11 @@ type PPP struct {
 	PPPType PPPType
 }
 
-// LayerType returns LayerTypePPP
-func (p *PPP) LayerType() LayerType { return LayerTypePPP }
-func (p *PPP) LinkFlow() Flow       { return PPPFlow }
+// LayerType returns gopacket.LayerTypePPP
+func (p *PPP) LayerType() gopacket.LayerType { return gopacket.LayerTypePPP }
+func (p *PPP) LinkFlow() gopacket.Flow       { return PPPgopacket.Flow }
 
-func decodePPP(data []byte) (out DecodeResult, err error) {
+func decodePPP(data []byte) (out gopacket.DecodeResult, err error) {
 	ppp := &PPP{}
 	if data[0]&0x1 == 0 {
 		if data[1]&0x1 == 0 {
