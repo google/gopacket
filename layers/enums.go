@@ -30,21 +30,21 @@ const (
 func (e EthernetType) Decode(data []byte) (out gopacket.DecodeResult, err error) {
 	switch e {
 	case EthernetTypeLLC:
-		return LayerTypeLLC.Decode(data)
+		return decodeLLC(data)
 	case EthernetTypeIPv4:
-		return LayerTypeIPv4.Decode(data)
+		return decodeIPv4(data)
 	case EthernetTypeIPv6:
-		return LayerTypeIPv6.Decode(data)
+		return decodeIPv6(data)
 	case EthernetTypeARP:
-		return LayerTypeARP.Decode(data)
+		return decodeARP(data)
 	case EthernetTypeDot1Q:
-		return LayerTypeDot1Q.Decode(data)
+		return decodeDot1Q(data)
 	case EthernetTypePPPoEDiscovery, EthernetTypePPPoESession:
-		return LayerTypePPPoE.Decode(data)
+		return decodePPPoE(data)
 	case EthernetTypeCTP:
-		return LayerTypeCTP.Decode(data)
+		return decodeCTP(data)
 	case EthernetTypeCDP:
-		return LayerTypeCDP.Decode(data)
+		return decodeCDP(data)
 	}
 	err = fmt.Errorf("Unsupported ethernet type %v", e)
 	return
@@ -69,23 +69,23 @@ const (
 func (ip IPProtocol) Decode(data []byte) (out gopacket.DecodeResult, err error) {
 	switch ip {
 	case IPProtocolTCP:
-		return LayerTypeTCP.Decode(data)
+		return decodeTCP(data)
 	case IPProtocolUDP:
-		return LayerTypeUDP.Decode(data)
+		return decodeUDP(data)
 	case IPProtocolICMP:
-		return LayerTypeICMP.Decode(data)
+		return decodeICMP(data)
 	case IPProtocolSCTP:
-		return LayerTypeSCTP.Decode(data)
+		return decodeSCTP(data)
 	case IPProtocolIPv6:
-		return LayerTypeIPv6.Decode(data)
+		return decodeIPv6(data)
 	case IPProtocolIPIP:
-		return LayerTypeIPv4.Decode(data)
+		return decodeIPv4(data)
 	case IPProtocolEtherIP:
-		return LayerTypeEtherIP.Decode(data)
+		return decodeEtherIP(data)
 	case IPProtocolRUDP:
-		return LayerTypeRUDP.Decode(data)
+		return decodeRUDP(data)
 	case IPProtocolGRE:
-		return LayerTypeGRE.Decode(data)
+		return decodeGRE(data)
 	}
 	err = fmt.Errorf("Unsupported IP protocol %v", ip)
 	return
@@ -127,9 +127,9 @@ const (
 func (l LinkType) Decode(data []byte) (out gopacket.DecodeResult, err error) {
 	switch l {
 	case LinkTypeEthernet:
-		return LayerTypeEthernet.Decode(data)
+		return decodeEthernet(data)
 	case LinkTypePPP:
-		return LayerTypePPP.Decode(data)
+		return decodePPP(data)
 	}
 	err = fmt.Errorf("Unsupported link-layer type %v", l)
 	return
@@ -151,7 +151,7 @@ const (
 func (p PPPoECode) Decode(data []byte) (_ gopacket.DecodeResult, err error) {
 	switch p {
 	case PPPoECodeSession:
-		return LayerTypePPP.Decode(data)
+		return decodePPP(data)
 	}
 	err = fmt.Errorf("Cannot currently handle PPPoE error code %v", p)
 	return
@@ -169,9 +169,9 @@ const (
 func (p PPPType) Decode(data []byte) (out gopacket.DecodeResult, err error) {
 	switch p {
 	case PPPTypeIPv4:
-		return LayerTypeIPv4.Decode(data)
+		return decodeIPv4(data)
 	case PPPTypeIPv6:
-		return LayerTypeIPv6.Decode(data)
+		return decodeIPv6(data)
 	}
 	err = fmt.Errorf("Unsupported PPP type %v", p)
 	return
