@@ -27,16 +27,17 @@ The following code can be used to read in data from a live device, in this case
 
  if handle, err := pcap.OpenLive("eth0", 1600, true, 0); err != nil {
    panic(err)
- } else if err := handle.SetBPFFilter("tcp and port 80"); err != nil {
+ } else if err := handle.SetBPFFilter("tcp and port 80"); err != nil {  // optional
    panic(err)
  } else {
+   packetSource := gopacket.NewPacketSource(handle, handle.LinkType())
    for {
-     packet, err := handle.Next()
-     if err != nil {
-       fmt.Println("Error reading in packet:", err)
+     packet, err := packetSource.NextPacket()
+     if err != {
+       fmt.Println("ERROR:", err)
        continue
      }
-     handlePacket(packet)
+     handlePacket(packet)  // Do something with a packet here.
    }
  }
 

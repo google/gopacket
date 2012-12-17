@@ -114,11 +114,21 @@ func (r *Ring) ReadPacketData() (data []byte, ci gopacket.CaptureInfo, err error
 type ClusterType C.cluster_type
 
 const (
-	ClusterPerFlow          ClusterType = C.cluster_per_flow
-	ClusterRoundRobin       ClusterType = C.cluster_round_robin
-	ClusterPerFlow2Tuple    ClusterType = C.cluster_per_flow_2_tuple
-	ClusterPerFlow4Tuple    ClusterType = C.cluster_per_flow_4_tuple
-	ClusterPerFlow5Tuple    ClusterType = C.cluster_per_flow_5_tuple
+	// ClusterPerFlow clusters by <src ip, src port, dst ip, dst port, proto,
+	// vlan>
+	ClusterPerFlow ClusterType = C.cluster_per_flow
+	// ClusterRoundRobin round-robins packets between applications, ignoring
+	// packet information.
+	ClusterRoundRobin ClusterType = C.cluster_round_robin
+	// ClusterPerFlow2Tuple clusters by <src ip, dst ip>
+	ClusterPerFlow2Tuple ClusterType = C.cluster_per_flow_2_tuple
+	// ClusterPerFlow4Tuple clusters by <src ip, src port, dst ip, dst port>
+	ClusterPerFlow4Tuple ClusterType = C.cluster_per_flow_4_tuple
+	// ClusterPerFlow5Tuple clusters by <src ip, src port, dst ip, dst port,
+	// proto>
+	ClusterPerFlow5Tuple ClusterType = C.cluster_per_flow_5_tuple
+	// ClusterPerFlowTCP5Tuple acts like ClusterPerFlow5Tuple for TCP packets and
+	// like ClusterPerFlow2Tuple for all other packets.
 	ClusterPerFlowTCP5Tuple ClusterType = C.cluster_per_flow_tcp_5_tuple
 )
 

@@ -66,19 +66,15 @@ if [ ! -z "$GEN" ]; then
 fi
 
 # First, make sure everything is formatted, compiles, and tests pass.
-go fmt
+go fmt ./...
 gofmt -w gen.go
 go build gen.go
-go test
+go test ./...
 pushd pcap
-go fmt
-go test
 gofmt -w benchmark.go
 go build benchmark.go
 popd
 pushd pfring
-go fmt
-go test
 gofmt -w simple.go
 go build simple.go
 popd
