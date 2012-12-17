@@ -80,19 +80,16 @@ func (n NextResult) Error() string {
 func (r *Ring) NextPacketData() (data []byte, ci gopacket.CaptureInfo, err error) {
 	var pkthdr C.struct_pfring_pkthdr
 
-	var buf unsafe.Pointer = C.malloc(C.size_t(r.snaplen))
-	var buf_ptr *C.u_char = (*C.u_char)(buf)
-	defer C.free(buf)
+	data = make([]byte, r.snaplen)
+	// This tricky buf_ptr points to the start of our slice data, so pfring_recv
+	// will actually write directly into our Go slice.  Nice!
+	var buf_ptr *C.u_char = (*C.u_char)(unsafe.Pointer(&data[0]))
 	result := NextResult(C.pfring_recv(r.cptr, &buf_ptr, C.u_int(r.snaplen), &pkthdr, 1))
 	if result != NextOk {
 		err = result
+		data = nil
 		return
 	}
-	// BUG(gconnell):  This currently does an extra copy of packet data... if we
-	// can figure out a way to pass a pointer to a slice address space into
-	// pfring_recv above, the pfring will write into the slice, instead of us
-	// having to copy it.
-	data = C.GoBytes(buf, C.int(pkthdr.caplen))
 	ci.Populated = true
 	ci.Timestamp = time.Unix(int64(pkthdr.ts.tv_sec), int64(pkthdr.ts.tv_usec))
 	ci.CaptureLength = int(pkthdr.caplen)
