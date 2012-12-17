@@ -70,10 +70,21 @@ const (
 	NextNoPacketNonblocking NextResult = 0
 	NextError               NextResult = -1
 	NextOk                  NextResult = 1
+	NextNotEnabled          NextResult = -7
 )
 
 // NextResult implements the error interface.
 func (n NextResult) Error() string {
+	switch n {
+	case NextNoPacketNonblocking:
+		return "No packet available, nonblocking socket"
+	case NextError:
+		return "Generic error"
+	case NextOk:
+		return "Success (not an error)"
+	case NextNotEnabled:
+		return "Ring not enabled"
+	}
 	return strconv.Itoa(int(n))
 }
 
@@ -201,15 +212,15 @@ func (r *Ring) Stats() (s Stats, err error) {
 type Direction C.packet_direction
 
 const (
-	// TransmitOnly will only capture packets transmitted by the ring's
+	// TXOnly will only capture packets transmitted by the ring's
 	// interface(s).
-	TransmitOnly Direction = C.tx_only_direction
-	// ReceiveOnly will only capture packets received by the ring's
+	TXOnly Direction = C.tx_only_direction
+	// RXOnly will only capture packets received by the ring's
 	// interface(s).
-	ReceiveOnly Direction = C.rx_only_direction
-	// ReceiveAndTransmit will capture both received and transmitted packets on
+	RXOnly Direction = C.rx_only_direction
+	// RXAndTX will capture both received and transmitted packets on
 	// the ring's interface(s).
-	ReceiveAndTransmit Direction = C.rx_and_tx_direction
+	RXAndTX Direction = C.rx_and_tx_direction
 )
 
 // SetDirection sets which packets should be captured by the ring.

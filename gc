@@ -67,6 +67,8 @@ popd
 pushd pfring
 go fmt
 go test
+gofmt -w simple.go
+go build simple.go
 popd
 
 # Run our initial commit
