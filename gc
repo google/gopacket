@@ -19,17 +19,22 @@
 # expected.
 
 function Usage {
-  echo "USAGE:  $0 [--benchmark] <git commit flags...>"
+  echo "USAGE:  $0 [--benchmark] [--gen] <git commit flags...>"
   echo
   echo "Note, some 'git commit' flags are necessary, if all else fails, pass in -a"
   exit 1
 }
 
 BENCH=""
-if [ ! -z "$1" ]; then
+GEN=""
+while [ ! -z "$1" ]; do
   case "$1" in
     "--benchmark")
       BENCH="yes"
+      shift
+      ;;
+    "--gen")
+      GEN="yes"
       shift
       ;;
     "--help")
@@ -41,8 +46,11 @@ if [ ! -z "$1" ]; then
     "help")
       Usage
       ;;
+    *)
+      break
+      ;;
   esac
-fi
+done
 
 if [ "$#" -eq "0" ]; then
   Usage
@@ -52,6 +60,10 @@ set -e
 set -x
 
 cd $(dirname $0)
+
+if [ ! -z "$GEN" ]; then
+  go run gen.go | gofmt > valid_mac_prefixes.go
+fi
 
 # First, make sure everything is formatted, compiles, and tests pass.
 go fmt
