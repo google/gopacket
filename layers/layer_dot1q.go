@@ -4,9 +4,9 @@
 package gopacket
 
 import (
-"github.com/gconnell/gopacket"
 	"encoding/binary"
 	"fmt"
+	"github.com/gconnell/gopacket"
 )
 
 // Dot1Q is the packet layer for 802.1Q VLAN headers.
@@ -18,7 +18,7 @@ type Dot1Q struct {
 }
 
 // LayerType returns gopacket.LayerTypeDot1Q
-func (d *Dot1Q) LayerType() gopacket.LayerType { return gopacket.LayerTypeDot1Q }
+func (d *Dot1Q) LayerType() gopacket.LayerType { return LayerTypeDot1Q }
 
 func (v *Dot1Q) String() {
 	fmt.Sprintf("VLAN Prioity:%d Drop:%v Tag:%d", v.Priority, v.DropEligible, v.VLANIdentifier)

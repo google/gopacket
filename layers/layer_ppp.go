@@ -3,9 +3,9 @@
 package gopacket
 
 import (
-"github.com/gconnell/gopacket"
 	"encoding/binary"
 	"errors"
+	"github.com/gconnell/gopacket"
 )
 
 // PPP is the layer for PPP encapsulation headers.
@@ -14,7 +14,7 @@ type PPP struct {
 }
 
 // LayerType returns gopacket.LayerTypePPP
-func (p *PPP) LayerType() gopacket.LayerType { return gopacket.LayerTypePPP }
+func (p *PPP) LayerType() gopacket.LayerType { return LayerTypePPP }
 func (p *PPP) LinkFlow() gopacket.Flow       { return PPPgopacket.Flow }
 
 func decodePPP(data []byte) (out gopacket.DecodeResult, err error) {

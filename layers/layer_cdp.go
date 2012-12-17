@@ -3,9 +3,9 @@
 package gopacket
 
 import (
-"github.com/gconnell/gopacket"
 	"encoding/binary"
 	"fmt"
+	"github.com/gconnell/gopacket"
 )
 
 // CDPType is the type of each TLV value in a CDP packet.
@@ -21,7 +21,7 @@ type CDP struct {
 }
 
 // LayerType returns gopacket.LayerTypeCDP.
-func (c *CDP) LayerType() gopacket.LayerType { return gopacket.LayerTypeCDP }
+func (c *CDP) LayerType() gopacket.LayerType { return LayerTypeCDP }
 
 // CDPValue is a TLV value inside a CDP packet layer.
 type CDPValue struct {

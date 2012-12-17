@@ -4,8 +4,8 @@
 package gopacket
 
 import (
-"github.com/gconnell/gopacket"
 	"encoding/binary"
+	"github.com/gconnell/gopacket"
 )
 
 // TCP is the layer for TCP headers.
@@ -23,7 +23,7 @@ type TCP struct {
 }
 
 // LayerType returns gopacket.LayerTypeTCP
-func (t *TCP) LayerType() gopacket.LayerType { return gopacket.LayerTypeTCP }
+func (t *TCP) LayerType() gopacket.LayerType { return LayerTypeTCP }
 
 func decodeTCP(data []byte) (out gopacket.DecodeResult, err error) {
 	tcp := &TCP{

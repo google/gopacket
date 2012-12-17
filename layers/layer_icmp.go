@@ -4,9 +4,9 @@
 package gopacket
 
 import (
-"github.com/gconnell/gopacket"
 	"encoding/binary"
 	"fmt"
+	"github.com/gconnell/gopacket"
 )
 
 // ICMP is the layer for ICMP packet data.
@@ -19,7 +19,7 @@ type ICMP struct {
 }
 
 // LayerType returns gopacket.LayerTypeICMP
-func (i *ICMP) LayerType() gopacket.LayerType { return gopacket.LayerTypeICMP }
+func (i *ICMP) LayerType() gopacket.LayerType { return LayerTypeICMP }
 
 func decodeICMP(data []byte) (out gopacket.DecodeResult, err error) {
 	out.DecodedLayer = &ICMP{

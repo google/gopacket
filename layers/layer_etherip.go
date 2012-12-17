@@ -3,8 +3,8 @@
 package gopacket
 
 import (
-"github.com/gconnell/gopacket"
 	"encoding/binary"
+	"github.com/gconnell/gopacket"
 )
 
 // EtherIP is the struct for storing RFC 3378 EtherIP packet headers.
@@ -14,7 +14,7 @@ type EtherIP struct {
 }
 
 // LayerType returns gopacket.LayerTypeEtherIP.
-func (e *EtherIP) LayerType() gopacket.LayerType { return gopacket.LayerTypeEtherIP }
+func (e *EtherIP) LayerType() gopacket.LayerType { return LayerTypeEtherIP }
 
 func decodeEtherIP(data []byte) (out gopacket.DecodeResult, _ error) {
 	out.DecodedLayer = &EtherIP{

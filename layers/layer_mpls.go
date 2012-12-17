@@ -3,9 +3,9 @@
 package gopacket
 
 import (
-"github.com/gconnell/gopacket"
 	"encoding/binary"
 	"errors"
+	"github.com/gconnell/gopacket"
 )
 
 // MPLS is the MPLS packet header.
@@ -17,7 +17,7 @@ type MPLS struct {
 }
 
 // LayerType returns gopacket.LayerTypeMPLS.
-func (m *MPLS) LayerType() gopacket.LayerType { return gopacket.LayerTypeMPLS }
+func (m *MPLS) LayerType() gopacket.LayerType { return LayerTypeMPLS }
 
 // ProtocolGuessingDecoder attempts to guess the protocol of the bytes it's
 // given, then decode the packet accordingly.  Its algorithm for guessing is:

@@ -4,8 +4,8 @@
 package gopacket
 
 import (
-"github.com/gconnell/gopacket"
 	"encoding/binary"
+	"github.com/gconnell/gopacket"
 )
 
 // IPv6 is the layer for the IPv6 header.
@@ -22,7 +22,7 @@ type IPv6 struct {
 }
 
 // LayerType returns gopacket.LayerTypeIPv6
-func (i *IPv6) LayerType() gopacket.LayerType { return gopacket.LayerTypeIPv6 }
+func (i *IPv6) LayerType() gopacket.LayerType { return LayerTypeIPv6 }
 func (i *IPv6) NetworkFlow() gopacket.Flow {
 	return gopacket.Flow{gopacket.LayerTypeIPv6, string(i.SrcIP), string(i.DstIP)}
 }

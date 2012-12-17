@@ -3,9 +3,9 @@
 package gopacket
 
 import (
-"github.com/gconnell/gopacket"
 	"encoding/binary"
 	"fmt"
+	"github.com/gconnell/gopacket"
 )
 
 type RUDP struct {
@@ -33,7 +33,7 @@ type RUDPHeaderEACK struct {
 }
 
 // LayerType returns gopacket.LayerTypeRUDP.
-func (r *RUDP) LayerType() gopacket.LayerType { return gopacket.LayerTypeRUDP }
+func (r *RUDP) LayerType() gopacket.LayerType { return LayerTypeRUDP }
 
 func decodeRUDP(data []byte) (out gopacket.DecodeResult, err error) {
 	r := &RUDP{

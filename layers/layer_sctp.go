@@ -3,9 +3,9 @@
 package gopacket
 
 import (
-"github.com/gconnell/gopacket"
 	"encoding/binary"
 	"fmt"
+	"github.com/gconnell/gopacket"
 )
 
 // SCTP contains information on the top level of an SCTP packet.
@@ -17,7 +17,7 @@ type SCTP struct {
 }
 
 // LayerType returns gopacket.LayerTypeSCTP
-func (s *SCTP) LayerType() gopacket.LayerType { return gopacket.LayerTypeSCTP }
+func (s *SCTP) LayerType() gopacket.LayerType { return LayerTypeSCTP }
 
 func decodeSCTP(data []byte) (out gopacket.DecodeResult, _ error) {
 	sctp := &SCTP{
@@ -113,7 +113,7 @@ func decodeSCTPChunkTypeUnknown(data []byte) (out gopacket.DecodeResult, err err
 }
 
 // LayerType returns gopacket.LayerTypeSCTPUnknownChunkType.
-func (s *SCTPUnknownChunkType) LayerType() gopacket.LayerType { return gopacket.LayerTypeSCTPUnknownChunkType }
+func (s *SCTPUnknownChunkType) LayerType() gopacket.LayerType { return LayerTypeSCTPUnknownChunkType }
 
 // Payload returns all bytes in this header, including the decoded Type, Length,
 // and Flags.
@@ -136,7 +136,7 @@ type SCTPData struct {
 }
 
 // LayerType returns gopacket.LayerTypeSCTPData.
-func (s *SCTPData) LayerType() gopacket.LayerType { return gopacket.LayerTypeSCTPData }
+func (s *SCTPData) LayerType() gopacket.LayerType { return LayerTypeSCTPData }
 
 // Payload returns the data payload of the SCTP data chunk.
 func (s *SCTPData) Payload() []byte {
@@ -180,10 +180,10 @@ type SCTPInit struct {
 // LayerType returns either gopacket.LayerTypeSCTPInit or gopacket.LayerTypeSCTPInitAck.
 func (sc *SCTPInit) LayerType() gopacket.LayerType {
 	if sc.Type == SCTPChunkTypeInitAck {
-		return gopacket.LayerTypeSCTPInitAck
+		return LayerTypeSCTPInitAck
 	}
 	// sc.Type == SCTPChunkTypeInit
-	return gopacket.LayerTypeSCTPInit
+	return LayerTypeSCTPInit
 }
 
 func decodeSCTPInit(data []byte) (out gopacket.DecodeResult, _ error) {
@@ -217,9 +217,9 @@ type SCTPSack struct {
 	DuplicateTSNs                  []uint32
 }
 
-// LayerType return gopacket.LayerTypeSCTPSack
+// LayerType return LayerTypeSCTPSack
 func (sc *SCTPSack) LayerType() gopacket.LayerType {
-	return gopacket.LayerTypeSCTPSack
+	return LayerTypeSCTPSack
 }
 
 func decodeSCTPSack(data []byte) (out gopacket.DecodeResult, _ error) {
@@ -274,10 +274,10 @@ type SCTPHeartbeat struct {
 // LayerType returns gopacket.LayerTypeSCTPHeartbeat.
 func (sc *SCTPHeartbeat) LayerType() gopacket.LayerType {
 	if sc.Type == SCTPChunkTypeHeartbeatAck {
-		return gopacket.LayerTypeSCTPHeartbeatAck
+		return LayerTypeSCTPHeartbeatAck
 	}
 	// sc.Type == SCTPChunkTypeHeartbeat
-	return gopacket.LayerTypeSCTPHeartbeat
+	return LayerTypeSCTPHeartbeat
 }
 
 func decodeSCTPHeartbeat(data []byte) (out gopacket.DecodeResult, _ error) {
@@ -307,10 +307,10 @@ type SCTPError struct {
 
 func (sc *SCTPError) LayerType() gopacket.LayerType {
 	if sc.Type == SCTPChunkTypeAbort {
-		return gopacket.LayerTypeSCTPAbort
+		return LayerTypeSCTPAbort
 	}
 	// sc.Type == SCTPChunkTypeError
-	return gopacket.LayerTypeSCTPError
+	return LayerTypeSCTPError
 }
 
 func decodeSCTPError(data []byte) (out gopacket.DecodeResult, _ error) {
@@ -337,7 +337,7 @@ type SCTPShutdown struct {
 }
 
 // LayerType returns gopacket.LayerTypeSCTPShutdown.
-func (sc *SCTPShutdown) LayerType() gopacket.LayerType { return gopacket.LayerTypeSCTPShutdown }
+func (sc *SCTPShutdown) LayerType() gopacket.LayerType { return LayerTypeSCTPShutdown }
 
 func decodeSCTPShutdown(data []byte) (out gopacket.DecodeResult, _ error) {
 	sc := &SCTPShutdown{
@@ -356,7 +356,7 @@ type SCTPShutdownAck struct {
 }
 
 // LayerType returns gopacket.LayerTypeSCTPShutdownAck.
-func (sc *SCTPShutdownAck) LayerType() gopacket.LayerType { return gopacket.LayerTypeSCTPShutdownAck }
+func (sc *SCTPShutdownAck) LayerType() gopacket.LayerType { return LayerTypeSCTPShutdownAck }
 
 func decodeSCTPShutdownAck(data []byte) (out gopacket.DecodeResult, _ error) {
 	sc := &SCTPShutdownAck{
@@ -375,7 +375,7 @@ type SCTPCookieEcho struct {
 }
 
 // LayerType returns gopacket.LayerTypeSCTPCookieEcho.
-func (sc *SCTPCookieEcho) LayerType() gopacket.LayerType { return gopacket.LayerTypeSCTPCookieEcho }
+func (sc *SCTPCookieEcho) LayerType() gopacket.LayerType { return LayerTypeSCTPCookieEcho }
 
 func decodeSCTPCookieEcho(data []byte) (out gopacket.DecodeResult, _ error) {
 	sc := &SCTPCookieEcho{
@@ -398,10 +398,10 @@ type SCTPEmptyLayer struct {
 // LayerTypeSCTPCookieAck.
 func (sc *SCTPEmptyLayer) LayerType() gopacket.LayerType {
 	if sc.Type == SCTPChunkTypeShutdownComplete {
-		return gopacket.LayerTypeSCTPShutdownComplete
+		return LayerTypeSCTPShutdownComplete
 	}
 	// sc.Type == SCTPChunkTypeCookieAck
-	return gopacket.LayerTypeSCTPCookieAck
+	return LayerTypeSCTPCookieAck
 }
 
 func decodeSCTPEmptyLayer(data []byte) (out gopacket.DecodeResult, _ error) {

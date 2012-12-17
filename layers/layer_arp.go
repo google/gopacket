@@ -4,8 +4,8 @@
 package gopacket
 
 import (
-"github.com/gconnell/gopacket"
 	"encoding/binary"
+	"github.com/gconnell/gopacket"
 )
 
 var LayerTypeARP = gopacket.RegisterLayerType(10, "ARP", gopacket.DecoderFunc(decodeARP))

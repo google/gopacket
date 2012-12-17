@@ -3,8 +3,8 @@
 package gopacket
 
 import (
-"github.com/gconnell/gopacket"
 	"encoding/binary"
+	"github.com/gconnell/gopacket"
 )
 
 // PPPoE is the layer for PPPoE encapsulation headers.
@@ -18,7 +18,7 @@ type PPPoE struct {
 
 // LayerType returns gopacket.LayerTypePPPoE.
 func (p *PPPoE) LayerType() gopacket.LayerType {
-	return gopacket.LayerTypePPPoE
+	return LayerTypePPPoE
 }
 
 // decodePPPoE decodes the PPPoE header (see http://tools.ietf.org/html/rfc2516).

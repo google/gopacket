@@ -3,9 +3,9 @@
 package gopacket
 
 import (
-"github.com/gconnell/gopacket"
 	"encoding/binary"
 	"fmt"
+	"github.com/gconnell/gopacket"
 	"net"
 )
 
@@ -26,7 +26,7 @@ type CTP struct {
 }
 
 // LayerType returns gopacket.LayerTypeCTP.
-func (c *CTP) LayerType() gopacket.LayerType { return gopacket.LayerTypeCTP }
+func (c *CTP) LayerType() gopacket.LayerType { return LayerTypeCTP }
 
 // CTPForwardData is the ForwardData layer inside CTP.  See CTP's docs for more
 // details.
@@ -36,10 +36,10 @@ type CTPForwardData struct {
 }
 
 // LayerType returns gopacket.LayerTypeCTPForwardData.
-func (c *CTPForwardData) LayerType() gopacket.LayerType { return gopacket.LayerTypeCTPForwardData }
+func (c *CTPForwardData) LayerType() gopacket.LayerType { return LayerTypeCTPForwardData }
 
 // ForwardEndpoint returns the CTPForwardData ForwardAddress as an endpoint.
-func (c *CTPForwardData) ForwardEndpoint() (e Endpoint) {
+func (c *CTPForwardData) ForwardEndpoint() (e gopacket.Endpoint) {
 	e, _ = NewMACEndpoint(net.HardwareAddr(c.ForwardAddress))
 	return
 }
@@ -52,7 +52,7 @@ type CTPReply struct {
 }
 
 // LayerType returns gopacket.LayerTypeCTPReply.
-func (c *CTPReply) LayerType() gopacket.LayerType { return gopacket.LayerTypeCTPReply }
+func (c *CTPReply) LayerType() gopacket.LayerType { return LayerTypeCTPReply }
 
 // Payload returns the CTP reply's Data bytes.
 func (c *CTPReply) Payload() []byte { return c.Data }
@@ -66,7 +66,7 @@ func decodeCTP(data []byte) (out gopacket.DecodeResult, err error) {
 		return
 	}
 	out.DecodedLayer = c
-	out.NextDecoder = decoderFunc(decodeCTPFromFunctionType)
+	out.NextDecoder = gopacket.DecoderFunc(decodeCTPFromFunctionType)
 	out.RemainingBytes = data[2:]
 	return
 }
@@ -90,7 +90,7 @@ func decodeCTPFromFunctionType(data []byte) (out gopacket.DecodeResult, err erro
 			Function:       function,
 			ForwardAddress: data[2:8],
 		}
-		out.NextDecoder = decoderFunc(decodeCTPFromFunctionType)
+		out.NextDecoder = gopacket.DecoderFunc(decodeCTPFromFunctionType)
 		out.RemainingBytes = data[8:]
 		return
 	}

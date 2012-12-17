@@ -4,8 +4,8 @@
 package gopacket
 
 import (
-"github.com/gconnell/gopacket"
 	"fmt"
+	"github.com/gconnell/gopacket"
 )
 
 // EthernetType is an enumeration of ethernet type values, and acts as a decoder
@@ -30,21 +30,21 @@ const (
 func (e EthernetType) Decode(data []byte) (out gopacket.DecodeResult, err error) {
 	switch e {
 	case EthernetTypeLLC:
-		return decodeLLC(data)
+		return LayerTypeLLC.Decode(data)
 	case EthernetTypeIPv4:
-		return decodeIPv4(data)
+		return LayerTypeIPv4.Decode(data)
 	case EthernetTypeIPv6:
-		return decodeIPv6(data)
+		return LayerTypeIPv6.Decode(data)
 	case EthernetTypeARP:
-		return decodeARP(data)
+		return LayerTypeARP.Decode(data)
 	case EthernetTypeDot1Q:
-		return decodeDot1Q(data)
+		return LayerTypeDot1Q.Decode(data)
 	case EthernetTypePPPoEDiscovery, EthernetTypePPPoESession:
-		return decodePPPoE(data)
+		return LayerTypePPPoE.Decode(data)
 	case EthernetTypeCTP:
-		return decodeCTP(data)
+		return LayerTypeCTP.Decode(data)
 	case EthernetTypeCDP:
-		return decodeCDP(data)
+		return LayerTypeCDP.Decode(data)
 	}
 	err = fmt.Errorf("Unsupported ethernet type %v", e)
 	return
@@ -69,23 +69,23 @@ const (
 func (ip IPProtocol) Decode(data []byte) (out gopacket.DecodeResult, err error) {
 	switch ip {
 	case IPProtocolTCP:
-		return decodeTCP(data)
+		return LayerTypeTCP.Decode(data)
 	case IPProtocolUDP:
-		return decodeUDP(data)
+		return LayerTypeUDP.Decode(data)
 	case IPProtocolICMP:
-		return decodeICMP(data)
+		return LayerTypeICMP.Decode(data)
 	case IPProtocolSCTP:
-		return decodeSCTP(data)
+		return LayerTypeSCTP.Decode(data)
 	case IPProtocolIPv6:
-		return decodeIPv6(data)
+		return LayerTypeIPv6.Decode(data)
 	case IPProtocolIPIP:
-		return decodeIPv4(data)
+		return LayerTypeIPv4.Decode(data)
 	case IPProtocolEtherIP:
-		return decodeEtherIP(data)
+		return LayerTypeEtherIP.Decode(data)
 	case IPProtocolRUDP:
-		return decodeRUDP(data)
+		return LayerTypeRUDP.Decode(data)
 	case IPProtocolGRE:
-		return decodeGRE(data)
+		return LayerTypeGRE.Decode(data)
 	}
 	err = fmt.Errorf("Unsupported IP protocol %v", ip)
 	return
@@ -127,9 +127,9 @@ const (
 func (l LinkType) Decode(data []byte) (out gopacket.DecodeResult, err error) {
 	switch l {
 	case LinkTypeEthernet:
-		return decodeEthernet(data)
+		return LayerTypeEthernet.Decode(data)
 	case LinkTypePPP:
-		return decodePPP(data)
+		return LayerTypePPP.Decode(data)
 	}
 	err = fmt.Errorf("Unsupported link-layer type %v", l)
 	return
@@ -151,7 +151,7 @@ const (
 func (p PPPoECode) Decode(data []byte) (_ gopacket.DecodeResult, err error) {
 	switch p {
 	case PPPoECodeSession:
-		return decodePPP(data)
+		return LayerTypePPP.Decode(data)
 	}
 	err = fmt.Errorf("Cannot currently handle PPPoE error code %v", p)
 	return
@@ -169,9 +169,9 @@ const (
 func (p PPPType) Decode(data []byte) (out gopacket.DecodeResult, err error) {
 	switch p {
 	case PPPTypeIPv4:
-		return decodeIPv4(data)
+		return LayerTypeIPv4.Decode(data)
 	case PPPTypeIPv6:
-		return decodeIPv6(data)
+		return LayerTypeIPv6.Decode(data)
 	}
 	err = fmt.Errorf("Unsupported PPP type %v", p)
 	return
@@ -199,23 +199,23 @@ const (
 func (s SCTPChunkType) Decode(data []byte) (_ gopacket.DecodeResult, err error) {
 	switch s {
 	case SCTPChunkTypeData:
-		return decodeSCTPData(data)
+		return LayerTypeSCTPData.Decode(data)
 	case SCTPChunkTypeInit, SCTPChunkTypeInitAck:
-		return decodeSCTPInit(data)
+		return LayerTypeSCTPInit.Decode(data)
 	case SCTPChunkTypeSack:
-		return decodeSCTPSack(data)
+		return LayerTypeSCTPSack.Decode(data)
 	case SCTPChunkTypeHeartbeat, SCTPChunkTypeHeartbeatAck:
-		return decodeSCTPHeartbeat(data)
+		return LayerTypeSCTPHeartbeat.Decode(data)
 	case SCTPChunkTypeAbort, SCTPChunkTypeError:
-		return decodeSCTPError(data)
+		return LayerTypeSCTPError.Decode(data)
 	case SCTPChunkTypeShutdown:
-		return decodeSCTPShutdown(data)
+		return LayerTypeSCTPShutdown.Decode(data)
 	case SCTPChunkTypeShutdownAck:
-		return decodeSCTPShutdownAck(data)
+		return LayerTypeSCTPShutdownAck.Decode(data)
 	case SCTPChunkTypeCookieEcho:
-		return decodeSCTPCookieEcho(data)
+		return LayerTypeSCTPCookieEcho.Decode(data)
 	case SCTPChunkTypeCookieAck, SCTPChunkTypeShutdownComplete:
-		return decodeSCTPEmptyLayer(data)
+		return LayerTypeSCTPEmptyLayer.Decode(data)
 	}
 	err = fmt.Errorf("Unable to decode SCTP chunk type %v", s)
 	return

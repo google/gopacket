@@ -4,9 +4,9 @@
 package gopacket
 
 import (
-"github.com/gconnell/gopacket"
 	"encoding/binary"
 	"errors"
+	"github.com/gconnell/gopacket"
 )
 
 // Ethernet is the layer for Ethernet frame headers.
@@ -22,7 +22,7 @@ type Ethernet struct {
 }
 
 // LayerType returns gopacket.LayerTypeEthernet
-func (e *Ethernet) LayerType() gopacket.LayerType { return gopacket.LayerTypeEthernet }
+func (e *Ethernet) LayerType() gopacket.LayerType { return LayerTypeEthernet }
 
 func (e *Ethernet) LinkFlow() gopacket.Flow {
 	return gopacket.Flow{gopacket.LayerTypeEthernet, string(e.SrcMAC), string(e.DstMAC)}

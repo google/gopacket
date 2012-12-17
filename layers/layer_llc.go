@@ -3,8 +3,8 @@
 package gopacket
 
 import (
-"github.com/gconnell/gopacket"
 	"encoding/binary"
+	"github.com/gconnell/gopacket"
 )
 
 // LLC is the layer used for 802.2 Logical Link Control headers.
@@ -18,7 +18,7 @@ type LLC struct {
 }
 
 // LayerType returns gopacket.LayerTypeLLC.
-func (l *LLC) LayerType() gopacket.LayerType { return gopacket.LayerTypeLLC }
+func (l *LLC) LayerType() gopacket.LayerType { return LayerTypeLLC }
 
 // SNAP is used inside LLC.  See
 // http://standards.ieee.org/getieee802/download/802-2001.pdf.
@@ -32,7 +32,7 @@ type SNAP struct {
 }
 
 // LayerType returns gopacket.LayerTypeSNAP.
-func (s *SNAP) LayerType() gopacket.LayerType { return gopacket.LayerTypeSNAP }
+func (s *SNAP) LayerType() gopacket.LayerType { return LayerTypeSNAP }
 
 func decodeLLC(data []byte) (out gopacket.DecodeResult, err error) {
 	l := &LLC{

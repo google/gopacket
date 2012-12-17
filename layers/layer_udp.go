@@ -4,8 +4,8 @@
 package gopacket
 
 import (
-"github.com/gconnell/gopacket"
 	"encoding/binary"
+	"github.com/gconnell/gopacket"
 )
 
 // UDP is the layer for UDP headers.
@@ -18,7 +18,7 @@ type UDP struct {
 }
 
 // LayerType returns gopacket.LayerTypeUDP
-func (u *UDP) LayerType() gopacket.LayerType { return gopacket.LayerTypeUDP }
+func (u *UDP) LayerType() gopacket.LayerType { return LayerTypeUDP }
 
 func decodeUDP(data []byte) (out gopacket.DecodeResult, err error) {
 	udp := &UDP{

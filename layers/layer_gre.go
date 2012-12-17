@@ -3,8 +3,8 @@
 package gopacket
 
 import (
-"github.com/gconnell/gopacket"
 	"encoding/binary"
+	"github.com/gconnell/gopacket"
 )
 
 // GRE is a Generic Routing Encapsulation header.
@@ -26,7 +26,7 @@ type GRERouting struct {
 }
 
 // LayerType returns gopacket.LayerTypeGRE.
-func (g *GRE) LayerType() gopacket.LayerType { return gopacket.LayerTypeGRE }
+func (g *GRE) LayerType() gopacket.LayerType { return LayerTypeGRE }
 
 func decodeGRE(data []byte) (out gopacket.DecodeResult, err error) {
 	g := &GRE{

@@ -4,8 +4,8 @@
 package gopacket
 
 import (
-"github.com/gconnell/gopacket"
 	"encoding/binary"
+	"github.com/gconnell/gopacket"
 )
 
 // IPv4 is the header of an IP packet.
@@ -25,7 +25,7 @@ type IPv4 struct {
 }
 
 // LayerType returns gopacket.LayerTypeIPv4
-func (i *IPv4) LayerType() gopacket.LayerType { return gopacket.LayerTypeIPv4 }
+func (i *IPv4) LayerType() gopacket.LayerType { return LayerTypeIPv4 }
 func (i *IPv4) NetworkFlow() gopacket.Flow {
 	return gopacket.Flow{gopacket.LayerTypeIPv4, string(i.SrcIP), string(i.DstIP)}
 }
