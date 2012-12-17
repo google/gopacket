@@ -1,7 +1,7 @@
 // Copyright 2012 Google, Inc. All rights reserved.
 // Copyright 2009-2012 Andreas Krennmair. All rights reserved.
 
-package gopacket
+package layers
 
 import (
 	"encoding/binary"
@@ -30,12 +30,12 @@ func decodeUDP(data []byte) (out gopacket.DecodeResult, err error) {
 		Checksum: binary.BigEndian.Uint16(data[6:8]),
 	}
 	out.DecodedLayer = udp
-	out.NextDecoder = decodePayload
+	out.NextDecoder = gopacket.LayerTypePayload
 	out.RemainingBytes = data[8:]
 	out.TransportLayer = udp
 	return
 }
 
 func (u *UDP) TransportFlow() gopacket.Flow {
-	return gopacket.Flow{gopacket.LayerTypeUDP, string(u.sPort), string(u.dPort)}
+	return gopacket.NewFlow(EndpointUDPPort, u.sPort, u.dPort)
 }

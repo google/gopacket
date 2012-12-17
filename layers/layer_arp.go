@@ -1,14 +1,12 @@
 // Copyright 2012 Google, Inc. All rights reserved.
 // Copyright 2009-2012 Andreas Krennmair. All rights reserved.
 
-package gopacket
+package layers
 
 import (
 	"encoding/binary"
 	"github.com/gconnell/gopacket"
 )
-
-var LayerTypeARP = gopacket.RegisterLayerType(10, "ARP", gopacket.DecoderFunc(decodeARP))
 
 // ARP is a ARP packet header.
 type ARP struct {

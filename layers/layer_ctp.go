@@ -1,12 +1,11 @@
 // Copyright 2012 Google, Inc. All rights reserved.
 
-package gopacket
+package layers
 
 import (
 	"encoding/binary"
 	"fmt"
 	"github.com/gconnell/gopacket"
-	"net"
 )
 
 // CTPFunction is the function code used by the CTP protocol to identify each
@@ -39,9 +38,8 @@ type CTPForwardData struct {
 func (c *CTPForwardData) LayerType() gopacket.LayerType { return LayerTypeCTPForwardData }
 
 // ForwardEndpoint returns the CTPForwardData ForwardAddress as an endpoint.
-func (c *CTPForwardData) ForwardEndpoint() (e gopacket.Endpoint) {
-	e, _ = NewMACEndpoint(net.HardwareAddr(c.ForwardAddress))
-	return
+func (c *CTPForwardData) ForwardEndpoint() gopacket.Endpoint {
+	return gopacket.NewEndpoint(EndpointMAC, c.ForwardAddress)
 }
 
 // CTPReply is the Reply layer inside CTP.  See CTP's docs for more details.

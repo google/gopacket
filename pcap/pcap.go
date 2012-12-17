@@ -19,6 +19,7 @@ import "C"
 import (
 	"errors"
 	"github.com/gconnell/gopacket"
+	"github.com/gconnell/gopacket/layers"
 	"io"
 	"net"
 	"strconv"
@@ -205,13 +206,13 @@ func Version() string {
 	return C.GoString(C.pcap_lib_version())
 }
 
-// LinkType returns pcap_datalink, as a gopacket.LinkType.
-func (p *Handle) LinkType() gopacket.LinkType {
-	return gopacket.LinkType(C.pcap_datalink(p.cptr))
+// LinkType returns pcap_datalink, as a layers.LinkType.
+func (p *Handle) LinkType() layers.LinkType {
+	return layers.LinkType(C.pcap_datalink(p.cptr))
 }
 
 // SetLinkType calls pcap_set_datalink on the pcap handle.
-func (p *Handle) SetLinkType(dlt gopacket.LinkType) error {
+func (p *Handle) SetLinkType(dlt layers.LinkType) error {
 	if -1 == C.pcap_set_datalink(p.cptr, C.int(dlt)) {
 		return p.Error()
 	}

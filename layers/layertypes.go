@@ -1,9 +1,8 @@
 // Copyright 2012 Google, Inc. All rights reserved.
 
-package gopacket
+package layers
 
 import (
-	"fmt"
 	"github.com/gconnell/gopacket"
 )
 
@@ -12,7 +11,7 @@ var (
 	LayerTypeCDP                  = gopacket.RegisterLayerType(11, "CDP", gopacket.DecoderFunc(decodeCDP))
 	LayerTypeCTP                  = gopacket.RegisterLayerType(12, "CTP", gopacket.DecoderFunc(decodeCTP))
 	LayerTypeCTPForwardData       = gopacket.RegisterLayerType(13, "CTPForwardData", gopacket.DecoderFunc(decodeCTPFromFunctionType))
-	LayerTypeCTPReply             = gopacket.RegisterLayerType(14, "CTPReply", gopacket.DecoderFunc(decodeCTPReply))
+	LayerTypeCTPReply             = gopacket.RegisterLayerType(14, "CTPReply", gopacket.DecoderFunc(decodeCTPFromFunctionType))
 	LayerTypeDot1Q                = gopacket.RegisterLayerType(15, "Dot1Q", gopacket.DecoderFunc(decodeDot1Q))
 	LayerTypeEtherIP              = gopacket.RegisterLayerType(16, "EtherIP", gopacket.DecoderFunc(decodeEtherIP))
 	LayerTypeEthernet             = gopacket.RegisterLayerType(17, "Ethernet", gopacket.DecoderFunc(decodeEthernet))
@@ -37,6 +36,11 @@ var (
 	LayerTypeSCTPShutdownAck      = gopacket.RegisterLayerType(36, "SCTPShutdownAck", gopacket.DecoderFunc(decodeWithSCTPChunkTypePrefix))
 	LayerTypeSCTPCookieEcho       = gopacket.RegisterLayerType(37, "SCTPCookieEcho", gopacket.DecoderFunc(decodeWithSCTPChunkTypePrefix))
 	LayerTypeSCTPEmptyLayer       = gopacket.RegisterLayerType(38, "SCTPEmptyLayer", gopacket.DecoderFunc(decodeWithSCTPChunkTypePrefix))
-	LayerTypeTCP                  = gopacket.RegisterLayerType(39, "TCP", gopacket.DecoderFunc(decodeTCP))
-	LayerTypeUDP                  = gopacket.RegisterLayerType(40, "UDP", gopacket.DecoderFunc(decodeUDP))
+	LayerTypeSCTPInitAck          = gopacket.RegisterLayerType(39, "LayerTypeSCTPInitAck", gopacket.DecoderFunc(decodeWithSCTPChunkTypePrefix))
+	LayerTypeSCTPHeartbeatAck     = gopacket.RegisterLayerType(40, "LayerTypeSCTPHeartbeatAck", gopacket.DecoderFunc(decodeWithSCTPChunkTypePrefix))
+	LayerTypeSCTPAbort            = gopacket.RegisterLayerType(41, "LayerTypeSCTPAbort", gopacket.DecoderFunc(decodeWithSCTPChunkTypePrefix))
+	LayerTypeSCTPShutdownComplete = gopacket.RegisterLayerType(42, "LayerTypeSCTPShutdownComplete", gopacket.DecoderFunc(decodeWithSCTPChunkTypePrefix))
+	LayerTypeSCTPCookieAck        = gopacket.RegisterLayerType(43, "LayerTypeSCTPCookieAck", gopacket.DecoderFunc(decodeWithSCTPChunkTypePrefix))
+	LayerTypeTCP                  = gopacket.RegisterLayerType(44, "TCP", gopacket.DecoderFunc(decodeTCP))
+	LayerTypeUDP                  = gopacket.RegisterLayerType(45, "UDP", gopacket.DecoderFunc(decodeUDP))
 )

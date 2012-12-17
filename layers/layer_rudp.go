@@ -1,6 +1,6 @@
 // Copyright 2012 Google, Inc. All rights reserved.
 
-package gopacket
+package layers
 
 import (
 	"encoding/binary"
@@ -80,12 +80,12 @@ func decodeRUDP(data []byte) (out gopacket.DecodeResult, err error) {
 		}
 	}
 	out.DecodedLayer = r
-	out.NextDecoder = decodePayload
+	out.NextDecoder = gopacket.LayerTypePayload
 	out.RemainingBytes = data[hlen : hlen+int(r.DataLength)]
 	out.TransportLayer = r
 	return
 }
 
 func (r *RUDP) TransportFlow() gopacket.Flow {
-	return gopacket.Flow{gopacket.LayerTypeRUDP, string([]byte{r.SrcPort}), string([]byte{r.DstPort})}
+	return gopacket.NewFlow(EndpointRUDPPort, []byte{r.SrcPort}, []byte{r.DstPort})
 }

@@ -1,7 +1,7 @@
 // Copyright 2012 Google, Inc. All rights reserved.
 // Copyright 2009-2012 Andreas Krennmair. All rights reserved.
 
-package gopacket
+package layers
 
 import (
 	"encoding/binary"
@@ -49,11 +49,11 @@ func decodeTCP(data []byte) (out gopacket.DecodeResult, err error) {
 	}
 	out.RemainingBytes = data[tcp.DataOffset*4:]
 	out.DecodedLayer = tcp
-	out.NextDecoder = decodePayload
+	out.NextDecoder = gopacket.LayerTypePayload
 	out.TransportLayer = tcp
 	return
 }
 
 func (t *TCP) TransportFlow() gopacket.Flow {
-	return gopacket.Flow{gopacket.LayerTypeTCP, string(t.sPort), string(t.dPort)}
+	return gopacket.NewFlow(EndpointTCPPort, t.sPort, t.dPort)
 }

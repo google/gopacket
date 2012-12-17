@@ -1,7 +1,7 @@
 // Copyright 2012 Google, Inc. All rights reserved.
 // Copyright 2009-2012 Andreas Krennmair. All rights reserved.
 
-package gopacket
+package layers
 
 import (
 	"encoding/binary"
@@ -21,10 +21,10 @@ type IPv6 struct {
 	DstIP        []byte     // 16 bytes
 }
 
-// LayerType returns gopacket.LayerTypeIPv6
+// LayerType returns LayerTypeIPv6
 func (i *IPv6) LayerType() gopacket.LayerType { return LayerTypeIPv6 }
 func (i *IPv6) NetworkFlow() gopacket.Flow {
-	return gopacket.Flow{gopacket.LayerTypeIPv6, string(i.SrcIP), string(i.DstIP)}
+	return gopacket.NewFlow(EndpointIP, i.SrcIP, i.DstIP)
 }
 
 func decodeIPv6(data []byte) (out gopacket.DecodeResult, err error) {

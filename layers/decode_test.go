@@ -1,10 +1,11 @@
 // Copyright 2012, Google, Inc. All rights reserved.
 // Copyright 2009-2012 Andreas Krennmair. All rights reserved.
 
-package gopacket
+package layers
 
 import (
 	"fmt"
+	"github.com/gconnell/gopacket"
 	"math/rand"
 	"os"
 	"reflect"
@@ -56,7 +57,7 @@ var testSimpleTCPPacket []byte = []byte{
 // things are.
 
 func BenchmarkTypeAssertion(b *testing.B) {
-	var eth LinkLayer = &Ethernet{}
+	var eth gopacket.LinkLayer = &Ethernet{}
 	c := 0
 	for i := 0; i < b.N; i++ {
 		if _, ok := eth.(*Ethernet); ok {
@@ -66,7 +67,7 @@ func BenchmarkTypeAssertion(b *testing.B) {
 }
 
 func BenchmarkMapLookup(b *testing.B) {
-	m := map[LayerType]bool{
+	m := map[gopacket.LayerType]bool{
 		LayerTypeTCP:      true,
 		LayerTypeEthernet: true,
 	}
@@ -76,14 +77,14 @@ func BenchmarkMapLookup(b *testing.B) {
 }
 
 func BenchmarkNilMapLookup(b *testing.B) {
-	var m map[LayerType]bool
+	var m map[gopacket.LayerType]bool
 	for i := 0; i < b.N; i++ {
 		_ = m[LayerTypeIPv4]
 	}
 }
 
 func BenchmarkNilMapLookupWithNilCheck(b *testing.B) {
-	var m map[LayerType]bool
+	var m map[gopacket.LayerType]bool
 	for i := 0; i < b.N; i++ {
 		if m != nil {
 			_ = m[LayerTypeIPv4]
@@ -101,14 +102,14 @@ func BenchmarkArrayLookup(b *testing.B) {
 // Benchmarks for actual gopacket code
 
 func BenchmarkLayerClassSliceContains(b *testing.B) {
-	lc := NewLayerClassSlice([]LayerType{LayerTypeTCP, LayerTypeEthernet})
+	lc := gopacket.NewLayerClassSlice([]gopacket.LayerType{LayerTypeTCP, LayerTypeEthernet})
 	for i := 0; i < b.N; i++ {
 		_ = lc.Contains(LayerTypeTCP)
 	}
 }
 
 func BenchmarkLayerClassMapContains(b *testing.B) {
-	lc := NewLayerClassMap([]LayerType{LayerTypeTCP, LayerTypeEthernet})
+	lc := gopacket.NewLayerClassMap([]gopacket.LayerType{LayerTypeTCP, LayerTypeEthernet})
 	for i := 0; i < b.N; i++ {
 		_ = lc.Contains(LayerTypeTCP)
 	}
@@ -116,49 +117,49 @@ func BenchmarkLayerClassMapContains(b *testing.B) {
 
 func BenchmarkLazyNoCopyEthLayer(b *testing.B) {
 	for i := 0; i < b.N; i++ {
-		NewPacket(testSimpleTCPPacket, LinkTypeEthernet, DecodeOptions{Lazy: true, NoCopy: true}).Layer(LayerTypeEthernet)
+		gopacket.NewPacket(testSimpleTCPPacket, LinkTypeEthernet, gopacket.DecodeOptions{Lazy: true, NoCopy: true}).Layer(LayerTypeEthernet)
 	}
 }
 
 func BenchmarkLazyNoCopyIPLayer(b *testing.B) {
 	for i := 0; i < b.N; i++ {
-		NewPacket(testSimpleTCPPacket, LinkTypeEthernet, DecodeOptions{Lazy: true, NoCopy: true}).Layer(LayerTypeIPv4)
+		gopacket.NewPacket(testSimpleTCPPacket, LinkTypeEthernet, gopacket.DecodeOptions{Lazy: true, NoCopy: true}).Layer(LayerTypeIPv4)
 	}
 }
 
 func BenchmarkLazyNoCopyTCPLayer(b *testing.B) {
 	for i := 0; i < b.N; i++ {
-		NewPacket(testSimpleTCPPacket, LinkTypeEthernet, DecodeOptions{Lazy: true, NoCopy: true}).Layer(LayerTypeTCP)
+		gopacket.NewPacket(testSimpleTCPPacket, LinkTypeEthernet, gopacket.DecodeOptions{Lazy: true, NoCopy: true}).Layer(LayerTypeTCP)
 	}
 }
 
 func BenchmarkLazyNoCopyAllLayers(b *testing.B) {
 	for i := 0; i < b.N; i++ {
-		NewPacket(testSimpleTCPPacket, LinkTypeEthernet, DecodeOptions{Lazy: true, NoCopy: true}).Layers()
+		gopacket.NewPacket(testSimpleTCPPacket, LinkTypeEthernet, gopacket.DecodeOptions{Lazy: true, NoCopy: true}).Layers()
 	}
 }
 
 func BenchmarkDefault(b *testing.B) {
 	for i := 0; i < b.N; i++ {
-		NewPacket(testSimpleTCPPacket, LinkTypeEthernet, Default)
+		gopacket.NewPacket(testSimpleTCPPacket, LinkTypeEthernet, gopacket.Default)
 	}
 }
 
 func BenchmarkLazy(b *testing.B) {
 	for i := 0; i < b.N; i++ {
-		NewPacket(testSimpleTCPPacket, LinkTypeEthernet, Lazy)
+		gopacket.NewPacket(testSimpleTCPPacket, LinkTypeEthernet, gopacket.Lazy)
 	}
 }
 
 func BenchmarkNoCopy(b *testing.B) {
 	for i := 0; i < b.N; i++ {
-		NewPacket(testSimpleTCPPacket, LinkTypeEthernet, NoCopy)
+		gopacket.NewPacket(testSimpleTCPPacket, LinkTypeEthernet, gopacket.NoCopy)
 	}
 }
 
 func BenchmarkLazyNoCopy(b *testing.B) {
 	for i := 0; i < b.N; i++ {
-		NewPacket(testSimpleTCPPacket, LinkTypeEthernet, DecodeOptions{Lazy: true, NoCopy: true})
+		gopacket.NewPacket(testSimpleTCPPacket, LinkTypeEthernet, gopacket.DecodeOptions{Lazy: true, NoCopy: true})
 	}
 }
 
@@ -169,7 +170,7 @@ func BenchmarkAlloc(b *testing.B) {
 }
 
 func BenchmarkFlow(b *testing.B) {
-	p := NewPacket(testSimpleTCPPacket, LinkTypeEthernet, DecodeOptions{Lazy: true, NoCopy: true})
+	p := gopacket.NewPacket(testSimpleTCPPacket, LinkTypeEthernet, gopacket.DecodeOptions{Lazy: true, NoCopy: true})
 	net := p.NetworkLayer()
 	for i := 0; i < b.N; i++ {
 		net.NetworkFlow()
@@ -177,7 +178,7 @@ func BenchmarkFlow(b *testing.B) {
 }
 
 func BenchmarkEndpoints(b *testing.B) {
-	p := NewPacket(testSimpleTCPPacket, LinkTypeEthernet, DecodeOptions{Lazy: true, NoCopy: true})
+	p := gopacket.NewPacket(testSimpleTCPPacket, LinkTypeEthernet, gopacket.DecodeOptions{Lazy: true, NoCopy: true})
 	flow := p.NetworkLayer().NetworkFlow()
 	for i := 0; i < b.N; i++ {
 		flow.Endpoints()
@@ -186,7 +187,7 @@ func BenchmarkEndpoints(b *testing.B) {
 
 func BenchmarkTCPLayerFromDecodedPacket(b *testing.B) {
 	b.StopTimer()
-	p := NewPacket(testSimpleTCPPacket, LinkTypeEthernet, Default)
+	p := gopacket.NewPacket(testSimpleTCPPacket, LinkTypeEthernet, gopacket.Default)
 	b.StartTimer()
 	for i := 0; i < b.N; i++ {
 		_ = p.Layer(LayerTypeTCP)
@@ -195,8 +196,8 @@ func BenchmarkTCPLayerFromDecodedPacket(b *testing.B) {
 
 func BenchmarkTCPLayerClassFromDecodedPacket(b *testing.B) {
 	b.StopTimer()
-	p := NewPacket(testSimpleTCPPacket, LinkTypeEthernet, Default)
-	lc := NewLayerClass([]LayerType{LayerTypeTCP})
+	p := gopacket.NewPacket(testSimpleTCPPacket, LinkTypeEthernet, gopacket.Default)
+	lc := gopacket.NewLayerClass([]gopacket.LayerType{LayerTypeTCP})
 	b.StartTimer()
 	for i := 0; i < b.N; i++ {
 		_ = p.LayerClass(lc)
@@ -205,18 +206,15 @@ func BenchmarkTCPLayerClassFromDecodedPacket(b *testing.B) {
 
 // TestFlowMapKey makes sure a flow and an endpoint can be used as map keys.
 func TestFlowMapKey(t *testing.T) {
-	_ = map[Flow]bool{}
-	_ = map[Endpoint]bool{}
-	_ = map[[2]Flow]bool{}
-	if NewUDPPortEndpoint(53) != NewUDPPortEndpoint(53) {
-		t.Error("Endpoint equality seems to be broken")
-	}
+	_ = map[gopacket.Flow]bool{}
+	_ = map[gopacket.Endpoint]bool{}
+	_ = map[[2]gopacket.Flow]bool{}
 }
 
 func BenchmarkCheckEthernetPrefix(b *testing.B) {
 	key := [3]byte{5, 5, 5}
 	for i := 0; i < b.N; i++ {
-		_ = ValidMACPrefixMap[key]
+		_ = gopacket.ValidMACPrefixMap[key]
 	}
 }
 
@@ -226,7 +224,7 @@ func TestDecodeSimpleTCPPacket(t *testing.T) {
 			t.Errorf("%s: got %q want %q", desc, got.String(), want)
 		}
 	}
-	p := NewPacket(testSimpleTCPPacket, LinkTypeEthernet, DecodeOptions{Lazy: true, NoCopy: true})
+	p := gopacket.NewPacket(testSimpleTCPPacket, LinkTypeEthernet, gopacket.DecodeOptions{Lazy: true, NoCopy: true})
 	if eth := p.LinkLayer(); eth == nil {
 		t.Error("No ethernet layer found")
 	} else {
@@ -283,7 +281,7 @@ func TestDecodeSimpleTCPPacket(t *testing.T) {
 			t.Errorf("TCP layer mismatch\ngot  %#v\nwant %#v", tcp, want)
 		}
 	}
-	if payload, ok := p.Layer(LayerTypePayload).(*Payload); payload == nil || !ok {
+	if payload, ok := p.Layer(gopacket.LayerTypePayload).(*gopacket.Payload); payload == nil || !ok {
 		t.Error("No payload layer found")
 	} else {
 		if string(payload.Data) != "GET / HTTP/1.1\r\nHost: www.fish.com\r\nConnection: keep-alive\r\nUser-Agent: Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/535.2 (KHTML, like Gecko) Chrome/15.0.874.121 Safari/535.2\r\nAccept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8\r\nAccept-Encoding: gzip,deflate,sdch\r\nAccept-Language: en-US,en;q=0.8\r\nAccept-Charset: ISO-8859-1,utf-8;q=0.7,*;q=0.3\r\n\r\n" {
@@ -295,22 +293,22 @@ func TestDecodeSimpleTCPPacket(t *testing.T) {
 // Makes sure packet payload doesn't display the 6 trailing null of this packet
 // as part of the payload.  They're actually the ethernet trailer.
 func TestDecodeSmallTCPPacketHasEmptyPayload(t *testing.T) {
-	p := NewPacket(
+	p := gopacket.NewPacket(
 		[]byte{
 			0xbc, 0x30, 0x5b, 0xe8, 0xd3, 0x49, 0xb8, 0xac, 0x6f, 0x92, 0xd5, 0xbf,
 			0x08, 0x00, 0x45, 0x00, 0x00, 0x28, 0x00, 0x00, 0x40, 0x00, 0x40, 0x06,
 			0x3f, 0x9f, 0xac, 0x11, 0x51, 0xc5, 0xac, 0x11, 0x51, 0x49, 0x00, 0x63,
 			0x9a, 0xef, 0x00, 0x00, 0x00, 0x00, 0x2e, 0xc1, 0x27, 0x83, 0x50, 0x14,
 			0x00, 0x00, 0xc3, 0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
-		}, LinkTypeEthernet, Default)
+		}, LinkTypeEthernet, gopacket.Default)
 
-	if payload := p.Layer(LayerTypePayload); payload != nil {
+	if payload := p.Layer(gopacket.LayerTypePayload); payload != nil {
 		t.Error("Payload found for empty TCP packet")
 	}
 }
 
 func TestDecodeVLANPacket(t *testing.T) {
-	p := NewPacket(
+	p := gopacket.NewPacket(
 		[]byte{
 			0x00, 0x10, 0xdb, 0xff, 0x10, 0x00, 0x00, 0x15, 0x2c, 0x9d, 0xcc, 0x00,
 			0x81, 0x00, 0x01, 0xf7, 0x08, 0x00, 0x45, 0x00, 0x00, 0x28, 0x29, 0x8d,
@@ -318,7 +316,7 @@ func TestDecodeVLANPacket(t *testing.T) {
 			0x94, 0xe2, 0xd4, 0x0a, 0x00, 0x50, 0xdf, 0xab, 0x9c, 0xc6, 0xcd, 0x1e,
 			0xe5, 0xd1, 0x50, 0x10, 0x01, 0x00, 0x5a, 0x74, 0x00, 0x00, 0x00, 0x00,
 			0x00, 0x00, 0x00, 0x00,
-		}, LinkTypeEthernet, Default)
+		}, LinkTypeEthernet, gopacket.Default)
 	if err := p.ErrorLayer(); err != nil {
 		t.Error("Error while parsing vlan packet:", err)
 	}
@@ -330,7 +328,7 @@ func TestDecodeVLANPacket(t *testing.T) {
 	for i, l := range p.Layers() {
 		t.Logf("Layer %d: %#v", i, l)
 	}
-	want := []LayerType{LayerTypeEthernet, LayerTypeDot1Q, LayerTypeIPv4, LayerTypeTCP}
+	want := []gopacket.LayerType{LayerTypeEthernet, LayerTypeDot1Q, LayerTypeIPv4, LayerTypeTCP}
 	if len(p.Layers()) != len(want) {
 		t.Fatal("Incorrect number of headers:", len(p.Layers()))
 	}
@@ -349,7 +347,7 @@ func TestDecoderSecurity(t *testing.T) {
 
 	testCases := []struct {
 		s string
-		d decoderFunc
+		d gopacket.DecoderFunc
 	}{
 		{"ARP", decodeARP},
 		{"Dot1Q", decodeDot1Q},
@@ -374,7 +372,7 @@ func TestDecoderSecurity(t *testing.T) {
 			for r.Int()%100 != 0 {
 				b = append(b, byte(r.Int()))
 			}
-			NewPacket(b, tc.d, Default)
+			gopacket.NewPacket(b, tc.d, gopacket.Default)
 		}
 	}
 	fmt.Fprintln(os.Stderr, "No crash to see here... continuing with testing")
@@ -463,19 +461,19 @@ func TestDecodeSCTPPackets(t *testing.T) {
 			0x09, 0xcc, 0x27, 0x0f, 0x22, 0xb8, 0x32, 0x80, 0xfb, 0x42, 0xa8, 0xd1, 0x86, 0x85, 0x0e, 0x00,
 			0x00, 0x04,
 		}}
-	wantLayers := [][]LayerType{
-		[]LayerType{LayerTypeSCTPInit},
-		[]LayerType{LayerTypeSCTPInitAck},
-		[]LayerType{LayerTypeSCTPCookieEcho, LayerTypeSCTPData},
-		[]LayerType{LayerTypeSCTPCookieAck, LayerTypeSCTPSack},
-		[]LayerType{LayerTypeSCTPData},
-		[]LayerType{LayerTypeSCTPSack},
-		[]LayerType{LayerTypeSCTPShutdown},
-		[]LayerType{LayerTypeSCTPShutdownAck},
-		[]LayerType{LayerTypeSCTPShutdownComplete},
+	wantLayers := [][]gopacket.LayerType{
+		[]gopacket.LayerType{LayerTypeSCTPInit},
+		[]gopacket.LayerType{LayerTypeSCTPInitAck},
+		[]gopacket.LayerType{LayerTypeSCTPCookieEcho, LayerTypeSCTPData},
+		[]gopacket.LayerType{LayerTypeSCTPCookieAck, LayerTypeSCTPSack},
+		[]gopacket.LayerType{LayerTypeSCTPData},
+		[]gopacket.LayerType{LayerTypeSCTPSack},
+		[]gopacket.LayerType{LayerTypeSCTPShutdown},
+		[]gopacket.LayerType{LayerTypeSCTPShutdownAck},
+		[]gopacket.LayerType{LayerTypeSCTPShutdownComplete},
 	}
 	for i, data := range sctpPackets {
-		p := NewPacket(data, LinkTypeEthernet, Default)
+		p := gopacket.NewPacket(data, LinkTypeEthernet, gopacket.Default)
 		for _, typ := range wantLayers[i] {
 			if p.Layer(typ) == nil {
 				t.Errorf("Packet %d missing layer type %v, got:", i, typ)
@@ -520,8 +518,8 @@ func TestDecodeCDP(t *testing.T) {
 		0x35, 0x32, 0x20, 0x62, 0x79, 0x20, 0x63, 0x63, 0x61, 0x69, 0x00, 0x06,
 		0x00, 0x0e, 0x63, 0x69, 0x73, 0x63, 0x6f, 0x20, 0x32, 0x35, 0x30, 0x30,
 	}
-	p := NewPacket(data, LinkTypeEthernet, Default)
-	wantLayers := []LayerType{LayerTypeEthernet, LayerTypeLLC, LayerTypeSNAP, LayerTypeCDP}
+	p := gopacket.NewPacket(data, LinkTypeEthernet, gopacket.Default)
+	wantLayers := []gopacket.LayerType{LayerTypeEthernet, LayerTypeLLC, LayerTypeSNAP, LayerTypeCDP}
 	layers := p.Layers()
 	for i, l := range layers {
 		t.Logf("Layer %d is %v:\n%#v", i, l.LayerType(), l)

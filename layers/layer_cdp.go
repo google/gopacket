@@ -1,6 +1,6 @@
 // Copyright 2012 Google, Inc. All rights reserved.
 
-package gopacket
+package layers
 
 import (
 	"encoding/binary"

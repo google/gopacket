@@ -1,7 +1,7 @@
 // Copyright 2012 Google, Inc. All rights reserved.
 // Copyright 2009-2012 Andreas Krennmair. All rights reserved.
 
-package gopacket
+package layers
 
 import (
 	"encoding/binary"
@@ -24,10 +24,10 @@ type IPv4 struct {
 	DstIP      []byte
 }
 
-// LayerType returns gopacket.LayerTypeIPv4
+// LayerType returns LayerTypeIPv4
 func (i *IPv4) LayerType() gopacket.LayerType { return LayerTypeIPv4 }
 func (i *IPv4) NetworkFlow() gopacket.Flow {
-	return gopacket.Flow{gopacket.LayerTypeIPv4, string(i.SrcIP), string(i.DstIP)}
+	return gopacket.NewFlow(EndpointIP, i.SrcIP, i.DstIP)
 }
 
 func decodeIPv4(data []byte) (out gopacket.DecodeResult, err error) {

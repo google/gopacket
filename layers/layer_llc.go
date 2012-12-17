@@ -1,6 +1,6 @@
 // Copyright 2012 Google, Inc. All rights reserved.
 
-package gopacket
+package layers
 
 import (
 	"encoding/binary"
@@ -50,9 +50,9 @@ func decodeLLC(data []byte) (out gopacket.DecodeResult, err error) {
 	}
 	out.DecodedLayer = l
 	if l.DSAP == 0xAA && l.SSAP == 0xAA {
-		out.NextDecoder = decoderFunc(decodeSNAP)
+		out.NextDecoder = LayerTypeSNAP
 	} else {
-		out.NextDecoder = decoderFunc(decodeUnknown)
+		out.NextDecoder = gopacket.LayerTypeDecodeFailure
 	}
 	return
 }

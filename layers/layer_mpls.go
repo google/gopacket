@@ -1,6 +1,6 @@
 // Copyright 2012 Google, Inc. All rights reserved.
 
-package gopacket
+package layers
 
 import (
 	"encoding/binary"
@@ -28,7 +28,7 @@ type ProtocolGuessingDecoder struct{}
 
 func (ProtocolGuessingDecoder) Decode(data []byte) (_ gopacket.DecodeResult, err error) {
 	ethPrefix := [3]byte{data[0], data[1], data[2]}
-	if _, ok := ValidMACPrefixMap[ethPrefix]; ok {
+	if _, ok := gopacket.ValidMACPrefixMap[ethPrefix]; ok {
 		return decodeEthernet(data)
 	}
 	switch data[0] >> 4 {
@@ -47,9 +47,9 @@ func (ProtocolGuessingDecoder) Decode(data []byte) (_ gopacket.DecodeResult, err
 // simple attempt at guessing protocols based on the first few bytes of data
 // available to us.  However, if you know that in your environment MPLS always
 // encapsulates a specific protocol, you may reset this.
-var MPLSPayloadDecoder Decoder = ProtocolGuessingDecoder{}
+var MPLSPayloadDecoder gopacket.Decoder = ProtocolGuessingDecoder{}
 
-var decodeMPLS decoderFunc = func(data []byte) (out gopacket.DecodeResult, err error) {
+func decodeMPLS(data []byte) (out gopacket.DecodeResult, err error) {
 	decoded := binary.BigEndian.Uint32(data[:4])
 	out.DecodedLayer = &MPLS{
 		Label:        decoded >> 12,

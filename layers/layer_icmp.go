@@ -1,7 +1,7 @@
 // Copyright 2012 Google, Inc. All rights reserved.
 // Copyright 2009-2012 Andreas Krennmair. All rights reserved.
 
-package gopacket
+package layers
 
 import (
 	"encoding/binary"
@@ -30,7 +30,7 @@ func decodeICMP(data []byte) (out gopacket.DecodeResult, err error) {
 		Seq:      binary.BigEndian.Uint16(data[6:8]),
 	}
 	out.RemainingBytes = data[8:]
-	out.NextDecoder = decodePayload
+	out.NextDecoder = gopacket.LayerTypePayload
 	return
 }
 

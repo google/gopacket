@@ -10,6 +10,7 @@ import (
 	"flag"
 	"fmt"
 	"github.com/gconnell/gopacket"
+	"github.com/gconnell/gopacket/layers"
 	"github.com/gconnell/gopacket/pfring"
 	"io"
 )
@@ -31,7 +32,7 @@ func main() {
 		}
 	}
 	ring.Enable() // Must do this!, or you get no packets!
-	packetSource := gopacket.NewPacketSource(ring, gopacket.LinkTypeEthernet)
+	packetSource := gopacket.NewPacketSource(ring, layers.LinkTypeEthernet)
 	fmt.Println("Waiting for packets...")
 	for {
 		packet, err := packetSource.NextPacket()

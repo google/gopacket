@@ -1,7 +1,7 @@
 // Copyright 2012 Google, Inc. All rights reserved.
 // Copyright 2009-2012 Andreas Krennmair. All rights reserved.
 
-package gopacket
+package layers
 
 import (
 	"fmt"
@@ -199,23 +199,23 @@ const (
 func (s SCTPChunkType) Decode(data []byte) (_ gopacket.DecodeResult, err error) {
 	switch s {
 	case SCTPChunkTypeData:
-		return LayerTypeSCTPData.Decode(data)
+		return decodeSCTPData(data)
 	case SCTPChunkTypeInit, SCTPChunkTypeInitAck:
-		return LayerTypeSCTPInit.Decode(data)
+		return decodeSCTPInit(data)
 	case SCTPChunkTypeSack:
-		return LayerTypeSCTPSack.Decode(data)
+		return decodeSCTPSack(data)
 	case SCTPChunkTypeHeartbeat, SCTPChunkTypeHeartbeatAck:
-		return LayerTypeSCTPHeartbeat.Decode(data)
+		return decodeSCTPHeartbeat(data)
 	case SCTPChunkTypeAbort, SCTPChunkTypeError:
-		return LayerTypeSCTPError.Decode(data)
+		return decodeSCTPError(data)
 	case SCTPChunkTypeShutdown:
-		return LayerTypeSCTPShutdown.Decode(data)
+		return decodeSCTPShutdown(data)
 	case SCTPChunkTypeShutdownAck:
-		return LayerTypeSCTPShutdownAck.Decode(data)
+		return decodeSCTPShutdownAck(data)
 	case SCTPChunkTypeCookieEcho:
-		return LayerTypeSCTPCookieEcho.Decode(data)
+		return decodeSCTPCookieEcho(data)
 	case SCTPChunkTypeCookieAck, SCTPChunkTypeShutdownComplete:
-		return LayerTypeSCTPEmptyLayer.Decode(data)
+		return decodeSCTPEmptyLayer(data)
 	}
 	err = fmt.Errorf("Unable to decode SCTP chunk type %v", s)
 	return

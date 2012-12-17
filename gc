@@ -118,7 +118,7 @@ BENCHMARK_MARKER_DO_NOT_CHANGE
 
 TEST BENCHMARKS
 EOF
-go test --test.bench=.* 2>&1 | tee -a $COMMIT_FILE
+go test ./... --test.bench=.* 2>&1 | tee -a $COMMIT_FILE
 cat >> $COMMIT_FILE <<EOF
 
 
@@ -140,7 +140,7 @@ BENCHMARKING AGAINST COMMIT $PREV
 
 OLD TEST BENCHMARKS
 EOF
-go test --test.bench=.* 2>&1 | tee -a $COMMIT_FILE
+go test ./... --test.bench=.* 2>&1 | tee -a $COMMIT_FILE
 cat >> $COMMIT_FILE <<EOF
 
 

@@ -1,6 +1,6 @@
 // Copyright 2012 Google, Inc. All rights reserved.
 
-package gopacket
+package layers
 
 import (
 	"encoding/binary"
@@ -13,9 +13,12 @@ type PPP struct {
 	PPPType PPPType
 }
 
-// LayerType returns gopacket.LayerTypePPP
+var PPPEndpoitn = gopacket.NewEndpoint(EndpointPPP, []byte{})
+var PPPFlow = gopacket.NewFlow(EndpointPPP, []byte{}, []byte{})
+
+// LayerType returns LayerTypePPP
 func (p *PPP) LayerType() gopacket.LayerType { return LayerTypePPP }
-func (p *PPP) LinkFlow() gopacket.Flow       { return PPPgopacket.Flow }
+func (p *PPP) LinkFlow() gopacket.Flow       { return PPPFlow }
 
 func decodePPP(data []byte) (out gopacket.DecodeResult, err error) {
 	ppp := &PPP{}

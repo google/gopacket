@@ -1,7 +1,7 @@
 // Copyright 2012 Google, Inc. All rights reserved.
 // Copyright 2009-2012 Andreas Krennmair. All rights reserved.
 
-package gopacket
+package layers
 
 import (
 	"encoding/binary"
@@ -21,11 +21,11 @@ type Ethernet struct {
 	Length uint16
 }
 
-// LayerType returns gopacket.LayerTypeEthernet
+// LayerType returns LayerTypeEthernet
 func (e *Ethernet) LayerType() gopacket.LayerType { return LayerTypeEthernet }
 
 func (e *Ethernet) LinkFlow() gopacket.Flow {
-	return gopacket.Flow{gopacket.LayerTypeEthernet, string(e.SrcMAC), string(e.DstMAC)}
+	return gopacket.NewFlow(EndpointMAC, e.SrcMAC, e.DstMAC)
 }
 
 func decodeEthernet(data []byte) (out gopacket.DecodeResult, err error) {
