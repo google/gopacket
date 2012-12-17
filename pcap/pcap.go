@@ -134,7 +134,7 @@ const (
 // NextError returns the next packet read from the pcap handle, along with an error
 // code associated with that packet.  If the packet is read successfully, the
 // returned error is nil.
-func (p *Handle) NextPacketData() (data []byte, ci gopacket.CaptureInfo, err error) {
+func (p *Handle) ReadPacketData() (data []byte, ci gopacket.CaptureInfo, err error) {
 	var pkthdr *C.struct_pcap_pkthdr
 
 	var buf_ptr *C.u_char
@@ -286,8 +286,8 @@ func sockaddr_to_IP(rsa *syscall.RawSockaddr) (IP []byte, err error) {
 	return
 }
 
-// Inject calls pcap_inject, injecting the given data into the pcap handle.
-func (p *Handle) Inject(data []byte) (err error) {
+// WritePacketData calls pcap_inject, injecting the given data into the pcap handle.
+func (p *Handle) WritePacketData(data []byte) (err error) {
 	buf := C.CString(string(data))
 	defer C.free(unsafe.Pointer(buf))
 

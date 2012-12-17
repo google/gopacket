@@ -91,7 +91,7 @@ func (n NextResult) Error() string {
 // NextResult returns the next packet read from the pcap handle, along with an error
 // code associated with that packet.  If the packet is read successfully, the
 // returned error is nil.
-func (r *Ring) NextPacketData() (data []byte, ci gopacket.CaptureInfo, err error) {
+func (r *Ring) ReadPacketData() (data []byte, ci gopacket.CaptureInfo, err error) {
 	var pkthdr C.struct_pfring_pkthdr
 
 	data = make([]byte, r.snaplen)
@@ -166,8 +166,8 @@ func (r *Ring) RemoveBPFFilter() error {
 	return nil
 }
 
-// Inject uses the ring to send raw packet data to the interface.
-func (r *Ring) Inject(data []byte) error {
+// WritePacketData uses the ring to send raw packet data to the interface.
+func (r *Ring) WritePacketData(data []byte) error {
 	buf := (*C.char)(unsafe.Pointer(&data[0]))
 	if rv := C.pfring_send(r.cptr, buf, C.u_int(len(data)), 1); rv != 0 {
 		return fmt.Errorf("Unable to send packet data, got error code %d", rv)
@@ -212,15 +212,15 @@ func (r *Ring) Stats() (s Stats, err error) {
 type Direction C.packet_direction
 
 const (
-	// TXOnly will only capture packets transmitted by the ring's
+	// TransmitOnly will only capture packets transmitted by the ring's
 	// interface(s).
-	TXOnly Direction = C.tx_only_direction
-	// RXOnly will only capture packets received by the ring's
+	TransmitOnly Direction = C.tx_only_direction
+	// ReceiveOnly will only capture packets received by the ring's
 	// interface(s).
-	RXOnly Direction = C.rx_only_direction
-	// RXAndTX will capture both received and transmitted packets on
+	ReceiveOnly Direction = C.rx_only_direction
+	// ReceiveAndTransmit will capture both received and transmitted packets on
 	// the ring's interface(s).
-	RXAndTX Direction = C.rx_and_tx_direction
+	ReceiveAndTransmit Direction = C.rx_and_tx_direction
 )
 
 // SetDirection sets which packets should be captured by the ring.
@@ -234,13 +234,13 @@ func (r *Ring) SetDirection(d Direction) error {
 type SocketMode C.socket_mode
 
 const (
-	// SendOnly sets up the ring to only send packets (Inject), not read them.
-	SendOnly SocketMode = C.send_only_mode
-	// ReceiveOnly sets up the ring to only receive packets (NextPacketData), not
+	// WriteOnly sets up the ring to only send packets (Inject), not read them.
+	WriteOnly SocketMode = C.send_only_mode
+	// ReadOnly sets up the ring to only receive packets (ReadPacketData), not
 	// send them.
-	ReceiveOnly SocketMode = C.recv_only_mode
-	// SendAndReceive sets up the ring to both send and receive packets.
-	SendAndReceive SocketMode = C.send_and_recv_mode
+	ReadOnly SocketMode = C.recv_only_mode
+	// WriteAndRead sets up the ring to both send and receive packets.
+	WriteAndRead SocketMode = C.send_and_recv_mode
 )
 
 // SetSocketMode sets the mode of the ring socket to send, receive, or both.

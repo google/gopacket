@@ -265,8 +265,8 @@ func (p *packet) String() string {
 }
 
 type PacketDataSource interface {
-	// NextPacket returns the next packet available from this data source.
-	NextPacketData() (data []byte, ci CaptureInfo, err error)
+	// ReadPacketData returns the next packet available from this data source.
+	ReadPacketData() (data []byte, ci CaptureInfo, err error)
 }
 
 type PacketSource struct {
@@ -283,7 +283,7 @@ func NewPacketSource(source PacketDataSource, decoder Decoder) *PacketSource {
 }
 
 func (p *PacketSource) NextPacket() (Packet, error) {
-	data, ci, err := p.source.NextPacketData()
+	data, ci, err := p.source.ReadPacketData()
 	if err != nil {
 		return nil, err
 	}
