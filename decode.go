@@ -40,10 +40,10 @@ type Decoder interface {
 	Decode([]byte) (DecodeResult, error)
 }
 
-// DecoderFunc is an implementation of decoder that's a simple function.
-type DecoderFunc func([]byte) (DecodeResult, error)
+// DecodeFunc is an implementation of decoder that's a simple function.
+type DecodeFunc func([]byte) (DecodeResult, error)
 
-func (d DecoderFunc) Decode(data []byte) (DecodeResult, error) {
+func (d DecodeFunc) Decode(data []byte) (DecodeResult, error) {
 	// function, call thyself.
 	return d(data)
 }
@@ -61,8 +61,20 @@ func (d *DecodeFailure) Payload() []byte { return d.data }
 // Error returns the error encountered during decoding.
 func (d *DecodeFailure) Error() error { return d.err }
 
-var LayerTypeDecodeFailure = RegisterLayerType(0, "Decode Failure", DecoderFunc(decodeUnknown))
-var LayerTypePayload = RegisterLayerType(1, "Payload", DecoderFunc(decodePayload))
+var (
+	// DecodePayload is a Decoder that returns a Payload layer containing all
+	// remaining bytes.
+	DecodePayload Decoder = DecodeFunc(decodePayload)
+	// DecodeUnknown is a Decoder that returns a DecodeFailure layer containing all
+	// remaining bytes, useful if you run up against a layer that you're unable to
+	// decode yet.
+	DecodeUnknown Decoder = DecodeFunc(decodeUnknown)
+	// LayerTypeDecodeFailure is the layer type for the default error layer.
+	LayerTypeDecodeFailure = RegisterLayerType(0, "Decode Failure", DecodeUnknown)
+	// LayerTypePayload is the layer type for a payload that we don't try to decode
+	// but treat as a success, IE: an application-level payload.
+	LayerTypePayload = RegisterLayerType(1, "Payload", DecodePayload)
+)
 
 // LayerType returns LayerTypeDecodeFailure
 func (d *DecodeFailure) LayerType() LayerType { return LayerTypeDecodeFailure }
@@ -70,7 +82,7 @@ func (d *DecodeFailure) LayerType() LayerType { return LayerTypeDecodeFailure }
 // decodeUnknown "decodes" unsupported data types by returning an error.
 // This decoder will thus always return a DecodeFailure layer.
 func decodeUnknown(data []byte) (out DecodeResult, err error) {
-	err = errors.New("Link type not currently supported")
+	err = errors.New("Layer type not currently supported")
 	return
 }
 

@@ -347,7 +347,7 @@ func TestDecoderSecurity(t *testing.T) {
 
 	testCases := []struct {
 		s string
-		d gopacket.DecoderFunc
+		d gopacket.DecodeFunc
 	}{
 		{"ARP", decodeARP},
 		{"Dot1Q", decodeDot1Q},

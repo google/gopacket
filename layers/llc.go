@@ -52,7 +52,7 @@ func decodeLLC(data []byte) (out gopacket.DecodeResult, err error) {
 	if l.DSAP == 0xAA && l.SSAP == 0xAA {
 		out.NextDecoder = LayerTypeSNAP
 	} else {
-		out.NextDecoder = gopacket.LayerTypeDecodeFailure
+		out.NextDecoder = gopacket.DecodeUnknown
 	}
 	return
 }

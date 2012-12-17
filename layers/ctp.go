@@ -64,7 +64,7 @@ func decodeCTP(data []byte) (out gopacket.DecodeResult, err error) {
 		return
 	}
 	out.DecodedLayer = c
-	out.NextDecoder = gopacket.DecoderFunc(decodeCTPFromFunctionType)
+	out.NextDecoder = gopacket.DecodeFunc(decodeCTPFromFunctionType)
 	out.RemainingBytes = data[2:]
 	return
 }
@@ -88,7 +88,7 @@ func decodeCTPFromFunctionType(data []byte) (out gopacket.DecodeResult, err erro
 			Function:       function,
 			ForwardAddress: data[2:8],
 		}
-		out.NextDecoder = gopacket.DecoderFunc(decodeCTPFromFunctionType)
+		out.NextDecoder = gopacket.DecodeFunc(decodeCTPFromFunctionType)
 		out.RemainingBytes = data[8:]
 		return
 	}
