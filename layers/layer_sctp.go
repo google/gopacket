@@ -42,7 +42,6 @@ func (s *SCTP) TransportFlow() gopacket.Flow {
 
 func decodeWithSCTPChunkTypePrefix(data []byte) (gopacket.DecodeResult, error) {
 	chunkType := SCTPChunkType(data[0])
-	fmt.Printf("CHUNK TYPE %v, %d bytes left", chunkType, len(data))
 	return chunkType.Decode(data)
 }
 
