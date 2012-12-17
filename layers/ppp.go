@@ -13,7 +13,7 @@ type PPP struct {
 	PPPType PPPType
 }
 
-var PPPEndpoitn = gopacket.NewEndpoint(EndpointPPP, []byte{})
+var PPPEndpoint = gopacket.NewEndpoint(EndpointPPP, []byte{})
 var PPPFlow = gopacket.NewFlow(EndpointPPP, []byte{}, []byte{})
 
 // LayerType returns LayerTypePPP

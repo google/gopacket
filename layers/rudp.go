@@ -16,10 +16,10 @@ type RUDP struct {
 	DataLength               uint16
 	Seq, Ack, Checksum       uint32
 	VariableHeaderArea       []byte
-	// RUDPSyn contains SYN information for the RUDP packet,
+	// RUDPHeaderSyn contains SYN information for the RUDP packet,
 	// if the SYN flag is set
 	*RUDPHeaderSYN
-	// RUDPEack contains EACK information for the RUDP packet,
+	// RUDPHeaderEack contains EACK information for the RUDP packet,
 	// if the EACK flag is set.
 	*RUDPHeaderEACK
 }

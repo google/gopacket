@@ -11,14 +11,14 @@ import (
 // IPv6 is the layer for the IPv6 header.
 type IPv6 struct {
 	// http://www.networksorcery.com/enp/protocol/ipv6.htm
-	Version      uint8      // 4 bits
-	TrafficClass uint8      // 8 bits
-	FlowLabel    uint32     // 20 bits
-	Length       uint16     // 16 bits
-	NextHeader   IPProtocol // 8 bits, same as Protocol in Iphdr
-	HopLimit     uint8      // 8 bits
-	SrcIP        []byte     // 16 bytes
-	DstIP        []byte     // 16 bytes
+	Version      uint8
+	TrafficClass uint8
+	FlowLabel    uint32
+	Length       uint16
+	NextHeader   IPProtocol
+	HopLimit     uint8
+	SrcIP        []byte
+	DstIP        []byte
 }
 
 // LayerType returns LayerTypeIPv6
