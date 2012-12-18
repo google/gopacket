@@ -34,9 +34,42 @@ var decodeLazy *bool = flag.Bool("lazy", false, "If true, use lazy decoding")
 var decodeNoCopy *bool = flag.Bool("nocopy", false, "If true, avoid an extra copy when decoding packets")
 var printErrors *bool = flag.Bool("printErrors", false, "If true, check for and print error layers.")
 var printLayers *bool = flag.Bool("printLayers", false, "If true, print out the layers of each packet")
-var repeat *int = flag.Int("repeat", 1, "Read over the file N times")
+var repeat *int = flag.Int("repeat", 10, "Read over the file N times")
 var cpuProfile *string = flag.String("cpuprofile", "", "If set, write CPU profile to filename")
 var url *string = flag.String("url", "http://www.ll.mit.edu/mission/communications/cyber/CSTcorpora/ideval/data/1999/training/week1/tuesday/inside.tcpdump.gz", "URL to gzip'd pcap file")
+
+type BufferPacketSource struct {
+	index int
+	data  [][]byte
+	ci    []gopacket.CaptureInfo
+}
+
+func NewBufferPacketSource(p gopacket.PacketDataSource) *BufferPacketSource {
+	start := time.Now()
+	b := &BufferPacketSource{}
+	for {
+		data, ci, err := p.ReadPacketData()
+		if err == io.EOF {
+			break
+		}
+		b.data = append(b.data, data)
+		b.ci = append(b.ci, ci)
+	}
+	duration := time.Since(start)
+	fmt.Printf("Reading packet data into memory: %d packets in %v, %v per packet\n", len(b.data), duration, duration/time.Duration(len(b.data)))
+	return b
+}
+
+func (b *BufferPacketSource) ReadPacketData() (data []byte, ci gopacket.CaptureInfo, err error) {
+	if b.index >= len(b.data) {
+		err = io.EOF
+		return
+	}
+	data = b.data[b.index]
+	ci = b.ci[b.index]
+	b.index++
+	return
+}
 
 func main() {
 	flag.Parse()
@@ -86,11 +119,14 @@ func main() {
 		}
 	}
 	for i := 0; i < *repeat; i++ {
-		fmt.Println("Opening file", filename, "for read")
+		fmt.Printf("%d/%d: Opening file %q for read\n", i+1, *repeat, filename)
 		if h, err := pcap.OpenOffline(filename); err != nil {
 			panic(err)
 		} else {
-			packetSource := gopacket.NewPacketSource(h, h.LinkType())
+			realStart := time.Now()
+			// Read all packets into memory with BufferPacketSource.
+			packetDataSource := NewBufferPacketSource(h)
+			packetSource := gopacket.NewPacketSource(packetDataSource, h.LinkType())
 			packetSource.DecodeOptions.Lazy = *decodeLazy
 			packetSource.DecodeOptions.NoCopy = *decodeNoCopy
 			count, errors := 0, 0
@@ -121,6 +157,7 @@ func main() {
 			if *printErrors {
 				fmt.Printf("%v errors, successfully decoded %.02f%%\n", errors, float64(count-errors)*100.0/float64(count))
 			}
+			fmt.Printf("Time to both read and process: %v\n", time.Since(realStart))
 		}
 	}
 }
