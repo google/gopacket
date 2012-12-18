@@ -37,37 +37,42 @@ func NewEndpoint(typ EndpointType, raw []byte) Endpoint {
 	return Endpoint{typ, string(raw)}
 }
 
-type endpointType struct {
-	name      string
-	formatter func([]byte) string
+type EndpointTypeMetadata struct {
+	// Name is the string returned by an EndpointType's String function.
+	Name string
+	// Formatter is called from an Endpoint's String function to format the raw
+	// bytes in an Endpoint into a human-readable string.
+	Formatter func([]byte) string
 }
 
+// EndpointType is the type of a gopacket Endpoint.  This type determines how
+// the bytes stored in the endpoint should be interpreted.
 type EndpointType int64
 
-var endpointTypes = map[EndpointType]endpointType{}
+var endpointTypes = map[EndpointType]EndpointTypeMetadata{}
 
-func RegisterEndpointType(num int, name string, formatter func([]byte) string) EndpointType {
+// RegisterEndpointType creates a new EndpointType and registers it globally.
+// It MUST be passed a unique number, or it will panic.  Numbers 0-999 are
+// reserved for gopacket's use.
+func RegisterEndpointType(num int, meta EndpointTypeMetadata) EndpointType {
 	t := EndpointType(num)
 	if _, ok := endpointTypes[t]; ok {
 		panic("Endpoint type number already in use")
 	}
-	endpointTypes[t] = endpointType{
-		name:      name,
-		formatter: formatter,
-	}
+	endpointTypes[t] = meta
 	return t
 }
 
 func (e EndpointType) String() string {
 	if t, ok := endpointTypes[e]; ok {
-		return t.name
+		return t.Name
 	}
 	return strconv.Itoa(int(e))
 }
 
 func (e Endpoint) String() string {
 	if t, ok := endpointTypes[e.typ]; ok {
-		return t.formatter([]byte(e.raw))
+		return t.Formatter([]byte(e.raw))
 	}
 	return fmt.Sprintf("%v:%v", e.typ, e.raw)
 }

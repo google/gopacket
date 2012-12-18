@@ -14,10 +14,18 @@ import (
 // A LayerType corresponds 1:1 to a struct type.
 type LayerType int64
 
+// LayerTypeMetadata contains metadata associated with each LayerType.
+type LayerTypeMetadata struct {
+	// Name is the string returned by each layer type's String method.
+	Name string
+	// Decoder is the decoder to use when the layer type is passed in as a
+	// Decoder.
+	Decoder Decoder
+}
+
 type layerTypeMetadata struct {
 	inUse bool
-	name  string
-	dec   Decoder
+	LayerTypeMetadata
 }
 
 const maxLayerType = 2000
@@ -32,24 +40,22 @@ var ltMetaMap = map[LayerType]layerTypeMetadata{}
 // number (negative or >= 2000) may be used for uncommon application-specific
 // types, and are somewhat slower (they require a map lookup over an array
 // index).
-func RegisterLayerType(num int, name string, dec Decoder) LayerType {
+func RegisterLayerType(num int, meta LayerTypeMetadata) LayerType {
 	if 0 <= num && num < maxLayerType {
 		if ltMeta[num].inUse {
 			panic("Layer type already exists")
 		}
 		ltMeta[num] = layerTypeMetadata{
-			inUse: true,
-			name:  name,
-			dec:   dec,
+			inUse:             true,
+			LayerTypeMetadata: meta,
 		}
 	} else {
 		if ltMetaMap[LayerType(num)].inUse {
 			panic("Layer type already exists")
 		}
 		ltMetaMap[LayerType(num)] = layerTypeMetadata{
-			inUse: true,
-			name:  name,
-			dec:   dec,
+			inUse:             true,
+			LayerTypeMetadata: meta,
 		}
 	}
 	return LayerType(num)
@@ -60,9 +66,9 @@ func RegisterLayerType(num int, name string, dec Decoder) LayerType {
 func (t LayerType) Decode(data []byte) (_ DecodeResult, err error) {
 	var d Decoder
 	if 0 <= int(t) && int(t) < maxLayerType {
-		d = ltMeta[int(t)].dec
+		d = ltMeta[int(t)].Decoder
 	} else {
-		d = ltMetaMap[t].dec
+		d = ltMetaMap[t].Decoder
 	}
 	if d != nil {
 		return d.Decode(data)
@@ -74,9 +80,9 @@ func (t LayerType) Decode(data []byte) (_ DecodeResult, err error) {
 // String returns the string associated with this layer type.
 func (t LayerType) String() (s string) {
 	if 0 <= int(t) && int(t) < maxLayerType {
-		s = ltMeta[int(t)].name
+		s = ltMeta[int(t)].Name
 	} else {
-		s = ltMetaMap[t].name
+		s = ltMetaMap[t].Name
 	}
 	if s == "" {
 		s = strconv.Itoa(int(t))

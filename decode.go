@@ -70,10 +70,10 @@ var (
 	// decode yet.
 	DecodeUnknown Decoder = DecodeFunc(decodeUnknown)
 	// LayerTypeDecodeFailure is the layer type for the default error layer.
-	LayerTypeDecodeFailure = RegisterLayerType(0, "Decode Failure", DecodeUnknown)
+	LayerTypeDecodeFailure = RegisterLayerType(0, LayerTypeMetadata{"Decode Failure", DecodeUnknown})
 	// LayerTypePayload is the layer type for a payload that we don't try to decode
 	// but treat as a success, IE: an application-level payload.
-	LayerTypePayload = RegisterLayerType(1, "Payload", DecodePayload)
+	LayerTypePayload = RegisterLayerType(1, LayerTypeMetadata{"Payload", DecodePayload})
 )
 
 // LayerType returns LayerTypeDecodeFailure

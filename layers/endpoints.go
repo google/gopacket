@@ -8,27 +8,27 @@ import (
 )
 
 var (
-	EndpointPPP = gopacket.RegisterEndpointType(0, "PPP", func([]byte) string {
+	EndpointPPP = gopacket.RegisterEndpointType(0, gopacket.EndpointTypeMetadata{"PPP", func([]byte) string {
 		return "point"
-	})
-	EndpointIP = gopacket.RegisterEndpointType(1, "IP", func(b []byte) string {
+	}})
+	EndpointIP = gopacket.RegisterEndpointType(1, gopacket.EndpointTypeMetadata{"IP", func(b []byte) string {
 		return net.IP(b).String()
-	})
-	EndpointMAC = gopacket.RegisterEndpointType(2, "MAC", func(b []byte) string {
+	}})
+	EndpointMAC = gopacket.RegisterEndpointType(2, gopacket.EndpointTypeMetadata{"MAC", func(b []byte) string {
 		return net.HardwareAddr(b).String()
-	})
-	EndpointTCPPort = gopacket.RegisterEndpointType(3, "TCP", func(b []byte) string {
+	}})
+	EndpointTCPPort = gopacket.RegisterEndpointType(3, gopacket.EndpointTypeMetadata{"TCP", func(b []byte) string {
 		return strconv.Itoa(int(binary.BigEndian.Uint16(b)))
-	})
-	EndpointUDPPort = gopacket.RegisterEndpointType(4, "UDP", func(b []byte) string {
+	}})
+	EndpointUDPPort = gopacket.RegisterEndpointType(4, gopacket.EndpointTypeMetadata{"UDP", func(b []byte) string {
 		return strconv.Itoa(int(binary.BigEndian.Uint16(b)))
-	})
-	EndpointSCTPPort = gopacket.RegisterEndpointType(5, "SCTP", func(b []byte) string {
+	}})
+	EndpointSCTPPort = gopacket.RegisterEndpointType(5, gopacket.EndpointTypeMetadata{"SCTP", func(b []byte) string {
 		return strconv.Itoa(int(binary.BigEndian.Uint16(b)))
-	})
-	EndpointRUDPPort = gopacket.RegisterEndpointType(6, "RUDP", func(b []byte) string {
+	}})
+	EndpointRUDPPort = gopacket.RegisterEndpointType(6, gopacket.EndpointTypeMetadata{"RUDP", func(b []byte) string {
 		return strconv.Itoa(int(b[0]))
-	})
+	}})
 )
 
 func NewIPEndpoint(a net.IP) gopacket.Endpoint {
