@@ -30,3 +30,25 @@ var (
 		return strconv.Itoa(int(b[0]))
 	})
 )
+
+func NewIPEndpoint(a net.IP) gopacket.Endpoint {
+	return gopacket.NewEndpoint(EndpointIP, []byte(a))
+}
+func NewMACEndpoint(a net.HardwareAddr) gopacket.Endpoint {
+	return gopacket.NewEndpoint(EndpointMAC, []byte(a))
+}
+func newPortEndpoint(t gopacket.EndpointType, p uint16) gopacket.Endpoint {
+	return gopacket.NewEndpoint(t, []byte{byte(p >> 16), byte(p)})
+}
+func NewTCPPortEndpoint(p uint16) gopacket.Endpoint {
+	return newPortEndpoint(EndpointTCPPort, p)
+}
+func NewUDPPortEndpoint(p uint16) gopacket.Endpoint {
+	return newPortEndpoint(EndpointUDPPort, p)
+}
+func NewSCTPPortEndpoint(p uint16) gopacket.Endpoint {
+	return newPortEndpoint(EndpointSCTPPort, p)
+}
+func NewRUDPPortEndpoint(p uint8) gopacket.Endpoint {
+	return gopacket.NewEndpoint(EndpointRUDPPort, []byte{p})
+}

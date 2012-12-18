@@ -42,7 +42,7 @@ type endpointType struct {
 	formatter func([]byte) string
 }
 
-type EndpointType int
+type EndpointType int64
 
 var endpointTypes = map[EndpointType]endpointType{}
 

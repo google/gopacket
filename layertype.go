@@ -12,7 +12,7 @@ import (
 // usable/useful within this library as a means for requesting layer types
 // (see Packet.Layer) and determining which types of layers have been decoded.
 // A LayerType corresponds 1:1 to a struct type.
-type LayerType int
+type LayerType int64
 
 type layerTypeMetadata struct {
 	inUse bool
