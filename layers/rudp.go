@@ -9,6 +9,7 @@ import (
 )
 
 type RUDP struct {
+	baseLayer
 	SYN, ACK, EACK, RST, NUL bool
 	Version                  uint8
 	HeaderLength             uint8
@@ -56,6 +57,8 @@ func decodeRUDP(data []byte) (out gopacket.DecodeResult, err error) {
 		return
 	}
 	hlen := int(r.HeaderLength) * 2
+	r.contents = data[:hlen]
+	r.payload = data[hlen : hlen+int(r.DataLength)]
 	r.VariableHeaderArea = data[18:hlen]
 	headerData := r.VariableHeaderArea
 	switch {
@@ -81,7 +84,6 @@ func decodeRUDP(data []byte) (out gopacket.DecodeResult, err error) {
 	}
 	out.DecodedLayer = r
 	out.NextDecoder = gopacket.LayerTypePayload
-	out.RemainingBytes = data[hlen : hlen+int(r.DataLength)]
 	out.TransportLayer = r
 	return
 }

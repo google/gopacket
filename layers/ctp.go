@@ -21,6 +21,7 @@ const (
 // We split CTP up into the top-level CTP layer, followed by zero or more
 // CTPForwardData layers, followed by a final CTPReply layer.
 type CTP struct {
+	baseLayer
 	SkipCount uint16
 }
 
@@ -30,6 +31,7 @@ func (c *CTP) LayerType() gopacket.LayerType { return LayerTypeCTP }
 // CTPForwardData is the ForwardData layer inside CTP.  See CTP's docs for more
 // details.
 type CTPForwardData struct {
+	baseLayer
 	Function       CTPFunction
 	ForwardAddress []byte
 }
@@ -44,6 +46,7 @@ func (c *CTPForwardData) ForwardEndpoint() gopacket.Endpoint {
 
 // CTPReply is the Reply layer inside CTP.  See CTP's docs for more details.
 type CTPReply struct {
+	baseLayer
 	Function      CTPFunction
 	ReceiptNumber uint16
 	Data          []byte
@@ -58,6 +61,7 @@ func (c *CTPReply) Payload() []byte { return c.Data }
 func decodeCTP(data []byte) (out gopacket.DecodeResult, err error) {
 	c := &CTP{
 		SkipCount: binary.LittleEndian.Uint16(data[:2]),
+		baseLayer: baseLayer{data[:2], data[2:]},
 	}
 	if c.SkipCount%2 != 0 {
 		err = fmt.Errorf("CTP skip count is odd: %d", c.SkipCount)
@@ -65,7 +69,6 @@ func decodeCTP(data []byte) (out gopacket.DecodeResult, err error) {
 	}
 	out.DecodedLayer = c
 	out.NextDecoder = gopacket.DecodeFunc(decodeCTPFromFunctionType)
-	out.RemainingBytes = data[2:]
 	return
 }
 
@@ -79,6 +82,7 @@ func decodeCTPFromFunctionType(data []byte) (out gopacket.DecodeResult, err erro
 			Function:      function,
 			ReceiptNumber: binary.LittleEndian.Uint16(data[2:4]),
 			Data:          data[4:],
+			baseLayer:     baseLayer{data, nil},
 		}
 		out.DecodedLayer = reply
 		out.ApplicationLayer = reply
@@ -87,9 +91,9 @@ func decodeCTPFromFunctionType(data []byte) (out gopacket.DecodeResult, err erro
 		out.DecodedLayer = &CTPForwardData{
 			Function:       function,
 			ForwardAddress: data[2:8],
+			baseLayer:      baseLayer{data[:8], data[8:]},
 		}
 		out.NextDecoder = gopacket.DecodeFunc(decodeCTPFromFunctionType)
-		out.RemainingBytes = data[8:]
 		return
 	}
 	err = fmt.Errorf("Unknown CTP function type %v", function)

@@ -11,6 +11,7 @@ import (
 
 // ICMP is the layer for ICMP packet data.
 type ICMP struct {
+	baseLayer
 	Type     uint8
 	Code     uint8
 	Checksum uint16
@@ -23,13 +24,13 @@ func (i *ICMP) LayerType() gopacket.LayerType { return LayerTypeICMP }
 
 func decodeICMP(data []byte) (out gopacket.DecodeResult, err error) {
 	out.DecodedLayer = &ICMP{
-		Type:     data[0],
-		Code:     data[1],
-		Checksum: binary.BigEndian.Uint16(data[2:4]),
-		Id:       binary.BigEndian.Uint16(data[4:6]),
-		Seq:      binary.BigEndian.Uint16(data[6:8]),
+		Type:      data[0],
+		Code:      data[1],
+		Checksum:  binary.BigEndian.Uint16(data[2:4]),
+		Id:        binary.BigEndian.Uint16(data[4:6]),
+		Seq:       binary.BigEndian.Uint16(data[6:8]),
+		baseLayer: baseLayer{data[:8], data[8:]},
 	}
-	out.RemainingBytes = data[8:]
 	out.NextDecoder = gopacket.LayerTypePayload
 	return
 }

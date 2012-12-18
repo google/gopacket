@@ -14,6 +14,7 @@ type CDPType uint16
 // CDP is a packet layer containing the Cisco Discovery Protocol.
 // See http://www.cisco.com/univercd/cc/td/doc/product/lan/trsrb/frames.htm#31885
 type CDP struct {
+	baseLayer
 	Version  byte
 	TTL      byte
 	Checksum uint16
@@ -40,20 +41,21 @@ func decodeCDP(data []byte) (out gopacket.DecodeResult, err error) {
 		err = fmt.Errorf("Invalid CDP version number %d", c.Version)
 		return
 	}
-	data = data[4:]
-	for len(data) > 0 {
+	vData := data[4:]
+	for len(vData) > 0 {
 		val := CDPValue{
-			Type:   CDPType(binary.BigEndian.Uint16(data[:2])),
-			Length: binary.BigEndian.Uint16(data[2:4]),
+			Type:   CDPType(binary.BigEndian.Uint16(vData[:2])),
+			Length: binary.BigEndian.Uint16(vData[2:4]),
 		}
 		if val.Length < 4 {
 			err = fmt.Errorf("Invalid CDP value length %d", val.Length)
 			return
 		}
-		val.Value = data[4:val.Length]
+		val.Value = vData[4:val.Length]
 		c.Values = append(c.Values, val)
-		data = data[val.Length:]
+		vData = vData[val.Length:]
 	}
+	c.contents = data
 	out.DecodedLayer = c
 	return
 }

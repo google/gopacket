@@ -9,6 +9,7 @@ import (
 
 // PPPoE is the layer for PPPoE encapsulation headers.
 type PPPoE struct {
+	baseLayer
 	Version   uint8
 	Type      uint8
 	Code      PPPoECode
@@ -29,8 +30,8 @@ func decodePPPoE(data []byte) (out gopacket.DecodeResult, err error) {
 		Code:      PPPoECode(data[1]),
 		SessionId: binary.BigEndian.Uint16(data[2:4]),
 		Length:    binary.BigEndian.Uint16(data[4:6]),
+		baseLayer: baseLayer{data[:6], data[6:]},
 	}
-	out.RemainingBytes = data[6:]
 	out.DecodedLayer = pppoe
 	out.NextDecoder = pppoe.Code
 	return

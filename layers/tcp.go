@@ -10,6 +10,7 @@ import (
 
 // TCP is the layer for TCP headers.
 type TCP struct {
+	baseLayer
 	SrcPort                                    uint16
 	DstPort                                    uint16
 	Seq                                        uint32
@@ -47,7 +48,9 @@ func decodeTCP(data []byte) (out gopacket.DecodeResult, err error) {
 		Checksum:   binary.BigEndian.Uint16(data[16:18]),
 		Urgent:     binary.BigEndian.Uint16(data[18:20]),
 	}
-	out.RemainingBytes = data[tcp.DataOffset*4:]
+	hlen := tcp.DataOffset * 4
+	tcp.contents = data[:hlen]
+	tcp.payload = data[hlen:]
 	out.DecodedLayer = tcp
 	out.NextDecoder = gopacket.LayerTypePayload
 	out.TransportLayer = tcp

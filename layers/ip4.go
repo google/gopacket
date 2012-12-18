@@ -10,6 +10,7 @@ import (
 
 // IPv4 is the header of an IP packet.
 type IPv4 struct {
+	baseLayer
 	Version    uint8
 	IHL        uint8
 	TOS        uint8
@@ -50,7 +51,8 @@ func decodeIPv4(data []byte) (out gopacket.DecodeResult, err error) {
 	if pEnd > len(data) {
 		pEnd = len(data)
 	}
-	out.RemainingBytes = data[ip.IHL*4 : pEnd]
+	ip.contents = data[:ip.IHL*4]
+	ip.payload = data[ip.IHL*4 : pEnd]
 	out.DecodedLayer = ip
 	out.NextDecoder = ip.Protocol
 	out.NetworkLayer = ip

@@ -213,9 +213,9 @@ func (p *packet) decodeNextLayer() (out Layer) {
 		p.decoder = nil
 		out = p.failure
 	} else {
-		p.encoded = result.RemainingBytes
 		p.decoder = result.NextDecoder
 		out = result.DecodedLayer
+		p.encoded = out.LayerPayload()
 		p.copySpecificLayersFrom(&result)
 	}
 	p.appendLayer(out)

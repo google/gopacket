@@ -10,6 +10,7 @@ import (
 // LLC is the layer used for 802.2 Logical Link Control headers.
 // See http://standards.ieee.org/getieee802/download/802.2-1998.pdf
 type LLC struct {
+	baseLayer
 	DSAP    uint8
 	IG      bool // true means group, false means individual
 	SSAP    uint8
@@ -27,6 +28,7 @@ func (l *LLC) LayerType() gopacket.LayerType { return LayerTypeLLC }
 //  on networks using IEEE 802.2 LLC, more protocols than can be distinguished by
 //  the 8-bit 802.2 Service Access Point (SAP) fields."
 type SNAP struct {
+	baseLayer
 	OrganizationalCode []byte
 	Type               EthernetType
 }
@@ -44,9 +46,11 @@ func decodeLLC(data []byte) (out gopacket.DecodeResult, err error) {
 	}
 	if l.Control&0x1 == 0 || l.Control&0x3 == 0x1 {
 		l.Control = l.Control<<8 | uint16(data[3])
-		out.RemainingBytes = data[4:]
+		l.contents = data[:4]
+		l.payload = data[4:]
 	} else {
-		out.RemainingBytes = data[3:]
+		l.contents = data[:3]
+		l.payload = data[3:]
 	}
 	out.DecodedLayer = l
 	if l.DSAP == 0xAA && l.SSAP == 0xAA {
@@ -61,11 +65,11 @@ func decodeSNAP(data []byte) (out gopacket.DecodeResult, err error) {
 	s := &SNAP{
 		OrganizationalCode: data[:3],
 		Type:               EthernetType(binary.BigEndian.Uint16(data[3:5])),
+		baseLayer:          baseLayer{data[:5], data[5:]},
 	}
 	out.DecodedLayer = s
 	// BUG(gconnell):  This may not actually be an ethernet type in all cases,
 	// depending on the organizational code.  Right now, we don't check.
 	out.NextDecoder = s.Type
-	out.RemainingBytes = data[5:]
 	return
 }

@@ -11,13 +11,12 @@ import (
 // ignore this struct.
 type DecodeResult struct {
 	// DecodedLayer is the layer we've created with this decode call.
+	// DecodedLayer.LayerPayload() is the next set of bytes to be decoded... if it
+	// is empty, we stop decoding.
 	DecodedLayer Layer
 	// NextDecoder is the next decoder to call.  When NextDecoder == nil, the
 	// packet considers itself fully decoded.
 	NextDecoder Decoder
-	// RemainingBytes is the bytes that are left to be decoded.  When
-	// len(RemainingBytes) is 0, the packet considers itself fully decoded.
-	RemainingBytes []byte
 	// If the DecodedLayer is one of these layer types, also point to it here.
 	// The first of each of these will be returned by Packet.*Layer().  IE: if
 	// we've got an IPv4 packet encapsulated in another IPv4 packet, the decoder
@@ -54,11 +53,10 @@ type DecodeFailure struct {
 	err  error
 }
 
-// Payload returns the entire payload which failed to be decoded.
-func (d *DecodeFailure) Payload() []byte { return d.data }
-
 // Error returns the error encountered during decoding.
-func (d *DecodeFailure) Error() error { return d.err }
+func (d *DecodeFailure) Error() error          { return d.err }
+func (d *DecodeFailure) LayerContents() []byte { return d.data }
+func (d *DecodeFailure) LayerPayload() []byte  { return nil }
 
 var (
 	// DecodePayload is a Decoder that returns a Payload layer containing all

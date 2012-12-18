@@ -3,7 +3,7 @@
 package gopacket
 
 // Created by gopacket_mac_fetcher, don't edit manually
-// Generated at 2012-12-17 15:17:26.767668 -0700 MST
+// Generated at 2012-12-18 10:05:58.315363 -0700 MST
 // Fetched from "http://standards.ieee.org/develop/regauth/oui/oui.txt"
 
 // ValidMACPrefixMap maps a valid MAC address prefix to the name of the
@@ -14702,6 +14702,7 @@ var validMACPrefixMap = map[[3]byte]string{
 	[3]byte{112, 2, 88}:    "01DB-METRAVIB",
 	[3]byte{112, 5, 20}:    "LG Electronics",
 	[3]byte{112, 11, 192}:  "Dewav Technology Company",
+	[3]byte{112, 17, 36}:   "Apple",
 	[3]byte{112, 20, 4}:    "Limited Liability Company \"Research Center \"Bresler\"",
 	[3]byte{112, 26, 4}:    "Liteon Tech Corp.",
 	[3]byte{112, 26, 237}:  "ADVAS CO., LTD.",
@@ -14791,6 +14792,7 @@ var validMACPrefixMap = map[[3]byte]string{
 	[3]byte{116, 56, 137}:  "ANNAX Anzeigesysteme GmbH",
 	[3]byte{116, 68, 1}:    "NETGEAR",
 	[3]byte{116, 69, 138}:  "Samsung Electronics Co.,Ltd",
+	[3]byte{116, 70, 160}:  "Hewlett Packard",
 	[3]byte{116, 77, 121}:  "Arrive Systems Inc.",
 	[3]byte{116, 83, 39}:   "COMMSEN CO., LIMITED",
 	[3]byte{116, 86, 18}:   "Motorola Mobility, Inc.",
@@ -15314,6 +15316,7 @@ var validMACPrefixMap = map[[3]byte]string{
 	[3]byte{144, 110, 187}: "Hon Hai Precision Ind. Co.,Ltd.",
 	[3]byte{144, 112, 37}:  "Garea Microsys Co.,Ltd.",
 	[3]byte{144, 127, 97}:  "Chicony Electronics Co., Ltd.",
+	[3]byte{144, 130, 96}:  "IEEE 1904.1 Working Group",
 	[3]byte{144, 132, 13}:  "Apple, Inc",
 	[3]byte{144, 136, 162}: "IONICS TECHNOLOGY ME LTDA",
 	[3]byte{144, 141, 29}:  "GH Technologies",
@@ -16254,6 +16257,7 @@ var validMACPrefixMap = map[[3]byte]string{
 	[3]byte{196, 212, 137}: "JiangSu Joyque Information Industry Co.,Ltd",
 	[3]byte{196, 217, 135}: "Intel Corporate",
 	[3]byte{196, 218, 38}:  "NOBLEX SA",
+	[3]byte{196, 224, 50}:  "IEEE 1904.1 Working Group",
 	[3]byte{196, 225, 124}: "U2S co.",
 	[3]byte{196, 231, 190}: "SCSpro Co.,Ltd",
 	[3]byte{196, 235, 227}: "RRCN SAS",
@@ -16560,6 +16564,7 @@ var validMACPrefixMap = map[[3]byte]string{
 	[3]byte{212, 232, 178}: "Samsung Electronics",
 	[3]byte{212, 234, 14}:  "Avaya, Inc",
 	[3]byte{212, 236, 12}:  "Harley-Davidson Motor Company",
+	[3]byte{212, 238, 7}:   "HIWIFI Co., Ltd.",
 	[3]byte{212, 240, 39}:  "Navetas Energy Management",
 	[3]byte{212, 240, 180}: "Napco Security Technologies",
 	[3]byte{212, 241, 67}:  "IPROAD.,Inc",
@@ -16661,6 +16666,7 @@ var validMACPrefixMap = map[[3]byte]string{
 	[3]byte{220, 69, 23}:   "Motorola Mobility, Inc.",
 	[3]byte{220, 73, 201}:  "CASCO SIGNAL LTD",
 	[3]byte{220, 78, 222}:  "SHINYEI TECHNOLOGY CO., LTD.",
+	[3]byte{220, 111, 8}:   "Bay Storage Technology",
 	[3]byte{220, 113, 68}:  "Samsung Electro Mechanics",
 	[3]byte{220, 123, 148}: "CISCO SYSTEMS, INC.",
 	[3]byte{220, 133, 222}: "Azurewave Technologies., inc.",
@@ -16738,6 +16744,7 @@ var validMACPrefixMap = map[[3]byte]string{
 	[3]byte{224, 170, 176}: "GENERAL VISION ELECTRONICS CO. LTD.",
 	[3]byte{224, 171, 254}: "Orb Networks, Inc.",
 	[3]byte{224, 174, 94}:  "ALPS Electric Co,. Ltd.",
+	[3]byte{224, 174, 237}: "LOENK",
 	[3]byte{224, 183, 177}: "Pace plc",
 	[3]byte{224, 185, 165}: "Azurewave",
 	[3]byte{224, 185, 186}: "Apple, Inc.",
@@ -17102,6 +17109,7 @@ var validMACPrefixMap = map[[3]byte]string{
 	[3]byte{244, 230, 215}: "Solar Power Technologies, Inc.",
 	[3]byte{244, 234, 103}: "CISCO SYSTEMS, INC.",
 	[3]byte{244, 236, 56}:  "TP-LINK TECHNOLOGIES CO., LTD.",
+	[3]byte{244, 241, 90}:  "Apple",
 	[3]byte{244, 252, 50}:  "Texas Instruments",
 	[3]byte{248, 1, 19}:    "Huawei Technologies Co., Ltd",
 	[3]byte{248, 3, 50}:    "Khomp",
@@ -17222,6 +17230,7 @@ var validMACPrefixMap = map[[3]byte]string{
 	[3]byte{252, 161, 62}:  "Samsung Electronics",
 	[3]byte{252, 168, 65}:  "Avaya, Inc",
 	[3]byte{252, 169, 176}: "MIARTECH (SHANGHAI),INC.",
+	[3]byte{252, 173, 15}:  "QTS NETWORKS",
 	[3]byte{252, 175, 106}: "Conemtech AB",
 	[3]byte{252, 194, 61}:  "Atmel Corporation",
 	[3]byte{252, 199, 52}:  "Samsung Electronics Co.,Ltd",

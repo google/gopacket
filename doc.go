@@ -182,16 +182,17 @@ in a 4-byte header.
  // Implement my layer
  type MyLayer struct {
    StrangeHeader []byte
+   payload []byte
  }
  func (m MyLayer) LayerType() LayerType { return MyLayerType }
+ func (m MyLayer) LayerContents() []byte { return m.StrangeHeader }
+ func (m MyLayer) LayerPayload() []byte { return m.payload }
 
  // Now implement a decoder... this one strips off the first 4 bytes of the
  // packet.
  func decodeMyLayer(data []byte) (out gopacket.DecodeResult, err error) {
    // Create my layer
-   out.DecodedLayer = &MyLayer{data[:4]}
-   // Set which bytes we have left to decode
-   out.RemainingBytes = data[4:]
+   out.DecodedLayer = &MyLayer{data[:4], data[4:]}
    // Determine how to handle the rest of the packet
    out.NextDecoder = layers.LayerTypeEthernet
    return

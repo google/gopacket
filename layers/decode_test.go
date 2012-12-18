@@ -239,6 +239,7 @@ func TestDecodeSimpleTCPPacket(t *testing.T) {
 		equal("IP Src", "172.17.81.73", net.NetworkFlow().Src())
 		equal("IP Dst", "173.222.254.225", net.NetworkFlow().Dst())
 		want := &IPv4{
+			baseLayer:  baseLayer{testSimpleTCPPacket[14:34], testSimpleTCPPacket[34:]},
 			Version:    4,
 			IHL:        5,
 			TOS:        0,
@@ -264,6 +265,7 @@ func TestDecodeSimpleTCPPacket(t *testing.T) {
 		equal("TCP Src", "50679", trans.TransportFlow().Src())
 		equal("TCP Dst", "80", trans.TransportFlow().Dst())
 		want := &TCP{
+			baseLayer:  baseLayer{testSimpleTCPPacket[34:66], testSimpleTCPPacket[66:]},
 			SrcPort:    50679,
 			DstPort:    80,
 			Seq:        0xc57e0e48,

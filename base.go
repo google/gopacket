@@ -10,6 +10,11 @@ package gopacket
 // inspection of the data.
 type Layer interface {
 	LayerType() LayerType
+	// LayerContents returns the set of bytes that make up this layer.
+	LayerContents() []byte
+	// LayerPayload returns the set of bytes contained within this layer, not
+	// including the layer itself.
+	LayerPayload() []byte
 }
 
 // Payload is a Layer containing the payload of a packet.  The definition of
@@ -21,8 +26,10 @@ type Payload struct {
 }
 
 // LayerType returns LayerTypePayload
-func (p *Payload) LayerType() LayerType { return LayerTypePayload }
-func (p *Payload) Payload() []byte      { return p.Data }
+func (p *Payload) LayerType() LayerType  { return LayerTypePayload }
+func (p *Payload) LayerContents() []byte { return p.Data }
+func (p *Payload) LayerPayload() []byte  { return nil }
+func (p *Payload) Payload() []byte       { return p.Data }
 
 // These layers correspond to Internet Protocol Suite (TCP/IP) layers, and their
 // corresponding OSI layers, as best as possible.
@@ -59,6 +66,5 @@ type ApplicationLayer interface {
 // error details why the decoding failed.
 type ErrorLayer interface {
 	Layer
-	Payload() []byte
 	Error() error
 }

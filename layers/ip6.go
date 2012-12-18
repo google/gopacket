@@ -11,6 +11,7 @@ import (
 // IPv6 is the layer for the IPv6 header.
 type IPv6 struct {
 	// http://www.networksorcery.com/enp/protocol/ipv6.htm
+	baseLayer
 	Version      uint8
 	TrafficClass uint8
 	FlowLabel    uint32
@@ -37,9 +38,9 @@ func decodeIPv6(data []byte) (out gopacket.DecodeResult, err error) {
 		HopLimit:     data[7],
 		SrcIP:        data[8:24],
 		DstIP:        data[24:40],
+		baseLayer:    baseLayer{data[:40], data[40:]},
 	}
 	out.DecodedLayer = ip6
-	out.RemainingBytes = data[40:]
 	out.NextDecoder = ip6.NextHeader
 	out.NetworkLayer = ip6
 	return
