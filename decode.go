@@ -14,6 +14,17 @@ type DecodeResult struct {
 	// DecodedLayer.LayerPayload() is the next set of bytes to be decoded... if it
 	// is empty, we stop decoding.
 	DecodedLayer Layer
+	// wtf is ... special.  Here's a funny story.  I remove it, and my pcap
+	// benchmark jumps from 3.3 us/packet to 4.0 us/packet, quite a non-trivial
+	// jump.  I add it back in and poof, we go down again.
+	// The benchmarks show that when this is removed, the following jumps in CPU
+	// time occur:
+	//  runtime.oldstack:  2.7% cum -> 8.2% cum
+	//  runtime.newstack:  2.5% cum -> 8.8% cum
+	// Not sure what's going on here, but it's an interesting problem, indeed.
+	// TODO: Remove this once the compiler makes this stupid micro-optimization
+	// obsolete.
+	wtf []byte
 	// NextDecoder is the next decoder to call.  When NextDecoder == nil, the
 	// packet considers itself fully decoded.
 	NextDecoder Decoder

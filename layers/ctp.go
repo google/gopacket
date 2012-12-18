@@ -88,11 +88,12 @@ func decodeCTPFromFunctionType(data []byte) (out gopacket.DecodeResult, err erro
 		out.ApplicationLayer = reply
 		return
 	case CTPFunctionForwardData:
-		out.DecodedLayer = &CTPForwardData{
+		forward := &CTPForwardData{
 			Function:       function,
 			ForwardAddress: data[2:8],
 			baseLayer:      baseLayer{data[:8], data[8:]},
 		}
+		out.DecodedLayer = forward
 		out.NextDecoder = gopacket.DecodeFunc(decodeCTPFromFunctionType)
 		return
 	}
