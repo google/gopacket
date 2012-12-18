@@ -194,7 +194,7 @@ func (p *packet) decodeNextLayer() (out Layer) {
 		if r := recover(); r != nil {
 			fail := &DecodeFailure{
 				data: p.encoded,
-				err:  fmt.Errorf("Decode failure:", r),
+				err:  fmt.Errorf("Decode panic failure: %v", r),
 			}
 			p.appendLayer(fail)
 			p.failure = fail

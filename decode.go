@@ -57,18 +57,6 @@ func (d DecodeFunc) Decode(data []byte) (DecodeResult, error) {
 	return d(data)
 }
 
-// DecodeFailure is a packet layer created if decoding of the packet data failed
-// for some reason.  It implements ErrorLayer.
-type DecodeFailure struct {
-	data []byte
-	err  error
-}
-
-// Error returns the error encountered during decoding.
-func (d *DecodeFailure) Error() error          { return d.err }
-func (d *DecodeFailure) LayerContents() []byte { return d.data }
-func (d *DecodeFailure) LayerPayload() []byte  { return nil }
-
 var (
 	// DecodePayload is a Decoder that returns a Payload layer containing all
 	// remaining bytes.
@@ -83,6 +71,20 @@ var (
 	// but treat as a success, IE: an application-level payload.
 	LayerTypePayload = RegisterLayerType(1, LayerTypeMetadata{"Payload", DecodePayload})
 )
+
+// DecodeFailure is a packet layer created if decoding of the packet data failed
+// for some reason.  It implements ErrorLayer.  LayerContents will be the entire
+// set of bytes that failed to parse, and Error will return the reason parsing
+// failed.
+type DecodeFailure struct {
+	data []byte
+	err  error
+}
+
+// Error returns the error encountered during decoding.
+func (d *DecodeFailure) Error() error          { return d.err }
+func (d *DecodeFailure) LayerContents() []byte { return d.data }
+func (d *DecodeFailure) LayerPayload() []byte  { return nil }
 
 // LayerType returns LayerTypeDecodeFailure
 func (d *DecodeFailure) LayerType() LayerType { return LayerTypeDecodeFailure }
