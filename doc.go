@@ -3,6 +3,16 @@
 /*
 Package gopacket provides packet decoding for the Go language.
 
+gopacket contains 3 sub-packages with additional functionality you may find
+useful:
+
+ * layers: You'll probably use this every time.  This contains of the logic
+     built into gopacket for decoding packet protocols.  Note that all example
+     code below assumes that you have imported both gopacket and
+     gopacket/layers.
+ * pcap: C bindings to use libpcap to pull packets off the wire.
+ * pfring: C bindings to use PF_RING to pull packets off the wire.
+
 Basic Usage
 
 gopacket takes in packet data as a []byte and decodes it into a packet with

@@ -6,7 +6,9 @@ import (
 	"errors"
 )
 
-// DecodeResult is returned from a Decode call.
+// DecodeResult is returned from a Decode call.  You shouldn't need to use this
+// unless you want to write your own packet decoding logic.  Most users can
+// ignore this struct.
 type DecodeResult struct {
 	// DecodedLayer is the layer we've created with this decode call.
 	DecodedLayer Layer
@@ -28,19 +30,16 @@ type DecodeResult struct {
 	ErrorLayer
 }
 
-// Decoder decodes the next layer in a packet.  It returns a set of useful
-// information, which is used by the packet decoding logic to update packet
-// state.  Optionally, the decode function may set any of the specificLayer
-// pointers to point to the new layer it has created.
-//
-// This decoder interface is the internal interface used by gopacket to store
-// the next method to use for decoding the rest of the data available in the
-// packet.
+// Decoder is an interface for logic to decode a packet layer.  See DecodeResult
+// for a long-winded explanation of the data this fuction returns.  Users may
+// implement a Decoder to handle their own strange packet types, or may use one
+// of the many decoders available in the 'layers' subpackage to decode things
+// for them.
 type Decoder interface {
 	Decode([]byte) (DecodeResult, error)
 }
 
-// DecodeFunc is an implementation of decoder that's a simple function.
+// DecodeFunc wraps a function to make it a Decoder.
 type DecodeFunc func([]byte) (DecodeResult, error)
 
 func (d DecodeFunc) Decode(data []byte) (DecodeResult, error) {
