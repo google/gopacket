@@ -59,10 +59,20 @@ func decodeTCP(data []byte) (out gopacket.DecodeResult, err error) {
 	hlen := tcp.DataOffset * 4
 	d := data[20:hlen]
 	for len(d) > 0 {
+		if tcp.Options == nil {
+			// Pre-allocate to avoid growing the slice too much.
+			tcp.Options = make([]TCPOption, 0, 4)
+		}
 		opt := TCPOption{OptionType: d[0]}
-		if opt.OptionType < 2 {
+		switch opt.OptionType {
+		case 0: // End of options
 			opt.OptionLength = 1
-		} else {
+			tcp.Options = append(tcp.Options, opt)
+			tcp.Padding = d[1:]
+			break
+		case 1: // 1 byte padding
+			opt.OptionLength = 1
+		default:
 			opt.OptionLength = d[1]
 			opt.OptionData = d[2:opt.OptionLength]
 		}

@@ -24,6 +24,7 @@ type IPv4 struct {
 	SrcIP      []byte
 	DstIP      []byte
 	Options    []IPv4Option
+	Padding    []byte
 }
 
 // LayerType returns LayerTypeIPv4
@@ -61,10 +62,20 @@ func decodeIPv4(data []byte) (out gopacket.DecodeResult, err error) {
 	d := data[20 : ip.IHL*4]
 	// Pull out IP options
 	for len(d) > 0 {
+		if ip.Options == nil {
+			// Pre-allocate to avoid growing the slice too much.
+			ip.Options = make([]IPv4Option, 0, 4)
+		}
 		opt := IPv4Option{OptionType: d[0]}
-		if opt.OptionType < 2 {
+		switch opt.OptionType {
+		case 0: // End of options
 			opt.OptionLength = 1
-		} else {
+			ip.Options = append(ip.Options, opt)
+			ip.Padding = d[1:]
+			break
+		case 1: // 1 byte padding
+			opt.OptionLength = 1
+		default:
 			opt.OptionLength = d[1]
 			opt.OptionData = d[2:opt.OptionLength]
 		}
