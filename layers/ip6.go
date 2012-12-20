@@ -152,7 +152,7 @@ type IPv6Fragment struct {
 	// Reserved1 is bits [8-16), from least to most significant, 0-indexed
 	Reserved1      uint8
 	FragmentOffset uint16
-	// Reserved1 is bits [29-31), from least to most significant, 0-indexed
+	// Reserved2 is bits [29-31), from least to most significant, 0-indexed
 	Reserved2      uint8
 	MoreFragments  bool
 	Identification uint32
