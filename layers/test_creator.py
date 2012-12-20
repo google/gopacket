@@ -55,9 +55,15 @@ class Packet(object):
     yield '}'
 
 
-def PcapToPackets(filename):
+
+def GetTcpdumpOutput(filename):
+  """Runs tcpdump on the given file, returning output as string."""
+  return subprocess.check_output(
+      ['tcpdump', '-XX', '-s', '0', '-n', '-r', filename])
+
+
+def TcpdumpOutputToPackets(output):
   """Reads a pcap file with TCPDump, yielding Packet objects."""
-  output = subprocess.check_output(['tcpdump', '-XX', '-s', '0', '-n', '-r', filename])
   pdata = []
   for line in output.splitlines():
     if line[0] not in string.whitespace and pdata:
@@ -79,7 +85,8 @@ def main():
     print 'Usage: %s file1.pcap file2.pcap ...' % sys.argv[0]
     sys.exit(1)
   for arg in sys.argv[1:]:
-    for i, packet in enumerate(PcapToPackets(arg)):
+    for i, packet in enumerate(
+        TcpdumpOutputToPackets(GetTcpdumpOutput(arg))):
       print '\n'.join(packet.Test('P' + str(i)))
       print
 
