@@ -21,6 +21,14 @@ type TCP struct {
 	Checksum                                   uint16
 	Urgent                                     uint16
 	sPort, dPort                               []byte
+	Options                                    []TCPOption
+	Padding                                    []byte
+}
+
+type TCPOption struct {
+	OptionType   uint8
+	OptionLength uint8
+	OptionData   []byte
 }
 
 // LayerType returns gopacket.LayerTypeTCP
@@ -49,6 +57,18 @@ func decodeTCP(data []byte) (out gopacket.DecodeResult, err error) {
 		Urgent:     binary.BigEndian.Uint16(data[18:20]),
 	}
 	hlen := tcp.DataOffset * 4
+	d := data[20:hlen]
+	for len(d) > 0 {
+		opt := TCPOption{OptionType: d[0]}
+		if opt.OptionType < 2 {
+			opt.OptionLength = 1
+		} else {
+			opt.OptionLength = d[1]
+			opt.OptionData = d[2:opt.OptionLength]
+		}
+		tcp.Options = append(tcp.Options, opt)
+		d = d[opt.OptionLength:]
+	}
 	tcp.contents = data[:hlen]
 	tcp.payload = data[hlen:]
 	out.DecodedLayer = tcp

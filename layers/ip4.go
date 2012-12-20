@@ -23,12 +23,19 @@ type IPv4 struct {
 	Checksum   uint16
 	SrcIP      []byte
 	DstIP      []byte
+	Options    []IPv4Option
 }
 
 // LayerType returns LayerTypeIPv4
 func (i *IPv4) LayerType() gopacket.LayerType { return LayerTypeIPv4 }
 func (i *IPv4) NetworkFlow() gopacket.Flow {
 	return gopacket.NewFlow(EndpointIP, i.SrcIP, i.DstIP)
+}
+
+type IPv4Option struct {
+	OptionType   uint8
+	OptionLength uint8
+	OptionData   []byte
 }
 
 func decodeIPv4(data []byte) (out gopacket.DecodeResult, err error) {
@@ -50,6 +57,19 @@ func decodeIPv4(data []byte) (out gopacket.DecodeResult, err error) {
 	pEnd := int(ip.Length)
 	if pEnd > len(data) {
 		pEnd = len(data)
+	}
+	d := data[20 : ip.IHL*4]
+	// Pull out IP options
+	for len(d) > 0 {
+		opt := IPv4Option{OptionType: d[0]}
+		if opt.OptionType < 2 {
+			opt.OptionLength = 1
+		} else {
+			opt.OptionLength = d[1]
+			opt.OptionData = d[2:opt.OptionLength]
+		}
+		ip.Options = append(ip.Options, opt)
+		d = d[opt.OptionLength:]
 	}
 	ip.contents = data[:ip.IHL*4]
 	ip.payload = data[ip.IHL*4 : pEnd]

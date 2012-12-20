@@ -278,6 +278,21 @@ func TestDecodeSimpleTCPPacket(t *testing.T) {
 			Urgent:     0,
 			sPort:      []byte{0xc5, 0xf7},
 			dPort:      []byte{0x0, 0x50},
+			Options: []TCPOption{
+				TCPOption{
+					OptionType:   0x1,
+					OptionLength: 0x1,
+				},
+				TCPOption{
+					OptionType:   0x1,
+					OptionLength: 0x1,
+				},
+				TCPOption{
+					OptionType:   0x8,
+					OptionLength: 0xa,
+					OptionData:   []byte{0x3, 0x77, 0x37, 0x9c, 0x42, 0x77, 0x5e, 0x3a},
+				},
+			},
 		}
 		if !reflect.DeepEqual(tcp, want) {
 			t.Errorf("TCP layer mismatch\ngot  %#v\nwant %#v", tcp, want)
