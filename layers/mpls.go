@@ -27,7 +27,7 @@ func (m *MPLS) LayerType() gopacket.LayerType { return LayerTypeMPLS }
 //  If the packet starts with nibble 0x6: IPv6
 type ProtocolGuessingDecoder struct{}
 
-func (ProtocolGuessingDecoder) Decode(data []byte) (_ gopacket.DecodeResult, err error) {
+func (ProtocolGuessingDecoder) Decode(data []byte) (out gopacket.DecodeResult, err error) {
 	ethPrefix := [3]byte{data[0], data[1], data[2]}
 	if _, ok := gopacket.ValidMACPrefixMap[ethPrefix]; ok {
 		return decodeEthernet(data)

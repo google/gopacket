@@ -74,14 +74,10 @@ type ipv6ExtensionBase struct {
 	HeaderLength uint8
 }
 
-func (i ipv6ExtensionBase) ActualLength() int {
-	return int(i.HeaderLength) * 8
-}
-
 func decodeIPv6ExensionBase(data []byte) (i ipv6ExtensionBase) {
 	i.NextHeader = IPProtocol(data[0])
 	i.HeaderLength = data[1]
-	hlen := i.ActualLength()
+	hlen := int(i.HeaderLength) * 8
 	i.contents = data[:hlen]
 	i.payload = data[hlen:]
 	return
@@ -145,5 +141,64 @@ func decodeIPv6Routing(data []byte) (out gopacket.DecodeResult, err error) {
 	}
 	out.DecodedLayer = i
 	out.NextDecoder = i.NextHeader
+	return
+}
+
+// IPv6Fragment is the IPv6 fragment header, used for packet
+// fragmentation/defragmentation.
+type IPv6Fragment struct {
+	baseLayer
+	NextHeader IPProtocol
+	// Reserved1 is bits [8-16), from least to most significant, 0-indexed
+	Reserved1      uint8
+	FragmentOffset uint16
+	// Reserved1 is bits [29-31), from least to most significant, 0-indexed
+	Reserved2      uint8
+	MoreFragments  bool
+	Identification uint32
+}
+
+// LayerType returns LayerTypeIPv6Fragment.
+func (i *IPv6Fragment) LayerType() gopacket.LayerType { return LayerTypeIPv6Fragment }
+
+func decodeIPv6Fragment(data []byte) (out gopacket.DecodeResult, err error) {
+	i := &IPv6Fragment{
+		baseLayer:      baseLayer{data[:8], data[8:]},
+		NextHeader:     IPProtocol(data[0]),
+		Reserved1:      data[1],
+		FragmentOffset: binary.BigEndian.Uint16(data[2:4]) >> 3,
+		Reserved2:      data[3] & 0x6 >> 1,
+		MoreFragments:  data[3]&0x1 != 0,
+		Identification: binary.BigEndian.Uint32(data[4:8]),
+	}
+	out.DecodedLayer = i
+	out.NextDecoder = i.NextHeader
+	return
+}
+
+// IPv6DestinationOption is a TLV option present in an IPv6 destination options extension.
+type IPv6DestinationOption ipv6HeaderTLVOption
+
+// IPv6Destination is the IPv6 destination options header.
+type IPv6Destination struct {
+	ipv6ExtensionBase
+	Options []IPv6DestinationOption
+}
+
+// LayerType returns LayerTypeIPv6Destination.
+func (i *IPv6Destination) LayerType() gopacket.LayerType { return LayerTypeIPv6Destination }
+
+func decodeIPv6Destination(data []byte) (out gopacket.DecodeResult, err error) {
+	i := &IPv6Destination{
+		ipv6ExtensionBase: decodeIPv6ExensionBase(data),
+		Options:           make([]IPv6DestinationOption, 0, 2),
+	}
+	var opt *IPv6DestinationOption
+	for d := i.contents; len(d) > 0; d = d[:opt.OptionLength] {
+		i.Options = append(i.Options, IPv6DestinationOption(decodeIPv6HeaderTLVOption(d)))
+		opt = &i.Options[len(i.Options)-1]
+	}
+	out.NextDecoder = i.NextHeader
+	out.DecodedLayer = i
 	return
 }

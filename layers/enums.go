@@ -16,15 +16,15 @@ const (
 	// EthernetTypeLLC is not an actual ethernet type.  It is instead a
 	// placeholder we use in Ethernet frames that use the 802.3 standard of
 	// srcmac|dstmac|length|LLC instead of srcmac|dstmac|ethertype.
-	EthernetTypeLLC                    EthernetType = 0
-	EthernetTypeCiscoDiscoveryProtocol EthernetType = 0x2000
-	EthernetTypeIPv4                   EthernetType = 0x0800
-	EthernetTypeARP                    EthernetType = 0x0806
-	EthernetTypeIPv6                   EthernetType = 0x86DD
-	EthernetTypeDot1Q                  EthernetType = 0x8100
-	EthernetTypePPPoEDiscovery         EthernetType = 0x8863
-	EthernetTypePPPoESession           EthernetType = 0x8864
-	EthernetTypeEthernetCTP            EthernetType = 0x9000
+	EthernetTypeLLC            EthernetType = 0
+	EthernetTypeCiscoDiscovery EthernetType = 0x2000
+	EthernetTypeIPv4           EthernetType = 0x0800
+	EthernetTypeARP            EthernetType = 0x0806
+	EthernetTypeIPv6           EthernetType = 0x86DD
+	EthernetTypeDot1Q          EthernetType = 0x8100
+	EthernetTypePPPoEDiscovery EthernetType = 0x8863
+	EthernetTypePPPoESession   EthernetType = 0x8864
+	EthernetTypeEthernetCTP    EthernetType = 0x9000
 )
 
 func (e EthernetType) Decode(data []byte) (out gopacket.DecodeResult, err error) {
@@ -43,8 +43,8 @@ func (e EthernetType) Decode(data []byte) (out gopacket.DecodeResult, err error)
 		return decodePPPoE(data)
 	case EthernetTypeEthernetCTP:
 		return decodeEthernetCTP(data)
-	case EthernetTypeCiscoDiscoveryProtocol:
-		return decodeCiscoDiscoveryProtocol(data)
+	case EthernetTypeCiscoDiscovery:
+		return decodeCiscoDiscovery(data)
 	}
 	err = fmt.Errorf("Unsupported ethernet type %v", e)
 	return
@@ -62,7 +62,11 @@ const (
 	IPProtocolRUDP         IPProtocol = 27
 	IPProtocolIPv6         IPProtocol = 41
 	IPProtocolIPv6Routing  IPProtocol = 43
+	IPProtocolIPv6Fragment IPProtocol = 44
 	IPProtocolGRE          IPProtocol = 47
+	IPProtocolESP          IPProtocol = 50
+	IPProtocolAH           IPProtocol = 51
+	IPProtocolNoNextHeader IPProtocol = 59
 	IPProtocolIPIP         IPProtocol = 94
 	IPProtocolEtherIP      IPProtocol = 97
 	IPProtocolSCTP         IPProtocol = 132
@@ -92,6 +96,15 @@ func (ip IPProtocol) Decode(data []byte) (out gopacket.DecodeResult, err error) 
 		return decodeIPv6HopByHop(data)
 	case IPProtocolIPv6Routing:
 		return decodeIPv6Routing(data)
+	case IPProtocolIPv6Fragment:
+		return decodeIPv6Fragment(data)
+	case IPProtocolAH:
+		return decodeIPSecAH(data)
+	case IPProtocolESP:
+		return decodeIPSecESP(data)
+	case IPProtocolNoNextHeader:
+		err = fmt.Errorf("NoNextHeader found with %d bytes remaining to decode", len(data))
+		return
 	}
 	err = fmt.Errorf("Unsupported IP protocol %v", ip)
 	return
@@ -154,7 +167,7 @@ const (
 )
 
 // Decode decodes a PPPoE payload, based on the PPPoECode.
-func (p PPPoECode) Decode(data []byte) (_ gopacket.DecodeResult, err error) {
+func (p PPPoECode) Decode(data []byte) (out gopacket.DecodeResult, err error) {
 	switch p {
 	case PPPoECodeSession:
 		return decodePPP(data)
@@ -202,7 +215,7 @@ const (
 	SCTPChunkTypeShutdownComplete SCTPChunkType = 14
 )
 
-func (s SCTPChunkType) Decode(data []byte) (_ gopacket.DecodeResult, err error) {
+func (s SCTPChunkType) Decode(data []byte) (out gopacket.DecodeResult, err error) {
 	switch s {
 	case SCTPChunkTypeData:
 		return decodeSCTPData(data)

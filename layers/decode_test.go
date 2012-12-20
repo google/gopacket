@@ -490,7 +490,7 @@ func TestDecodeSCTPPackets(t *testing.T) {
 	}
 }
 
-func TestDecodeCiscoDiscoveryProtocol(t *testing.T) {
+func TestDecodeCiscoDiscovery(t *testing.T) {
 	data := []byte{
 		0x01, 0x00, 0x0c, 0xcc, 0xcc, 0xcc, 0x00, 0x10, 0x7b, 0x38, 0x46, 0x33,
 		0x01, 0x36, 0xaa, 0xaa, 0x03, 0x00, 0x00, 0x0c, 0x20, 0x00, 0x01, 0xb4,
@@ -521,7 +521,7 @@ func TestDecodeCiscoDiscoveryProtocol(t *testing.T) {
 		0x00, 0x0e, 0x63, 0x69, 0x73, 0x63, 0x6f, 0x20, 0x32, 0x35, 0x30, 0x30,
 	}
 	p := gopacket.NewPacket(data, LinkTypeEthernet, gopacket.Default)
-	wantLayers := []gopacket.LayerType{LayerTypeEthernet, LayerTypeLLC, LayerTypeSNAP, LayerTypeCiscoDiscoveryProtocol}
+	wantLayers := []gopacket.LayerType{LayerTypeEthernet, LayerTypeLLC, LayerTypeSNAP, LayerTypeCiscoDiscovery}
 	layers := p.Layers()
 	for i, l := range layers {
 		t.Logf("Layer %d is %v:\n%#v", i, l.LayerType(), l)

@@ -8,7 +8,7 @@ import (
 
 var (
 	LayerTypeARP                    = gopacket.RegisterLayerType(10, gopacket.LayerTypeMetadata{"ARP", gopacket.DecodeFunc(decodeARP)})
-	LayerTypeCiscoDiscoveryProtocol = gopacket.RegisterLayerType(11, gopacket.LayerTypeMetadata{"CiscoDiscoveryProtocol", gopacket.DecodeFunc(decodeCiscoDiscoveryProtocol)})
+	LayerTypeCiscoDiscovery         = gopacket.RegisterLayerType(11, gopacket.LayerTypeMetadata{"CiscoDiscovery", gopacket.DecodeFunc(decodeCiscoDiscovery)})
 	LayerTypeEthernetCTP            = gopacket.RegisterLayerType(12, gopacket.LayerTypeMetadata{"EthernetCTP", gopacket.DecodeFunc(decodeEthernetCTP)})
 	LayerTypeEthernetCTPForwardData = gopacket.RegisterLayerType(13, gopacket.LayerTypeMetadata{"EthernetCTPForwardData", nil})
 	LayerTypeEthernetCTPReply       = gopacket.RegisterLayerType(14, gopacket.LayerTypeMetadata{"EthernetCTPReply", nil})
@@ -45,6 +45,10 @@ var (
 	LayerTypeUDP                    = gopacket.RegisterLayerType(45, gopacket.LayerTypeMetadata{"UDP", gopacket.DecodeFunc(decodeUDP)})
 	LayerTypeIPv6HopByHop           = gopacket.RegisterLayerType(46, gopacket.LayerTypeMetadata{"IPv6HopByHop", gopacket.DecodeFunc(decodeIPv6HopByHop)})
 	LayerTypeIPv6Routing            = gopacket.RegisterLayerType(47, gopacket.LayerTypeMetadata{"IPv6Routing", gopacket.DecodeFunc(decodeIPv6Routing)})
+	LayerTypeIPv6Fragment           = gopacket.RegisterLayerType(48, gopacket.LayerTypeMetadata{"IPv6Fragment", gopacket.DecodeFunc(decodeIPv6Fragment)})
+	LayerTypeIPv6Destination        = gopacket.RegisterLayerType(49, gopacket.LayerTypeMetadata{"IPv6Destination", gopacket.DecodeFunc(decodeIPv6Destination)})
+	LayerTypeIPSecAH                = gopacket.RegisterLayerType(50, gopacket.LayerTypeMetadata{"IPSecAH", gopacket.DecodeFunc(decodeIPSecAH)})
+	LayerTypeIPSecESP               = gopacket.RegisterLayerType(51, gopacket.LayerTypeMetadata{"IPSecESP", gopacket.DecodeFunc(decodeIPSecESP)})
 )
 
 var (
@@ -82,5 +86,16 @@ var (
 		LayerTypeSCTPAbort,
 		LayerTypeSCTPShutdownComplete,
 		LayerTypeSCTPCookieAck,
+	})
+	// LayerClassIPv6Extension contains IPv6 extension headers.
+	LayerClassIPv6Extension = gopacket.NewLayerClass([]gopacket.LayerType{
+		LayerTypeIPv6HopByHop,
+		LayerTypeIPv6Routing,
+		LayerTypeIPv6Fragment,
+		LayerTypeIPv6Destination,
+	})
+	LayerClassIPSec = gopacket.NewLayerClass([]gopacket.LayerType{
+		LayerTypeIPSecAH,
+		LayerTypeIPSecESP,
 	})
 )
