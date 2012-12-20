@@ -63,7 +63,7 @@ func RegisterLayerType(num int, meta LayerTypeMetadata) LayerType {
 
 // Decode decodes the given data using the decoder registered with the layer
 // type.
-func (t LayerType) Decode(data []byte) (_ DecodeResult, err error) {
+func (t LayerType) Decode(data []byte, c LayerCollector) error {
 	var d Decoder
 	if 0 <= int(t) && int(t) < maxLayerType {
 		d = ltMeta[int(t)].Decoder
@@ -71,10 +71,9 @@ func (t LayerType) Decode(data []byte) (_ DecodeResult, err error) {
 		d = ltMetaMap[t].Decoder
 	}
 	if d != nil {
-		return d.Decode(data)
+		return d.Decode(data, c)
 	}
-	err = fmt.Errorf("Layer type %v has no associated decoder", t)
-	return
+	return fmt.Errorf("Layer type %v has no associated decoder", t)
 }
 
 // String returns the string associated with this layer type.

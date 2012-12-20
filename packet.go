@@ -99,28 +99,18 @@ func (p *packet) copySpecificLayersFrom(r *DecodeResult) {
 }
 
 func (p *packet) LinkLayer() LinkLayer {
-	for p.link == nil && p.decodeNextLayer() != nil {
-	}
 	return p.link
 }
 func (p *packet) NetworkLayer() NetworkLayer {
-	for p.network == nil && p.decodeNextLayer() != nil {
-	}
 	return p.network
 }
 func (p *packet) TransportLayer() TransportLayer {
-	for p.transport == nil && p.decodeNextLayer() != nil {
-	}
 	return p.transport
 }
 func (p *packet) ApplicationLayer() ApplicationLayer {
-	for p.application == nil && p.decodeNextLayer() != nil {
-	}
 	return p.application
 }
 func (p *packet) ErrorLayer() ErrorLayer {
-	for p.failure == nil && p.decodeNextLayer() != nil {
-	}
 	return p.failure
 }
 
@@ -173,8 +163,6 @@ func NewPacket(data []byte, firstLayerDecoder Decoder, options DecodeOptions) Pa
 	}
 	p := &packet{
 		data:    data,
-		encoded: data,
-		decoder: firstLayerDecoder,
 		// We start off with a size-4 slice since growing a size-zero slice actually
 		// can take us a large amount of time, and we expect most packets to give us
 		// 4 layers (link, network, transport, application).  This gives our 4-layer
@@ -182,49 +170,26 @@ func NewPacket(data []byte, firstLayerDecoder Decoder, options DecodeOptions) Pa
 		layers: make([]Layer, 0, 4),
 	}
 	if !options.Lazy {
+    err := firstLayerDecoder.Decode(data, eagerCollector(p.layers))
+    if err != nil {
+      errData := data
+      if len(p.layers) > 0 {
+        errData = p.layers[len(p.layers) - 1].LayerPayload()
+      }
+      p.layers = append(p.layers, &DecodeFailure{
+        data: errData,
+        err: err,
+      })
+    }
 		p.Layers()
-	}
+	} else {
+    p.decoder = firstLayerDecoder
+    p.encoded = data
+  }
 	return p
 }
 
-// decodeNextLayer decodes the next layer, updates the payload, and returns it.
-// Returns nil if there are no more layers to decode.
-func (p *packet) decodeNextLayer() (out Layer) {
-	defer func() {
-		if r := recover(); r != nil {
-			fail := &DecodeFailure{
-				data: p.encoded,
-				err:  fmt.Errorf("Decode panic failure: %v", r),
-			}
-			p.appendLayer(fail)
-			p.failure = fail
-			p.encoded = nil
-			p.decoder = nil
-			out = p.failure
-		}
-	}()
-	if p.decoder == nil || len(p.encoded) == 0 {
-		return nil
-	}
-	result, err := p.decoder.Decode(p.encoded)
-	if err != nil {
-		p.failure = &DecodeFailure{data: p.encoded, err: err}
-		p.encoded = nil
-		p.decoder = nil
-		out = p.failure
-	} else {
-		p.decoder = result.NextDecoder
-		out = result.DecodedLayer
-		p.encoded = out.LayerPayload()
-		p.copySpecificLayersFrom(&result)
-	}
-	p.appendLayer(out)
-	return out
-}
-
 func (p *packet) Layers() []Layer {
-	for p.decodeNextLayer() != nil {
-	}
 	return p.layers
 }
 
@@ -234,21 +199,11 @@ func (p *packet) Layer(t LayerType) Layer {
 			return l
 		}
 	}
-	for l := p.decodeNextLayer(); l != nil; l = p.decodeNextLayer() {
-		if t == l.LayerType() {
-			return l
-		}
-	}
 	return nil
 }
 
 func (p *packet) LayerClass(lc LayerClass) Layer {
 	for _, l := range p.layers {
-		if lc.Contains(l.LayerType()) {
-			return l
-		}
-	}
-	for l := p.decodeNextLayer(); l != nil; l = p.decodeNextLayer() {
 		if lc.Contains(l.LayerType()) {
 			return l
 		}

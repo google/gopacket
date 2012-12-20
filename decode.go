@@ -46,15 +46,26 @@ type DecodeResult struct {
 // of the many decoders available in the 'layers' subpackage to decode things
 // for them.
 type Decoder interface {
-	Decode([]byte) (DecodeResult, error)
+	Decode([]byte, LayerCollector) error
+}
+
+type LayerCollector interface {
+  DecodedLayer(l Layer, next Decoder) error
+}
+
+type eagerCollector []Layer
+
+func (s eagerCollector) DecodedLayer(l Layer, next Decoder) error {
+  s = append(s, l)
+  return next.Decode(l.LayerPayload(), s)
 }
 
 // DecodeFunc wraps a function to make it a Decoder.
-type DecodeFunc func([]byte) (DecodeResult, error)
+type DecodeFunc func([]byte, LayerCollector) error
 
-func (d DecodeFunc) Decode(data []byte) (DecodeResult, error) {
+func (d DecodeFunc) Decode(data []byte, c LayerCollector) error {
 	// function, call thyself.
-	return d(data)
+	return d(data, c)
 }
 
 var (
@@ -91,15 +102,13 @@ func (d *DecodeFailure) LayerType() LayerType { return LayerTypeDecodeFailure }
 
 // decodeUnknown "decodes" unsupported data types by returning an error.
 // This decoder will thus always return a DecodeFailure layer.
-func decodeUnknown(data []byte) (out DecodeResult, err error) {
-	err = errors.New("Layer type not currently supported")
-	return
+func decodeUnknown(data []byte, c LayerCollector) error {
+	return errors.New("Layer type not currently supported")
 }
 
 // decodePayload decodes data by returning it all in a Payload layer.
-func decodePayload(data []byte) (out DecodeResult, err error) {
+func decodePayload(data []byte, c LayerCollector) error {
 	payload := &Payload{Data: data}
-	out.DecodedLayer = payload
-	out.ApplicationLayer = payload
-	return
+  c.DecodedLayer(payload, nil)
+	return nil
 }
