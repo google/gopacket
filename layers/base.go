@@ -8,5 +8,8 @@ type baseLayer struct {
 	contents, payload []byte
 }
 
+// LayerContents returns the bytes of the packet layer.
 func (b *baseLayer) LayerContents() []byte { return b.contents }
-func (b *baseLayer) LayerPayload() []byte  { return b.payload }
+
+// LayerPayload returns the bytes contained within the packet layer.
+func (b *baseLayer) LayerPayload() []byte { return b.payload }

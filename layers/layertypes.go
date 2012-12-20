@@ -43,6 +43,8 @@ var (
 	LayerTypeSCTPCookieAck          = gopacket.RegisterLayerType(43, gopacket.LayerTypeMetadata{"LayerTypeSCTPCookieAck", nil})
 	LayerTypeTCP                    = gopacket.RegisterLayerType(44, gopacket.LayerTypeMetadata{"TCP", gopacket.DecodeFunc(decodeTCP)})
 	LayerTypeUDP                    = gopacket.RegisterLayerType(45, gopacket.LayerTypeMetadata{"UDP", gopacket.DecodeFunc(decodeUDP)})
+	LayerTypeIPv6HopByHop           = gopacket.RegisterLayerType(46, gopacket.LayerTypeMetadata{"IPv6HopByHop", gopacket.DecodeFunc(decodeIPv6HopByHop)})
+	LayerTypeIPv6Routing            = gopacket.RegisterLayerType(47, gopacket.LayerTypeMetadata{"IPv6Routing", gopacket.DecodeFunc(decodeIPv6Routing)})
 )
 
 var (
@@ -50,6 +52,17 @@ var (
 	LayerClassIPNetwork = gopacket.NewLayerClass([]gopacket.LayerType{
 		LayerTypeIPv4,
 		LayerTypeIPv6,
+	})
+	// LayerClassIPTransport contains TCP/IP transport layer types.
+	LayerClassIPTransport = gopacket.NewLayerClass([]gopacket.LayerType{
+		LayerTypeTCP,
+		LayerTypeUDP,
+		LayerTypeSCTP,
+	})
+	// LayerClassIPControl contains TCP/IP control protocols.
+	LayerClassIPControl = gopacket.NewLayerClass([]gopacket.LayerType{
+		LayerTypeICMP,
+		// soon, ICMPv6
 	})
 	// LayerClassSCTPChunk contains SCTP chunk types (not the top-level SCTP
 	// layer).
@@ -69,16 +82,5 @@ var (
 		LayerTypeSCTPAbort,
 		LayerTypeSCTPShutdownComplete,
 		LayerTypeSCTPCookieAck,
-	})
-	// LayerClassIPTransport contains TCP/IP transport layer types.
-	LayerClassIPTransport = gopacket.NewLayerClass([]gopacket.LayerType{
-		LayerTypeTCP,
-		LayerTypeUDP,
-		LayerTypeSCTP,
-	})
-	// LayerClassIPControl contains TCP/IP control protocols.
-	LayerClassIPControl = gopacket.NewLayerClass([]gopacket.LayerType{
-		LayerTypeICMP,
-		// soon, ICMPv6
 	})
 )

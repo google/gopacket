@@ -55,15 +55,17 @@ func (e EthernetType) Decode(data []byte) (out gopacket.DecodeResult, err error)
 type IPProtocol uint8
 
 const (
-	IPProtocolICMP    IPProtocol = 1
-	IPProtocolTCP     IPProtocol = 6
-	IPProtocolUDP     IPProtocol = 17
-	IPProtocolSCTP    IPProtocol = 132
-	IPProtocolIPv6    IPProtocol = 41
-	IPProtocolIPIP    IPProtocol = 94
-	IPProtocolEtherIP IPProtocol = 97
-	IPProtocolRUDP    IPProtocol = 27
-	IPProtocolGRE     IPProtocol = 47
+	IPProtocolIPv6HopByHop IPProtocol = 0
+	IPProtocolICMP         IPProtocol = 1
+	IPProtocolTCP          IPProtocol = 6
+	IPProtocolUDP          IPProtocol = 17
+	IPProtocolRUDP         IPProtocol = 27
+	IPProtocolIPv6         IPProtocol = 41
+	IPProtocolIPv6Routing  IPProtocol = 43
+	IPProtocolGRE          IPProtocol = 47
+	IPProtocolIPIP         IPProtocol = 94
+	IPProtocolEtherIP      IPProtocol = 97
+	IPProtocolSCTP         IPProtocol = 132
 )
 
 func (ip IPProtocol) Decode(data []byte) (out gopacket.DecodeResult, err error) {
@@ -86,6 +88,10 @@ func (ip IPProtocol) Decode(data []byte) (out gopacket.DecodeResult, err error) 
 		return decodeRUDP(data)
 	case IPProtocolGRE:
 		return decodeGRE(data)
+	case IPProtocolIPv6HopByHop:
+		return decodeIPv6HopByHop(data)
+	case IPProtocolIPv6Routing:
+		return decodeIPv6Routing(data)
 	}
 	err = fmt.Errorf("Unsupported IP protocol %v", ip)
 	return
