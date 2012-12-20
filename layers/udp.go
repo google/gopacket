@@ -21,7 +21,7 @@ type UDP struct {
 // LayerType returns gopacket.LayerTypeUDP
 func (u *UDP) LayerType() gopacket.LayerType { return LayerTypeUDP }
 
-func decodeUDP(data []byte) (out gopacket.DecodeResult, err error) {
+func decodeUDP(data []byte, c gopacket.LayerCollector) error {
 	udp := &UDP{
 		SrcPort:   binary.BigEndian.Uint16(data[0:2]),
 		sPort:     data[0:2],
@@ -31,10 +31,8 @@ func decodeUDP(data []byte) (out gopacket.DecodeResult, err error) {
 		Checksum:  binary.BigEndian.Uint16(data[6:8]),
 		baseLayer: baseLayer{data[:8], data[8:]},
 	}
-	out.DecodedLayer = udp
-	out.NextDecoder = gopacket.LayerTypePayload
-	out.TransportLayer = udp
-	return
+	c.DecodedLayer(udp, gopacket.LayerTypePayload)
+	return nil
 }
 
 func (u *UDP) TransportFlow() gopacket.Flow {

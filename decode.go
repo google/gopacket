@@ -50,14 +50,20 @@ type Decoder interface {
 }
 
 type LayerCollector interface {
-  DecodedLayer(l Layer, next Decoder) error
+	DecodedLayer(l Layer, next Decoder) error
 }
 
 type eagerCollector []Layer
 
 func (s eagerCollector) DecodedLayer(l Layer, next Decoder) error {
-  s = append(s, l)
-  return next.Decode(l.LayerPayload(), s)
+	s = append(s, l)
+	if next != nil {
+		err := next.Decode(l.LayerPayload(), s)
+		if err != nil {
+			return err
+		}
+	}
+	return nil
 }
 
 // DecodeFunc wraps a function to make it a Decoder.
@@ -109,6 +115,6 @@ func decodeUnknown(data []byte, c LayerCollector) error {
 // decodePayload decodes data by returning it all in a Payload layer.
 func decodePayload(data []byte, c LayerCollector) error {
 	payload := &Payload{Data: data}
-  c.DecodedLayer(payload, nil)
+	c.DecodedLayer(payload, nil)
 	return nil
 }

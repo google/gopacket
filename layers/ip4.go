@@ -39,7 +39,7 @@ type IPv4Option struct {
 	OptionData   []byte
 }
 
-func decodeIPv4(data []byte) (out gopacket.DecodeResult, err error) {
+func decodeIPv4(data []byte, c gopacket.LayerCollector) error {
 	flagsfrags := binary.BigEndian.Uint16(data[6:8])
 	ip := &IPv4{
 		Version:    uint8(data[0]) >> 4,
@@ -84,8 +84,6 @@ func decodeIPv4(data []byte) (out gopacket.DecodeResult, err error) {
 	}
 	ip.contents = data[:ip.IHL*4]
 	ip.payload = data[ip.IHL*4 : pEnd]
-	out.DecodedLayer = ip
-	out.NextDecoder = ip.Protocol
-	out.NetworkLayer = ip
-	return
+	c.DecodedLayer(ip, ip.Protocol)
+	return nil
 }

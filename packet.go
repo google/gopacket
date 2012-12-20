@@ -162,7 +162,7 @@ func NewPacket(data []byte, firstLayerDecoder Decoder, options DecodeOptions) Pa
 		data = dataCopy
 	}
 	p := &packet{
-		data:    data,
+		data: data,
 		// We start off with a size-4 slice since growing a size-zero slice actually
 		// can take us a large amount of time, and we expect most packets to give us
 		// 4 layers (link, network, transport, application).  This gives our 4-layer
@@ -170,22 +170,22 @@ func NewPacket(data []byte, firstLayerDecoder Decoder, options DecodeOptions) Pa
 		layers: make([]Layer, 0, 4),
 	}
 	if !options.Lazy {
-    err := firstLayerDecoder.Decode(data, eagerCollector(p.layers))
-    if err != nil {
-      errData := data
-      if len(p.layers) > 0 {
-        errData = p.layers[len(p.layers) - 1].LayerPayload()
-      }
-      p.layers = append(p.layers, &DecodeFailure{
-        data: errData,
-        err: err,
-      })
-    }
+		err := firstLayerDecoder.Decode(data, eagerCollector(p.layers))
+		if err != nil {
+			errData := data
+			if len(p.layers) > 0 {
+				errData = p.layers[len(p.layers)-1].LayerPayload()
+			}
+			p.layers = append(p.layers, &DecodeFailure{
+				data: errData,
+				err:  err,
+			})
+		}
 		p.Layers()
 	} else {
-    p.decoder = firstLayerDecoder
-    p.encoded = data
-  }
+		p.decoder = firstLayerDecoder
+		p.encoded = data
+	}
 	return p
 }
 
