@@ -25,8 +25,8 @@ func (l *LLC) LayerType() gopacket.LayerType { return LayerTypeLLC }
 // http://standards.ieee.org/getieee802/download/802-2001.pdf.
 // From http://en.wikipedia.org/wiki/Subnetwork_Access_Protocol:
 //  "[T]he Subnetwork Access Protocol (SNAP) is a mechanism for multiplexing,
-//  on networks using IEEE 802.2 LLC, more protocols than can be distinguished by
-//  the 8-bit 802.2 Service Access Point (SAP) fields."
+//  on networks using IEEE 802.2 LLC, more protocols than can be distinguished
+//  by the 8-bit 802.2 Service Access Point (SAP) fields."
 type SNAP struct {
 	baseLayer
 	OrganizationalCode []byte
@@ -68,7 +68,8 @@ func decodeSNAP(data []byte) (out gopacket.DecodeResult, err error) {
 		baseLayer:          baseLayer{data[:5], data[5:]},
 	}
 	out.DecodedLayer = s
-	// BUG(gconnell):  This may not actually be an ethernet type in all cases,
+	// BUG(gconnell):  When decoding SNAP, we treat the SNAP type as an Ethernet
+	// type.  This may not actually be an ethernet type in all cases,
 	// depending on the organizational code.  Right now, we don't check.
 	out.NextDecoder = s.Type
 	return

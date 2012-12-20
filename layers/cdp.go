@@ -8,47 +8,49 @@ import (
 	"github.com/gconnell/gopacket"
 )
 
-// CDPType is the type of each TLV value in a CDP packet.
-type CDPType uint16
+// CiscoDiscoveryProtocolType is the type of each TLV value in a CiscoDiscoveryProtocol packet.
+type CiscoDiscoveryProtocolType uint16
 
-// CDP is a packet layer containing the Cisco Discovery Protocol.
+// CiscoDiscoveryProtocol is a packet layer containing the Cisco Discovery Protocol.
 // See http://www.cisco.com/univercd/cc/td/doc/product/lan/trsrb/frames.htm#31885
-type CDP struct {
+type CiscoDiscoveryProtocol struct {
 	baseLayer
 	Version  byte
 	TTL      byte
 	Checksum uint16
-	Values   []CDPValue
+	Values   []CiscoDiscoveryProtocolValue
 }
 
-// LayerType returns gopacket.LayerTypeCDP.
-func (c *CDP) LayerType() gopacket.LayerType { return LayerTypeCDP }
+// LayerType returns gopacket.LayerTypeCiscoDiscoveryProtocol.
+func (c *CiscoDiscoveryProtocol) LayerType() gopacket.LayerType {
+	return LayerTypeCiscoDiscoveryProtocol
+}
 
-// CDPValue is a TLV value inside a CDP packet layer.
-type CDPValue struct {
-	Type   CDPType
+// CiscoDiscoveryProtocolValue is a TLV value inside a CiscoDiscoveryProtocol packet layer.
+type CiscoDiscoveryProtocolValue struct {
+	Type   CiscoDiscoveryProtocolType
 	Length uint16
 	Value  []byte
 }
 
-func decodeCDP(data []byte) (out gopacket.DecodeResult, err error) {
-	c := &CDP{
+func decodeCiscoDiscoveryProtocol(data []byte) (out gopacket.DecodeResult, err error) {
+	c := &CiscoDiscoveryProtocol{
 		Version:  data[0],
 		TTL:      data[1],
 		Checksum: binary.BigEndian.Uint16(data[2:4]),
 	}
 	if c.Version != 1 {
-		err = fmt.Errorf("Invalid CDP version number %d", c.Version)
+		err = fmt.Errorf("Invalid CiscoDiscoveryProtocol version number %d", c.Version)
 		return
 	}
 	vData := data[4:]
 	for len(vData) > 0 {
-		val := CDPValue{
-			Type:   CDPType(binary.BigEndian.Uint16(vData[:2])),
+		val := CiscoDiscoveryProtocolValue{
+			Type:   CiscoDiscoveryProtocolType(binary.BigEndian.Uint16(vData[:2])),
 			Length: binary.BigEndian.Uint16(vData[2:4]),
 		}
 		if val.Length < 4 {
-			err = fmt.Errorf("Invalid CDP value length %d", val.Length)
+			err = fmt.Errorf("Invalid CiscoDiscoveryProtocol value length %d", val.Length)
 			return
 		}
 		val.Value = vData[4:val.Length]
