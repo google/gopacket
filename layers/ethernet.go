@@ -43,6 +43,6 @@ func decodeEthernet(data []byte, c gopacket.LayerCollector) error {
 		eth.Length = uint16(eth.EthernetType)
 		eth.EthernetType = EthernetTypeLLC
 	}
-	c.DecodedLayer(eth, eth.EthernetType)
-	return nil
+	c.AddLayer(eth)
+	return c.NextDecoder(eth.EthernetType)
 }

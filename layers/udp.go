@@ -31,8 +31,8 @@ func decodeUDP(data []byte, c gopacket.LayerCollector) error {
 		Checksum:  binary.BigEndian.Uint16(data[6:8]),
 		baseLayer: baseLayer{data[:8], data[8:]},
 	}
-	c.DecodedLayer(udp, gopacket.LayerTypePayload)
-	return nil
+	c.AddLayer(udp)
+	return c.NextDecoder(gopacket.LayerTypePayload)
 }
 
 func (u *UDP) TransportFlow() gopacket.Flow {

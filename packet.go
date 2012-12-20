@@ -170,23 +170,31 @@ func NewPacket(data []byte, firstLayerDecoder Decoder, options DecodeOptions) Pa
 		layers: make([]Layer, 0, 4),
 	}
 	if !options.Lazy {
-		err := firstLayerDecoder.Decode(data, eagerCollector(p.layers))
-		if err != nil {
-			errData := data
-			if len(p.layers) > 0 {
-				errData = p.layers[len(p.layers)-1].LayerPayload()
-			}
-			p.layers = append(p.layers, &DecodeFailure{
-				data: errData,
-				err:  err,
-			})
-		}
-		p.Layers()
+		p.eagerDecode(data, firstLayerDecoder)
 	} else {
 		p.decoder = firstLayerDecoder
 		p.encoded = data
 	}
 	return p
+}
+
+func (p *packet) eagerDecode(data []byte, dec Decoder) {
+	e := eagerCollector{&p.layers, nil}
+	defer func() {
+		if r := recover(); r != nil {
+			fail := &DecodeFailure{err: fmt.Errorf("BLAH")}
+			if e.last == nil {
+				fail.data = data
+			} else {
+				fail.data = e.last.LayerPayload()
+			}
+			p.layers = append(p.layers, fail)
+		}
+	}()
+	err := dec.Decode(data, &e)
+	if err != nil {
+		panic(err)
+	}
 }
 
 func (p *packet) Layers() []Layer {

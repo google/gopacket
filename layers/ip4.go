@@ -84,6 +84,6 @@ func decodeIPv4(data []byte, c gopacket.LayerCollector) error {
 	}
 	ip.contents = data[:ip.IHL*4]
 	ip.payload = data[ip.IHL*4 : pEnd]
-	c.DecodedLayer(ip, ip.Protocol)
-	return nil
+	c.AddLayer(ip)
+	return c.NextDecoder(ip.Protocol)
 }

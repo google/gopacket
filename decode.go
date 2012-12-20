@@ -50,20 +50,21 @@ type Decoder interface {
 }
 
 type LayerCollector interface {
-	DecodedLayer(l Layer, next Decoder) error
+	AddLayer(l Layer)
+	NextDecoder(next Decoder) error
 }
 
-type eagerCollector []Layer
+type eagerCollector struct {
+	layers *[]Layer
+	last   Layer
+}
 
-func (s eagerCollector) DecodedLayer(l Layer, next Decoder) error {
-	s = append(s, l)
-	if next != nil {
-		err := next.Decode(l.LayerPayload(), s)
-		if err != nil {
-			return err
-		}
-	}
-	return nil
+func (s *eagerCollector) AddLayer(l Layer) {
+	*s.layers = append(*s.layers, l)
+	s.last = l
+}
+func (s *eagerCollector) NextDecoder(next Decoder) error {
+	return next.Decode(s.last.LayerPayload(), s)
 }
 
 // DecodeFunc wraps a function to make it a Decoder.
@@ -115,6 +116,6 @@ func decodeUnknown(data []byte, c LayerCollector) error {
 // decodePayload decodes data by returning it all in a Payload layer.
 func decodePayload(data []byte, c LayerCollector) error {
 	payload := &Payload{Data: data}
-	c.DecodedLayer(payload, nil)
+	c.AddLayer(payload)
 	return nil
 }

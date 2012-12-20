@@ -81,8 +81,8 @@ func decodeTCP(data []byte, c gopacket.LayerCollector) error {
 	}
 	tcp.contents = data[:hlen]
 	tcp.payload = data[hlen:]
-	c.DecodedLayer(tcp, gopacket.LayerTypePayload)
-	return nil
+	c.AddLayer(tcp)
+	return c.NextDecoder(gopacket.LayerTypePayload)
 }
 
 func (t *TCP) TransportFlow() gopacket.Flow {
