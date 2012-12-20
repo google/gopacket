@@ -46,10 +46,13 @@ var (
 )
 
 var (
-	LayerClassIP = gopacket.NewLayerClass([]gopacket.LayerType{
+	// LayerClassIPNetwork contains TCP/IP network layer types.
+	LayerClassIPNetwork = gopacket.NewLayerClass([]gopacket.LayerType{
 		LayerTypeIPv4,
 		LayerTypeIPv6,
 	})
+	// LayerClassSCTPChunk contains SCTP chunk types (not the top-level SCTP
+	// layer).
 	LayerClassSCTPChunk = gopacket.NewLayerClass([]gopacket.LayerType{
 		LayerTypeSCTPUnknownChunkType,
 		LayerTypeSCTPData,
@@ -67,9 +70,15 @@ var (
 		LayerTypeSCTPShutdownComplete,
 		LayerTypeSCTPCookieAck,
 	})
+	// LayerClassIPTransport contains TCP/IP transport layer types.
 	LayerClassIPTransport = gopacket.NewLayerClass([]gopacket.LayerType{
 		LayerTypeTCP,
 		LayerTypeUDP,
 		LayerTypeSCTP,
+	})
+	// LayerClassIPControl contains TCP/IP control protocols.
+	LayerClassIPControl = gopacket.NewLayerClass([]gopacket.LayerType{
+		LayerTypeICMP,
+		// soon, ICMPv6
 	})
 )
