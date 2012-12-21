@@ -3,6 +3,7 @@
 package gopacket
 
 import (
+	"errors"
 	"fmt"
 	"io"
 	"strings"
@@ -56,15 +57,17 @@ type Packet interface {
 	ErrorLayer() ErrorLayer
 }
 
+// packet contains all the information we need to fulfill the Packet interface,
+// and its two "subclasses" (yes, no such thing in Go, bear with me),
+// eagerPacket and lazyPacket, provide eager and lazy decoding logic around the
+// various functions needed to access this information.
 type packet struct {
 	// data contains the entire packet data for a packet
 	data []byte
-	// encoded contains all the packet data we have yet to decode
-	encoded []byte
 	// layers contains each layer we've already decoded
-	layers layerList
-	// decoder is the next decoder we should call (lazily)
-	decoder Decoder
+	layers []Layer
+	// last is the last layer added to the packet
+	last Layer
 	// capInfo is the CaptureInfo for this packet
 	capInfo CaptureInfo
 
@@ -76,47 +79,217 @@ type packet struct {
 	failure     ErrorLayer
 }
 
+func (p *packet) SetLinkLayer(l LinkLayer) {
+	if p.link == nil {
+		p.link = l
+	}
+}
+func (p *packet) SetNetworkLayer(l NetworkLayer) {
+	if p.network == nil {
+		p.network = l
+	}
+}
+func (p *packet) SetTransportLayer(l TransportLayer) {
+	if p.transport == nil {
+		p.transport = l
+	}
+}
+func (p *packet) SetApplicationLayer(l ApplicationLayer) {
+	if p.application == nil {
+		p.application = l
+	}
+}
+func (p *packet) SetErrorLayer(l ErrorLayer) {
+	if p.failure == nil {
+		p.failure = l
+	}
+}
+func (p *packet) AddLayer(l Layer) {
+	p.layers = append(p.layers, l)
+	p.last = l
+}
 func (p *packet) CaptureInfo() *CaptureInfo {
 	return &p.capInfo
 }
-
-func (p *packet) copySpecificLayersFrom(r *DecodeResult) {
-	if p.link == nil {
-		p.link = r.LinkLayer
-	}
-	if p.network == nil {
-		p.network = r.NetworkLayer
-	}
-	if p.transport == nil {
-		p.transport = r.TransportLayer
-	}
-	if p.application == nil {
-		p.application = r.ApplicationLayer
-	}
-	if p.failure == nil {
-		p.failure = r.ErrorLayer
-	}
-}
-
-func (p *packet) LinkLayer() LinkLayer {
-	return p.link
-}
-func (p *packet) NetworkLayer() NetworkLayer {
-	return p.network
-}
-func (p *packet) TransportLayer() TransportLayer {
-	return p.transport
-}
-func (p *packet) ApplicationLayer() ApplicationLayer {
-	return p.application
-}
-func (p *packet) ErrorLayer() ErrorLayer {
-	return p.failure
-}
-
 func (p *packet) Data() []byte {
 	return p.data
 }
+func (p *packet) recoverDecodeError() {
+	if r := recover(); r != nil {
+		fail := &DecodeFailure{err: fmt.Errorf("BLAH")}
+		if p.last == nil {
+			fail.data = p.data
+		} else {
+			fail.data = p.last.LayerPayload()
+		}
+		p.AddLayer(fail)
+	}
+}
+func packetString(pLayers []Layer) string {
+	layers := []string{}
+	for l := range pLayers {
+		layers = append(layers, fmt.Sprintf("%#v", l))
+	}
+	return fmt.Sprintf("PACKET [%s]", strings.Join(layers, ", "))
+}
+
+type eagerPacket struct {
+	packet
+}
+
+func (p *eagerPacket) NextDecoder(next Decoder) error {
+	if p.last == nil {
+		return errors.New("NextDecoder called, but no layers added yet")
+	}
+	// Since we're eager, immediately call the next decoder.
+	return next.Decode(p.last.LayerPayload(), p)
+}
+func (p *eagerPacket) initialDecode(dec Decoder) {
+	defer p.recoverDecodeError()
+	err := dec.Decode(p.data, p)
+	if err != nil {
+		panic(err)
+	}
+}
+func (p *eagerPacket) LinkLayer() LinkLayer {
+	return p.link
+}
+func (p *eagerPacket) NetworkLayer() NetworkLayer {
+	return p.network
+}
+func (p *eagerPacket) TransportLayer() TransportLayer {
+	return p.transport
+}
+func (p *eagerPacket) ApplicationLayer() ApplicationLayer {
+	return p.application
+}
+func (p *eagerPacket) ErrorLayer() ErrorLayer {
+	return p.failure
+}
+func (p *eagerPacket) Layers() []Layer {
+	return p.layers
+}
+func (p *eagerPacket) Layer(t LayerType) Layer {
+	for _, l := range p.layers {
+		if l.LayerType() == t {
+			return l
+		}
+	}
+	return nil
+}
+func (p *eagerPacket) LayerClass(lc LayerClass) Layer {
+	for _, l := range p.layers {
+		if lc.Contains(l.LayerType()) {
+			return l
+		}
+	}
+	return nil
+}
+func (p *eagerPacket) String() string { return packetString(p.Layers()) }
+
+type lazyPacket struct {
+	packet
+	next Decoder
+}
+
+func (p *lazyPacket) NextDecoder(next Decoder) error {
+	p.next = next
+	return nil
+}
+func (p *lazyPacket) decodeNextLayer() {
+	if p.next == nil {
+		return
+	}
+	d := p.data
+	if p.last != nil {
+		d = p.last.LayerPayload()
+	}
+	next := p.next
+	p.next = nil
+	// We've just set p.next to nil, so if we see we have no data, this should be
+	// the final call we get to decodeNextLayer if we return here.
+	if len(d) == 0 {
+		return
+	}
+	defer p.recoverDecodeError()
+	err := next.Decode(d, p)
+	if err != nil {
+		panic(err)
+	}
+}
+func (p *lazyPacket) LinkLayer() LinkLayer {
+	for p.link == nil && p.next != nil {
+		p.decodeNextLayer()
+	}
+	return p.link
+}
+func (p *lazyPacket) NetworkLayer() NetworkLayer {
+	for p.network == nil && p.next != nil {
+		p.decodeNextLayer()
+	}
+	return p.network
+}
+func (p *lazyPacket) TransportLayer() TransportLayer {
+	for p.transport == nil && p.next != nil {
+		p.decodeNextLayer()
+	}
+	return p.transport
+}
+func (p *lazyPacket) ApplicationLayer() ApplicationLayer {
+	for p.application == nil && p.next != nil {
+		p.decodeNextLayer()
+	}
+	return p.application
+}
+func (p *lazyPacket) ErrorLayer() ErrorLayer {
+	for p.failure == nil && p.next != nil {
+		p.decodeNextLayer()
+	}
+	return p.failure
+}
+func (p *lazyPacket) Layers() []Layer {
+	for p.next != nil {
+		p.decodeNextLayer()
+	}
+	return p.layers
+}
+func (p *lazyPacket) Layer(t LayerType) Layer {
+	for _, l := range p.layers {
+		if l.LayerType() == t {
+			return l
+		}
+	}
+	numLayers := len(p.layers)
+	for p.next != nil {
+		p.decodeNextLayer()
+		for _, l := range p.layers[numLayers:] {
+			if l.LayerType() == t {
+				return l
+			}
+		}
+		numLayers = len(p.layers)
+	}
+	return nil
+}
+func (p *lazyPacket) LayerClass(lc LayerClass) Layer {
+	for _, l := range p.layers {
+		if lc.Contains(l.LayerType()) {
+			return l
+		}
+	}
+	numLayers := len(p.layers)
+	for p.next != nil {
+		p.decodeNextLayer()
+		for _, l := range p.layers[numLayers:] {
+			if lc.Contains(l.LayerType()) {
+				return l
+			}
+		}
+		numLayers = len(p.layers)
+	}
+	return nil
+}
+func (p *lazyPacket) String() string { return packetString(p.Layers()) }
 
 // DecodeOptions tells gopacket how to decode a packet.
 type DecodeOptions struct {
@@ -157,72 +330,17 @@ func NewPacket(data []byte, firstLayerDecoder Decoder, options DecodeOptions) Pa
 		copy(dataCopy, data)
 		data = dataCopy
 	}
-	p := &packet{
-		data: data,
-	}
-	if !options.Lazy {
-		p.eagerDecode(data, firstLayerDecoder)
-	} else {
-    p.lazyDecode(data, firstLayerDecoder)
-	}
-	return p
-}
-
-func (p *packet) eagerDecode(data []byte, dec Decoder) {
-	e := eagerCollector{make([]Layer, 0, 4), nil}
-  p.layers = e
-	defer func() {
-		if r := recover(); r != nil {
-			fail := &DecodeFailure{err: fmt.Errorf("BLAH")}
-			if e.last == nil {
-				fail.data = data
-			} else {
-				fail.data = e.last.LayerPayload()
-			}
-			e.layers = append(e.layers, fail)
+	if options.Lazy {
+		return &lazyPacket{
+			packet: packet{data: data, layers: make([]Layer, 0, 4)},
+			next:   firstLayerDecoder,
 		}
-	}()
-	err := dec.Decode(data, &e)
-	if err != nil {
-		panic(err)
 	}
-}
-
-func (p *packet) Layers() []Layer {
-	return p.layers.getAll()
-}
-
-func (p *packet) Layer(t LayerType) Layer {
-  for i := 0; ; i++ {
-    l := p.layers.get(i)
-    if l == nil {
-      return nil
-    }
-    if t == l.LayerType() {
-      return l
-    }
-  }
-}
-
-
-func (p *packet) LayerClass(lc LayerClass) Layer {
-  for i := 0; ; i++ {
-    l := p.layers.get(i)
-    if l == nil {
-      return nil
-    }
-    if lc.Contains(l.LayerType()) {
-      return l
-    }
-  }
-}
-
-func (p *packet) String() string {
-	layers := []string{}
-	for l := range p.Layers() {
-		layers = append(layers, fmt.Sprintf("%#v", l))
+	p := &eagerPacket{
+		packet: packet{data: data, layers: make([]Layer, 0, 4)},
 	}
-	return fmt.Sprintf("PACKET [%s]", strings.Join(layers, ", "))
+	p.initialDecode(firstLayerDecoder)
+	return p
 }
 
 type PacketDataSource interface {

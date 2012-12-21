@@ -27,7 +27,7 @@ const (
 	EthernetTypeEthernetCTP    EthernetType = 0x9000
 )
 
-func (e EthernetType) Decode(data []byte, c gopacket.LayerCollector) error {
+func (e EthernetType) Decode(data []byte, c gopacket.PacketBuilder) error {
 	switch e {
 	/*
 		case EthernetTypeLLC:
@@ -75,7 +75,7 @@ const (
 	IPProtocolSCTP         IPProtocol = 132
 )
 
-func (ip IPProtocol) Decode(data []byte, c gopacket.LayerCollector) error {
+func (ip IPProtocol) Decode(data []byte, c gopacket.PacketBuilder) error {
 	switch ip {
 	case IPProtocolTCP:
 		return decodeTCP(data, c)
@@ -146,7 +146,7 @@ const (
 	LinkTypeLinuxLAPD      LinkType = 177
 )
 
-func (l LinkType) Decode(data []byte, c gopacket.LayerCollector) error {
+func (l LinkType) Decode(data []byte, c gopacket.PacketBuilder) error {
 	switch l {
 	case LinkTypeEthernet:
 		return decodeEthernet(data, c)

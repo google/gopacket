@@ -39,7 +39,7 @@ type IPv4Option struct {
 	OptionData   []byte
 }
 
-func decodeIPv4(data []byte, c gopacket.LayerCollector) error {
+func decodeIPv4(data []byte, c gopacket.PacketBuilder) error {
 	flagsfrags := binary.BigEndian.Uint16(data[6:8])
 	ip := &IPv4{
 		Version:    uint8(data[0]) >> 4,

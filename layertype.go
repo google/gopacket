@@ -63,7 +63,7 @@ func RegisterLayerType(num int, meta LayerTypeMetadata) LayerType {
 
 // Decode decodes the given data using the decoder registered with the layer
 // type.
-func (t LayerType) Decode(data []byte, c LayerCollector) error {
+func (t LayerType) Decode(data []byte, c PacketBuilder) error {
 	var d Decoder
 	if 0 <= int(t) && int(t) < maxLayerType {
 		d = ltMeta[int(t)].Decoder

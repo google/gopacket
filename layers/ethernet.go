@@ -29,7 +29,7 @@ func (e *Ethernet) LinkFlow() gopacket.Flow {
 	return gopacket.NewFlow(EndpointMAC, e.SrcMAC, e.DstMAC)
 }
 
-func decodeEthernet(data []byte, c gopacket.LayerCollector) error {
+func decodeEthernet(data []byte, c gopacket.PacketBuilder) error {
 	if len(data) < 14 {
 		return errors.New("Ethernet packet too small")
 	}
