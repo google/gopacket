@@ -29,10 +29,9 @@ func (e *Ethernet) LinkFlow() gopacket.Flow {
 	return gopacket.NewFlow(EndpointMAC, e.SrcMAC, e.DstMAC)
 }
 
-func decodeEthernet(data []byte) (out gopacket.DecodeResult, err error) {
+func decodeEthernet(data []byte, p gopacket.PacketBuilder) error {
 	if len(data) < 14 {
-		err = errors.New("Ethernet packet too small")
-		return
+		return errors.New("Ethernet packet too small")
 	}
 	eth := &Ethernet{
 		DstMAC:       data[0:6],
@@ -44,8 +43,7 @@ func decodeEthernet(data []byte) (out gopacket.DecodeResult, err error) {
 		eth.Length = uint16(eth.EthernetType)
 		eth.EthernetType = EthernetTypeLLC
 	}
-	out.DecodedLayer = eth
-	out.NextDecoder = eth.EthernetType
-	out.LinkLayer = eth
-	return
+	p.AddLayer(eth)
+	p.SetLinkLayer(eth)
+	return p.NextDecoder(eth.EthernetType)
 }

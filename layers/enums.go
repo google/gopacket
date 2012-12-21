@@ -27,27 +27,26 @@ const (
 	EthernetTypeEthernetCTP    EthernetType = 0x9000
 )
 
-func (e EthernetType) Decode(data []byte) (out gopacket.DecodeResult, err error) {
+func (e EthernetType) Decode(data []byte, p gopacket.PacketBuilder) error {
 	switch e {
 	case EthernetTypeLLC:
-		return decodeLLC(data)
+		return decodeLLC(data, p)
 	case EthernetTypeIPv4:
-		return decodeIPv4(data)
+		return decodeIPv4(data, p)
 	case EthernetTypeIPv6:
-		return decodeIPv6(data)
+		return decodeIPv6(data, p)
 	case EthernetTypeARP:
-		return decodeARP(data)
+		return decodeARP(data, p)
 	case EthernetTypeDot1Q:
-		return decodeDot1Q(data)
+		return decodeDot1Q(data, p)
 	case EthernetTypePPPoEDiscovery, EthernetTypePPPoESession:
-		return decodePPPoE(data)
+		return decodePPPoE(data, p)
 	case EthernetTypeEthernetCTP:
-		return decodeEthernetCTP(data)
+		return decodeEthernetCTP(data, p)
 	case EthernetTypeCiscoDiscovery:
-		return decodeCiscoDiscovery(data)
+		return decodeCiscoDiscovery(data, p)
 	}
-	err = fmt.Errorf("Unsupported ethernet type %v", e)
-	return
+	return fmt.Errorf("Unsupported ethernet type %v", e)
 }
 
 // IPProtocol is an enumeration of IP protocol values, and acts as a decoder
@@ -72,42 +71,40 @@ const (
 	IPProtocolSCTP         IPProtocol = 132
 )
 
-func (ip IPProtocol) Decode(data []byte) (out gopacket.DecodeResult, err error) {
+func (ip IPProtocol) Decode(data []byte, p gopacket.PacketBuilder) error {
 	switch ip {
 	case IPProtocolTCP:
-		return decodeTCP(data)
+		return decodeTCP(data, p)
 	case IPProtocolUDP:
-		return decodeUDP(data)
+		return decodeUDP(data, p)
 	case IPProtocolICMP:
-		return decodeICMP(data)
+		return decodeICMP(data, p)
 	case IPProtocolSCTP:
-		return decodeSCTP(data)
+		return decodeSCTP(data, p)
 	case IPProtocolIPv6:
-		return decodeIPv6(data)
+		return decodeIPv6(data, p)
 	case IPProtocolIPIP:
-		return decodeIPv4(data)
+		return decodeIPv4(data, p)
 	case IPProtocolEtherIP:
-		return decodeEtherIP(data)
+		return decodeEtherIP(data, p)
 	case IPProtocolRUDP:
-		return decodeRUDP(data)
+		return decodeRUDP(data, p)
 	case IPProtocolGRE:
-		return decodeGRE(data)
+		return decodeGRE(data, p)
 	case IPProtocolIPv6HopByHop:
-		return decodeIPv6HopByHop(data)
+		return decodeIPv6HopByHop(data, p)
 	case IPProtocolIPv6Routing:
-		return decodeIPv6Routing(data)
+		return decodeIPv6Routing(data, p)
 	case IPProtocolIPv6Fragment:
-		return decodeIPv6Fragment(data)
+		return decodeIPv6Fragment(data, p)
 	case IPProtocolAH:
-		return decodeIPSecAH(data)
+		return decodeIPSecAH(data, p)
 	case IPProtocolESP:
-		return decodeIPSecESP(data)
+		return decodeIPSecESP(data, p)
 	case IPProtocolNoNextHeader:
-		err = fmt.Errorf("NoNextHeader found with %d bytes remaining to decode", len(data))
-		return
+		return fmt.Errorf("NoNextHeader found with %d bytes remaining to decode", len(data))
 	}
-	err = fmt.Errorf("Unsupported IP protocol %v", ip)
-	return
+	return fmt.Errorf("Unsupported IP protocol %v", ip)
 }
 
 // LinkType is an enumeration of link types, and acts as a decoder for any
@@ -143,15 +140,14 @@ const (
 	LinkTypeLinuxLAPD      LinkType = 177
 )
 
-func (l LinkType) Decode(data []byte) (out gopacket.DecodeResult, err error) {
+func (l LinkType) Decode(data []byte, p gopacket.PacketBuilder) error {
 	switch l {
 	case LinkTypeEthernet:
-		return decodeEthernet(data)
+		return decodeEthernet(data, p)
 	case LinkTypePPP:
-		return decodePPP(data)
+		return decodePPP(data, p)
 	}
-	err = fmt.Errorf("Unsupported link-layer type %v", l)
-	return
+	return fmt.Errorf("Unsupported link-layer type %v", l)
 }
 
 // PPPoECode is the PPPoE code enum, taken from http://tools.ietf.org/html/rfc2516
@@ -167,13 +163,12 @@ const (
 )
 
 // Decode decodes a PPPoE payload, based on the PPPoECode.
-func (p PPPoECode) Decode(data []byte) (out gopacket.DecodeResult, err error) {
-	switch p {
+func (pc PPPoECode) Decode(data []byte, p gopacket.PacketBuilder) error {
+	switch pc {
 	case PPPoECodeSession:
-		return decodePPP(data)
+		return decodePPP(data, p)
 	}
-	err = fmt.Errorf("Cannot currently handle PPPoE error code %v", p)
-	return
+	return fmt.Errorf("Cannot currently handle PPPoE error code %v", pc)
 }
 
 // PPPType is an enumeration of PPP type values, and acts as a decoder for any
@@ -185,15 +180,14 @@ const (
 	PPPTypeIPv6 PPPType = 0x0057
 )
 
-func (p PPPType) Decode(data []byte) (out gopacket.DecodeResult, err error) {
-	switch p {
+func (pt PPPType) Decode(data []byte, p gopacket.PacketBuilder) error {
+	switch pt {
 	case PPPTypeIPv4:
-		return decodeIPv4(data)
+		return decodeIPv4(data, p)
 	case PPPTypeIPv6:
-		return decodeIPv6(data)
+		return decodeIPv6(data, p)
 	}
-	err = fmt.Errorf("Unsupported PPP type %v", p)
-	return
+	return fmt.Errorf("Unsupported PPP type %v", pt)
 }
 
 // SCTPChunkType is an enumeration of chunk types inside SCTP packets.
@@ -215,27 +209,26 @@ const (
 	SCTPChunkTypeShutdownComplete SCTPChunkType = 14
 )
 
-func (s SCTPChunkType) Decode(data []byte) (out gopacket.DecodeResult, err error) {
+func (s SCTPChunkType) Decode(data []byte, p gopacket.PacketBuilder) error {
 	switch s {
 	case SCTPChunkTypeData:
-		return decodeSCTPData(data)
+		return decodeSCTPData(data, p)
 	case SCTPChunkTypeInit, SCTPChunkTypeInitAck:
-		return decodeSCTPInit(data)
+		return decodeSCTPInit(data, p)
 	case SCTPChunkTypeSack:
-		return decodeSCTPSack(data)
+		return decodeSCTPSack(data, p)
 	case SCTPChunkTypeHeartbeat, SCTPChunkTypeHeartbeatAck:
-		return decodeSCTPHeartbeat(data)
+		return decodeSCTPHeartbeat(data, p)
 	case SCTPChunkTypeAbort, SCTPChunkTypeError:
-		return decodeSCTPError(data)
+		return decodeSCTPError(data, p)
 	case SCTPChunkTypeShutdown:
-		return decodeSCTPShutdown(data)
+		return decodeSCTPShutdown(data, p)
 	case SCTPChunkTypeShutdownAck:
-		return decodeSCTPShutdownAck(data)
+		return decodeSCTPShutdownAck(data, p)
 	case SCTPChunkTypeCookieEcho:
-		return decodeSCTPCookieEcho(data)
+		return decodeSCTPCookieEcho(data, p)
 	case SCTPChunkTypeCookieAck, SCTPChunkTypeShutdownComplete:
-		return decodeSCTPEmptyLayer(data)
+		return decodeSCTPEmptyLayer(data, p)
 	}
-	err = fmt.Errorf("Unable to decode SCTP chunk type %v", s)
-	return
+	return fmt.Errorf("Unable to decode SCTP chunk type %v", s)
 }

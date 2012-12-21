@@ -6,38 +6,38 @@ import (
 	"errors"
 )
 
-// DecodeResult is returned from a Decode call.  You shouldn't need to use this
-// unless you want to write your own packet decoding logic.  Most users can
-// ignore this struct.
-type DecodeResult struct {
-	// DecodedLayer is the layer we've created with this decode call.
-	// DecodedLayer.LayerPayload() is the next set of bytes to be decoded... if it
-	// is empty, we stop decoding.
-	DecodedLayer Layer
-	// wtf is ... special.  Here's a funny story.  I remove it, and my pcap
-	// benchmark jumps from 3.3 us/packet to 4.0 us/packet, quite a non-trivial
-	// jump.  I add it back in and poof, we go down again.
-	// The benchmarks show that when this is removed, the following jumps in CPU
-	// time occur:
-	//  runtime.oldstack:  2.7% cum -> 8.2% cum
-	//  runtime.newstack:  2.5% cum -> 8.8% cum
-	// Not sure what's going on here, but it's an interesting problem, indeed.
-	// TODO: Remove this once the compiler makes this stupid micro-optimization
-	// obsolete.
-	wtf []byte
-	// NextDecoder is the next decoder to call.  When NextDecoder == nil, the
-	// packet considers itself fully decoded.
-	NextDecoder Decoder
-	// If the DecodedLayer is one of these layer types, also point to it here.
-	// The first of each of these will be returned by Packet.*Layer().  IE: if
-	// we've got an IPv4 packet encapsulated in another IPv4 packet, the decoder
-	// should point NetworkLayer at each of them, and packet will use the first
-	// (outermost) of these as its NetworkLayer().
-	LinkLayer
-	NetworkLayer
-	TransportLayer
-	ApplicationLayer
-	ErrorLayer
+// PacketBuilder is used by layer decoders to store the layers they've decoded,
+// and to defer future decoding via NextDecoder.
+// Typically, the pattern for use is:
+//  func (m *myDecoder) Decode(data []byte, c PacketBuilder) error {
+//    if myLayer, err := myDecodingLogic(data); err != nil {
+//      return err
+//    } else {
+//      c.AddLayer(myLayer)
+//    }
+//    // maybe do this, if myLayer is a LinkLayer
+//    c.SetLinkLayer(myLayer)
+//    return c.NextDecoder(nextDecoder)
+//  }
+type PacketBuilder interface {
+	// AddLayer should be called by a decoder immediately upon successful
+	// decoding of a layer.
+	AddLayer(l Layer)
+	// The following functions set the various specific layers in the final
+	// packet.  Note that if many layers call SetX, the first call is kept and all
+	// other calls are ignored.
+	SetLinkLayer(LinkLayer)
+	SetNetworkLayer(NetworkLayer)
+	SetTransportLayer(TransportLayer)
+	SetApplicationLayer(ApplicationLayer)
+	SetErrorLayer(ErrorLayer)
+	// NextDecoder should be called by a decoder when they're done decoding a
+	// packet layer but not done with decoding the entire packet.  The next
+	// decoder will be called to decode the last AddLayer's LayerPayload.
+	// Because of this, NextDecoder must only be called once all other
+	// PacketBuilder calls have been made.  Set*Layer and AddLayer calls after
+	// NextDecoder calls will behave incorrectly.
+	NextDecoder(next Decoder) error
 }
 
 // Decoder is an interface for logic to decode a packet layer.  See DecodeResult
@@ -46,15 +46,18 @@ type DecodeResult struct {
 // of the many decoders available in the 'layers' subpackage to decode things
 // for them.
 type Decoder interface {
-	Decode([]byte) (DecodeResult, error)
+	// Decode decodes the bytes of a packet, sending decoded values and other
+	// information to PacketBuilder, and returning an error if unsuccessful.  See
+	// the PacketBuilder documentation for more details.
+	Decode([]byte, PacketBuilder) error
 }
 
 // DecodeFunc wraps a function to make it a Decoder.
-type DecodeFunc func([]byte) (DecodeResult, error)
+type DecodeFunc func([]byte, PacketBuilder) error
 
-func (d DecodeFunc) Decode(data []byte) (DecodeResult, error) {
+func (d DecodeFunc) Decode(data []byte, c PacketBuilder) error {
 	// function, call thyself.
-	return d(data)
+	return d(data, c)
 }
 
 var (
@@ -91,15 +94,13 @@ func (d *DecodeFailure) LayerType() LayerType { return LayerTypeDecodeFailure }
 
 // decodeUnknown "decodes" unsupported data types by returning an error.
 // This decoder will thus always return a DecodeFailure layer.
-func decodeUnknown(data []byte) (out DecodeResult, err error) {
-	err = errors.New("Layer type not currently supported")
-	return
+func decodeUnknown(data []byte, c PacketBuilder) error {
+	return errors.New("Layer type not currently supported")
 }
 
 // decodePayload decodes data by returning it all in a Payload layer.
-func decodePayload(data []byte) (out DecodeResult, err error) {
+func decodePayload(data []byte, c PacketBuilder) error {
 	payload := &Payload{Data: data}
-	out.DecodedLayer = payload
-	out.ApplicationLayer = payload
-	return
+	c.AddLayer(payload)
+	return nil
 }

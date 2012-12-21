@@ -23,7 +23,7 @@ func (p *PPPoE) LayerType() gopacket.LayerType {
 }
 
 // decodePPPoE decodes the PPPoE header (see http://tools.ietf.org/html/rfc2516).
-func decodePPPoE(data []byte) (out gopacket.DecodeResult, err error) {
+func decodePPPoE(data []byte, p gopacket.PacketBuilder) error {
 	pppoe := &PPPoE{
 		Version:   data[0] >> 4,
 		Type:      data[0] & 0x0F,
@@ -32,7 +32,6 @@ func decodePPPoE(data []byte) (out gopacket.DecodeResult, err error) {
 		Length:    binary.BigEndian.Uint16(data[4:6]),
 		baseLayer: baseLayer{data[:6], data[6:]},
 	}
-	out.DecodedLayer = pppoe
-	out.NextDecoder = pppoe.Code
-	return
+	p.AddLayer(pppoe)
+	return p.NextDecoder(pppoe.Code)
 }

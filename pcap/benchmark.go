@@ -31,7 +31,7 @@ import (
 )
 
 var decodeLazy *bool = flag.Bool("lazy", false, "If true, use lazy decoding")
-var decodeNoCopy *bool = flag.Bool("nocopy", false, "If true, avoid an extra copy when decoding packets")
+var decodeNoCopy *bool = flag.Bool("nocopy", true, "If true, avoid an extra copy when decoding packets")
 var printErrors *bool = flag.Bool("printErrors", false, "If true, check for and print error layers.")
 var printLayers *bool = flag.Bool("printLayers", false, "If true, print out the layers of each packet")
 var repeat *int = flag.Int("repeat", 10, "Read over the file N times")
@@ -69,6 +69,10 @@ func (b *BufferPacketSource) ReadPacketData() (data []byte, ci gopacket.CaptureI
 	ci = b.ci[b.index]
 	b.index++
 	return
+}
+
+func (b *BufferPacketSource) Reset() {
+	b.index = 0
 }
 
 func main() {
@@ -118,46 +122,51 @@ func main() {
 			}()
 		}
 	}
+	var packetDataSource *BufferPacketSource
+	var packetSource *gopacket.PacketSource
+	fmt.Printf("Opening file %q for read\n", filename)
+	if h, err := pcap.OpenOffline(filename); err != nil {
+		panic(err)
+	} else {
+		fmt.Println("Reading all packets into memory with BufferPacketSource.")
+		start := time.Now()
+		packetDataSource = NewBufferPacketSource(h)
+		duration := time.Since(start)
+		fmt.Printf("Time to read packet data into memory from file: %v\n", duration)
+		packetSource = gopacket.NewPacketSource(packetDataSource, h.LinkType())
+		packetSource.DecodeOptions.Lazy = *decodeLazy
+		packetSource.DecodeOptions.NoCopy = *decodeNoCopy
+	}
 	for i := 0; i < *repeat; i++ {
-		fmt.Printf("%d/%d: Opening file %q for read\n", i+1, *repeat, filename)
-		if h, err := pcap.OpenOffline(filename); err != nil {
-			panic(err)
-		} else {
-			realStart := time.Now()
-			// Read all packets into memory with BufferPacketSource.
-			packetDataSource := NewBufferPacketSource(h)
-			packetSource := gopacket.NewPacketSource(packetDataSource, h.LinkType())
-			packetSource.DecodeOptions.Lazy = *decodeLazy
-			packetSource.DecodeOptions.NoCopy = *decodeNoCopy
-			count, errors := 0, 0
-			start := time.Now()
-			for packet, err := packetSource.NextPacket(); err != io.EOF; packet, err = packetSource.NextPacket() {
-				if err != nil {
-					fmt.Println("Error reading in packet:", err)
-				}
-				count++
-				var hasError bool
-				if *printErrors && packet.ErrorLayer() != nil {
-					fmt.Println("\n\n\nError decoding packet:", packet.ErrorLayer().Error())
-					fmt.Println(hex.Dump(packet.Data()))
-					fmt.Printf("%#v\n", packet.Data())
-					errors++
-					hasError = true
-				}
-				if *printLayers || hasError {
-					fmt.Printf("\n=== PACKET %d ===\n", count)
-					for _, l := range packet.Layers() {
-						fmt.Printf("--- LAYER %v ---\n%#v\n\n", l.LayerType(), l)
-					}
-					fmt.Println()
-				}
+		packetDataSource.Reset()
+		count, errors := 0, 0
+		fmt.Printf("Benchmarking decode %d/%d\n", i+1, *repeat)
+		start := time.Now()
+		for packet, err := packetSource.NextPacket(); err != io.EOF; packet, err = packetSource.NextPacket() {
+			if err != nil {
+				fmt.Println("Error reading in packet:", err)
 			}
-			duration := time.Since(start)
-			fmt.Printf("Read in %v packets in %v, %v per packet\n", count, duration, duration/time.Duration(count))
-			if *printErrors {
-				fmt.Printf("%v errors, successfully decoded %.02f%%\n", errors, float64(count-errors)*100.0/float64(count))
+			count++
+			var hasError bool
+			if *printErrors && packet.ErrorLayer() != nil {
+				fmt.Println("\n\n\nError decoding packet:", packet.ErrorLayer().Error())
+				fmt.Println(hex.Dump(packet.Data()))
+				fmt.Printf("%#v\n", packet.Data())
+				errors++
+				hasError = true
 			}
-			fmt.Printf("Time to both read and process: %v\n", time.Since(realStart))
+			if *printLayers || hasError {
+				fmt.Printf("\n=== PACKET %d ===\n", count)
+				for _, l := range packet.Layers() {
+					fmt.Printf("--- LAYER %v ---\n%#v\n\n", l.LayerType(), l)
+				}
+				fmt.Println()
+			}
+		}
+		duration := time.Since(start)
+		fmt.Printf("\tRead in %v packets in %v, %v per packet\n", count, duration, duration/time.Duration(count))
+		if *printErrors {
+			fmt.Printf("%v errors, successfully decoded %.02f%%\n", errors, float64(count-errors)*100.0/float64(count))
 		}
 	}
 }

@@ -36,7 +36,7 @@ type SNAP struct {
 // LayerType returns gopacket.LayerTypeSNAP.
 func (s *SNAP) LayerType() gopacket.LayerType { return LayerTypeSNAP }
 
-func decodeLLC(data []byte) (out gopacket.DecodeResult, err error) {
+func decodeLLC(data []byte, p gopacket.PacketBuilder) error {
 	l := &LLC{
 		DSAP:    data[0] & 0xFE,
 		IG:      data[0]&0x1 != 0,
@@ -52,25 +52,22 @@ func decodeLLC(data []byte) (out gopacket.DecodeResult, err error) {
 		l.contents = data[:3]
 		l.payload = data[3:]
 	}
-	out.DecodedLayer = l
+	p.AddLayer(l)
 	if l.DSAP == 0xAA && l.SSAP == 0xAA {
-		out.NextDecoder = LayerTypeSNAP
-	} else {
-		out.NextDecoder = gopacket.DecodeUnknown
+		return p.NextDecoder(LayerTypeSNAP)
 	}
-	return
+	return p.NextDecoder(gopacket.DecodeUnknown)
 }
 
-func decodeSNAP(data []byte) (out gopacket.DecodeResult, err error) {
+func decodeSNAP(data []byte, p gopacket.PacketBuilder) error {
 	s := &SNAP{
 		OrganizationalCode: data[:3],
 		Type:               EthernetType(binary.BigEndian.Uint16(data[3:5])),
 		baseLayer:          baseLayer{data[:5], data[5:]},
 	}
-	out.DecodedLayer = s
+	p.AddLayer(s)
 	// BUG(gconnell):  When decoding SNAP, we treat the SNAP type as an Ethernet
 	// type.  This may not actually be an ethernet type in all cases,
 	// depending on the organizational code.  Right now, we don't check.
-	out.NextDecoder = s.Type
-	return
+	return p.NextDecoder(s.Type)
 }

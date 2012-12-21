@@ -36,7 +36,7 @@ type RUDPHeaderEACK struct {
 // LayerType returns gopacket.LayerTypeRUDP.
 func (r *RUDP) LayerType() gopacket.LayerType { return LayerTypeRUDP }
 
-func decodeRUDP(data []byte) (out gopacket.DecodeResult, err error) {
+func decodeRUDP(data []byte, p gopacket.PacketBuilder) error {
 	r := &RUDP{
 		SYN:          data[0]&0x80 != 0,
 		ACK:          data[0]&0x40 != 0,
@@ -53,8 +53,7 @@ func decodeRUDP(data []byte) (out gopacket.DecodeResult, err error) {
 		Checksum:     binary.BigEndian.Uint32(data[14:18]),
 	}
 	if r.HeaderLength < 9 {
-		err = fmt.Errorf("RUDP packet with too-short header length %d", r.HeaderLength)
-		return
+		return fmt.Errorf("RUDP packet with too-short header length %d", r.HeaderLength)
 	}
 	hlen := int(r.HeaderLength) * 2
 	r.contents = data[:hlen]
@@ -64,8 +63,7 @@ func decodeRUDP(data []byte) (out gopacket.DecodeResult, err error) {
 	switch {
 	case r.SYN:
 		if len(headerData) != 6 {
-			err = fmt.Errorf("RUDP packet invalid SYN header length: %d", len(headerData))
-			return
+			return fmt.Errorf("RUDP packet invalid SYN header length: %d", len(headerData))
 		}
 		r.RUDPHeaderSYN = &RUDPHeaderSYN{
 			MaxOutstandingSegments: binary.BigEndian.Uint16(headerData[:2]),
@@ -74,18 +72,16 @@ func decodeRUDP(data []byte) (out gopacket.DecodeResult, err error) {
 		}
 	case r.EACK:
 		if len(headerData)%4 != 0 {
-			err = fmt.Errorf("RUDP packet invalid EACK header length: %d", len(headerData))
-			return
+			return fmt.Errorf("RUDP packet invalid EACK header length: %d", len(headerData))
 		}
 		r.RUDPHeaderEACK = &RUDPHeaderEACK{make([]uint32, len(headerData)/4)}
 		for i := 0; i < len(headerData); i += 4 {
 			r.SeqsReceivedOK[i/4] = binary.BigEndian.Uint32(headerData[i : i+4])
 		}
 	}
-	out.DecodedLayer = r
-	out.NextDecoder = gopacket.LayerTypePayload
-	out.TransportLayer = r
-	return
+	p.AddLayer(r)
+	p.SetTransportLayer(r)
+	return p.NextDecoder(gopacket.LayerTypePayload)
 }
 
 func (r *RUDP) TransportFlow() gopacket.Flow {

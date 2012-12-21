@@ -22,7 +22,7 @@ type IPSecAH struct {
 // LayerType returns LayerTypeIPSecAH.
 func (i *IPSecAH) LayerType() gopacket.LayerType { return LayerTypeIPSecAH }
 
-func decodeIPSecAH(data []byte) (out gopacket.DecodeResult, err error) {
+func decodeIPSecAH(data []byte, p gopacket.PacketBuilder) error {
 	i := &IPSecAH{
 		ipv6ExtensionBase: decodeIPv6ExensionBase(data),
 		Reserved:          binary.BigEndian.Uint16(data[2:4]),
@@ -30,9 +30,8 @@ func decodeIPSecAH(data []byte) (out gopacket.DecodeResult, err error) {
 		Seq:               binary.BigEndian.Uint32(data[8:12]),
 	}
 	i.AuthenticationData = i.contents[12:]
-	out.DecodedLayer = i
-	out.NextDecoder = i.NextHeader
-	return
+	p.AddLayer(i)
+	return p.NextDecoder(i.NextHeader)
 }
 
 // IPSecESP is the encapsulating security payload defined in
@@ -47,13 +46,13 @@ type IPSecESP struct {
 // LayerType returns LayerTypeIPSecESP.
 func (i *IPSecESP) LayerType() gopacket.LayerType { return LayerTypeIPSecESP }
 
-func decodeIPSecESP(data []byte) (out gopacket.DecodeResult, err error) {
+func decodeIPSecESP(data []byte, p gopacket.PacketBuilder) error {
 	i := &IPSecESP{
 		baseLayer: baseLayer{data, nil},
 		SPI:       binary.BigEndian.Uint32(data[:4]),
 		Seq:       binary.BigEndian.Uint32(data[4:8]),
 		Encrypted: data[8:],
 	}
-	out.DecodedLayer = i
-	return
+	p.AddLayer(i)
+	return nil
 }

@@ -27,19 +27,18 @@ func (m *MPLS) LayerType() gopacket.LayerType { return LayerTypeMPLS }
 //  If the packet starts with nibble 0x6: IPv6
 type ProtocolGuessingDecoder struct{}
 
-func (ProtocolGuessingDecoder) Decode(data []byte) (out gopacket.DecodeResult, err error) {
+func (ProtocolGuessingDecoder) Decode(data []byte, p gopacket.PacketBuilder) error {
 	ethPrefix := [3]byte{data[0], data[1], data[2]}
 	if _, ok := gopacket.ValidMACPrefixMap[ethPrefix]; ok {
-		return decodeEthernet(data)
+		return decodeEthernet(data, p)
 	}
 	switch data[0] >> 4 {
 	case 4:
-		return decodeIPv4(data)
+		return decodeIPv4(data, p)
 	case 6:
-		return decodeIPv6(data)
+		return decodeIPv6(data, p)
 	}
-	err = errors.New("Unable to guess protocol of packet data")
-	return
+	return errors.New("Unable to guess protocol of packet data")
 }
 
 // MPLSPayloadDecoder is the decoder used to data encapsulated by each MPLS
@@ -50,15 +49,14 @@ func (ProtocolGuessingDecoder) Decode(data []byte) (out gopacket.DecodeResult, e
 // encapsulates a specific protocol, you may reset this.
 var MPLSPayloadDecoder gopacket.Decoder = ProtocolGuessingDecoder{}
 
-func decodeMPLS(data []byte) (out gopacket.DecodeResult, err error) {
+func decodeMPLS(data []byte, p gopacket.PacketBuilder) error {
 	decoded := binary.BigEndian.Uint32(data[:4])
-	out.DecodedLayer = &MPLS{
+	p.AddLayer(&MPLS{
 		Label:        decoded >> 12,
 		TrafficClass: uint8(decoded>>9) & 0x7,
 		StackBottom:  decoded&0x10 != 0,
 		TTL:          uint8(decoded),
 		baseLayer:    baseLayer{data[:4], data[4:]},
-	}
-	out.NextDecoder = MPLSPayloadDecoder
-	return
+	})
+	return p.NextDecoder(MPLSPayloadDecoder)
 }
