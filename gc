@@ -124,7 +124,7 @@ cat >> $COMMIT_FILE <<EOF
 
 PCAP BENCHMARK
 EOF
-go run pcap/benchmark.go 2>&1 | tee -a $COMMIT_FILE
+go run pcap/benchmark.go --nocopy 2>&1 | tee -a $COMMIT_FILE
 
 
 
@@ -146,7 +146,7 @@ cat >> $COMMIT_FILE <<EOF
 
 OLD PCAP BENCHMARK
 EOF
-go run pcap/benchmark.go 2>&1 | tee -a $COMMIT_FILE
+go run pcap/benchmark.go --nocopy 2>&1 | tee -a $COMMIT_FILE
 
 
 
