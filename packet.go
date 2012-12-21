@@ -137,7 +137,12 @@ type eagerPacket struct {
 	packet
 }
 
+var nilDecoderError = errors.New("NextDecoder passed nil decoder, probably an unsupported decode type")
+
 func (p *eagerPacket) NextDecoder(next Decoder) error {
+	if next == nil {
+		return nilDecoderError
+	}
 	if p.last == nil {
 		return errors.New("NextDecoder called, but no layers added yet")
 	}
@@ -197,6 +202,9 @@ type lazyPacket struct {
 }
 
 func (p *lazyPacket) NextDecoder(next Decoder) error {
+	if next == nil {
+		return nilDecoderError
+	}
 	p.next = next
 	return nil
 }

@@ -6,11 +6,8 @@ package layers
 import (
 	"fmt"
 	"github.com/gconnell/gopacket"
-	"math/rand"
-	"os"
 	"reflect"
 	"testing"
-	"time"
 )
 
 var testSimpleTCPPacket []byte = []byte{
@@ -51,52 +48,6 @@ var testSimpleTCPPacket []byte = []byte{
 	0x2d, 0x31, 0x2c, 0x75, 0x74, 0x66, 0x2d, 0x38, 0x3b, 0x71, 0x3d, 0x30,
 	0x2e, 0x37, 0x2c, 0x2a, 0x3b, 0x71, 0x3d, 0x30, 0x2e, 0x33, 0x0d, 0x0a,
 	0x0d, 0x0a,
-}
-
-// A few benchmarks for figuring out exactly how fast some underlying Go
-// things are.
-
-func BenchmarkTypeAssertion(b *testing.B) {
-	var eth gopacket.LinkLayer = &Ethernet{}
-	c := 0
-	for i := 0; i < b.N; i++ {
-		if _, ok := eth.(*Ethernet); ok {
-			c++
-		}
-	}
-}
-
-func BenchmarkMapLookup(b *testing.B) {
-	m := map[gopacket.LayerType]bool{
-		LayerTypeTCP:      true,
-		LayerTypeEthernet: true,
-	}
-	for i := 0; i < b.N; i++ {
-		_ = m[LayerTypeIPv4]
-	}
-}
-
-func BenchmarkNilMapLookup(b *testing.B) {
-	var m map[gopacket.LayerType]bool
-	for i := 0; i < b.N; i++ {
-		_ = m[LayerTypeIPv4]
-	}
-}
-
-func BenchmarkNilMapLookupWithNilCheck(b *testing.B) {
-	var m map[gopacket.LayerType]bool
-	for i := 0; i < b.N; i++ {
-		if m != nil {
-			_ = m[LayerTypeIPv4]
-		}
-	}
-}
-
-func BenchmarkArrayLookup(b *testing.B) {
-	m := make([]bool, 100)
-	for i := 0; i < b.N; i++ {
-		_ = m[LayerTypeIPv4]
-	}
 }
 
 // Benchmarks for actual gopacket code
@@ -218,13 +169,6 @@ func TestFlowMapKey(t *testing.T) {
 	_ = map[gopacket.Flow]bool{}
 	_ = map[gopacket.Endpoint]bool{}
 	_ = map[[2]gopacket.Flow]bool{}
-}
-
-func BenchmarkCheckEthernetPrefix(b *testing.B) {
-	key := [3]byte{5, 5, 5}
-	for i := 0; i < b.N; i++ {
-		_ = gopacket.ValidMACPrefixMap[key]
-	}
 }
 
 func TestDecodeSimpleTCPPacket(t *testing.T) {
@@ -363,45 +307,6 @@ func TestDecodeVLANPacket(t *testing.T) {
 			t.Errorf("At index %d, got layer type %s, want %s", i, l.LayerType(), want[i])
 		}
 	}
-}
-
-func TestDecoderSecurity(t *testing.T) {
-	seed := time.Now().UnixNano()
-	fmt.Fprintf(os.Stderr, "If you see a crash here, it's serious business.  Report it!\n"+
-		"Send this number with any crash reports: %v\n", seed)
-	r := rand.New(rand.NewSource(seed))
-
-	testCases := []struct {
-		s string
-		d gopacket.DecodeFunc
-	}{
-		{"ARP", decodeARP},
-		{"Dot1Q", decodeDot1Q},
-		{"Ethernet", decodeEthernet},
-		{"ICMP", decodeICMP},
-		{"IPv4", decodeIPv4},
-		{"IPv6", decodeIPv6},
-		{"PPP", decodePPP},
-		{"TCP", decodeTCP},
-		{"UDP", decodeUDP},
-		{"MPLS", decodeMPLS},
-		{"PPPoE", decodePPPoE},
-	}
-	for _, tc := range testCases {
-		// Fuzz-test the decoder tc.d by feeding it random inputs.
-		// We're fine with errors occurring here... what we're looking
-		// for is actual program crashes, which Shouldn't Happen (tm) due
-		// to golang slice range checking... but we're paranoid.
-		t.Logf("Testing %s", tc.s)
-		for i := 0; i < 10; i++ {
-			b := make([]byte, 0, 256)
-			for r.Int()%100 != 0 {
-				b = append(b, byte(r.Int()))
-			}
-			gopacket.NewPacket(b, tc.d, gopacket.Default)
-		}
-	}
-	fmt.Fprintln(os.Stderr, "No crash to see here... continuing with testing")
 }
 
 func TestDecodeSCTPPackets(t *testing.T) {
