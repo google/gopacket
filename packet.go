@@ -351,6 +351,16 @@ func NewPacket(data []byte, firstLayerDecoder Decoder, options DecodeOptions) Pa
 			next:   firstLayerDecoder,
 		}
 		p.layers = p.initialLayers[:0]
+		// Crazy craziness:
+		// If the following return statemet is REMOVED, and Lazy is FALSE, then
+		// eager packet processing becomes 17% FASTER.  No, there is no logical
+		// explanation for this.  However, it's such a hacky micro-optimization that
+		// we really can't rely on it.  It appears to have to do with the size the
+		// compiler guesses for this function's stack space, since one symptom is
+		// that with the return statement in place, we more than double calls to
+		// runtime.morestack/runtime.lessstack.  We'll hope the compiler gets better
+		// over time and we get this optimization for free.  Until then, we'll have
+		// to live with slower packet processing.
 		return p
 	}
 	p := &eagerPacket{
