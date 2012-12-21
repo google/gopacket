@@ -62,7 +62,7 @@ type packet struct {
 	// encoded contains all the packet data we have yet to decode
 	encoded []byte
 	// layers contains each layer we've already decoded
-	layers []Layer
+	layers layerList
 	// decoder is the next decoder we should call (lazily)
 	decoder Decoder
 	// capInfo is the CaptureInfo for this packet
@@ -118,10 +118,6 @@ func (p *packet) Data() []byte {
 	return p.data
 }
 
-func (p *packet) appendLayer(l Layer) {
-	p.layers = append(p.layers, l)
-}
-
 // DecodeOptions tells gopacket how to decode a packet.
 type DecodeOptions struct {
 	// Lazy decoding decodes the minimum number of layers needed to return data
@@ -163,23 +159,18 @@ func NewPacket(data []byte, firstLayerDecoder Decoder, options DecodeOptions) Pa
 	}
 	p := &packet{
 		data: data,
-		// We start off with a size-4 slice since growing a size-zero slice actually
-		// can take us a large amount of time, and we expect most packets to give us
-		// 4 layers (link, network, transport, application).  This gives our 4-layer
-		// benchmark (DecodeNotLazy) a speedup of ~10% (2150ns -> 1922ns)
-		layers: make([]Layer, 0, 4),
 	}
 	if !options.Lazy {
 		p.eagerDecode(data, firstLayerDecoder)
 	} else {
-		p.decoder = firstLayerDecoder
-		p.encoded = data
+    p.lazyDecode(data, firstLayerDecoder)
 	}
 	return p
 }
 
 func (p *packet) eagerDecode(data []byte, dec Decoder) {
-	e := eagerCollector{&p.layers, nil}
+	e := eagerCollector{make([]Layer, 0, 4), nil}
+  p.layers = e
 	defer func() {
 		if r := recover(); r != nil {
 			fail := &DecodeFailure{err: fmt.Errorf("BLAH")}
@@ -188,7 +179,7 @@ func (p *packet) eagerDecode(data []byte, dec Decoder) {
 			} else {
 				fail.data = e.last.LayerPayload()
 			}
-			p.layers = append(p.layers, fail)
+			e.layers = append(e.layers, fail)
 		}
 	}()
 	err := dec.Decode(data, &e)
@@ -198,25 +189,32 @@ func (p *packet) eagerDecode(data []byte, dec Decoder) {
 }
 
 func (p *packet) Layers() []Layer {
-	return p.layers
+	return p.layers.getAll()
 }
 
 func (p *packet) Layer(t LayerType) Layer {
-	for _, l := range p.layers {
-		if t == l.LayerType() {
-			return l
-		}
-	}
-	return nil
+  for i := 0; ; i++ {
+    l := p.layers.get(i)
+    if l == nil {
+      return nil
+    }
+    if t == l.LayerType() {
+      return l
+    }
+  }
 }
 
+
 func (p *packet) LayerClass(lc LayerClass) Layer {
-	for _, l := range p.layers {
-		if lc.Contains(l.LayerType()) {
-			return l
-		}
-	}
-	return nil
+  for i := 0; ; i++ {
+    l := p.layers.get(i)
+    if l == nil {
+      return nil
+    }
+    if lc.Contains(l.LayerType()) {
+      return l
+    }
+  }
 }
 
 func (p *packet) String() string {

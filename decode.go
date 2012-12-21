@@ -6,28 +6,8 @@ import (
 	"errors"
 )
 
-// DecodeResult is returned from a Decode call.  You shouldn't need to use this
-// unless you want to write your own packet decoding logic.  Most users can
-// ignore this struct.
-type DecodeResult struct {
-	// DecodedLayer is the layer we've created with this decode call.
-	// DecodedLayer.LayerPayload() is the next set of bytes to be decoded... if it
-	// is empty, we stop decoding.
-	DecodedLayer Layer
-	// wtf is ... special.  Here's a funny story.  I remove it, and my pcap
-	// benchmark jumps from 3.3 us/packet to 4.0 us/packet, quite a non-trivial
-	// jump.  I add it back in and poof, we go down again.
-	// The benchmarks show that when this is removed, the following jumps in CPU
-	// time occur:
-	//  runtime.oldstack:  2.7% cum -> 8.2% cum
-	//  runtime.newstack:  2.5% cum -> 8.8% cum
-	// Not sure what's going on here, but it's an interesting problem, indeed.
-	// TODO: Remove this once the compiler makes this stupid micro-optimization
-	// obsolete.
-	wtf []byte
-	// NextDecoder is the next decoder to call.  When NextDecoder == nil, the
-	// packet considers itself fully decoded.
-	NextDecoder Decoder
+// SpecificLayers contains pointers to specific layer types.
+type SpecificLayers struct {
 	// If the DecodedLayer is one of these layer types, also point to it here.
 	// The first of each of these will be returned by Packet.*Layer().  IE: if
 	// we've got an IPv4 packet encapsulated in another IPv4 packet, the decoder
@@ -40,31 +20,72 @@ type DecodeResult struct {
 	ErrorLayer
 }
 
+// LayerCollector is used by layer decoders to store the layers they've decoded,
+// and to defer future decoding via NextDecoder.
+// Typically, the pattern for use is:
+//  func (m *myDecoder) Decode(data []byte, c LayerCollector) error {
+//    if myLayer, err := myDecodingLogic(data); err != nil {
+//      return err
+//    } else {
+//      c.DecodedLayer(myLayer)
+//    }
+//    // maybe do this, if myLayer is a LinkLayer
+//    c.SpecificLayers(SpecificLayers{LinkLayer: myLayer})
+//    return c.NextDecoder(nextDecoder)
+//  }
+type LayerCollector interface {
+  // DecodedLayer should be called by a decoder immediately upon successful
+  // decoding of a layer.
+	DecodedLayer(l Layer)
+  // SpecificLayers should be called by a decoder if they have a decoded layer
+  // they'd like specific layer calls to point to.
+  SpecificLayers(s SpecificLayers)
+  // NextDecoder should be called by a decoder when they're done decoding a
+  // packet layer but not done with decoding the entire packet.  The next
+  // decoder will be called to decode the last DecodedLayer's LayerPayload.
+	NextDecoder(next Decoder) error
+}
+
 // Decoder is an interface for logic to decode a packet layer.  See DecodeResult
 // for a long-winded explanation of the data this fuction returns.  Users may
 // implement a Decoder to handle their own strange packet types, or may use one
 // of the many decoders available in the 'layers' subpackage to decode things
 // for them.
 type Decoder interface {
+  // Decode decodes the bytes of a packet, sending decoded values and other
+  // information to LayerCollector, and returning an error if unsuccessful.  See
+  // the LayerCollector documentation for more details.
 	Decode([]byte, LayerCollector) error
 }
 
-type LayerCollector interface {
-	AddLayer(l Layer)
-	NextDecoder(next Decoder) error
+type layerList interface {
+  // get returns the i-th layer, or nil if there isn't one.
+  func get(i int) Layer
+  // getAll returns all layers as a slice.
+  func getAll() []Layer
 }
 
+// eagerCollector is an eager LayerCollector.
 type eagerCollector struct {
-	layers *[]Layer
+	layers []Layer
 	last   Layer
 }
-
 func (s *eagerCollector) AddLayer(l Layer) {
-	*s.layers = append(*s.layers, l)
+	s.layers = append(s.layers, l)
 	s.last = l
 }
 func (s *eagerCollector) NextDecoder(next Decoder) error {
+  // Since we're eager, immediately call the next decoder.
 	return next.Decode(s.last.LayerPayload(), s)
+}
+func (s *eagerCollector) get(i int) Layer {
+  if i < len(s.layers) {
+    return s.layers[i]
+  }
+  return nil
+}
+func (s *eagerCollector) getAll() []Layer {
+  return s.layers
 }
 
 // DecodeFunc wraps a function to make it a Decoder.
