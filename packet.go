@@ -64,6 +64,9 @@ type Packet interface {
 type packet struct {
 	// data contains the entire packet data for a packet
 	data []byte
+	// initialLayers is space for an initial set of layers already created inside
+	// the packet.
+	initialLayers [6]Layer
 	// layers contains each layer we've already decoded
 	layers []Layer
 	// last is the last layer added to the packet
@@ -343,14 +346,16 @@ func NewPacket(data []byte, firstLayerDecoder Decoder, options DecodeOptions) Pa
 		data = dataCopy
 	}
 	if options.Lazy {
-		return &lazyPacket{
-			packet: packet{data: data, layers: make([]Layer, 0, 4)},
+		p := &lazyPacket{
+			packet: packet{data: data},
 			next:   firstLayerDecoder,
 		}
+		p.layers = p.initialLayers[:0]
 	}
 	p := &eagerPacket{
-		packet: packet{data: data, layers: make([]Layer, 0, 4)},
+		packet: packet{data: data},
 	}
+	p.layers = p.initialLayers[:0]
 	p.initialDecode(firstLayerDecoder)
 	return p
 }
