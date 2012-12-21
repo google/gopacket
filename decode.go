@@ -40,8 +40,7 @@ type PacketBuilder interface {
 	NextDecoder(next Decoder) error
 }
 
-// Decoder is an interface for logic to decode a packet layer.  See DecodeResult
-// for a long-winded explanation of the data this fuction returns.  Users may
+// Decoder is an interface for logic to decode a packet layer.  Users may
 // implement a Decoder to handle their own strange packet types, or may use one
 // of the many decoders available in the 'layers' subpackage to decode things
 // for them.

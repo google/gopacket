@@ -1,6 +1,7 @@
 // Copyright 2012 Google, Inc. All rights reserved.
 
-/* Package layers provides decoding layers for many common protocols.
+/*
+Package layers provides decoding layers for many common protocols.
 
 The layers package contains decode implementations for a number of different
 types of packet layers.  Users of gopacket will almost always want to also use

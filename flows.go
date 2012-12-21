@@ -17,7 +17,7 @@ type Endpoint struct {
 	raw string
 }
 
-// EndpointType returns the layer type associated with this endpoint.
+// EndpointType returns the endpoint type associated with this endpoint.
 func (e Endpoint) EndpointType() EndpointType { return e.typ }
 
 // Raw returns the raw bytes of this endpoint.  These aren't human-readable
@@ -37,6 +37,7 @@ func NewEndpoint(typ EndpointType, raw []byte) Endpoint {
 	return Endpoint{typ, string(raw)}
 }
 
+// EndpointTypeMetadata is used to register a new endpoint type.
 type EndpointTypeMetadata struct {
 	// Name is the string returned by an EndpointType's String function.
 	Name string
@@ -71,7 +72,7 @@ func (e EndpointType) String() string {
 }
 
 func (e Endpoint) String() string {
-	if t, ok := endpointTypes[e.typ]; ok {
+	if t, ok := endpointTypes[e.typ]; ok && t.Formatter != nil {
 		return t.Formatter([]byte(e.raw))
 	}
 	return fmt.Sprintf("%v:%v", e.typ, e.raw)

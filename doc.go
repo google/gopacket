@@ -190,15 +190,18 @@ in a 4-byte header.
 
  // Now implement a decoder... this one strips off the first 4 bytes of the
  // packet.
- func decodeMyLayer(data []byte) (out gopacket.DecodeResult, err error) {
+ func decodeMyLayer(data []byte, p gopacket.PacketBuilder) error {
    // Create my layer
-   out.DecodedLayer = &MyLayer{data[:4], data[4:]}
+   p.AddLayer(&MyLayer{data[:4], data[4:]})
    // Determine how to handle the rest of the packet
-   out.NextDecoder = layers.LayerTypeEthernet
-   return
+   return p.NextDecoder(layers.LayerTypeEthernet)
  }
 
  // Finally, decode your packets:
  p := gopacket.NewPacket(data, MyLayerType, gopacket.Lazy)
+
+See the docs for Decoder and PacketBuilder for more details on how coding
+decoders works, or look at RegisterLayerType and RegisterEndpointType to see how
+to add layer/endpoint types to gopacket.
 */
 package gopacket
