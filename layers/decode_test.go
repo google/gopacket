@@ -204,6 +204,15 @@ func BenchmarkTCPLayerClassFromDecodedPacket(b *testing.B) {
 	}
 }
 
+func BenchmarkTCPTransportLayerFromDecodedPacket(b *testing.B) {
+	b.StopTimer()
+	p := gopacket.NewPacket(testSimpleTCPPacket, LinkTypeEthernet, gopacket.Default)
+	b.StartTimer()
+	for i := 0; i < b.N; i++ {
+		_ = p.TransportLayer()
+	}
+}
+
 // TestFlowMapKey makes sure a flow and an endpoint can be used as map keys.
 func TestFlowMapKey(t *testing.T) {
 	_ = map[gopacket.Flow]bool{}
