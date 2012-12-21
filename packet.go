@@ -141,8 +141,12 @@ func (p *eagerPacket) NextDecoder(next Decoder) error {
 	if p.last == nil {
 		return errors.New("NextDecoder called, but no layers added yet")
 	}
+	d := p.last.LayerPayload()
+	if len(d) == 0 {
+		return nil
+	}
 	// Since we're eager, immediately call the next decoder.
-	return next.Decode(p.last.LayerPayload(), p)
+	return next.Decode(d, p)
 }
 func (p *eagerPacket) initialDecode(dec Decoder) {
 	defer p.recoverDecodeError()

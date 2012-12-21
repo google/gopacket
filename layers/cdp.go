@@ -33,15 +33,14 @@ type CiscoDiscoveryValue struct {
 	Value  []byte
 }
 
-func decodeCiscoDiscovery(data []byte) (out gopacket.DecodeResult, err error) {
+func decodeCiscoDiscovery(data []byte, p gopacket.PacketBuilder) error {
 	c := &CiscoDiscovery{
 		Version:  data[0],
 		TTL:      data[1],
 		Checksum: binary.BigEndian.Uint16(data[2:4]),
 	}
 	if c.Version != 1 {
-		err = fmt.Errorf("Invalid CiscoDiscovery version number %d", c.Version)
-		return
+		return fmt.Errorf("Invalid CiscoDiscovery version number %d", c.Version)
 	}
 	vData := data[4:]
 	for len(vData) > 0 {
@@ -50,14 +49,13 @@ func decodeCiscoDiscovery(data []byte) (out gopacket.DecodeResult, err error) {
 			Length: binary.BigEndian.Uint16(vData[2:4]),
 		}
 		if val.Length < 4 {
-			err = fmt.Errorf("Invalid CiscoDiscovery value length %d", val.Length)
-			return
+			return fmt.Errorf("Invalid CiscoDiscovery value length %d", val.Length)
 		}
 		val.Value = vData[4:val.Length]
 		c.Values = append(c.Values, val)
 		vData = vData[val.Length:]
 	}
 	c.contents = data
-	out.DecodedLayer = c
-	return
+	p.AddLayer(c)
+	return nil
 }

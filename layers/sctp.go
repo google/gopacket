@@ -20,7 +20,7 @@ type SCTP struct {
 // LayerType returns gopacket.LayerTypeSCTP
 func (s *SCTP) LayerType() gopacket.LayerType { return LayerTypeSCTP }
 
-func decodeSCTP(data []byte) (out gopacket.DecodeResult, _ error) {
+func decodeSCTP(data []byte, p gopacket.PacketBuilder) error {
 	sctp := &SCTP{
 		SrcPort:         binary.BigEndian.Uint16(data[:2]),
 		DstPort:         binary.BigEndian.Uint16(data[2:4]),
@@ -30,10 +30,9 @@ func decodeSCTP(data []byte) (out gopacket.DecodeResult, _ error) {
 		dPort:           data[2:4],
 		baseLayer:       baseLayer{data[:12], data[12:]},
 	}
-	out.DecodedLayer = sctp
-	out.TransportLayer = sctp
-	out.NextDecoder = gopacket.DecodeFunc(decodeWithSCTPChunkTypePrefix)
-	return
+	p.AddLayer(sctp)
+	p.SetTransportLayer(sctp)
+	return p.NextDecoder(gopacket.DecodeFunc(decodeWithSCTPChunkTypePrefix))
 }
 
 // TransportFlow returns a flow based on the source and destination SCTP port.
@@ -41,9 +40,9 @@ func (s *SCTP) TransportFlow() gopacket.Flow {
 	return gopacket.NewFlow(EndpointSCTPPort, s.sPort, s.dPort)
 }
 
-func decodeWithSCTPChunkTypePrefix(data []byte) (gopacket.DecodeResult, error) {
+func decodeWithSCTPChunkTypePrefix(data []byte, p gopacket.PacketBuilder) error {
 	chunkType := SCTPChunkType(data[0])
-	return chunkType.Decode(data)
+	return chunkType.Decode(data, p)
 }
 
 // SCTPChunk contains the common fields in all SCTP chunks.
@@ -106,13 +105,12 @@ type SCTPUnknownChunkType struct {
 	bytes []byte
 }
 
-func decodeSCTPChunkTypeUnknown(data []byte) (out gopacket.DecodeResult, err error) {
+func decodeSCTPChunkTypeUnknown(data []byte, p gopacket.PacketBuilder) error {
 	sc := &SCTPUnknownChunkType{SCTPChunk: decodeSCTPChunk(data)}
 	sc.bytes = data[:sc.ActualLength]
-	out.DecodedLayer = sc
-	out.ErrorLayer = sc
-	out.NextDecoder = gopacket.DecodeFunc(decodeWithSCTPChunkTypePrefix)
-	return
+	p.AddLayer(sc)
+	p.SetErrorLayer(sc)
+	return p.NextDecoder(gopacket.DecodeFunc(decodeWithSCTPChunkTypePrefix))
 }
 
 // LayerType returns gopacket.LayerTypeSCTPUnknownChunkType.
@@ -146,7 +144,7 @@ func (s *SCTPData) Payload() []byte {
 	return s.PayloadData
 }
 
-func decodeSCTPData(data []byte) (out gopacket.DecodeResult, _ error) {
+func decodeSCTPData(data []byte, p gopacket.PacketBuilder) error {
 	sc := &SCTPData{
 		SCTPChunk:       decodeSCTPChunk(data),
 		Unordered:       data[1]&0x4 != 0,
@@ -159,10 +157,9 @@ func decodeSCTPData(data []byte) (out gopacket.DecodeResult, _ error) {
 	}
 	// Length is the length in bytes of the data, INCLUDING the 16-byte header.
 	sc.PayloadData = data[16:sc.Length]
-	out.DecodedLayer = sc
-	out.ApplicationLayer = sc
-	out.NextDecoder = gopacket.DecodeFunc(decodeWithSCTPChunkTypePrefix)
-	return
+	p.AddLayer(sc)
+	p.SetApplicationLayer(sc)
+	return p.NextDecoder(gopacket.DecodeFunc(decodeWithSCTPChunkTypePrefix))
 }
 
 // SCTPInitParameter is a parameter for an SCTP Init or InitAck packet.
@@ -188,7 +185,7 @@ func (sc *SCTPInit) LayerType() gopacket.LayerType {
 	return LayerTypeSCTPInit
 }
 
-func decodeSCTPInit(data []byte) (out gopacket.DecodeResult, _ error) {
+func decodeSCTPInit(data []byte, p gopacket.PacketBuilder) error {
 	sc := &SCTPInit{
 		SCTPChunk:                      decodeSCTPChunk(data),
 		InitiateTag:                    binary.BigEndian.Uint32(data[4:8]),
@@ -203,9 +200,8 @@ func decodeSCTPInit(data []byte) (out gopacket.DecodeResult, _ error) {
 		paramData = paramData[p.ActualLength:]
 		sc.Parameters = append(sc.Parameters, p)
 	}
-	out.DecodedLayer = sc
-	out.NextDecoder = gopacket.DecodeFunc(decodeWithSCTPChunkTypePrefix)
-	return
+	p.AddLayer(sc)
+	return p.NextDecoder(gopacket.DecodeFunc(decodeWithSCTPChunkTypePrefix))
 }
 
 // SCTPSack is the SCTP Selective ACK chunk layer.
@@ -223,7 +219,7 @@ func (sc *SCTPSack) LayerType() gopacket.LayerType {
 	return LayerTypeSCTPSack
 }
 
-func decodeSCTPSack(data []byte) (out gopacket.DecodeResult, _ error) {
+func decodeSCTPSack(data []byte, p gopacket.PacketBuilder) error {
 	sc := &SCTPSack{
 		SCTPChunk:                      decodeSCTPChunk(data),
 		CumulativeTSNAck:               binary.BigEndian.Uint32(data[4:8]),
@@ -256,9 +252,8 @@ func decodeSCTPSack(data []byte) (out gopacket.DecodeResult, _ error) {
 		sc.DuplicateTSNs = append(sc.DuplicateTSNs, binary.BigEndian.Uint32(bytesRemaining[:4]))
 		bytesRemaining = bytesRemaining[4:]
 	}
-	out.DecodedLayer = sc
-	out.NextDecoder = gopacket.DecodeFunc(decodeWithSCTPChunkTypePrefix)
-	return
+	p.AddLayer(sc)
+	return p.NextDecoder(gopacket.DecodeFunc(decodeWithSCTPChunkTypePrefix))
 }
 
 // SCTPHeartbeatParameter is the parameter type used by SCTP heartbeat and
@@ -280,7 +275,7 @@ func (sc *SCTPHeartbeat) LayerType() gopacket.LayerType {
 	return LayerTypeSCTPHeartbeat
 }
 
-func decodeSCTPHeartbeat(data []byte) (out gopacket.DecodeResult, _ error) {
+func decodeSCTPHeartbeat(data []byte, p gopacket.PacketBuilder) error {
 	sc := &SCTPHeartbeat{
 		SCTPChunk: decodeSCTPChunk(data),
 	}
@@ -290,9 +285,8 @@ func decodeSCTPHeartbeat(data []byte) (out gopacket.DecodeResult, _ error) {
 		paramData = paramData[p.ActualLength:]
 		sc.Parameters = append(sc.Parameters, p)
 	}
-	out.DecodedLayer = sc
-	out.NextDecoder = gopacket.DecodeFunc(decodeWithSCTPChunkTypePrefix)
-	return
+	p.AddLayer(sc)
+	return p.NextDecoder(gopacket.DecodeFunc(decodeWithSCTPChunkTypePrefix))
 }
 
 // SCTPErrorParameter is the parameter type used by SCTP Abort and Error layers.
@@ -312,7 +306,7 @@ func (sc *SCTPError) LayerType() gopacket.LayerType {
 	return LayerTypeSCTPError
 }
 
-func decodeSCTPError(data []byte) (out gopacket.DecodeResult, _ error) {
+func decodeSCTPError(data []byte, p gopacket.PacketBuilder) error {
 	// remarkably similarot decodeSCTPHeartbeat ;)
 	sc := &SCTPError{
 		SCTPChunk: decodeSCTPChunk(data),
@@ -323,9 +317,8 @@ func decodeSCTPError(data []byte) (out gopacket.DecodeResult, _ error) {
 		paramData = paramData[p.ActualLength:]
 		sc.Parameters = append(sc.Parameters, p)
 	}
-	out.DecodedLayer = sc
-	out.NextDecoder = gopacket.DecodeFunc(decodeWithSCTPChunkTypePrefix)
-	return
+	p.AddLayer(sc)
+	return p.NextDecoder(gopacket.DecodeFunc(decodeWithSCTPChunkTypePrefix))
 }
 
 // SCTPShutdown is the SCTP shutdown layer.
@@ -337,14 +330,13 @@ type SCTPShutdown struct {
 // LayerType returns gopacket.LayerTypeSCTPShutdown.
 func (sc *SCTPShutdown) LayerType() gopacket.LayerType { return LayerTypeSCTPShutdown }
 
-func decodeSCTPShutdown(data []byte) (out gopacket.DecodeResult, _ error) {
+func decodeSCTPShutdown(data []byte, p gopacket.PacketBuilder) error {
 	sc := &SCTPShutdown{
 		SCTPChunk:        decodeSCTPChunk(data),
 		CumulativeTSNAck: binary.BigEndian.Uint32(data[4:8]),
 	}
-	out.DecodedLayer = sc
-	out.NextDecoder = gopacket.DecodeFunc(decodeWithSCTPChunkTypePrefix)
-	return
+	p.AddLayer(sc)
+	return p.NextDecoder(gopacket.DecodeFunc(decodeWithSCTPChunkTypePrefix))
 }
 
 // SCTPShutdownAck is the SCTP shutdown layer.
@@ -355,13 +347,12 @@ type SCTPShutdownAck struct {
 // LayerType returns gopacket.LayerTypeSCTPShutdownAck.
 func (sc *SCTPShutdownAck) LayerType() gopacket.LayerType { return LayerTypeSCTPShutdownAck }
 
-func decodeSCTPShutdownAck(data []byte) (out gopacket.DecodeResult, _ error) {
+func decodeSCTPShutdownAck(data []byte, p gopacket.PacketBuilder) error {
 	sc := &SCTPShutdownAck{
 		SCTPChunk: decodeSCTPChunk(data),
 	}
-	out.DecodedLayer = sc
-	out.NextDecoder = gopacket.DecodeFunc(decodeWithSCTPChunkTypePrefix)
-	return
+	p.AddLayer(sc)
+	return p.NextDecoder(gopacket.DecodeFunc(decodeWithSCTPChunkTypePrefix))
 }
 
 // SCTPCookieEcho is the SCTP Cookie Echo layer.
@@ -373,14 +364,13 @@ type SCTPCookieEcho struct {
 // LayerType returns gopacket.LayerTypeSCTPCookieEcho.
 func (sc *SCTPCookieEcho) LayerType() gopacket.LayerType { return LayerTypeSCTPCookieEcho }
 
-func decodeSCTPCookieEcho(data []byte) (out gopacket.DecodeResult, _ error) {
+func decodeSCTPCookieEcho(data []byte, p gopacket.PacketBuilder) error {
 	sc := &SCTPCookieEcho{
 		SCTPChunk: decodeSCTPChunk(data),
 	}
 	sc.Cookie = data[4:sc.Length]
-	out.DecodedLayer = sc
-	out.NextDecoder = gopacket.DecodeFunc(decodeWithSCTPChunkTypePrefix)
-	return
+	p.AddLayer(sc)
+	return p.NextDecoder(gopacket.DecodeFunc(decodeWithSCTPChunkTypePrefix))
 }
 
 // This struct is used by all empty SCTP chunks (currently CookieAck and
@@ -399,11 +389,10 @@ func (sc *SCTPEmptyLayer) LayerType() gopacket.LayerType {
 	return LayerTypeSCTPCookieAck
 }
 
-func decodeSCTPEmptyLayer(data []byte) (out gopacket.DecodeResult, _ error) {
+func decodeSCTPEmptyLayer(data []byte, p gopacket.PacketBuilder) error {
 	sc := &SCTPEmptyLayer{
 		SCTPChunk: decodeSCTPChunk(data),
 	}
-	out.DecodedLayer = sc
-	out.NextDecoder = gopacket.DecodeFunc(decodeWithSCTPChunkTypePrefix)
-	return
+	p.AddLayer(sc)
+	return p.NextDecoder(gopacket.DecodeFunc(decodeWithSCTPChunkTypePrefix))
 }

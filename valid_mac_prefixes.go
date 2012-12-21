@@ -3,7 +3,7 @@
 package gopacket
 
 // Created by gopacket_mac_fetcher, don't edit manually
-// Generated at 2012-12-20 10:14:11.470502 -0700 MST
+// Generated at 2012-12-21 10:41:59.167194 -0700 MST
 // Fetched from "http://standards.ieee.org/develop/regauth/oui/oui.txt"
 
 // ValidMACPrefixMap maps a valid MAC address prefix to the name of the
@@ -4998,7 +4998,7 @@ var validMACPrefixMap = map[[3]byte]string{
 	[3]byte{0, 19, 148}:    "Infohand Co.,Ltd",
 	[3]byte{0, 19, 149}:    "congatec AG",
 	[3]byte{0, 19, 150}:    "Acbel Polytech Inc.",
-	[3]byte{0, 19, 151}:    "Xsigo Systems, Inc.",
+	[3]byte{0, 19, 151}:    "Oracle Corporation",
 	[3]byte{0, 19, 152}:    "TrafficSim Co.,Ltd",
 	[3]byte{0, 19, 153}:    "STAC Corporation.",
 	[3]byte{0, 19, 154}:    "K-ubique ID Corp.",
@@ -12714,6 +12714,7 @@ var validMACPrefixMap = map[[3]byte]string{
 	[3]byte{4, 32, 154}:    "Panasonic AVC Networks Company",
 	[3]byte{4, 34, 52}:     "Wireless Standard Extensions",
 	[3]byte{4, 38, 5}:      "GFR Gesellschaft für Regelungstechnik und Energieeinsparung mbH",
+	[3]byte{4, 38, 101}:    "Apple",
 	[3]byte{4, 43, 187}:    "PicoCELA, Inc.",
 	[3]byte{4, 47, 86}:     "ATOCS (Shenzhen) LTD",
 	[3]byte{4, 50, 244}:    "Partron",
@@ -12949,6 +12950,7 @@ var validMACPrefixMap = map[[3]byte]string{
 	[3]byte{8, 81, 46}:     "Orion Diagnostica Oy",
 	[3]byte{8, 91, 14}:     "Fortinet, Inc.",
 	[3]byte{8, 96, 110}:    "ASUSTek COMPUTER INC.",
+	[3]byte{8, 104, 208}:   "Japan System Design",
 	[3]byte{8, 104, 234}:   "EITO ELECTRONICS CO., LTD.",
 	[3]byte{8, 117, 114}:   "Obelux Oy",
 	[3]byte{8, 118, 24}:    "ViE Technologies Sdn. Bhd.",
@@ -13088,6 +13090,7 @@ var validMACPrefixMap = map[[3]byte]string{
 	[3]byte{16, 45, 150}:   "Looxcie Inc.",
 	[3]byte{16, 46, 175}:   "Texas Instruments",
 	[3]byte{16, 55, 17}:    "Simlink AS",
+	[3]byte{16, 61, 234}:   "HFC Technology (Beijing) Ltd. Co.",
 	[3]byte{16, 64, 243}:   "Apple, Inc.",
 	[3]byte{16, 67, 105}:   "Soundmax Electronic Limited",
 	[3]byte{16, 68, 90}:    "Shaanxi Hitech Electronic Co., LTD",
@@ -13401,6 +13404,7 @@ var validMACPrefixMap = map[[3]byte]string{
 	[3]byte{32, 179, 153}:  "Enterasys",
 	[3]byte{32, 181, 198}:  "Mimosa Networks",
 	[3]byte{32, 183, 192}:  "Omicron electronics GmbH",
+	[3]byte{32, 187, 192}:  "Cisco",
 	[3]byte{32, 187, 198}:  "Jabil Circuit Hungary Ltd.",
 	[3]byte{32, 191, 219}:  "DVL",
 	[3]byte{32, 193, 175}:  "i Wit Digital Co., Limited",
@@ -13658,6 +13662,7 @@ var validMACPrefixMap = map[[3]byte]string{
 	[3]byte{48, 133, 169}:  "Asustek Computer Inc",
 	[3]byte{48, 135, 48}:   "Huawei Device Co., Ltd",
 	[3]byte{48, 140, 251}:  "Dropcam",
+	[3]byte{48, 144, 171}:  "Apple",
 	[3]byte{48, 146, 246}:  "SHANGHAI SUNMON COMMUNICATION TECHNOGY CO.,LTD",
 	[3]byte{48, 174, 246}:  "Radio Mobile Access",
 	[3]byte{48, 178, 22}:   "Hytec Geraetebau GmbH",
@@ -14097,6 +14102,7 @@ var validMACPrefixMap = map[[3]byte]string{
 	[3]byte{76, 26, 149}:   "Novakon Co., Ltd.",
 	[3]byte{76, 31, 204}:   "HUAWEI TECHNOLOGIES CO.,LTD",
 	[3]byte{76, 34, 88}:    "cozybit, Inc.",
+	[3]byte{76, 37, 120}:   "Nokia Corporation",
 	[3]byte{76, 44, 128}:   "Beijing Skyway Technologies Co.,Ltd",
 	[3]byte{76, 47, 157}:   "ICM Controls",
 	[3]byte{76, 48, 137}:   "Thales Transportation Systems GmbH",
@@ -14105,6 +14111,7 @@ var validMACPrefixMap = map[[3]byte]string{
 	[3]byte{76, 57, 16}:    "Newtek Electronics co., Ltd.",
 	[3]byte{76, 59, 116}:   "VOGTEC(H.K.) Co., Ltd",
 	[3]byte{76, 75, 104}:   "Mobile Device, Inc.",
+	[3]byte{76, 78, 53}:    "Cisco",
 	[3]byte{76, 84, 39}:    "Linepro Sp. z o.o.",
 	[3]byte{76, 84, 153}:   "Huawei Device Co., Ltd",
 	[3]byte{76, 85, 133}:   "Hamilton Systems",
@@ -16512,8 +16519,10 @@ var validMACPrefixMap = map[[3]byte]string{
 	[3]byte{212, 30, 53}:   "TOHO Electronics INC.",
 	[3]byte{212, 31, 12}:   "TVI Vision Oy",
 	[3]byte{212, 32, 109}:  "HTC Corporation",
+	[3]byte{212, 34, 63}:   "Lenovo Mobile Communication Technology Ltd.",
 	[3]byte{212, 39, 81}:   "Infopia Co., Ltd",
 	[3]byte{212, 40, 178}:  "ioBridge, Inc.",
+	[3]byte{212, 41, 234}:  "Zimory GmbH",
 	[3]byte{212, 44, 61}:   "Sky Light Digital Limited",
 	[3]byte{212, 58, 233}:  "DONGGUAN ipt INDUSTRIAL CO., LTD",
 	[3]byte{212, 61, 103}:  "Carma Industries Inc.",
@@ -16916,6 +16925,7 @@ var validMACPrefixMap = map[[3]byte]string{
 	[3]byte{232, 229, 214}: "Samsung Electronics Co.,Ltd",
 	[3]byte{232, 231, 50}:  "Alcatel-Lucent",
 	[3]byte{232, 231, 118}: "Shenzhen Kootion Technology Co., Ltd",
+	[3]byte{232, 232, 117}: "iS5 Communications Inc.",
 	[3]byte{232, 241, 176}: "SAGEMCOM SAS",
 	[3]byte{232, 249, 40}:  "RFTECH SRL",
 	[3]byte{236, 14, 214}:  "ITECH INSTRUMENTS SAS",

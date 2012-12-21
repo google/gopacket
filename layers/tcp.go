@@ -34,7 +34,7 @@ type TCPOption struct {
 // LayerType returns gopacket.LayerTypeTCP
 func (t *TCP) LayerType() gopacket.LayerType { return LayerTypeTCP }
 
-func decodeTCP(data []byte, c gopacket.PacketBuilder) error {
+func decodeTCP(data []byte, p gopacket.PacketBuilder) error {
 	tcp := &TCP{
 		SrcPort:    binary.BigEndian.Uint16(data[0:2]),
 		sPort:      data[0:2],
@@ -81,8 +81,9 @@ func decodeTCP(data []byte, c gopacket.PacketBuilder) error {
 	}
 	tcp.contents = data[:hlen]
 	tcp.payload = data[hlen:]
-	c.AddLayer(tcp)
-	return c.NextDecoder(gopacket.LayerTypePayload)
+	p.AddLayer(tcp)
+	p.SetTransportLayer(tcp)
+	return p.NextDecoder(gopacket.LayerTypePayload)
 }
 
 func (t *TCP) TransportFlow() gopacket.Flow {

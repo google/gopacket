@@ -23,10 +23,6 @@ type PacketBuilder interface {
 	// AddLayer should be called by a decoder immediately upon successful
 	// decoding of a layer.
 	AddLayer(l Layer)
-	// NextDecoder should be called by a decoder when they're done decoding a
-	// packet layer but not done with decoding the entire packet.  The next
-	// decoder will be called to decode the last AddLayer's LayerPayload.
-	NextDecoder(next Decoder) error
 	// The following functions set the various specific layers in the final
 	// packet.  Note that if many layers call SetX, the first call is kept and all
 	// other calls are ignored.
@@ -35,6 +31,13 @@ type PacketBuilder interface {
 	SetTransportLayer(TransportLayer)
 	SetApplicationLayer(ApplicationLayer)
 	SetErrorLayer(ErrorLayer)
+	// NextDecoder should be called by a decoder when they're done decoding a
+	// packet layer but not done with decoding the entire packet.  The next
+	// decoder will be called to decode the last AddLayer's LayerPayload.
+	// Because of this, NextDecoder must only be called once all other
+	// PacketBuilder calls have been made.  Set*Layer and AddLayer calls after
+	// NextDecoder calls will behave incorrectly.
+	NextDecoder(next Decoder) error
 }
 
 // Decoder is an interface for logic to decode a packet layer.  See DecodeResult

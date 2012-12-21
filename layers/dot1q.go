@@ -25,7 +25,7 @@ func (v *Dot1Q) String() {
 	fmt.Sprintf("VLAN Prioity:%d Drop:%v Tag:%d", v.Priority, v.DropEligible, v.VLANIdentifier)
 }
 
-func decodeDot1Q(data []byte) (out gopacket.DecodeResult, err error) {
+func decodeDot1Q(data []byte, p gopacket.PacketBuilder) error {
 	d := &Dot1Q{
 		Priority:       (data[2] & 0xE0) >> 13,
 		DropEligible:   data[2]&0x10 != 0,
@@ -33,7 +33,6 @@ func decodeDot1Q(data []byte) (out gopacket.DecodeResult, err error) {
 		Type:           EthernetType(binary.BigEndian.Uint16(data[2:4])),
 		baseLayer:      baseLayer{contents: data[:4], payload: data[4:]},
 	}
-	out.DecodedLayer = d
-	out.NextDecoder = d.Type
-	return
+	p.AddLayer(d)
+	return p.NextDecoder(d.Type)
 }

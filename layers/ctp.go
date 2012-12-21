@@ -64,23 +64,21 @@ func (c *EthernetCTPReply) LayerType() gopacket.LayerType {
 // Payload returns the EthernetCTP reply's Data bytes.
 func (c *EthernetCTPReply) Payload() []byte { return c.Data }
 
-func decodeEthernetCTP(data []byte) (out gopacket.DecodeResult, err error) {
+func decodeEthernetCTP(data []byte, p gopacket.PacketBuilder) error {
 	c := &EthernetCTP{
 		SkipCount: binary.LittleEndian.Uint16(data[:2]),
 		baseLayer: baseLayer{data[:2], data[2:]},
 	}
 	if c.SkipCount%2 != 0 {
-		err = fmt.Errorf("EthernetCTP skip count is odd: %d", c.SkipCount)
-		return
+		return fmt.Errorf("EthernetCTP skip count is odd: %d", c.SkipCount)
 	}
-	out.DecodedLayer = c
-	out.NextDecoder = gopacket.DecodeFunc(decodeEthernetCTPFromFunctionType)
-	return
+	p.AddLayer(c)
+	return p.NextDecoder(gopacket.DecodeFunc(decodeEthernetCTPFromFunctionType))
 }
 
 // decodeEthernetCTPFromFunctionType reads in the first 2 bytes to determine the EthernetCTP
 // layer type to decode next, then decodes based on that.
-func decodeEthernetCTPFromFunctionType(data []byte) (out gopacket.DecodeResult, err error) {
+func decodeEthernetCTPFromFunctionType(data []byte, p gopacket.PacketBuilder) error {
 	function := EthernetCTPFunction(binary.LittleEndian.Uint16(data[:2]))
 	switch function {
 	case EthernetCTPFunctionReply:
@@ -90,19 +88,17 @@ func decodeEthernetCTPFromFunctionType(data []byte) (out gopacket.DecodeResult, 
 			Data:          data[4:],
 			baseLayer:     baseLayer{data, nil},
 		}
-		out.DecodedLayer = reply
-		out.ApplicationLayer = reply
-		return
+		p.AddLayer(reply)
+		p.SetApplicationLayer(reply)
+		return nil
 	case EthernetCTPFunctionForwardData:
 		forward := &EthernetCTPForwardData{
 			Function:       function,
 			ForwardAddress: data[2:8],
 			baseLayer:      baseLayer{data[:8], data[8:]},
 		}
-		out.DecodedLayer = forward
-		out.NextDecoder = gopacket.DecodeFunc(decodeEthernetCTPFromFunctionType)
-		return
+		p.AddLayer(forward)
+		return p.NextDecoder(gopacket.DecodeFunc(decodeEthernetCTPFromFunctionType))
 	}
-	err = fmt.Errorf("Unknown EthernetCTP function type %v", function)
-	return
+	return fmt.Errorf("Unknown EthernetCTP function type %v", function)
 }

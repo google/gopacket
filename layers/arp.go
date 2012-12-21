@@ -35,7 +35,7 @@ func (arp *ARP) String() (s string) {
 // LayerType returns LayerTypeARP
 func (arp *ARP) LayerType() gopacket.LayerType { return LayerTypeARP }
 
-func decodeARP(data []byte) (out gopacket.DecodeResult, err error) {
+func decodeARP(data []byte, p gopacket.PacketBuilder) error {
 	arp := &ARP{
 		AddrType:        LinkType(binary.BigEndian.Uint16(data[0:2])),
 		Protocol:        EthernetType(binary.BigEndian.Uint16(data[2:4])),
@@ -48,10 +48,9 @@ func decodeARP(data []byte) (out gopacket.DecodeResult, err error) {
 	arp.DstHwAddress = data[8+arp.HwAddressSize+arp.ProtAddressSize : 8+2*arp.HwAddressSize+arp.ProtAddressSize]
 	arp.DstProtAddress = data[8+2*arp.HwAddressSize+arp.ProtAddressSize : 8+2*arp.HwAddressSize+2*arp.ProtAddressSize]
 
-	out.DecodedLayer = arp
 	arpLength := 8 + 2*arp.HwAddressSize + 2*arp.ProtAddressSize
 	arp.contents = data[:arpLength]
 	arp.payload = data[arpLength:]
-	out.NextDecoder = gopacket.LayerTypePayload
-	return
+	p.AddLayer(arp)
+	return p.NextDecoder(gopacket.LayerTypePayload)
 }

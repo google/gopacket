@@ -21,12 +21,11 @@ var PPPFlow = gopacket.NewFlow(EndpointPPP, []byte{}, []byte{})
 func (p *PPP) LayerType() gopacket.LayerType { return LayerTypePPP }
 func (p *PPP) LinkFlow() gopacket.Flow       { return PPPFlow }
 
-func decodePPP(data []byte) (out gopacket.DecodeResult, err error) {
+func decodePPP(data []byte, p gopacket.PacketBuilder) error {
 	ppp := &PPP{}
 	if data[0]&0x1 == 0 {
 		if data[1]&0x1 == 0 {
-			err = errors.New("PPP has invalid type")
-			return
+			return errors.New("PPP has invalid type")
 		}
 		ppp.PPPType = PPPType(binary.BigEndian.Uint16(data[:2]))
 		ppp.contents = data[:2]
@@ -36,8 +35,7 @@ func decodePPP(data []byte) (out gopacket.DecodeResult, err error) {
 		ppp.contents = data[:1]
 		ppp.payload = data[1:]
 	}
-	out.DecodedLayer = ppp
-	out.NextDecoder = ppp.PPPType
-	out.LinkLayer = ppp
-	return
+	p.AddLayer(ppp)
+	p.SetLinkLayer(ppp)
+	return p.NextDecoder(ppp.PPPType)
 }

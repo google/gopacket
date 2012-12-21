@@ -29,7 +29,7 @@ type GRERouting struct {
 // LayerType returns gopacket.LayerTypeGRE.
 func (g *GRE) LayerType() gopacket.LayerType { return LayerTypeGRE }
 
-func decodeGRE(data []byte) (out gopacket.DecodeResult, err error) {
+func decodeGRE(data []byte, p gopacket.PacketBuilder) error {
 	g := &GRE{
 		ChecksumPresent:   data[0]&0x80 != 0,
 		RoutingPresent:    data[0]&0x40 != 0,
@@ -59,7 +59,6 @@ func decodeGRE(data []byte) (out gopacket.DecodeResult, err error) {
 		g.contents = data[:16+end]
 		g.payload = data[16+end:]
 	}
-	out.DecodedLayer = g
-	out.NextDecoder = g.Protocol
-	return
+	p.AddLayer(g)
+	return p.NextDecoder(g.Protocol)
 }

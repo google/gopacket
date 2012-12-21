@@ -22,17 +22,16 @@ type ICMP struct {
 // LayerType returns gopacket.LayerTypeICMP
 func (i *ICMP) LayerType() gopacket.LayerType { return LayerTypeICMP }
 
-func decodeICMP(data []byte) (out gopacket.DecodeResult, err error) {
-	out.DecodedLayer = &ICMP{
+func decodeICMP(data []byte, p gopacket.PacketBuilder) error {
+	p.AddLayer(&ICMP{
 		Type:      data[0],
 		Code:      data[1],
 		Checksum:  binary.BigEndian.Uint16(data[2:4]),
 		Id:        binary.BigEndian.Uint16(data[4:6]),
 		Seq:       binary.BigEndian.Uint16(data[6:8]),
 		baseLayer: baseLayer{data[:8], data[8:]},
-	}
-	out.NextDecoder = gopacket.LayerTypePayload
-	return
+	})
+	return p.NextDecoder(gopacket.LayerTypePayload)
 }
 
 func (icmp *ICMP) TypeString() (result string) {
