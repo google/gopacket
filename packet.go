@@ -351,6 +351,7 @@ func NewPacket(data []byte, firstLayerDecoder Decoder, options DecodeOptions) Pa
 			next:   firstLayerDecoder,
 		}
 		p.layers = p.initialLayers[:0]
+		return p
 	}
 	p := &eagerPacket{
 		packet: packet{data: data},
