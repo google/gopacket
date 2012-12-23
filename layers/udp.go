@@ -5,6 +5,7 @@ package layers
 
 import (
 	"encoding/binary"
+	"fmt"
 	"github.com/gconnell/gopacket"
 )
 
@@ -29,7 +30,15 @@ func decodeUDP(data []byte, p gopacket.PacketBuilder) error {
 		dPort:     data[2:4],
 		Length:    binary.BigEndian.Uint16(data[4:6]),
 		Checksum:  binary.BigEndian.Uint16(data[6:8]),
-		baseLayer: baseLayer{data[:8], data[8:]},
+		baseLayer: baseLayer{contents: data[:8]},
+	}
+	switch {
+	case udp.Length >= 8:
+		udp.payload = data[8:udp.Length]
+	case udp.Length == 0: // Jumbogram, use entire rest of data
+		udp.payload = data[8:]
+	default:
+		return fmt.Errorf("UDP packet too small: %d bytes", udp.Length)
 	}
 	p.AddLayer(udp)
 	p.SetTransportLayer(udp)
