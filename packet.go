@@ -3,10 +3,10 @@
 package gopacket
 
 import (
+	"bytes"
 	"errors"
 	"fmt"
 	"io"
-	"strings"
 	"time"
 )
 
@@ -26,6 +26,7 @@ type CaptureInfo struct {
 // Decoder's Decode call.  A packet is made up of a set of Data, which
 // is broken into a number of Layers as it is decoded.
 type Packet interface {
+	fmt.Stringer
 	// Data returns all data associated with this packet
 	Data() []byte
 	// Layers returns all layers in this packet, computing them as necessary
@@ -35,8 +36,6 @@ type Packet interface {
 	// LayerClass returns the first layer in this packet of the given class,
 	// or nil.
 	LayerClass(LayerClass) Layer
-	// String returns a human-readable string.
-	String() string
 	// CaptureInfo returns the caputure information for this packet.  This returns
 	// a pointer to the packet's struct, so it can be used both for reading and
 	// writing the information.
@@ -129,13 +128,18 @@ func (p *packet) recoverDecodeError() {
 	}
 }
 func packetString(pLayers []Layer) string {
-	layers := []string{}
-	for l := range pLayers {
-		layers = append(layers, fmt.Sprintf("%#v", l))
+	var b bytes.Buffer
+	for i, l := range pLayers {
+		fmt.Fprintf(&b, "--- Layer %d: %v ---\n", i+1, l.LayerType())
+		b.WriteString(l.String())
+		b.WriteString("\n")
 	}
-	return fmt.Sprintf("PACKET [%s]", strings.Join(layers, ", "))
+	return b.String()
 }
 
+// eagerPacket is a packet implementation that does eager decoding.  Upon
+// initial construction, it decodes all the layers it can from packet data.
+// eagerPacket implements Packet and PacketBuilder.
 type eagerPacket struct {
 	packet
 }
@@ -199,6 +203,10 @@ func (p *eagerPacket) LayerClass(lc LayerClass) Layer {
 }
 func (p *eagerPacket) String() string { return packetString(p.Layers()) }
 
+// lazyPacket does lazy decoding on its packet data.  On construction it does
+// no initial decoding.  For each function call, it decodes only as many layers
+// as are necessary to compute the return value for that function.
+// lazyPacket implements Packet and PacketBuilder.
 type lazyPacket struct {
 	packet
 	next Decoder
@@ -376,40 +384,59 @@ type PacketDataSource interface {
 	ReadPacketData() (data []byte, ci CaptureInfo, err error)
 }
 
+// PacketSource reads in packets from a PacketDataSource, decodes them, and
+// returns them.  Use the NextPacket function to get one packet at a time
+// from the underlying PacketDataSource as a Packet.
 type PacketSource struct {
-	source PacketDataSource
-	Decoder
+	source  PacketDataSource
+	decoder Decoder
+	// DecodeOptions is the set of options to use for decoding each piece
+	// of packet data.
 	DecodeOptions
 }
 
+// NewPacketSource creates a packet data source.  
 func NewPacketSource(source PacketDataSource, decoder Decoder) *PacketSource {
 	return &PacketSource{
 		source:  source,
-		Decoder: decoder,
+		decoder: decoder,
 	}
 }
 
+// NextPacket returns the next decoded packet from the PacketSource.  On error,
+// it returns a nil packet and a non-nil error.
 func (p *PacketSource) NextPacket() (Packet, error) {
 	data, ci, err := p.source.ReadPacketData()
 	if err != nil {
 		return nil, err
 	}
-	packet := NewPacket(data, p.Decoder, p.DecodeOptions)
+	packet := NewPacket(data, p.decoder, p.DecodeOptions)
 	*packet.CaptureInfo() = ci
 	return packet, nil
 }
 
-func (p *PacketSource) PacketChannel() <-chan Packet {
-	c := make(chan Packet, 100)
-	go func() {
-		for {
-			packet, err := p.NextPacket()
-			if err == io.EOF {
-				close(c)
-			} else if err == nil {
-				c <- packet
-			}
+// PacketsToChannel reads in all packets from the packet source and sends them
+// to the given channel.  When it receives an error, it ignores it.  When it
+// receives an io.EOF, it closes the channel.
+//
+// Example usage:
+//  ps := gopacket.NewPacketSource(...)
+//  c := make(chan Packet)
+//  go ps.PacketsToChannel(c)
+//  for p := range c {
+//    handlePacket(p)
+//  }
+//
+// For slow packet sources or files, you can pass in a blocking channel, but if
+// you're using a fast packet source, you may want to create a buffered channel.
+func (p *PacketSource) PacketsToChannel(c chan<- Packet) {
+	for {
+		packet, err := p.NextPacket()
+		if err == io.EOF {
+			close(c)
+			return
+		} else if err == nil {
+			c <- packet
 		}
-	}()
-	return c
+	}
 }

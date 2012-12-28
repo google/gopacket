@@ -3,6 +3,7 @@
 package gopacket
 
 import (
+	"encoding/hex"
 	"errors"
 )
 
@@ -59,20 +60,21 @@ func (d DecodeFunc) Decode(data []byte, c PacketBuilder) error {
 	return d(data, c)
 }
 
-var (
-	// DecodePayload is a Decoder that returns a Payload layer containing all
-	// remaining bytes.
-	DecodePayload Decoder = DecodeFunc(decodePayload)
-	// DecodeUnknown is a Decoder that returns a DecodeFailure layer containing all
-	// remaining bytes, useful if you run up against a layer that you're unable to
-	// decode yet.
-	DecodeUnknown Decoder = DecodeFunc(decodeUnknown)
-	// LayerTypeDecodeFailure is the layer type for the default error layer.
-	LayerTypeDecodeFailure = RegisterLayerType(0, LayerTypeMetadata{"Decode Failure", DecodeUnknown})
-	// LayerTypePayload is the layer type for a payload that we don't try to decode
-	// but treat as a success, IE: an application-level payload.
-	LayerTypePayload = RegisterLayerType(1, LayerTypeMetadata{"Payload", DecodePayload})
-)
+// DecodePayload is a Decoder that returns a Payload layer containing all
+// remaining bytes.
+var DecodePayload Decoder = DecodeFunc(decodePayload)
+
+// DecodeUnknown is a Decoder that returns a DecodeFailure layer containing all
+// remaining bytes, useful if you run up against a layer that you're unable to
+// decode yet.
+var DecodeUnknown Decoder = DecodeFunc(decodeUnknown)
+
+// LayerTypeDecodeFailure is the layer type for the default error layer.
+var LayerTypeDecodeFailure LayerType = RegisterLayerType(0, LayerTypeMetadata{"Decode Failure", DecodeUnknown})
+
+// LayerTypePayload is the layer type for a payload that we don't try to decode
+// but treat as a success, IE: an application-level payload.
+var LayerTypePayload LayerType = RegisterLayerType(1, LayerTypeMetadata{"Payload", DecodePayload})
 
 // DecodeFailure is a packet layer created if decoding of the packet data failed
 // for some reason.  It implements ErrorLayer.  LayerContents will be the entire
@@ -87,6 +89,7 @@ type DecodeFailure struct {
 func (d *DecodeFailure) Error() error          { return d.err }
 func (d *DecodeFailure) LayerContents() []byte { return d.data }
 func (d *DecodeFailure) LayerPayload() []byte  { return nil }
+func (d *DecodeFailure) String() string        { return hex.Dump(d.data) }
 
 // LayerType returns LayerTypeDecodeFailure
 func (d *DecodeFailure) LayerType() LayerType { return LayerTypeDecodeFailure }

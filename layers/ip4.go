@@ -4,8 +4,11 @@
 package layers
 
 import (
+	"bytes"
 	"encoding/binary"
+	"fmt"
 	"github.com/gconnell/gopacket"
+	"net"
 )
 
 // IPv4 is the header of an IP packet.
@@ -31,6 +34,12 @@ type IPv4 struct {
 func (i *IPv4) LayerType() gopacket.LayerType { return LayerTypeIPv4 }
 func (i *IPv4) NetworkFlow() gopacket.Flow {
 	return gopacket.NewFlow(EndpointIP, i.SrcIP, i.DstIP)
+}
+func (i *IPv4) String() string {
+	var b bytes.Buffer
+	fmt.Fprintf(&b, "IPv4: %v->%v (%v)\n", net.IP(i.SrcIP), net.IP(i.DstIP), i.Protocol)
+	b.WriteString(i.baseLayer.String())
+	return b.String()
 }
 
 type IPv4Option struct {
