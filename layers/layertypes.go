@@ -49,6 +49,7 @@ var (
 	LayerTypeIPv6Destination        = gopacket.RegisterLayerType(49, gopacket.LayerTypeMetadata{"IPv6Destination", gopacket.DecodeFunc(decodeIPv6Destination)})
 	LayerTypeIPSecAH                = gopacket.RegisterLayerType(50, gopacket.LayerTypeMetadata{"IPSecAH", gopacket.DecodeFunc(decodeIPSecAH)})
 	LayerTypeIPSecESP               = gopacket.RegisterLayerType(51, gopacket.LayerTypeMetadata{"IPSecESP", gopacket.DecodeFunc(decodeIPSecESP)})
+	LayerTypeUDPLite                = gopacket.RegisterLayerType(52, gopacket.LayerTypeMetadata{"UDPLite", gopacket.DecodeFunc(decodeUDPLite)})
 )
 
 var (

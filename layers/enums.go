@@ -24,6 +24,8 @@ const (
 	EthernetTypeDot1Q          EthernetType = 0x8100
 	EthernetTypePPPoEDiscovery EthernetType = 0x8863
 	EthernetTypePPPoESession   EthernetType = 0x8864
+	EthernetTypeMPLSUnicast    EthernetType = 0x8847
+	EthernetTypeMPLSMulticast  EthernetType = 0x8848
 	EthernetTypeEthernetCTP    EthernetType = 0x9000
 )
 
@@ -45,6 +47,8 @@ func (e EthernetType) Decode(data []byte, p gopacket.PacketBuilder) error {
 		return decodeEthernetCTP(data, p)
 	case EthernetTypeCiscoDiscovery:
 		return decodeCiscoDiscovery(data, p)
+	case EthernetTypeMPLSUnicast, EthernetTypeMPLSMulticast:
+		return decodeMPLS(data, p)
 	}
 	return fmt.Errorf("Unsupported ethernet type %v", e)
 }
@@ -69,6 +73,8 @@ const (
 	IPProtocolIPIP         IPProtocol = 94
 	IPProtocolEtherIP      IPProtocol = 97
 	IPProtocolSCTP         IPProtocol = 132
+	IPProtocolUDPLite      IPProtocol = 136
+	IPProtocolMPLSInIP     IPProtocol = 137
 )
 
 func (ip IPProtocol) Decode(data []byte, p gopacket.PacketBuilder) error {
@@ -101,6 +107,10 @@ func (ip IPProtocol) Decode(data []byte, p gopacket.PacketBuilder) error {
 		return decodeIPSecAH(data, p)
 	case IPProtocolESP:
 		return decodeIPSecESP(data, p)
+	case IPProtocolUDPLite:
+		return decodeUDPLite(data, p)
+	case IPProtocolMPLSInIP:
+		return decodeMPLS(data, p)
 	case IPProtocolNoNextHeader:
 		return fmt.Errorf("NoNextHeader found with %d bytes remaining to decode", len(data))
 	}

@@ -29,6 +29,9 @@ var (
 	EndpointRUDPPort = gopacket.RegisterEndpointType(6, gopacket.EndpointTypeMetadata{"RUDP", func(b []byte) string {
 		return strconv.Itoa(int(b[0]))
 	}})
+	EndpointUDPLitePort = gopacket.RegisterEndpointType(7, gopacket.EndpointTypeMetadata{"UDPLite", func(b []byte) string {
+		return strconv.Itoa(int(binary.BigEndian.Uint16(b)))
+	}})
 )
 
 func NewIPEndpoint(a net.IP) gopacket.Endpoint {
@@ -51,4 +54,7 @@ func NewSCTPPortEndpoint(p uint16) gopacket.Endpoint {
 }
 func NewRUDPPortEndpoint(p uint8) gopacket.Endpoint {
 	return gopacket.NewEndpoint(EndpointRUDPPort, []byte{p})
+}
+func NewUDPLitePortEndpoint(p uint16) gopacket.Endpoint {
+	return newPortEndpoint(EndpointUDPLitePort, p)
 }
