@@ -69,15 +69,21 @@ fi
 go fmt ./...
 gofmt -w gen.go
 go build gen.go
-go test ./...
-pushd pcap
-gofmt -w benchmark.go
-go build benchmark.go
-popd
-pushd pfring
-gofmt -w simple.go
-go build simple.go
-popd
+go test
+if [ -f /usr/include/pcap.h ]; then
+	pushd pcap
+	go test
+	gofmt -w benchmark.go
+	go build benchmark.go
+	popd
+fi
+if [ -f /usr/include/pfring.h ]; then
+	pushd pfring
+	go test
+	gofmt -w simple.go
+	go build simple.go
+	popd
+fi
 
 # Run our initial commit
 git commit "$@"
