@@ -104,7 +104,7 @@ fi
 BRANCH="$(git branch | grep '^*' | awk '{print $2}')"
 
 # File we're going to build our commit description in.
-COMMIT_FILE="$(mktemp)"
+COMMIT_FILE="$(mktemp /tmp/tmp.XXXXXXXX)"
 
 # Add the word "BENCH" to the start of the git commit.
 echo -n "BENCH " > $COMMIT_FILE
