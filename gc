@@ -70,6 +70,9 @@ go fmt ./...
 gofmt -w gen.go
 go build gen.go
 go test
+pushd layers
+go test
+popd
 if [ -f /usr/include/pcap.h ]; then
 	pushd pcap
 	go test

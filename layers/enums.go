@@ -144,6 +144,12 @@ const (
 	SCTPChunkTypeShutdownComplete SCTPChunkType = 14
 )
 
+type FDDIFrameControl uint8
+
+const (
+	FDDIFrameControlLLC FDDIFrameControl = 0x50
+)
+
 var (
 	// Each of the following arrays contains mappings of how to handle enum
 	// values for various enum types in gopacket/layers.
@@ -156,12 +162,13 @@ var (
 	// TCP decoder, you can override IPProtocolMetadata[IPProtocolTCP].DecodeWith
 	// with your new decoder, and all gopacket/layers decoding will use your new
 	// decoder whenever they encounter that IPProtocol.
-	EthernetTypeMetadata  [65536]EnumMetadata
-	IPProtocolMetadata    [265]EnumMetadata
-	SCTPChunkTypeMetadata [265]EnumMetadata
-	PPPTypeMetadata       [65536]EnumMetadata
-	PPPoECodeMetadata     [256]EnumMetadata
-	LinkTypeMetadata      [256]EnumMetadata
+	EthernetTypeMetadata     [65536]EnumMetadata
+	IPProtocolMetadata       [265]EnumMetadata
+	SCTPChunkTypeMetadata    [265]EnumMetadata
+	PPPTypeMetadata          [65536]EnumMetadata
+	PPPoECodeMetadata        [256]EnumMetadata
+	LinkTypeMetadata         [256]EnumMetadata
+	FDDIFrameControlMetadata [256]EnumMetadata
 )
 
 func (a EthernetType) Decode(data []byte, p gopacket.PacketBuilder) error {
@@ -200,6 +207,12 @@ func (a PPPoECode) Decode(data []byte, p gopacket.PacketBuilder) error {
 func (a PPPoECode) String() string {
 	return PPPoECodeMetadata[a].Name
 }
+func (a FDDIFrameControl) Decode(data []byte, p gopacket.PacketBuilder) error {
+	return FDDIFrameControlMetadata[a].DecodeWith.Decode(data, p)
+}
+func (a FDDIFrameControl) String() string {
+	return FDDIFrameControlMetadata[a].Name
+}
 
 func init() {
 	for i := 0; i < 65536; i++ {
@@ -228,6 +241,10 @@ func init() {
 		LinkTypeMetadata[i] = EnumMetadata{
 			DecodeWith: errorFunc(fmt.Sprintf("Unable to decode link type %d", i)),
 			Name:       fmt.Sprintf("UnknownLinkType(%d)", i),
+		}
+		FDDIFrameControlMetadata[i] = EnumMetadata{
+			DecodeWith: errorFunc(fmt.Sprintf("Unable to decode FDDI frame control %d", i)),
+			Name:       fmt.Sprintf("UnknownFDDIFrameControl(%d)", i),
 		}
 	}
 
@@ -282,4 +299,7 @@ func init() {
 
 	LinkTypeMetadata[LinkTypeEthernet] = EnumMetadata{DecodeWith: gopacket.DecodeFunc(decodeEthernet), Name: "Ethernet"}
 	LinkTypeMetadata[LinkTypePPP] = EnumMetadata{DecodeWith: gopacket.DecodeFunc(decodePPP), Name: "PPP"}
+	LinkTypeMetadata[LinkTypeFDDI] = EnumMetadata{DecodeWith: gopacket.DecodeFunc(decodeFDDI), Name: "FDDI"}
+
+	FDDIFrameControlMetadata[FDDIFrameControlLLC] = EnumMetadata{DecodeWith: gopacket.DecodeFunc(decodeLLC), Name: "LLC"}
 }
