@@ -164,6 +164,37 @@ func BenchmarkTCPTransportLayerFromDecodedPacket(b *testing.B) {
 	}
 }
 
+func testDecoder([]byte, gopacket.PacketBuilder) error {
+	return nil
+}
+
+func BenchmarkDecodeFuncCallOverheadDirectCall(b *testing.B) {
+	var data []byte
+	var pb gopacket.PacketBuilder
+	for i := 0; i < b.N; i++ {
+		_ = testDecoder(data, pb)
+	}
+}
+
+func BenchmarkDecodeFuncCallOverheadDecoderCall(b *testing.B) {
+	d := gopacket.DecodeFunc(testDecoder)
+	var data []byte
+	var pb gopacket.PacketBuilder
+	for i := 0; i < b.N; i++ {
+		_ = d.Decode(data, pb)
+	}
+}
+
+func BenchmarkDecodeFuncCallOverheadArrayCall(b *testing.B) {
+	EthernetTypeMetadata[1] = EnumMetadata{DecodeWith: gopacket.DecodeFunc(testDecoder)}
+	d := EthernetType(1)
+	var data []byte
+	var pb gopacket.PacketBuilder
+	for i := 0; i < b.N; i++ {
+		_ = d.Decode(data, pb)
+	}
+}
+
 // TestFlowMapKey makes sure a flow and an endpoint can be used as map keys.
 func TestFlowMapKey(t *testing.T) {
 	_ = map[gopacket.Flow]bool{}
