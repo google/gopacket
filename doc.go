@@ -45,6 +45,33 @@ we don't have full data.
  // Decode a TCP header and its payload
  tcpP := gopacket.NewPacket(p3, layers.LayerTypeTCP, gopacket.Default)
 
+Reading Packets From A Source
+
+Most of the time, you won't just have a []byte of packet data lying around.
+Instead, you'll want to read packets in from somewhere (file, interface, etc)
+and process them.  To do that, you'll want to build a PacketSource.
+
+First, you'll need to construct an object that implements the PacketDataSource
+interface.  There are implementations of this interface bundled with gopacket
+in the gopacket/pcap and gopacket/pfring subpackages... see their documentation
+for more information on their usage.  Once you have a PacketDataSource, you can
+pass it into NewPacketSource, along with a Decoder of your choice, to create
+a PacketSource.
+
+Once you have a PacketSource, you can read packets from it in multiple ways.
+See the docs for PacketSource for more details.  The easiest method is the
+Packets function, which returns a channel, then asynchronously writes new
+packets into that channel, closing the channel if the packetSource hits an
+end-of-file.
+
+  packetSource := ...  // construct using pcap or pfring
+  for packet := range packetSource.Packets() {
+    handlePacket(packet)  // do something with each packet
+  }
+
+You can change the decoding options of the packetSource by setting fields in
+packetSource.DecodeOptions... see the following sections for more details.
+
 Lazy Decoding
 
 gopacket optionally decodes packet data lazily, meaning it

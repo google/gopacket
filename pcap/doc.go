@@ -8,15 +8,12 @@ Reading PCAP Files
 
 The following code can be used to read in data from a pcap file.
 
- if handle, err := pcap.OpenOffline(filename); err != nil {
+ if handle, err := pcap.OpenOffline("/path/to/my/file"); err != nil {
    panic(err)
  } else {
-   for packet, err := handle.Next(); err != io.EOF; packet, err = handle.Next() {
-     if err != nil {
-       fmt.Println("Error reading in packet:", err)
-     } else {
-       handlePacket(packet)
-     }
+   packetSource := gopacket.NewPacketSource(handle, handle.LinkType())
+	 for packet := range packetSource.Packets() {
+     handlePacket(packet)  // Do something with a packet here.
    }
  }
 
@@ -31,31 +28,9 @@ The following code can be used to read in data from a live device, in this case
    panic(err)
  } else {
    packetSource := gopacket.NewPacketSource(handle, handle.LinkType())
-   for {
-     packet, err := packetSource.NextPacket()
-     if err != {
-       fmt.Println("ERROR:", err)
-       continue
-     }
+	 for packet := range packetSource.Packets() {
      handlePacket(packet)  // Do something with a packet here.
    }
  }
-
-Changing Packet Decoding Behavior
-
-You have a few options for changing the behavior of packet decoding on a handle.
-The first is to modify the DecodeOptions of the handle:
-
- handle, _ := pcap.OpenLive(...)
- // See gopacket.DecodeOptions for more options you can set here.
- handle.DecodeOptions.Lazy = true
-
-The second option is to change the default decoder used to decode each packet.
-By default, we set the decoder based on the link type of the handler, so you
-should very rarely need to do this.  However, if you want, you can:
-
- handle, _ := pcap.OpenLive(...)
- // Force the handle to decode every packet as if it were PPP
- handle.Decoder = gopacket.LinkTypePPP
 */
 package pcap

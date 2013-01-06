@@ -379,19 +379,62 @@ func NewPacket(data []byte, firstLayerDecoder Decoder, options DecodeOptions) Pa
 	return p
 }
 
+// PacketDataSource is an interface for some source of packet data.  Users may
+// create their own implementations, or use the existing implementations in
+// gopacket/pcap (libpcap, allows reading from live interfaces or from 
+// pcap files) or gopacket/pfring (PF_RING, allows reading from live
+// interfaces).
 type PacketDataSource interface {
 	// ReadPacketData returns the next packet available from this data source.
+	// It returns:
+	//  data:  The bytes of an individual packet.
+	//  ci:  Metadata about the capture
+	//  err:  An error encountered while reading packet data.  If err != nil,
+	//    then data/ci will be ignored.
 	ReadPacketData() (data []byte, ci CaptureInfo, err error)
 }
 
 // PacketSource reads in packets from a PacketDataSource, decodes them, and
-// returns them.  Use the NextPacket function to get one packet at a time
-// from the underlying PacketDataSource as a Packet.
+// returns them.
+//
+// There are currently two different methods for reading packets in through
+// a PacketSource:
+//
+// Reading With Packets Function
+//
+// This method is the most convenient and easiest to code, but lacks
+// flexibility.  Packets returns a 'chan Packet', then asynchronously writes
+// packets into that channel.  Packets uses a blocking channel, and closes
+// it if an io.EOF is returned by the underlying PacketDataSource.  All other
+// PacketDataSource errors are ignored and discarded.
+//  for packet := range packetSource.Packets() {
+//    ...
+//  }
+//
+// Reading With NextPacket Function
+//
+// This method is the most flexible, and exposes errors that may be
+// encountered by the underlying PacketDataSource.  It's also the fastest
+// in a tight loop, since it doesn't have the overhead of a channel
+// read/write.  However, it requires the user to handle errors, most
+// importantly the io.EOF error in cases where packets are being read from
+// a file.
+//  for {
+//    packet, err := packetSource.NextPacket() {
+//    if err == io.EOF {
+//      break
+//    } else if err != nil {
+//      log.Println("Error:", err)
+//      continue
+//    }
+//    handlePacket(packet)  // Do something with each packet.
+//  }
 type PacketSource struct {
 	source  PacketDataSource
 	decoder Decoder
 	// DecodeOptions is the set of options to use for decoding each piece
-	// of packet data.
+	// of packet data.  This can/should be changed by the user to reflect the
+	// way packets should be decoded.
 	DecodeOptions
 }
 
@@ -415,21 +458,10 @@ func (p *PacketSource) NextPacket() (Packet, error) {
 	return packet, nil
 }
 
-// PacketsToChannel reads in all packets from the packet source and sends them
+// packetsToChannel reads in all packets from the packet source and sends them
 // to the given channel.  When it receives an error, it ignores it.  When it
 // receives an io.EOF, it closes the channel.
-//
-// Example usage:
-//  ps := gopacket.NewPacketSource(...)
-//  c := make(chan Packet)
-//  go ps.PacketsToChannel(c)
-//  for p := range c {
-//    handlePacket(p)
-//  }
-//
-// For slow packet sources or files, you can pass in a blocking channel, but if
-// you're using a fast packet source, you may want to create a buffered channel.
-func (p *PacketSource) PacketsToChannel(c chan<- Packet) {
+func (p *PacketSource) packetsToChannel(c chan<- Packet) {
 	for {
 		packet, err := p.NextPacket()
 		if err == io.EOF {
@@ -439,4 +471,19 @@ func (p *PacketSource) PacketsToChannel(c chan<- Packet) {
 			c <- packet
 		}
 	}
+}
+
+// Packets returns a blocking channel of packets, allowing easy iterating over
+// packets.  Packets will be asynchronously read in from the underlying
+// PacketDataSource and written to the returned channel.  If the underlying
+// PacketDataSource returns an io.EOF error, the channel will be closed.
+// If any other error is encountered, it is ignored.
+//
+//  for packet := range packetSource.Packets() {
+//    handlePacket(packet)  // Do something with each packet.
+//  }
+func (p *PacketSource) Packets() chan Packet {
+	c := make(chan Packet)
+	go p.packetsToChannel(c)
+	return c
 }

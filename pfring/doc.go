@@ -19,12 +19,7 @@ pfring:
    panic(err)
  } else {
    packetSource := gopacket.NewPacketSource(ring, gopacket.LinkTypeEthernet)
-   for {
-     packet, err := packetSource.NextPacket()
-     if err != {
-       fmt.Println("ERROR:", err)
-       continue
-     }
+	 for packet := range packetSource.Packets() {
      handlePacket(packet)  // Do something with a packet here.
    }
  }

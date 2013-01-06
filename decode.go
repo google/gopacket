@@ -10,15 +10,15 @@ import (
 // PacketBuilder is used by layer decoders to store the layers they've decoded,
 // and to defer future decoding via NextDecoder.
 // Typically, the pattern for use is:
-//  func (m *myDecoder) Decode(data []byte, c PacketBuilder) error {
+//  func (m *myDecoder) Decode(data []byte, p PacketBuilder) error {
 //    if myLayer, err := myDecodingLogic(data); err != nil {
 //      return err
 //    } else {
-//      c.AddLayer(myLayer)
+//      p.AddLayer(myLayer)
 //    }
 //    // maybe do this, if myLayer is a LinkLayer
-//    c.SetLinkLayer(myLayer)
-//    return c.NextDecoder(nextDecoder)
+//    p.SetLinkLayer(myLayer)
+//    return p.NextDecoder(nextDecoder)
 //  }
 type PacketBuilder interface {
 	// AddLayer should be called by a decoder immediately upon successful
@@ -55,9 +55,9 @@ type Decoder interface {
 // DecodeFunc wraps a function to make it a Decoder.
 type DecodeFunc func([]byte, PacketBuilder) error
 
-func (d DecodeFunc) Decode(data []byte, c PacketBuilder) error {
+func (d DecodeFunc) Decode(data []byte, p PacketBuilder) error {
 	// function, call thyself.
-	return d(data, c)
+	return d(data, p)
 }
 
 // DecodePayload is a Decoder that returns a Payload layer containing all
@@ -96,13 +96,13 @@ func (d *DecodeFailure) LayerType() LayerType { return LayerTypeDecodeFailure }
 
 // decodeUnknown "decodes" unsupported data types by returning an error.
 // This decoder will thus always return a DecodeFailure layer.
-func decodeUnknown(data []byte, c PacketBuilder) error {
+func decodeUnknown(data []byte, p PacketBuilder) error {
 	return errors.New("Layer type not currently supported")
 }
 
 // decodePayload decodes data by returning it all in a Payload layer.
-func decodePayload(data []byte, c PacketBuilder) error {
+func decodePayload(data []byte, p PacketBuilder) error {
 	payload := &Payload{Data: data}
-	c.AddLayer(payload)
+	p.AddLayer(payload)
 	return nil
 }
