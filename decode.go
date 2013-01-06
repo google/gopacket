@@ -5,6 +5,7 @@ package gopacket
 import (
 	"encoding/hex"
 	"errors"
+	"fmt"
 )
 
 // PacketBuilder is used by layer decoders to store the layers they've decoded,
@@ -89,7 +90,9 @@ type DecodeFailure struct {
 func (d *DecodeFailure) Error() error          { return d.err }
 func (d *DecodeFailure) LayerContents() []byte { return d.data }
 func (d *DecodeFailure) LayerPayload() []byte  { return nil }
-func (d *DecodeFailure) String() string        { return hex.Dump(d.data) }
+func (d *DecodeFailure) String() string {
+	return fmt.Sprintf("ERROR: %v\n%v", d.err, hex.Dump(d.data))
+}
 
 // LayerType returns LayerTypeDecodeFailure
 func (d *DecodeFailure) LayerType() LayerType { return LayerTypeDecodeFailure }

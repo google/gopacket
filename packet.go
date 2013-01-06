@@ -118,7 +118,7 @@ func (p *packet) Data() []byte {
 }
 func (p *packet) recoverDecodeError() {
 	if r := recover(); r != nil {
-		fail := &DecodeFailure{err: fmt.Errorf("BLAH")}
+		fail := &DecodeFailure{err: fmt.Errorf("%v", r)}
 		if p.last == nil {
 			fail.data = p.data
 		} else {

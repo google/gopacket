@@ -11,7 +11,8 @@ import (
 // does not match with any externally available numbering scheme... it's solely
 // usable/useful within this library as a means for requesting layer types
 // (see Packet.Layer) and determining which types of layers have been decoded.
-// A LayerType corresponds 1:1 to a struct type.
+//
+// New LayerTypes may be created by calling gopacket.RegisterLayerType.
 type LayerType int64
 
 // LayerTypeMetadata contains metadata associated with each LayerType.

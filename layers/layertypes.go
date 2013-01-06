@@ -51,6 +51,7 @@ var (
 	LayerTypeIPSecESP               = gopacket.RegisterLayerType(51, gopacket.LayerTypeMetadata{"IPSecESP", gopacket.DecodeFunc(decodeIPSecESP)})
 	LayerTypeUDPLite                = gopacket.RegisterLayerType(52, gopacket.LayerTypeMetadata{"UDPLite", gopacket.DecodeFunc(decodeUDPLite)})
 	LayerTypeFDDI                   = gopacket.RegisterLayerType(53, gopacket.LayerTypeMetadata{"FDDI", gopacket.DecodeFunc(decodeFDDI)})
+	LayerTypeLoopback               = gopacket.RegisterLayerType(54, gopacket.LayerTypeMetadata{"Loopback", gopacket.DecodeFunc(decodeLoopback)})
 )
 
 var (

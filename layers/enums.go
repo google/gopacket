@@ -152,6 +152,9 @@ const (
 	FDDIFrameControlLLC FDDIFrameControl = 0x50
 )
 
+// ProtocolFamily is the set of values defined as PF_* in sys/socket.h
+type ProtocolFamily uint8
+
 var (
 	// Each of the following arrays contains mappings of how to handle enum
 	// values for various enum types in gopacket/layers.
@@ -171,6 +174,7 @@ var (
 	PPPoECodeMetadata        [256]EnumMetadata
 	LinkTypeMetadata         [256]EnumMetadata
 	FDDIFrameControlMetadata [256]EnumMetadata
+	ProtocolFamilyMetadata   [256]EnumMetadata
 )
 
 func (a EthernetType) Decode(data []byte, p gopacket.PacketBuilder) error {
@@ -215,6 +219,24 @@ func (a FDDIFrameControl) Decode(data []byte, p gopacket.PacketBuilder) error {
 func (a FDDIFrameControl) String() string {
 	return FDDIFrameControlMetadata[a].Name
 }
+func (a ProtocolFamily) Decode(data []byte, p gopacket.PacketBuilder) error {
+	return ProtocolFamilyMetadata[a].DecodeWith.Decode(data, p)
+}
+func (a ProtocolFamily) String() string {
+	return ProtocolFamilyMetadata[a].Name
+}
+
+// Decode a raw v4 or v6 IP packet.
+func decodeIPv4or6(data []byte, p gopacket.PacketBuilder) error {
+	version := data[0] >> 4
+	switch version {
+	case 4:
+		return decodeIPv4(data, p)
+	case 6:
+		return decodeIPv6(data, p)
+	}
+	return fmt.Errorf("Invalid IP packet version %v", version)
+}
 
 func init() {
 	for i := 0; i < 65536; i++ {
@@ -247,6 +269,10 @@ func init() {
 		FDDIFrameControlMetadata[i] = EnumMetadata{
 			DecodeWith: errorFunc(fmt.Sprintf("Unable to decode FDDI frame control %d", i)),
 			Name:       fmt.Sprintf("UnknownFDDIFrameControl(%d)", i),
+		}
+		ProtocolFamilyMetadata[i] = EnumMetadata{
+			DecodeWith: errorFunc(fmt.Sprintf("Unable to decode protocol family %d", i)),
+			Name:       fmt.Sprintf("UnknownProtocolFamily(%d)", i),
 		}
 	}
 
@@ -304,6 +330,13 @@ func init() {
 	LinkTypeMetadata[LinkTypeEthernet] = EnumMetadata{DecodeWith: gopacket.DecodeFunc(decodeEthernet), Name: "Ethernet"}
 	LinkTypeMetadata[LinkTypePPP] = EnumMetadata{DecodeWith: gopacket.DecodeFunc(decodePPP), Name: "PPP"}
 	LinkTypeMetadata[LinkTypeFDDI] = EnumMetadata{DecodeWith: gopacket.DecodeFunc(decodeFDDI), Name: "FDDI"}
+	LinkTypeMetadata[LinkTypeNull] = EnumMetadata{DecodeWith: gopacket.DecodeFunc(decodeLoopback), Name: "Null"}
+	LinkTypeMetadata[LinkTypeLoop] = EnumMetadata{DecodeWith: gopacket.DecodeFunc(decodeLoopback), Name: "Loop"}
+	LinkTypeMetadata[LinkTypeRaw] = EnumMetadata{DecodeWith: gopacket.DecodeFunc(decodeIPv4or6), Name: "Raw"}
 
 	FDDIFrameControlMetadata[FDDIFrameControlLLC] = EnumMetadata{DecodeWith: gopacket.DecodeFunc(decodeLLC), Name: "LLC"}
+
+	ProtocolFamilyMetadata[ProtocolFamilyIPv4] = EnumMetadata{DecodeWith: gopacket.DecodeFunc(decodeIPv4), Name: "IPv4"}
+	ProtocolFamilyMetadata[ProtocolFamilyIPv6] = EnumMetadata{DecodeWith: gopacket.DecodeFunc(decodeIPv6), Name: "IPv6"}
+	ProtocolFamilyMetadata[ProtocolFamilyPPP] = EnumMetadata{DecodeWith: gopacket.DecodeFunc(decodePPP), Name: "PPP"}
 }
