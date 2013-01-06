@@ -26,6 +26,7 @@ import (
 	"io/ioutil"
 	"net/http"
 	"os"
+	"runtime"
 	"runtime/pprof"
 	"time"
 )
@@ -140,6 +141,7 @@ func main() {
 	for i := 0; i < *repeat; i++ {
 		packetDataSource.Reset()
 		count, errors := 0, 0
+		runtime.GC()
 		fmt.Printf("Benchmarking decode %d/%d\n", i+1, *repeat)
 		start := time.Now()
 		for packet, err := packetSource.NextPacket(); err != io.EOF; packet, err = packetSource.NextPacket() {
