@@ -9,21 +9,49 @@ import (
 )
 
 func TestPcapFileRead(t *testing.T) {
-	packets := []gopacket.Packet{}
-	if handle, err := OpenOffline("test.pcap"); err != nil {
-		t.Fatal(err)
-	} else {
-		packetSource := gopacket.NewPacketSource(handle, handle.LinkType())
-		for packet := range packetSource.Packets() {
-			packets = append(packets, packet)
+
+	for _, file := range []struct {
+		filename       string
+		num            int
+		expectedLayers []gopacket.LayerType
+	}{
+		{"test_loopback.pcap",
+			24,
+			[]gopacket.LayerType{
+				layers.LayerTypeLoopback,
+				layers.LayerTypeIPv6,
+				layers.LayerTypeTCP,
+			},
+		},
+		{"test_ethernet.pcap",
+			16,
+			[]gopacket.LayerType{
+				layers.LayerTypeEthernet,
+				layers.LayerTypeIPv4,
+				layers.LayerTypeTCP,
+			},
+		},
+	} {
+		t.Log("Processing file", file.filename)
+
+		packets := []gopacket.Packet{}
+		if handle, err := OpenOffline(file.filename); err != nil {
+			t.Fatal(err)
+		} else {
+			packetSource := gopacket.NewPacketSource(handle, handle.LinkType())
+			for packet := range packetSource.Packets() {
+				packets = append(packets, packet)
+			}
 		}
-	}
-	if len(packets) != 24 {
-		t.Fatal("Incorrect number of packets, want 24 got", len(packets))
-	}
-	for i, p := range packets {
-		if p.Layer(layers.LayerTypeTCP) == nil {
-			t.Error("Packet", i, "is not a TCP packet:\n", p)
+		if len(packets) != file.num {
+			t.Fatal("Incorrect number of packets, want", file.num, "got", len(packets))
+		}
+		for i, p := range packets {
+			for _, layertype := range file.expectedLayers {
+				if p.Layer(layertype) == nil {
+					t.Error("Packet", i, "has no layer type", layertype, "\n", p)
+				}
+			}
 		}
 	}
 }
