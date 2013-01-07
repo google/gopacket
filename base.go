@@ -2,6 +2,10 @@
 
 package gopacket
 
+import (
+	"fmt"
+)
+
 // Layer represents a single decoded packet layer (using either the
 // OSI or TCP/IP definition of a layer).  When decoding, a packet's data is
 // broken up into a number of layers.  The caller may call LayerType() to
@@ -31,6 +35,7 @@ func (p *Payload) LayerType() LayerType  { return LayerTypePayload }
 func (p *Payload) LayerContents() []byte { return p.data }
 func (p *Payload) LayerPayload() []byte  { return nil }
 func (p *Payload) Payload() []byte       { return p.data }
+func (p *Payload) String() string        { return fmt.Sprintf("%d byte(s)", len(p.data)) }
 
 // These layers correspond to Internet Protocol Suite (TCP/IP) layers, and their
 // corresponding OSI layers, as best as possible.

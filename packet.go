@@ -4,6 +4,7 @@ package gopacket
 
 import (
 	"bytes"
+	"encoding/hex"
 	"errors"
 	"fmt"
 	"io"
@@ -29,7 +30,13 @@ type CaptureInfo struct {
 // Decoder's Decode call.  A packet is made up of a set of Data, which
 // is broken into a number of Layers as it is decoded.
 type Packet interface {
-	fmt.Stringer
+	// String returns a human-readable string representation of the packet.
+	// It uses LayerString on each layer to output the layer.
+	String() string
+	// Dump returns a verbose human-readable string representation of the packet,
+	// including a hex dump of all layers.  It uses LayerDump on each layer to
+	// output the layer.
+	Dump() string
 	// Data returns all data associated with this packet
 	Data() []byte
 	// Layers returns all layers in this packet, computing them as necessary
@@ -139,46 +146,75 @@ func (p *packet) recoverDecodeError() {
 	}
 }
 
-var zeroReflect reflect.Value
+// LayerString outputs an individual layer as a string.  The layer is output
+// in a single line, with no trailing newline.  This function is specifically
+// designed to do the right thing for most layers... it follows the following
+// rules:
+//  * If the Layer has a String function, just output that.
+//  * Otherwise, output all exported fields in the layer, recursing into
+//    exported slices and structs.
+// NOTE:  This is NOT THE SAME AS fmt's "%#v".  %#v will output both exported
+// and unexported fields... many times packet layers contain unexported stuff
+// that would just mess up the output of the layer, see for example the
+// Payload layer and it's internal 'data' field, which contains a large byte
+// array that would really mess up formatting.
+func LayerString(l Layer) string {
+	return fmt.Sprintf("%v\t%s", l.LayerType(), layerString(l))
+}
 
-func exportedString(i interface{}) string {
+// LayerDump outputs a very verbose string representation of a layer.  Its
+// output is a concatenation of LayerString(l) and hex.Dump(l.LayerContents()).
+// It contains newlines and ends with a newline.
+func LayerDump(l Layer) string {
+	return fmt.Sprintf("%s\n%s\n", LayerString(l), hex.Dump(l.LayerContents()))
+}
+
+// layerString outputs, recursively, a layer in a "smart" way.  See docs for
+// LayerString for more details.
+func layerString(i interface{}) string {
+	// Let String() functions take precedence.
 	if s, ok := i.(fmt.Stringer); ok {
 		return s.String()
 	}
-	// Reflect, and spit out all the exported fields as key:value.
+	// Reflect, and spit out all the exported fields as key=value.
 	v := reflect.ValueOf(i)
-	if v.Type().Kind() != reflect.Ptr {
-		return fmt.Sprintf("%v", i)
-	}
-	var b bytes.Buffer
-	r := v.Elem()
-	typ := r.Type()
-	for i := 0; i < r.NumField(); i++ {
-		// Check if this is upper-case.
-		first, _ := utf8.DecodeRuneInString(typ.Field(i).Name)
-		if !unicode.IsUpper(first) {
-			continue
-		}
-		f := r.Field(i)
-		if f.Type().Kind() == reflect.Slice && f.MethodByName("String") == zeroReflect {
-			fmt.Fprintf(&b, "%v=[", typ.Field(i).Name)
-			for j := 0; j < f.Len(); j++ {
-				if j != 0 {
-					b.WriteByte(',')
-				}
-				f2 := f.Index(j)
-				if f2.CanInterface() && f2.MethodByName("String") == zeroReflect {
-					fmt.Fprintf(&b, "{%s}", exportedString(f2.Interface()))
-				} else {
-					fmt.Fprintf(&b, "%v", f2.Interface())
-				}
+	switch v.Type().Kind() {
+	case reflect.Interface, reflect.Ptr:
+		r := v.Elem()
+		return layerString(r.Interface())
+	case reflect.Struct:
+		var b bytes.Buffer
+		typ := v.Type()
+		b.WriteByte('{')
+		writeSpace := false
+		for i := 0; i < v.NumField(); i++ {
+			// Check if this is upper-case.
+			first, _ := utf8.DecodeRuneInString(typ.Field(i).Name)
+			if !unicode.IsUpper(first) {
+				continue
 			}
-			fmt.Fprintf(&b, "] ")
-		} else {
-			fmt.Fprintf(&b, "%v=%v ", typ.Field(i).Name, f.Interface())
+			f := v.Field(i)
+			if writeSpace {
+				b.WriteByte(' ')
+			}
+			writeSpace = true
+			fmt.Fprintf(&b, "%s=%s", typ.Field(i).Name, layerString(f.Interface()))
 		}
+		b.WriteByte('}')
+		return b.String()
+	case reflect.Slice:
+		var b bytes.Buffer
+		b.WriteByte('[')
+		for j := 0; j < v.Len(); j++ {
+			if j != 0 {
+				b.WriteString(", ")
+			}
+			b.WriteString(layerString(v.Index(j).Interface()))
+		}
+		b.WriteByte(']')
+		return b.String()
 	}
-	return b.String()
+	return fmt.Sprintf("%v", v.Interface())
 }
 
 func packetString(pLayers []Layer) string {
@@ -189,8 +225,12 @@ func packetString(pLayers []Layer) string {
 	return b.String()
 }
 
-func LayerString(l Layer) string {
-	return fmt.Sprintf("%v:  %s", l.LayerType(), exportedString(l))
+func packetDump(pLayers []Layer) string {
+	var b bytes.Buffer
+	for i, l := range pLayers {
+		fmt.Fprintf(&b, "--- Layer %d ---\n%s", i+1, LayerDump(l))
+	}
+	return b.String()
 }
 
 // eagerPacket is a packet implementation that does eager decoding.  Upon
@@ -258,6 +298,7 @@ func (p *eagerPacket) LayerClass(lc LayerClass) Layer {
 	return nil
 }
 func (p *eagerPacket) String() string { return packetString(p.Layers()) }
+func (p *eagerPacket) Dump() string   { return packetDump(p.Layers()) }
 
 // lazyPacket does lazy decoding on its packet data.  On construction it does
 // no initial decoding.  For each function call, it decodes only as many layers
@@ -369,6 +410,7 @@ func (p *lazyPacket) LayerClass(lc LayerClass) Layer {
 	return nil
 }
 func (p *lazyPacket) String() string { return packetString(p.Layers()) }
+func (p *lazyPacket) Dump() string   { return packetDump(p.Layers()) }
 
 // DecodeOptions tells gopacket how to decode a packet.
 type DecodeOptions struct {

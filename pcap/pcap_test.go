@@ -47,9 +47,10 @@ func TestPcapFileRead(t *testing.T) {
 			t.Fatal("Incorrect number of packets, want", file.num, "got", len(packets))
 		}
 		for i, p := range packets {
+			t.Log("Packet ", i, "\n", p.Dump())
 			for _, layertype := range file.expectedLayers {
 				if p.Layer(layertype) == nil {
-					t.Error("Packet", i, "has no layer type", layertype, "\n", p)
+					t.Error("Packet", i, "has no layer type", layertype)
 				}
 			}
 		}
