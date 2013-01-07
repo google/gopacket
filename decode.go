@@ -105,7 +105,7 @@ func decodeUnknown(data []byte, p PacketBuilder) error {
 
 // decodePayload decodes data by returning it all in a Payload layer.
 func decodePayload(data []byte, p PacketBuilder) error {
-	payload := &Payload{Data: data}
+	payload := &Payload{data: data}
 	p.AddLayer(payload)
 	return nil
 }

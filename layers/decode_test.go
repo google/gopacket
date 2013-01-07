@@ -285,8 +285,8 @@ func TestDecodeSimpleTCPPacket(t *testing.T) {
 	if payload, ok := p.Layer(gopacket.LayerTypePayload).(*gopacket.Payload); payload == nil || !ok {
 		t.Error("No payload layer found")
 	} else {
-		if string(payload.Data) != "GET / HTTP/1.1\r\nHost: www.fish.com\r\nConnection: keep-alive\r\nUser-Agent: Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/535.2 (KHTML, like Gecko) Chrome/15.0.874.121 Safari/535.2\r\nAccept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8\r\nAccept-Encoding: gzip,deflate,sdch\r\nAccept-Language: en-US,en;q=0.8\r\nAccept-Charset: ISO-8859-1,utf-8;q=0.7,*;q=0.3\r\n\r\n" {
-			t.Error("--- Payload STRING ---\n", string(payload.Data), "\n--- Payload BYTES ---\n", payload.Data)
+		if string(payload.Payload()) != "GET / HTTP/1.1\r\nHost: www.fish.com\r\nConnection: keep-alive\r\nUser-Agent: Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/535.2 (KHTML, like Gecko) Chrome/15.0.874.121 Safari/535.2\r\nAccept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8\r\nAccept-Encoding: gzip,deflate,sdch\r\nAccept-Language: en-US,en;q=0.8\r\nAccept-Charset: ISO-8859-1,utf-8;q=0.7,*;q=0.3\r\n\r\n" {
+			t.Error("--- Payload STRING ---\n", string(payload.Payload()), "\n--- Payload BYTES ---\n", payload.Payload())
 		}
 	}
 }

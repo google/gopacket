@@ -29,15 +29,15 @@ type Layer interface {
 // TCP and UDP, we stop decoding above layer 4 and return the remaining
 // bytes as a Payload.  Payload is an ApplicationLayer.
 type Payload struct {
-	Data []byte
+	data []byte
 }
 
 // LayerType returns LayerTypePayload
 func (p *Payload) LayerType() LayerType  { return LayerTypePayload }
-func (p *Payload) LayerContents() []byte { return p.Data }
+func (p *Payload) LayerContents() []byte { return p.data }
 func (p *Payload) LayerPayload() []byte  { return nil }
-func (p *Payload) Payload() []byte       { return p.Data }
-func (p *Payload) String() string        { return hex.Dump(p.Data) }
+func (p *Payload) Payload() []byte       { return p.data }
+func (p *Payload) String() string        { return hex.Dump(p.data) }
 
 // These layers correspond to Internet Protocol Suite (TCP/IP) layers, and their
 // corresponding OSI layers, as best as possible.

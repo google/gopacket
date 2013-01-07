@@ -7,7 +7,10 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"reflect"
 	"time"
+	"unicode"
+	"unicode/utf8"
 )
 
 // CaptureInfo contains capture metadata for a packet.  If a packet was captured
@@ -86,36 +89,44 @@ func (p *packet) SetLinkLayer(l LinkLayer) {
 		p.link = l
 	}
 }
+
 func (p *packet) SetNetworkLayer(l NetworkLayer) {
 	if p.network == nil {
 		p.network = l
 	}
 }
+
 func (p *packet) SetTransportLayer(l TransportLayer) {
 	if p.transport == nil {
 		p.transport = l
 	}
 }
+
 func (p *packet) SetApplicationLayer(l ApplicationLayer) {
 	if p.application == nil {
 		p.application = l
 	}
 }
+
 func (p *packet) SetErrorLayer(l ErrorLayer) {
 	if p.failure == nil {
 		p.failure = l
 	}
 }
+
 func (p *packet) AddLayer(l Layer) {
 	p.layers = append(p.layers, l)
 	p.last = l
 }
+
 func (p *packet) CaptureInfo() *CaptureInfo {
 	return &p.capInfo
 }
+
 func (p *packet) Data() []byte {
 	return p.data
 }
+
 func (p *packet) recoverDecodeError() {
 	if r := recover(); r != nil {
 		fail := &DecodeFailure{err: fmt.Errorf("%v", r)}
@@ -127,11 +138,51 @@ func (p *packet) recoverDecodeError() {
 		p.AddLayer(fail)
 	}
 }
+
+var zeroReflect reflect.Value
+
+func exportedString(i interface{}, useString bool) string {
+	if s, ok := i.(fmt.Stringer); ok && useString {
+		return s.String()
+	}
+	// Reflect, and spit out all the exported fields as key:value.
+	v := reflect.ValueOf(i)
+	if v.Type().Kind() != reflect.Ptr {
+		return fmt.Sprintf("%v", i)
+	}
+	var b bytes.Buffer
+	r := v.Elem()
+	typ := r.Type()
+	for i := 0; i < r.NumField(); i++ {
+		// Check if this is upper-case.
+		first, _ := utf8.DecodeRuneInString(typ.Field(i).Name)
+		if !unicode.IsUpper(first) {
+			continue
+		}
+		f := r.Field(i)
+		if f.Type().Kind() == reflect.Slice && f.MethodByName("String") == zeroReflect {
+			fmt.Fprintf(&b, "%v=[", typ.Field(i).Name)
+			for j := 0; j < f.Len(); j++ {
+				f2 := f.Index(j)
+				if f2.CanInterface() && f2.MethodByName("String") == zeroReflect {
+					fmt.Fprintf(&b, "{%s},", exportedString(f2.Interface(), true))
+				} else {
+					fmt.Fprintf(&b, "%v,", f2.Interface())
+				}
+			}
+			fmt.Fprintf(&b, "] ")
+		} else {
+			fmt.Fprintf(&b, "%v=%v ", typ.Field(i).Name, f.Interface())
+		}
+	}
+	return b.String()
+}
+
 func packetString(pLayers []Layer) string {
 	var b bytes.Buffer
 	for i, l := range pLayers {
 		fmt.Fprintf(&b, "--- Layer %d: %v ---\n", i+1, l.LayerType())
-		b.WriteString(l.String())
+		b.WriteString(exportedString(l, false))
 		b.WriteString("\n")
 	}
 	return b.String()
