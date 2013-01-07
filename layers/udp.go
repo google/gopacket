@@ -21,11 +21,6 @@ type UDP struct {
 // LayerType returns gopacket.LayerTypeUDP
 func (u *UDP) LayerType() gopacket.LayerType { return LayerTypeUDP }
 
-func (u *UDP) String() string {
-	return fmt.Sprintf("UDP ports:%v->%v cksum:%v\n",
-		u.SrcPort, u.DstPort, u.Checksum)
-}
-
 func decodeUDP(data []byte, p gopacket.PacketBuilder) error {
 	udp := &UDP{
 		SrcPort:   UDPPort(binary.BigEndian.Uint16(data[0:2])),

@@ -4,7 +4,6 @@
 package layers
 
 import (
-	"bytes"
 	"encoding/binary"
 	"fmt"
 	"github.com/gconnell/gopacket"
@@ -36,24 +35,13 @@ func (i *IPv4) NetworkFlow() gopacket.Flow {
 	return gopacket.NewFlow(EndpointIP, i.SrcIP, i.DstIP)
 }
 
-// String returns a human-readable string for this layer.
-func (i *IPv4) String() string {
-	var b bytes.Buffer
-	fmt.Fprintf(&b, "IPv4 addrs:%v->%v prot:%v id:%v ttl:%v tos:%v frag:%v cksum:%v\n",
-		i.SrcIP, i.DstIP, i.Protocol, i.Id, i.TTL, i.TOS, i.FragOffset, i.Checksum)
-	for _, opt := range i.Options {
-		fmt.Fprintln(&b, "  option:", &opt)
-	}
-	return b.String()
-}
-
 type IPv4Option struct {
 	OptionType   uint8
 	OptionLength uint8
 	OptionData   []byte
 }
 
-func (i *IPv4Option) String() string {
+func (i IPv4Option) String() string {
 	return fmt.Sprintf("IPv4Option(%v:%v)", i.OptionType, i.OptionData)
 }
 

@@ -29,10 +29,6 @@ func (i *IPv6) LayerType() gopacket.LayerType { return LayerTypeIPv6 }
 func (i *IPv6) NetworkFlow() gopacket.Flow {
 	return gopacket.NewFlow(EndpointIP, i.SrcIP, i.DstIP)
 }
-func (i *IPv6) String() string {
-	return fmt.Sprintf("IPv6 addrs:%v->%v next:%v class:%v flow:%v hlimit:%v\n",
-		i.SrcIP, i.DstIP, i.NextHeader, i.TrafficClass, i.FlowLabel, i.HopLimit)
-}
 
 func decodeIPv6(data []byte, p gopacket.PacketBuilder) error {
 	ip6 := &IPv6{

@@ -141,8 +141,8 @@ func (p *packet) recoverDecodeError() {
 
 var zeroReflect reflect.Value
 
-func exportedString(i interface{}, useString bool) string {
-	if s, ok := i.(fmt.Stringer); ok && useString {
+func exportedString(i interface{}) string {
+	if s, ok := i.(fmt.Stringer); ok {
 		return s.String()
 	}
 	// Reflect, and spit out all the exported fields as key:value.
@@ -163,11 +163,14 @@ func exportedString(i interface{}, useString bool) string {
 		if f.Type().Kind() == reflect.Slice && f.MethodByName("String") == zeroReflect {
 			fmt.Fprintf(&b, "%v=[", typ.Field(i).Name)
 			for j := 0; j < f.Len(); j++ {
+				if j != 0 {
+					b.WriteByte(',')
+				}
 				f2 := f.Index(j)
 				if f2.CanInterface() && f2.MethodByName("String") == zeroReflect {
-					fmt.Fprintf(&b, "{%s},", exportedString(f2.Interface(), true))
+					fmt.Fprintf(&b, "{%s}", exportedString(f2.Interface()))
 				} else {
-					fmt.Fprintf(&b, "%v,", f2.Interface())
+					fmt.Fprintf(&b, "%v", f2.Interface())
 				}
 			}
 			fmt.Fprintf(&b, "] ")
@@ -181,11 +184,13 @@ func exportedString(i interface{}, useString bool) string {
 func packetString(pLayers []Layer) string {
 	var b bytes.Buffer
 	for i, l := range pLayers {
-		fmt.Fprintf(&b, "--- Layer %d: %v ---\n", i+1, l.LayerType())
-		b.WriteString(exportedString(l, false))
-		b.WriteString("\n")
+		fmt.Fprintf(&b, "- Layer %d=%s\n", i+1, LayerString(l))
 	}
 	return b.String()
+}
+
+func LayerString(l Layer) string {
+	return fmt.Sprintf("%v:  %s", l.LayerType(), exportedString(l))
 }
 
 // eagerPacket is a packet implementation that does eager decoding.  Upon

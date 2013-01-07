@@ -6,7 +6,6 @@ package layers
 import (
 	"encoding/binary"
 	"errors"
-	"fmt"
 	"github.com/gconnell/gopacket"
 	"net"
 )
@@ -26,10 +25,6 @@ type Ethernet struct {
 
 // LayerType returns LayerTypeEthernet
 func (e *Ethernet) LayerType() gopacket.LayerType { return LayerTypeEthernet }
-
-func (e *Ethernet) String() string {
-	return fmt.Sprintf("Ethernet addrs:%v->%v type:%v\n", e.SrcMAC, e.DstMAC, e.EthernetType)
-}
 
 func (e *Ethernet) LinkFlow() gopacket.Flow {
 	return gopacket.NewFlow(EndpointMAC, e.SrcMAC, e.DstMAC)

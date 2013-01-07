@@ -22,16 +22,6 @@ type ARP struct {
 	DstProtAddress    []byte
 }
 
-func (arp *ARP) String() (s string) {
-	switch arp.Operation {
-	case 1:
-		s = "ARP request"
-	case 2:
-		s = "ARP Reply"
-	}
-	return
-}
-
 // LayerType returns LayerTypeARP
 func (arp *ARP) LayerType() gopacket.LayerType { return LayerTypeARP }
 
