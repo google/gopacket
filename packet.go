@@ -1,4 +1,8 @@
 // Copyright 2012 Google, Inc. All rights reserved.
+//
+// Use of this source code is governed by a BSD-style license
+// that can be found in the LICENSE file in the root of the source
+// tree.
 
 package gopacket
 
@@ -479,7 +483,7 @@ func NewPacket(data []byte, firstLayerDecoder Decoder, options DecodeOptions) Pa
 
 // PacketDataSource is an interface for some source of packet data.  Users may
 // create their own implementations, or use the existing implementations in
-// gopacket/pcap (libpcap, allows reading from live interfaces or from 
+// gopacket/pcap (libpcap, allows reading from live interfaces or from
 // pcap files) or gopacket/pfring (PF_RING, allows reading from live
 // interfaces).
 type PacketDataSource interface {
@@ -536,7 +540,7 @@ type PacketSource struct {
 	DecodeOptions
 }
 
-// NewPacketSource creates a packet data source.  
+// NewPacketSource creates a packet data source.
 func NewPacketSource(source PacketDataSource, decoder Decoder) *PacketSource {
 	return &PacketSource{
 		source:  source,
