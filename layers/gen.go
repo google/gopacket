@@ -16,6 +16,7 @@ import (
 	"io/ioutil"
 	"net/http"
 	"os"
+	"strconv"
 	"time"
 )
 
@@ -52,7 +53,7 @@ func main() {
 	var registry struct {
 		Records []struct {
 			Protocol string `xml:"protocol"`
-			Number   int    `xml:"number"`
+			Number   string `xml:"number"`
 			Name     string `xml:"name"`
 		} `xml:"record"`
 	}
@@ -64,6 +65,10 @@ func main() {
 		"udp": map[int]bool{},
 	}
 	for _, r := range registry.Records {
+		port, err := strconv.Atoi(r.Number)
+		if err != nil {
+			continue
+		}
 		if r.Name == "" {
 			continue
 		}
@@ -76,11 +81,11 @@ func main() {
 		default:
 			continue
 		}
-		if done[r.Protocol][r.Number] {
+		if done[r.Protocol][port] {
 			continue
 		}
-		done[r.Protocol][r.Number] = true
-		fmt.Fprintf(b, "\t%d: %q,\n", r.Number, r.Name)
+		done[r.Protocol][port] = true
+		fmt.Fprintf(b, "\t%d: %q,\n", port, r.Name)
 	}
 	fmt.Fprintln(os.Stderr, "Writing results to stdout")
 	fmt.Printf(fmtString, time.Now(), *url, tcpPorts.String(), udpPorts.String())

@@ -3,7 +3,7 @@
 package gopacket
 
 // Created by gen.go, don't edit manually
-// Generated at 2013-01-06 20:06:04.110959 -0700 MST
+// Generated at 2013-01-06 20:14:49.420395 -0700 MST
 // Fetched from "http://standards.ieee.org/develop/regauth/oui/oui.txt"
 
 // ValidMACPrefixMap maps a valid MAC address prefix to the name of the
