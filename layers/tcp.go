@@ -4,7 +4,9 @@
 package layers
 
 import (
+	"bytes"
 	"encoding/binary"
+	"fmt"
 	"github.com/gconnell/gopacket"
 )
 
@@ -31,8 +33,56 @@ type TCPOption struct {
 	OptionData   []byte
 }
 
+func (t *TCPOption) String() string {
+	return fmt.Sprintf("TCPOption(%v:%v)", t.OptionType, t.OptionData)
+}
+
 // LayerType returns gopacket.LayerTypeTCP
 func (t *TCP) LayerType() gopacket.LayerType { return LayerTypeTCP }
+
+// String returns the human-readable string for a TCP layer.
+func (t *TCP) String() string {
+	var b bytes.Buffer
+	fmt.Fprintf(&b, "TCP ports:%v->%v seq:%v ack:%v window:%v cksum:%v urg:%v flags:%v\n",
+		t.SrcPort, t.DstPort, t.Seq, t.Ack, t.Window, t.Checksum, t.Urgent, t.flagsString())
+	for _, opt := range t.Options {
+		fmt.Fprintln(&b, "  option:", opt)
+	}
+	b.WriteString(t.baseLayer.String())
+	return b.String()
+}
+
+func (t *TCP) flagsString() string {
+	var b bytes.Buffer
+	if t.FIN {
+		b.WriteByte('F')
+	}
+	if t.SYN {
+		b.WriteByte('S')
+	}
+	if t.RST {
+		b.WriteByte('R')
+	}
+	if t.PSH {
+		b.WriteByte('P')
+	}
+	if t.ACK {
+		b.WriteByte('A')
+	}
+	if t.URG {
+		b.WriteByte('U')
+	}
+	if t.ECE {
+		b.WriteByte('E')
+	}
+	if t.CWR {
+		b.WriteByte('C')
+	}
+	if t.NS {
+		b.WriteByte('N')
+	}
+	return b.String()
+}
 
 func decodeTCP(data []byte, p gopacket.PacketBuilder) error {
 	tcp := &TCP{

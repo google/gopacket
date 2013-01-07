@@ -35,9 +35,14 @@ func (i *IPv4) LayerType() gopacket.LayerType { return LayerTypeIPv4 }
 func (i *IPv4) NetworkFlow() gopacket.Flow {
 	return gopacket.NewFlow(EndpointIP, i.SrcIP, i.DstIP)
 }
+
+// String returns a human-readable string for this layer.
 func (i *IPv4) String() string {
 	var b bytes.Buffer
 	fmt.Fprintf(&b, "IPv4: %v->%v (%v)\n", net.IP(i.SrcIP), net.IP(i.DstIP), i.Protocol)
+	for _, opt := range i.Options {
+		fmt.Fprintln(&b, "  option:", opt)
+	}
 	b.WriteString(i.baseLayer.String())
 	return b.String()
 }
@@ -46,6 +51,10 @@ type IPv4Option struct {
 	OptionType   uint8
 	OptionLength uint8
 	OptionData   []byte
+}
+
+func (i *IPv4Option) String() string {
+	return fmt.Sprintf("IPv4Option(%v:%v)", i.OptionType, i.OptionData)
 }
 
 func decodeIPv4(data []byte, p gopacket.PacketBuilder) error {

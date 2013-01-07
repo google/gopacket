@@ -16,5 +16,5 @@ func (b *baseLayer) LayerContents() []byte { return b.contents }
 // LayerPayload returns the bytes contained within the packet layer.
 func (b *baseLayer) LayerPayload() []byte { return b.payload }
 
-// String returns a human-readable string for the base layer.
+// String returns a human-readable string for the packet layer.
 func (b *baseLayer) String() string { return hex.Dump(b.contents) }
