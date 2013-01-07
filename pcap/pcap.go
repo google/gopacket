@@ -62,6 +62,9 @@ type InterfaceAddress struct {
 	// TODO: add broadcast + PtP dst ?
 }
 
+// BlockForever, when passed into OpenLive, causes it to block forever waiting for packets.
+const BlockForever = time.Duration(0)
+
 // OpenLive opens a device and returns a *Handle.
 // It takes as arguments the name of the device ("eth0"), the maximum size to
 // read for each packet (snaplen), whether to put the interface in promiscuous
@@ -140,6 +143,7 @@ func (p *Handle) ReadPacketData() (data []byte, ci gopacket.CaptureInfo, err err
 
 	var buf_ptr *C.u_char
 	var buf unsafe.Pointer
+
 	result := NextError(C.hack_pcap_next_ex(p.cptr, &pkthdr, &buf_ptr))
 
 	buf = unsafe.Pointer(buf_ptr)

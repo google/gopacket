@@ -44,6 +44,7 @@ const (
 	EthernetTypePPPoESession   EthernetType = 0x8864
 	EthernetTypeMPLSUnicast    EthernetType = 0x8847
 	EthernetTypeMPLSMulticast  EthernetType = 0x8848
+	EthernetTypeEAPOL          EthernetType = 0x888e
 	EthernetTypeEthernetCTP    EthernetType = 0x9000
 )
 
@@ -152,6 +153,16 @@ const (
 	FDDIFrameControlLLC FDDIFrameControl = 0x50
 )
 
+type EAPOLType uint8
+
+const (
+	EAPOLTypeEAP      EAPOLType = 0
+	EAPOLTypeStart    EAPOLType = 1
+	EAPOLTypeLogOff   EAPOLType = 2
+	EAPOLTypeKey      EAPOLType = 3
+	EAPOLTypeASFAlert EAPOLType = 4
+)
+
 // ProtocolFamily is the set of values defined as PF_* in sys/socket.h
 type ProtocolFamily uint8
 
@@ -174,6 +185,7 @@ var (
 	PPPoECodeMetadata        [256]EnumMetadata
 	LinkTypeMetadata         [256]EnumMetadata
 	FDDIFrameControlMetadata [256]EnumMetadata
+	EAPOLTypeMetadata        [256]EnumMetadata
 	ProtocolFamilyMetadata   [256]EnumMetadata
 )
 
@@ -218,6 +230,12 @@ func (a FDDIFrameControl) Decode(data []byte, p gopacket.PacketBuilder) error {
 }
 func (a FDDIFrameControl) String() string {
 	return FDDIFrameControlMetadata[a].Name
+}
+func (a EAPOLType) Decode(data []byte, p gopacket.PacketBuilder) error {
+	return EAPOLTypeMetadata[a].DecodeWith.Decode(data, p)
+}
+func (a EAPOLType) String() string {
+	return EAPOLTypeMetadata[a].Name
 }
 func (a ProtocolFamily) Decode(data []byte, p gopacket.PacketBuilder) error {
 	return ProtocolFamilyMetadata[a].DecodeWith.Decode(data, p)
@@ -270,6 +288,10 @@ func init() {
 			DecodeWith: errorFunc(fmt.Sprintf("Unable to decode FDDI frame control %d", i)),
 			Name:       fmt.Sprintf("UnknownFDDIFrameControl(%d)", i),
 		}
+		EAPOLTypeMetadata[i] = EnumMetadata{
+			DecodeWith: errorFunc(fmt.Sprintf("Unable to decode EAPOL type %d", i)),
+			Name:       fmt.Sprintf("UnknownEAPOLType(%d)", i),
+		}
 		ProtocolFamilyMetadata[i] = EnumMetadata{
 			DecodeWith: errorFunc(fmt.Sprintf("Unable to decode protocol family %d", i)),
 			Name:       fmt.Sprintf("UnknownProtocolFamily(%d)", i),
@@ -287,6 +309,7 @@ func init() {
 	EthernetTypeMetadata[EthernetTypeCiscoDiscovery] = EnumMetadata{DecodeWith: gopacket.DecodeFunc(decodeCiscoDiscovery), Name: "CiscoDiscovery"}
 	EthernetTypeMetadata[EthernetTypeMPLSUnicast] = EnumMetadata{DecodeWith: gopacket.DecodeFunc(decodeMPLS), Name: "MPLSUnicast"}
 	EthernetTypeMetadata[EthernetTypeMPLSMulticast] = EnumMetadata{DecodeWith: gopacket.DecodeFunc(decodeMPLS), Name: "MPLSMulticast"}
+	EthernetTypeMetadata[EthernetTypeEAPOL] = EnumMetadata{DecodeWith: gopacket.DecodeFunc(decodeEAPOL), Name: "EAPOL"}
 
 	IPProtocolMetadata[IPProtocolTCP] = EnumMetadata{DecodeWith: gopacket.DecodeFunc(decodeTCP), Name: "TCP"}
 	IPProtocolMetadata[IPProtocolUDP] = EnumMetadata{DecodeWith: gopacket.DecodeFunc(decodeUDP), Name: "UDP"}
@@ -335,6 +358,8 @@ func init() {
 	LinkTypeMetadata[LinkTypeRaw] = EnumMetadata{DecodeWith: gopacket.DecodeFunc(decodeIPv4or6), Name: "Raw"}
 
 	FDDIFrameControlMetadata[FDDIFrameControlLLC] = EnumMetadata{DecodeWith: gopacket.DecodeFunc(decodeLLC), Name: "LLC"}
+
+	EAPOLTypeMetadata[EAPOLTypeEAP] = EnumMetadata{DecodeWith: gopacket.DecodeFunc(decodeEAP), Name: "EAP"}
 
 	ProtocolFamilyMetadata[ProtocolFamilyIPv4] = EnumMetadata{DecodeWith: gopacket.DecodeFunc(decodeIPv4), Name: "IPv4"}
 	ProtocolFamilyMetadata[ProtocolFamilyIPv6] = EnumMetadata{DecodeWith: gopacket.DecodeFunc(decodeIPv6), Name: "IPv6"}

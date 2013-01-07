@@ -24,8 +24,8 @@ type IPv4 struct {
 	TTL        uint8
 	Protocol   IPProtocol
 	Checksum   uint16
-	SrcIP      []byte
-	DstIP      []byte
+	SrcIP      net.IP
+	DstIP      net.IP
 	Options    []IPv4Option
 	Padding    []byte
 }
@@ -39,11 +39,11 @@ func (i *IPv4) NetworkFlow() gopacket.Flow {
 // String returns a human-readable string for this layer.
 func (i *IPv4) String() string {
 	var b bytes.Buffer
-	fmt.Fprintf(&b, "IPv4: %v->%v (%v)\n", net.IP(i.SrcIP), net.IP(i.DstIP), i.Protocol)
+	fmt.Fprintf(&b, "IPv4 addrs:%v->%v prot:%v id:%v ttl:%v tos:%v frag:%v cksum:%v\n",
+		i.SrcIP, i.DstIP, i.Protocol, i.Id, i.TTL, i.TOS, i.FragOffset, i.Checksum)
 	for _, opt := range i.Options {
-		fmt.Fprintln(&b, "  option:", opt)
+		fmt.Fprintln(&b, "  option:", &opt)
 	}
-	b.WriteString(i.baseLayer.String())
 	return b.String()
 }
 

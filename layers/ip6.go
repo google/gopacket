@@ -4,7 +4,6 @@
 package layers
 
 import (
-	"bytes"
 	"encoding/binary"
 	"fmt"
 	"github.com/gconnell/gopacket"
@@ -21,8 +20,8 @@ type IPv6 struct {
 	Length       uint16
 	NextHeader   IPProtocol
 	HopLimit     uint8
-	SrcIP        []byte
-	DstIP        []byte
+	SrcIP        net.IP
+	DstIP        net.IP
 }
 
 // LayerType returns LayerTypeIPv6
@@ -31,10 +30,8 @@ func (i *IPv6) NetworkFlow() gopacket.Flow {
 	return gopacket.NewFlow(EndpointIP, i.SrcIP, i.DstIP)
 }
 func (i *IPv6) String() string {
-	var b bytes.Buffer
-	fmt.Fprintf(&b, "IPv6: %v->%v (%v)\n", net.IP(i.SrcIP), net.IP(i.DstIP), i.NextHeader)
-	b.WriteString(i.baseLayer.String())
-	return b.String()
+	return fmt.Sprintf("IPv6 addrs:%v->%v next:%v class:%v flow:%v hlimit:%v\n",
+		i.SrcIP, i.DstIP, i.NextHeader, i.TrafficClass, i.FlowLabel, i.HopLimit)
 }
 
 func decodeIPv6(data []byte, p gopacket.PacketBuilder) error {

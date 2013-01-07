@@ -11,7 +11,7 @@ import (
 // SCTP contains information on the top level of an SCTP packet.
 type SCTP struct {
 	baseLayer
-	SrcPort, DstPort uint16
+	SrcPort, DstPort SCTPPort
 	VerificationTag  uint32
 	Checksum         uint32
 	sPort, dPort     []byte
@@ -22,12 +22,12 @@ func (s *SCTP) LayerType() gopacket.LayerType { return LayerTypeSCTP }
 
 func decodeSCTP(data []byte, p gopacket.PacketBuilder) error {
 	sctp := &SCTP{
-		SrcPort:         binary.BigEndian.Uint16(data[:2]),
-		DstPort:         binary.BigEndian.Uint16(data[2:4]),
+		SrcPort:         SCTPPort(binary.BigEndian.Uint16(data[:2])),
+		sPort:           data[:2],
+		DstPort:         SCTPPort(binary.BigEndian.Uint16(data[2:4])),
+		dPort:           data[2:4],
 		VerificationTag: binary.BigEndian.Uint32(data[4:8]),
 		Checksum:        binary.BigEndian.Uint32(data[8:12]),
-		sPort:           data[:2],
-		dPort:           data[2:4],
 		baseLayer:       baseLayer{data[:12], data[12:]},
 	}
 	p.AddLayer(sctp)

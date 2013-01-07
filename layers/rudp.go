@@ -13,7 +13,7 @@ type RUDP struct {
 	SYN, ACK, EACK, RST, NUL bool
 	Version                  uint8
 	HeaderLength             uint8
-	SrcPort, DstPort         uint8
+	SrcPort, DstPort         RUDPPort
 	DataLength               uint16
 	Seq, Ack, Checksum       uint32
 	VariableHeaderArea       []byte
@@ -45,8 +45,8 @@ func decodeRUDP(data []byte, p gopacket.PacketBuilder) error {
 		NUL:          data[0]&0x08 != 0,
 		Version:      data[0] & 0x3,
 		HeaderLength: data[1],
-		SrcPort:      data[2],
-		DstPort:      data[3],
+		SrcPort:      RUDPPort(data[2]),
+		DstPort:      RUDPPort(data[3]),
 		DataLength:   binary.BigEndian.Uint16(data[4:6]),
 		Seq:          binary.BigEndian.Uint32(data[6:10]),
 		Ack:          binary.BigEndian.Uint32(data[10:14]),
@@ -85,5 +85,5 @@ func decodeRUDP(data []byte, p gopacket.PacketBuilder) error {
 }
 
 func (r *RUDP) TransportFlow() gopacket.Flow {
-	return gopacket.NewFlow(EndpointRUDPPort, []byte{r.SrcPort}, []byte{r.DstPort})
+	return gopacket.NewFlow(EndpointRUDPPort, []byte{byte(r.SrcPort)}, []byte{byte(r.DstPort)})
 }

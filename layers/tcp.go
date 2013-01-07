@@ -13,8 +13,7 @@ import (
 // TCP is the layer for TCP headers.
 type TCP struct {
 	baseLayer
-	SrcPort                                    uint16
-	DstPort                                    uint16
+	SrcPort, DstPort                           TCPPort
 	Seq                                        uint32
 	Ack                                        uint32
 	DataOffset                                 uint8
@@ -46,9 +45,8 @@ func (t *TCP) String() string {
 	fmt.Fprintf(&b, "TCP ports:%v->%v seq:%v ack:%v window:%v cksum:%v urg:%v flags:%v\n",
 		t.SrcPort, t.DstPort, t.Seq, t.Ack, t.Window, t.Checksum, t.Urgent, t.flagsString())
 	for _, opt := range t.Options {
-		fmt.Fprintln(&b, "  option:", opt)
+		fmt.Fprintln(&b, "  option:", &opt)
 	}
-	b.WriteString(t.baseLayer.String())
 	return b.String()
 }
 
@@ -86,9 +84,9 @@ func (t *TCP) flagsString() string {
 
 func decodeTCP(data []byte, p gopacket.PacketBuilder) error {
 	tcp := &TCP{
-		SrcPort:    binary.BigEndian.Uint16(data[0:2]),
+		SrcPort:    TCPPort(binary.BigEndian.Uint16(data[0:2])),
 		sPort:      data[0:2],
-		DstPort:    binary.BigEndian.Uint16(data[2:4]),
+		DstPort:    TCPPort(binary.BigEndian.Uint16(data[2:4])),
 		dPort:      data[2:4],
 		Seq:        binary.BigEndian.Uint32(data[4:8]),
 		Ack:        binary.BigEndian.Uint32(data[8:12]),
