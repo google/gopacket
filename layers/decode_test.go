@@ -199,6 +199,33 @@ func BenchmarkDecodeFuncCallOverheadArrayCall(b *testing.B) {
 	}
 }
 
+func BenchmarkFmtVerboseString(b *testing.B) {
+	b.StopTimer()
+	p := gopacket.NewPacket(testSimpleTCPPacket, LinkTypeEthernet, gopacket.Default)
+	b.StartTimer()
+	for i := 0; i < b.N; i++ {
+		fmt.Sprintf("%#v", p)
+	}
+}
+
+func BenchmarkPacketString(b *testing.B) {
+	b.StopTimer()
+	p := gopacket.NewPacket(testSimpleTCPPacket, LinkTypeEthernet, gopacket.Default)
+	b.StartTimer()
+	for i := 0; i < b.N; i++ {
+		p.String()
+	}
+}
+
+func BenchmarkPacketDumpString(b *testing.B) {
+	b.StopTimer()
+	p := gopacket.NewPacket(testSimpleTCPPacket, LinkTypeEthernet, gopacket.Default)
+	b.StartTimer()
+	for i := 0; i < b.N; i++ {
+		p.String()
+	}
+}
+
 // TestFlowMapKey makes sure a flow and an endpoint can be used as map keys.
 func TestFlowMapKey(t *testing.T) {
 	_ = map[gopacket.Flow]bool{}

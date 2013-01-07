@@ -84,3 +84,18 @@ func BenchmarkCheckEthernetPrefix(b *testing.B) {
 		_ = ValidMACPrefixMap[key]
 	}
 }
+
+var decodeOpts DecodeOptions
+
+func decodeOptsByValue(_ DecodeOptions)    {}
+func decodeOptsByPointer(_ *DecodeOptions) {}
+func BenchmarkPassDecodeOptionsByValue(b *testing.B) {
+	for i := 0; i < b.N; i++ {
+		decodeOptsByValue(decodeOpts)
+	}
+}
+func BenchmarkPassDecodeOptionsByPointer(b *testing.B) {
+	for i := 0; i < b.N; i++ {
+		decodeOptsByPointer(&decodeOpts)
+	}
+}
