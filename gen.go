@@ -2,7 +2,7 @@
 
 // +build ignore
 
-// Package gopacket_mac_fetcher is a binary that pulls the list of known MAC
+// This binary pulls the list of known MAC
 // prefixes from IEEE and writes them out to a go file which is compiled
 // into gopacket.  It should be run as follows:
 //
@@ -25,7 +25,7 @@ const header = `// Copyright 2012 Google, Inc. All rights reserved.
 
 package gopacket
 
-// Created by gopacket_mac_fetcher, don't edit manually
+// Created by gen.go, don't edit manually
 // Generated at %s
 // Fetched from %q
 

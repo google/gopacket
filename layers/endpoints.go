@@ -43,18 +43,18 @@ func NewMACEndpoint(a net.HardwareAddr) gopacket.Endpoint {
 func newPortEndpoint(t gopacket.EndpointType, p uint16) gopacket.Endpoint {
 	return gopacket.NewEndpoint(t, []byte{byte(p >> 16), byte(p)})
 }
-func NewTCPPortEndpoint(p uint16) gopacket.Endpoint {
-	return newPortEndpoint(EndpointTCPPort, p)
+func NewTCPPortEndpoint(p TCPPort) gopacket.Endpoint {
+	return newPortEndpoint(EndpointTCPPort, uint16(p))
 }
-func NewUDPPortEndpoint(p uint16) gopacket.Endpoint {
-	return newPortEndpoint(EndpointUDPPort, p)
+func NewUDPPortEndpoint(p UDPPort) gopacket.Endpoint {
+	return newPortEndpoint(EndpointUDPPort, uint16(p))
 }
-func NewSCTPPortEndpoint(p uint16) gopacket.Endpoint {
-	return newPortEndpoint(EndpointSCTPPort, p)
+func NewSCTPPortEndpoint(p SCTPPort) gopacket.Endpoint {
+	return newPortEndpoint(EndpointSCTPPort, uint16(p))
 }
-func NewRUDPPortEndpoint(p uint8) gopacket.Endpoint {
-	return gopacket.NewEndpoint(EndpointRUDPPort, []byte{p})
+func NewRUDPPortEndpoint(p RUDPPort) gopacket.Endpoint {
+	return gopacket.NewEndpoint(EndpointRUDPPort, []byte{byte(p)})
 }
-func NewUDPLitePortEndpoint(p uint16) gopacket.Endpoint {
-	return newPortEndpoint(EndpointUDPLitePort, p)
+func NewUDPLitePortEndpoint(p UDPLitePort) gopacket.Endpoint {
+	return newPortEndpoint(EndpointUDPLitePort, uint16(p))
 }

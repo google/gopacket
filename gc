@@ -63,6 +63,9 @@ cd $(dirname $0)
 
 if [ ! -z "$GEN" ]; then
   go run gen.go | gofmt > valid_mac_prefixes.go
+	pushd layers
+	go run gen.go | gofmt > iana_ports.go
+	popd
 fi
 
 # First, make sure everything is formatted, compiles, and tests pass.
@@ -71,6 +74,8 @@ gofmt -w gen.go
 go build gen.go
 go test
 pushd layers
+gofmt -w gen.go
+go build gen.go
 go test
 popd
 if [ -f /usr/include/pcap.h ]; then
