@@ -33,7 +33,7 @@ type TCPOption struct {
 	OptionData   []byte
 }
 
-func (t *TCPOption) String() string {
+func (t TCPOption) String() string {
 	return fmt.Sprintf("TCPOption(%v:%v)", t.OptionType, t.OptionData)
 }
 
