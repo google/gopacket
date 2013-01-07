@@ -12,11 +12,10 @@ import (
 // UDP is the layer for UDP headers.
 type UDP struct {
 	baseLayer
-	SrcPort      UDPPort
-	DstPort      UDPPort
-	Length       uint16
-	Checksum     uint16
-	sPort, dPort []byte
+	SrcPort, DstPort UDPPort
+	Length           uint16
+	Checksum         uint16
+	sPort, dPort     []byte
 }
 
 // LayerType returns gopacket.LayerTypeUDP
