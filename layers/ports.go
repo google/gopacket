@@ -14,10 +14,9 @@ type SCTPPort uint16
 type UDPLitePort uint16
 
 var RUDPPortNames = map[RUDPPort]string{}
-var SCTPPortNames = map[SCTPPort]string{}
 var UDPLitePortNames = map[UDPLitePort]string{}
 
-// TCPPortNames and UDPPortNames can be found in iana_ports.go.
+// {TCP,UDP,SCTP}PortNames can be found in iana_ports.go
 
 func (a TCPPort) String() string {
 	if name, ok := TCPPortNames[a]; ok {

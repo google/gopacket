@@ -3,11 +3,12 @@
 package layers
 
 // Created by gen.go, don't edit manually
-// Generated at 2013-01-06 20:14:54.248557 -0700 MST
+// Generated at 2013-01-06 20:30:00.418565 -0700 MST
 // Fetched from "http://www.iana.org/assignments/service-names-port-numbers/service-names-port-numbers.xml"
 
 var TCPPortNames = tcpPortNames
 var UDPPortNames = udpPortNames
+var SCTPPortNames = sctpPortNames
 var tcpPortNames = map[TCPPort]string{
 	1:     "tcpmux",
 	2:     "compressnet",
@@ -10962,4 +10963,63 @@ var udpPortNames = map[UDPPort]string{
 	48129: "blp5",
 	48556: "com-bardac-dw",
 	48619: "iqobject",
+}
+var sctpPortNames = map[SCTPPort]string{
+	9:     "discard",
+	20:    "ftp-data",
+	21:    "ftp",
+	22:    "ssh",
+	80:    "http",
+	179:   "bgp",
+	443:   "https",
+	1021:  "exp1",
+	1022:  "exp2",
+	1167:  "cisco-ipsla",
+	2049:  "nfs",
+	2225:  "rcip-itu",
+	2904:  "m2ua",
+	2905:  "m3ua",
+	2944:  "megaco-h248",
+	2945:  "h248-binary",
+	3097:  "itu-bicc-stc",
+	3565:  "m2pa",
+	3863:  "asap-sctp",
+	3864:  "asap-sctp-tls",
+	3868:  "diameter",
+	4502:  "a25-fap-fgw",
+	4739:  "ipfix",
+	4740:  "ipfixs",
+	5090:  "car",
+	5091:  "cxtp",
+	5445:  "smbdirect",
+	5672:  "amqp",
+	5675:  "v5ua",
+	5868:  "diameters",
+	5910:  "cm",
+	5911:  "cpdlc",
+	5912:  "fis",
+	5913:  "ads-c",
+	6704:  "frc-hp",
+	6705:  "frc-mp",
+	6706:  "frc-lp",
+	7626:  "simco",
+	8471:  "pim-port",
+	9082:  "lcs-ap",
+	9084:  "aurora",
+	9900:  "iua",
+	9901:  "enrp-sctp",
+	9902:  "enrp-sctp-tls",
+	11997: "wmereceiving",
+	11998: "wmedistribution",
+	11999: "wmereporting",
+	14001: "sua",
+	20049: "nfsrdma",
+	25471: "rna",
+	29118: "sgsap",
+	29168: "sbcap",
+	29169: "iuhsctpassoc",
+	36412: "s1-control",
+	36422: "x2-control",
+	36443: "m2ap",
+	36444: "m3ap",
 }

@@ -30,9 +30,12 @@ package layers
 
 var TCPPortNames = tcpPortNames
 var UDPPortNames = udpPortNames
+var SCTPPortNames = sctpPortNames
 var tcpPortNames = map[TCPPort]string{
 %s}
 var udpPortNames = map[UDPPort]string{
+%s}
+var sctpPortNames = map[SCTPPort]string{
 %s}
 `
 
@@ -60,9 +63,11 @@ func main() {
 	xml.Unmarshal(body, &registry)
 	var tcpPorts bytes.Buffer
 	var udpPorts bytes.Buffer
+	var sctpPorts bytes.Buffer
 	done := map[string]map[int]bool{
-		"tcp": map[int]bool{},
-		"udp": map[int]bool{},
+		"tcp":  map[int]bool{},
+		"udp":  map[int]bool{},
+		"sctp": map[int]bool{},
 	}
 	for _, r := range registry.Records {
 		port, err := strconv.Atoi(r.Number)
@@ -78,6 +83,8 @@ func main() {
 			b = &tcpPorts
 		case "udp":
 			b = &udpPorts
+		case "sctp":
+			b = &sctpPorts
 		default:
 			continue
 		}
@@ -88,5 +95,5 @@ func main() {
 		fmt.Fprintf(b, "\t%d: %q,\n", port, r.Name)
 	}
 	fmt.Fprintln(os.Stderr, "Writing results to stdout")
-	fmt.Printf(fmtString, time.Now(), *url, tcpPorts.String(), udpPorts.String())
+	fmt.Printf(fmtString, time.Now(), *url, tcpPorts.String(), udpPorts.String(), sctpPorts.String())
 }
