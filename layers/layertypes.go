@@ -52,6 +52,8 @@ var (
 	LayerTypeUDPLite                = gopacket.RegisterLayerType(52, gopacket.LayerTypeMetadata{"UDPLite", gopacket.DecodeFunc(decodeUDPLite)})
 	LayerTypeFDDI                   = gopacket.RegisterLayerType(53, gopacket.LayerTypeMetadata{"FDDI", gopacket.DecodeFunc(decodeFDDI)})
 	LayerTypeLoopback               = gopacket.RegisterLayerType(54, gopacket.LayerTypeMetadata{"Loopback", gopacket.DecodeFunc(decodeLoopback)})
+	LayerTypeEAP                    = gopacket.RegisterLayerType(55, gopacket.LayerTypeMetadata{"EAP", gopacket.DecodeFunc(decodeEAP)})
+	LayerTypeEAPOL                  = gopacket.RegisterLayerType(56, gopacket.LayerTypeMetadata{"EAPOL", gopacket.DecodeFunc(decodeEAPOL)})
 )
 
 var (
