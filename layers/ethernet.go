@@ -6,13 +6,15 @@ package layers
 import (
 	"encoding/binary"
 	"errors"
+	"fmt"
 	"github.com/gconnell/gopacket"
+	"net"
 )
 
 // Ethernet is the layer for Ethernet frame headers.
 type Ethernet struct {
 	baseLayer
-	SrcMAC, DstMAC []byte
+	SrcMAC, DstMAC net.HardwareAddr
 	EthernetType   EthernetType
 	// Length is only set if a length field exists within this header.  Ethernet
 	// headers follow two different standards, one that uses an EthernetType, the
@@ -25,6 +27,10 @@ type Ethernet struct {
 // LayerType returns LayerTypeEthernet
 func (e *Ethernet) LayerType() gopacket.LayerType { return LayerTypeEthernet }
 
+func (e *Ethernet) String() string {
+	return fmt.Sprintf("Ethernet addrs:%v->%v type:%v\n", e.SrcMAC, e.DstMAC, e.EthernetType)
+}
+
 func (e *Ethernet) LinkFlow() gopacket.Flow {
 	return gopacket.NewFlow(EndpointMAC, e.SrcMAC, e.DstMAC)
 }
@@ -34,8 +40,8 @@ func decodeEthernet(data []byte, p gopacket.PacketBuilder) error {
 		return errors.New("Ethernet packet too small")
 	}
 	eth := &Ethernet{
-		DstMAC:       data[0:6],
-		SrcMAC:       data[6:12],
+		DstMAC:       net.HardwareAddr(data[0:6]),
+		SrcMAC:       net.HardwareAddr(data[6:12]),
 		EthernetType: EthernetType(binary.BigEndian.Uint16(data[12:14])),
 		baseLayer:    baseLayer{data[:14], data[14:]},
 	}

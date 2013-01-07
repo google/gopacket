@@ -42,7 +42,7 @@ func (i *IPv4) String() string {
 	fmt.Fprintf(&b, "IPv4 addrs:%v->%v prot:%v id:%v ttl:%v tos:%v frag:%v cksum:%v\n",
 		i.SrcIP, i.DstIP, i.Protocol, i.Id, i.TTL, i.TOS, i.FragOffset, i.Checksum)
 	for _, opt := range i.Options {
-		fmt.Fprintln(&b, "  option:", opt)
+		fmt.Fprintln(&b, "  option:", &opt)
 	}
 	return b.String()
 }

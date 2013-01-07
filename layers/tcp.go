@@ -45,7 +45,7 @@ func (t *TCP) String() string {
 	fmt.Fprintf(&b, "TCP ports:%v->%v seq:%v ack:%v window:%v cksum:%v urg:%v flags:%v\n",
 		t.SrcPort, t.DstPort, t.Seq, t.Ack, t.Window, t.Checksum, t.Urgent, t.flagsString())
 	for _, opt := range t.Options {
-		fmt.Fprintln(&b, "  option:", opt)
+		fmt.Fprintln(&b, "  option:", &opt)
 	}
 	return b.String()
 }

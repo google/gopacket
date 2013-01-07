@@ -83,6 +83,8 @@ if [ -f /usr/include/pcap.h ]; then
 	go test
 	gofmt -w benchmark.go
 	go build benchmark.go
+	gofmt -w tcpdump.go
+	go build tcpdump.go
 	popd
 fi
 if [ -f /usr/include/pfring.h ]; then
