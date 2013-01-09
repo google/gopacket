@@ -34,6 +34,8 @@ type CaptureInfo struct {
 // Decoder's Decode call.  A packet is made up of a set of Data, which
 // is broken into a number of Layers as it is decoded.
 type Packet interface {
+	//// Functions for outputting the packet as a human-readable string:
+	//// ------------------------------------------------------------------
 	// String returns a human-readable string representation of the packet.
 	// It uses LayerString on each layer to output the layer.
 	String() string
@@ -41,8 +43,9 @@ type Packet interface {
 	// including a hex dump of all layers.  It uses LayerDump on each layer to
 	// output the layer.
 	Dump() string
-	// Data returns all data associated with this packet
-	Data() []byte
+
+	//// Functions for accessing arbitrary packet layers:
+	//// ------------------------------------------------------------------
 	// Layers returns all layers in this packet, computing them as necessary
 	Layers() []Layer
 	// Layer returns the first layer in this packet of the given type, or nil
@@ -50,11 +53,10 @@ type Packet interface {
 	// LayerClass returns the first layer in this packet of the given class,
 	// or nil.
 	LayerClass(LayerClass) Layer
-	// CaptureInfo returns the caputure information for this packet.  This returns
-	// a pointer to the packet's struct, so it can be used both for reading and
-	// writing the information.
-	CaptureInfo() *CaptureInfo
 
+	//// Functions for accessing specific types of packet layers.  These functions
+	//// return the first layer of each type found within the packet.
+	//// ------------------------------------------------------------------
 	// LinkLayer returns the first link layer in the packet
 	LinkLayer() LinkLayer
 	// NetworkLayer returns the first network layer in the packet
@@ -68,6 +70,15 @@ type Packet interface {
 	// in decoding and the packet was only partially decoded.  Thus, its output
 	// can be used to determine if the entire packet was able to be decoded.
 	ErrorLayer() ErrorLayer
+
+	//// Functions for accessing data specific to the packet:
+	//// ------------------------------------------------------------------
+	// Data returns the set of bytes that make up this entire packet.
+	Data() []byte
+	// CaptureInfo returns the caputure information for this packet.  This returns
+	// a pointer to the packet's struct, so it can be used both for reading and
+	// writing the information.
+	CaptureInfo() *CaptureInfo
 }
 
 // packet contains all the information we need to fulfill the Packet interface,
