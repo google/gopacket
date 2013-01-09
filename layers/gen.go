@@ -32,9 +32,15 @@ package layers
 // Generated at %s
 // Fetched from %q
 
+// TCPPortNames contains the port names for all TCP ports.
 var TCPPortNames = tcpPortNames
+
+// UDPPortNames contains the port names for all UDP ports.
 var UDPPortNames = udpPortNames
+
+// SCTPPortNames contains the port names for all SCTP ports.
 var SCTPPortNames = sctpPortNames
+
 var tcpPortNames = map[TCPPort]string{
 %s}
 var udpPortNames = map[UDPPort]string{

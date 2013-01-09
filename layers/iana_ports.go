@@ -1,18 +1,20 @@
 // Copyright 2012 Google, Inc. All rights reserved.
-//
-// Use of this source code is governed by a BSD-style license
-// that can be found in the LICENSE file in the root of the source
-// tree.
 
 package layers
 
 // Created by gen.go, don't edit manually
-// Generated at 2013-01-06 20:30:00.418565 -0700 MST
+// Generated at 2013-01-09 16:30:32.088751637 -0700 MST
 // Fetched from "http://www.iana.org/assignments/service-names-port-numbers/service-names-port-numbers.xml"
 
+// TCPPortNames contains the port names for all TCP ports.
 var TCPPortNames = tcpPortNames
+
+// UDPPortNames contains the port names for all UDP ports.
 var UDPPortNames = udpPortNames
+
+// SCTPPortNames contains the port names for all SCTP ports.
 var SCTPPortNames = sctpPortNames
+
 var tcpPortNames = map[TCPPort]string{
 	1:     "tcpmux",
 	2:     "compressnet",
@@ -5203,6 +5205,8 @@ var tcpPortNames = map[TCPPort]string{
 	11104: "netapp-icmgmt",
 	11105: "netapp-icdata",
 	11106: "sgi-lk",
+	11109: "sgi-dmfmgr",
+	11110: "sgi-soap",
 	11111: "vce",
 	11112: "dicom",
 	11161: "suncacao-snmp",

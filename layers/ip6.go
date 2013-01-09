@@ -31,7 +31,7 @@ type IPv6 struct {
 // LayerType returns LayerTypeIPv6
 func (i *IPv6) LayerType() gopacket.LayerType { return LayerTypeIPv6 }
 func (i *IPv6) NetworkFlow() gopacket.Flow {
-	return gopacket.NewFlow(EndpointIP, i.SrcIP, i.DstIP)
+	return gopacket.NewFlow(EndpointIPv6, i.SrcIP, i.DstIP)
 }
 
 func decodeIPv6(data []byte, p gopacket.PacketBuilder) error {

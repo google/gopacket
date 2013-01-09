@@ -139,3 +139,15 @@ func (f Flow) Reverse() Flow {
 func NewFlow(t EndpointType, src, dst []byte) Flow {
 	return Flow{t, string(src), string(dst)}
 }
+
+// EndpointInvalid is an endpoint type used for invalid endpoints, IE endpoints
+// that are specified incorrectly during creation.
+var EndpointInvalid = RegisterEndpointType(0, EndpointTypeMetadata{"invalid", func(b []byte) string {
+	return fmt.Sprintf("%v", b)
+}})
+
+// InvalidEndpoint is a singleton Endpoint of type EndpointInvalid.
+var InvalidEndpoint = NewEndpoint(EndpointInvalid, nil)
+
+// InvalidFlow is a singleton Flow of type EndpointInvalid.
+var InvalidFlow = NewFlow(EndpointInvalid, nil, nil)

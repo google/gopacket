@@ -302,6 +302,7 @@ type SCTPError struct {
 	Parameters []SCTPErrorParameter
 }
 
+// LayerType returns LayerTypeSCTPAbort or LayerTypeSCTPError.
 func (sc *SCTPError) LayerType() gopacket.LayerType {
 	if sc.Type == SCTPChunkTypeAbort {
 		return LayerTypeSCTPAbort

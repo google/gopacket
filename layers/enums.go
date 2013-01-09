@@ -151,12 +151,14 @@ const (
 	SCTPChunkTypeShutdownComplete SCTPChunkType = 14
 )
 
+// FDDIFrameControl is an enumeration of FDDI frame control bytes.
 type FDDIFrameControl uint8
 
 const (
 	FDDIFrameControlLLC FDDIFrameControl = 0x50
 )
 
+// EAPOLType is an enumeration of EAPOL packet types.
 type EAPOLType uint8
 
 const (
@@ -261,6 +263,7 @@ func decodeIPv4or6(data []byte, p gopacket.PacketBuilder) error {
 }
 
 func init() {
+	// Here we link up all enumerations with their respective names and decoders.
 	for i := 0; i < 65536; i++ {
 		EthernetTypeMetadata[i] = EnumMetadata{
 			DecodeWith: errorFunc(fmt.Sprintf("Unable to decode ethernet type %d", i)),
