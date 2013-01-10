@@ -11,12 +11,6 @@ package pcap
 #cgo LDFLAGS: -lpcap
 #include <stdlib.h>
 #include <pcap.h>
-
-// Workaround for not knowing how to cast to const u_char**
-int hack_pcap_next_ex(pcap_t *p, struct pcap_pkthdr **pkt_header,
-                      u_char **pkt_data) {
-    return pcap_next_ex(p, pkt_header, (const u_char **)pkt_data);
-}
 */
 import "C"
 
@@ -148,7 +142,7 @@ func (p *Handle) ReadPacketData() (data []byte, ci gopacket.CaptureInfo, err err
 	var buf_ptr *C.u_char
 	var buf unsafe.Pointer
 
-	result := NextError(C.hack_pcap_next_ex(p.cptr, &pkthdr, &buf_ptr))
+	result := NextError(C.pcap_next_ex(p.cptr, &pkthdr, &buf_ptr))
 
 	buf = unsafe.Pointer(buf_ptr)
 
