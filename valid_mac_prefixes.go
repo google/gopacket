@@ -3,13 +3,13 @@
 package gopacket
 
 // Created by gen.go, don't edit manually
-// Generated at 2013-01-09 17:06:58.006291 -0700 MST
+// Generated at 2013-01-10 10:16:19.203882 -0700 MST
 // Fetched from "http://standards.ieee.org/develop/regauth/oui/oui.txt"
 
 // ValidMACPrefixMap maps a valid MAC address prefix to the name of the
 // organization that owns the rights to use it.  We map it to a hidden
 // variable so it won't show up in godoc, since it's a very large map.
-var ValidMACPrefixMap = validMACPrefixMap
+var ValidMACPrefixMap map[[3]byte]string = validMACPrefixMap
 var validMACPrefixMap = map[[3]byte]string{
 	[3]byte{0, 0, 0}:       "XEROX CORPORATION",
 	[3]byte{0, 0, 1}:       "XEROX CORPORATION",

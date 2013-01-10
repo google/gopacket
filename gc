@@ -131,6 +131,8 @@ cat >> $COMMIT_FILE <<EOF
 BENCHMARK_MARKER_DO_NOT_CHANGE
 ----------------------------------------------------------
 
+Go version $(go version)
+
 
 TEST BENCHMARKS
 EOF
