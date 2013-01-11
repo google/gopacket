@@ -107,10 +107,13 @@ func (d *DecodeFailure) Error() error          { return d.err }
 func (d *DecodeFailure) LayerContents() []byte { return d.data }
 func (d *DecodeFailure) LayerPayload() []byte  { return nil }
 func (d *DecodeFailure) String() string {
-	if d.stack != nil {
-		return "Packet decoding panic: " + d.Error().Error() + "\n" + string(d.stack)
-	}
 	return "Packet decoding error: " + d.Error().Error()
+}
+func (d *DecodeFailure) Dump() (s string) {
+	if d.stack != nil {
+		s = string(d.stack)
+	}
+	return
 }
 
 // LayerType returns LayerTypeDecodeFailure

@@ -202,11 +202,31 @@ func LayerString(l Layer) string {
 	return fmt.Sprintf("%v\t%s", l.LayerType(), layerString(l, false, false))
 }
 
+// Dumper dumps verbose information on a value.  If a layer type implements
+// Dumper, then its LayerDump() string will include the results in its output.
+type Dumper interface {
+	Dump() string
+}
+
 // LayerDump outputs a very verbose string representation of a layer.  Its
 // output is a concatenation of LayerString(l) and hex.Dump(l.LayerContents()).
 // It contains newlines and ends with a newline.
 func LayerDump(l Layer) string {
-	return fmt.Sprintf("%s\n%s\n", LayerString(l), hex.Dump(l.LayerContents()))
+	var b bytes.Buffer
+	b.WriteString(LayerString(l))
+	b.WriteByte('\n')
+	if d, ok := l.(Dumper); ok {
+		dump := d.Dump()
+		if dump != "" {
+			b.WriteString(dump)
+			if dump[len(dump)-1] != '\n' {
+				b.WriteByte('\n')
+			}
+		}
+	}
+	b.WriteString(hex.Dump(l.LayerContents()))
+	b.WriteByte('\n')
+	return b.String()
 }
 
 // layerString outputs, recursively, a layer in a "smart" way.  See docs for
