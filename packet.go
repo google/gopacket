@@ -225,7 +225,6 @@ func LayerDump(l Layer) string {
 		}
 	}
 	b.WriteString(hex.Dump(l.LayerContents()))
-	b.WriteByte('\n')
 	return b.String()
 }
 
