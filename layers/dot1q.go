@@ -9,7 +9,6 @@ package layers
 
 import (
 	"encoding/binary"
-	"fmt"
 	"github.com/gconnell/gopacket"
 )
 
@@ -24,10 +23,6 @@ type Dot1Q struct {
 
 // LayerType returns gopacket.LayerTypeDot1Q
 func (d *Dot1Q) LayerType() gopacket.LayerType { return LayerTypeDot1Q }
-
-func (v *Dot1Q) String() string {
-	return fmt.Sprintf("VLAN Prioity:%d Drop:%v Tag:%d", v.Priority, v.DropEligible, v.VLANIdentifier)
-}
 
 func decodeDot1Q(data []byte, p gopacket.PacketBuilder) error {
 	d := &Dot1Q{
