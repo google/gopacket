@@ -3,7 +3,7 @@
 package gopacket
 
 // Created by gen.go, don't edit manually
-// Generated at 2013-01-10 10:16:19.203882 -0700 MST
+// Generated at 2013-01-11 16:06:49.779104 -0700 MST
 // Fetched from "http://standards.ieee.org/develop/regauth/oui/oui.txt"
 
 // ValidMACPrefixMap maps a valid MAC address prefix to the name of the
@@ -10715,7 +10715,7 @@ var validMACPrefixMap = map[[3]byte]string{
 	[3]byte{0, 80, 191}:    "Metalligence Technology Corp.",
 	[3]byte{0, 80, 192}:    "GATAN, INC.",
 	[3]byte{0, 80, 193}:    "GEMFLEX NETWORKS, LTD.",
-	[3]byte{0, 80, 194}:    "IEEE REGISTRATION AUTHORITY",
+	[3]byte{0, 80, 194}:    "IEEE REGISTRATION AUTHORITY  - Please see IAB public listing for more information.",
 	[3]byte{0, 80, 196}:    "IMD",
 	[3]byte{0, 80, 197}:    "ADS Technologies, Inc",
 	[3]byte{0, 80, 198}:    "LOOP TELECOMMUNICATION INTERNATIONAL, INC.",
@@ -15290,6 +15290,7 @@ var validMACPrefixMap = map[[3]byte]string{
 	[3]byte{140, 115, 110}: "Fujitsu Limited",
 	[3]byte{140, 118, 193}: "Goden Tech Limited",
 	[3]byte{140, 119, 18}:  "Samsung Electronics Co.,Ltd",
+	[3]byte{140, 119, 22}:  "LONGCHEER TELECOMMUNICATION LIMITED",
 	[3]byte{140, 123, 157}: "Apple, Inc.",
 	[3]byte{140, 124, 181}: "Hon Hai Precision Ind. Co.,Ltd.",
 	[3]byte{140, 124, 255}: "Brocade Communications Systems, Inc.",
@@ -15399,6 +15400,7 @@ var validMACPrefixMap = map[[3]byte]string{
 	[3]byte{144, 215, 235}: "Texas Instruments",
 	[3]byte{144, 216, 82}:  "Comtec Co., Ltd.",
 	[3]byte{144, 217, 44}:  "HUG-WITSCHI AG",
+	[3]byte{144, 218, 78}:  "AVANU",
 	[3]byte{144, 224, 240}: "IEEE P1722",
 	[3]byte{144, 226, 186}: "Intel Corporation",
 	[3]byte{144, 230, 186}: "ASUSTek COMPUTER INC.",
@@ -16538,6 +16540,7 @@ var validMACPrefixMap = map[[3]byte]string{
 	[3]byte{208, 180, 152}: "Robert Bosch LLC Automotive Electronics",
 	[3]byte{208, 181, 61}:  "SEPRO ROBOTIQUE",
 	[3]byte{208, 187, 128}: "SHL Telemedicine International Ltd.",
+	[3]byte{208, 190, 44}:  "CNSLink Co., Ltd.",
 	[3]byte{208, 193, 177}: "Samsung Electronics Co.,Ltd",
 	[3]byte{208, 194, 130}: "CISCO SYSTEMS, INC.",
 	[3]byte{208, 205, 225}: "Scientech Electronics",
@@ -16724,6 +16727,7 @@ var validMACPrefixMap = map[[3]byte]string{
 	[3]byte{220, 22, 162}:  "Medtronic Diabetes",
 	[3]byte{220, 23, 90}:   "Hitachi High-Technologies Corporation",
 	[3]byte{220, 29, 159}:  "U & B tech",
+	[3]byte{220, 29, 212}:  "Microstep-MIS spol. s r.o.",
 	[3]byte{220, 30, 163}:  "Accensus LLC",
 	[3]byte{220, 32, 8}:    "ASD Electronics Ltd",
 	[3]byte{220, 42, 20}:   "Shanghai Longjing Technology Co.",
