@@ -74,9 +74,16 @@ func decodeTCP(data []byte, p gopacket.PacketBuilder) error {
 		Checksum:   binary.BigEndian.Uint16(data[16:18]),
 		Urgent:     binary.BigEndian.Uint16(data[18:20]),
 	}
-	hlen := tcp.DataOffset * 4
+	p.AddLayer(tcp)
+	p.SetTransportLayer(tcp)
+	hlen := int(tcp.DataOffset) * 4
+	if hlen > len(data) {
+		hlen = len(data)
+		p.SetTruncated()
+	}
 	d := data[20:hlen]
 	for len(d) > 0 {
+		truncated := false
 		if tcp.Options == nil {
 			// Pre-allocate to avoid growing the slice too much.
 			tcp.Options = make([]TCPOption, 0, 4)
@@ -92,15 +99,21 @@ func decodeTCP(data []byte, p gopacket.PacketBuilder) error {
 			opt.OptionLength = 1
 		default:
 			opt.OptionLength = d[1]
-			opt.OptionData = d[2:opt.OptionLength]
+			if len(d) < int(opt.OptionLength) {
+				p.SetTruncated()
+				truncated = true
+			} else {
+				opt.OptionData = d[2:opt.OptionLength]
+			}
+		}
+		if truncated {
+			break
 		}
 		tcp.Options = append(tcp.Options, opt)
 		d = d[opt.OptionLength:]
 	}
 	tcp.contents = data[:hlen]
 	tcp.payload = data[hlen:]
-	p.AddLayer(tcp)
-	p.SetTransportLayer(tcp)
 	return p.NextDecoder(gopacket.LayerTypePayload)
 }
 

@@ -52,12 +52,8 @@ func decodeIPv6(data []byte, p gopacket.PacketBuilder) error {
 		// HopByHop jumbogram option can both change this eventually, though.
 		baseLayer: baseLayer{data[:40], data[40:]},
 	}
-	if ip6.Length != 0 && int(ip6.Length) < len(ip6.payload) {
-		ip6.payload = ip6.payload[:ip6.Length]
-	}
 	p.AddLayer(ip6)
 	p.SetNetworkLayer(ip6)
-
 	// The following is a good candidate for code clean-up... it treats hop-by-hop
 	// as a special part of the IPv6 packet, since we require its information to
 	// correctly compute jumbogram size.
@@ -75,16 +71,24 @@ func decodeIPv6(data []byte, p gopacket.PacketBuilder) error {
 					return fmt.Errorf("Invalid jumbo packet option length")
 				}
 				payloadLength := binary.BigEndian.Uint32(o.OptionData)
-				pEnd := len(data)
-				if pEnd > 40+int(payloadLength) {
-					pEnd = 40 + int(payloadLength)
+				pEnd := int(payloadLength)
+				if pEnd > len(ip6.payload) {
+					p.SetTruncated()
+					pEnd = len(ip6.payload)
 				}
-				ip6.payload = data[40:pEnd]
-				hopByHop.payload = data[40+len(hopByHop.contents) : pEnd]
+				ip6.payload = ip6.payload[:pEnd]
+				hopByHop.payload = ip6.payload[len(hopByHop.contents):]
 				return p.NextDecoder(hopByHop.NextHeader)
 			}
 		}
 		return fmt.Errorf("IPv6 length 0, HopByHop header, but no jumbogram option")
+	} else {
+		pEnd := int(ip6.Length)
+		if pEnd > len(ip6.payload) {
+			p.SetTruncated()
+			pEnd = len(ip6.payload)
+		}
+		ip6.payload = ip6.payload[:pEnd]
 	}
 	return p.NextDecoder(ip6.NextHeader)
 }

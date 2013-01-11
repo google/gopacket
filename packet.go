@@ -14,6 +14,7 @@ import (
 	"io"
 	"os"
 	"reflect"
+	"runtime/debug"
 	"time"
 	"unicode"
 	"unicode/utf8"
@@ -105,6 +106,13 @@ type packet struct {
 	transport   TransportLayer
 	application ApplicationLayer
 	failure     ErrorLayer
+
+	// truncated is true if this packet was truncated during capture.
+	truncated bool
+}
+
+func (p *packet) SetTruncated() {
+	p.truncated = true
 }
 
 func (p *packet) SetLinkLayer(l LinkLayer) {
@@ -143,7 +151,7 @@ func (p *packet) AddLayer(l Layer) {
 }
 
 func (p *packet) DumpPacketData() {
-	fmt.Fprintf(os.Stderr, "DumpPacketData: %#v\n", p.data)
+	fmt.Fprint(os.Stderr, p.packetDump())
 	os.Stderr.Sync()
 }
 
@@ -155,15 +163,28 @@ func (p *packet) Data() []byte {
 	return p.data
 }
 
+func (p *packet) addFinalDecodeError(err error, stack []byte) {
+	fail := &DecodeFailure{err: err, stack: stack}
+	if p.last == nil {
+		fail.data = p.data
+	} else {
+		fail.data = p.last.LayerPayload()
+	}
+	p.AddLayer(fail)
+	p.SetErrorLayer(fail)
+	p.maybeAddTruncatedLayer()
+}
+
 func (p *packet) recoverDecodeError() {
 	if r := recover(); r != nil {
-		fail := &DecodeFailure{err: fmt.Errorf("%v", r)}
-		if p.last == nil {
-			fail.data = p.data
-		} else {
-			fail.data = p.last.LayerPayload()
-		}
-		p.AddLayer(fail)
+		p.addFinalDecodeError(fmt.Errorf("%v", r), debug.Stack())
+	}
+}
+
+func (p *packet) maybeAddTruncatedLayer() {
+	if p.truncated {
+		p.AddLayer(truncatedSingleton)
+		p.SetErrorLayer(truncatedSingleton)
 	}
 }
 
@@ -238,17 +259,18 @@ func layerString(i interface{}) string {
 	return fmt.Sprintf("%v", v.Interface())
 }
 
-func packetString(pLayers []Layer) string {
+func (p *packet) packetString() string {
 	var b bytes.Buffer
-	for i, l := range pLayers {
+	for i, l := range p.layers {
 		fmt.Fprintf(&b, "- Layer %d=%s\n", i+1, LayerString(l))
 	}
 	return b.String()
 }
 
-func packetDump(pLayers []Layer) string {
+func (p *packet) packetDump() string {
 	var b bytes.Buffer
-	for i, l := range pLayers {
+	fmt.Fprintf(&b, "-- FULL PACKET DATA (%d bytes) ------------------------------------\n%s", len(p.data), hex.Dump(p.data))
+	for i, l := range p.layers {
 		fmt.Fprintf(&b, "--- Layer %d ---\n%s", i+1, LayerDump(l))
 	}
 	return b.String()
@@ -281,7 +303,9 @@ func (p *eagerPacket) initialDecode(dec Decoder) {
 	defer p.recoverDecodeError()
 	err := dec.Decode(p.data, p)
 	if err != nil {
-		panic(err)
+		p.addFinalDecodeError(err, nil)
+	} else {
+		p.maybeAddTruncatedLayer()
 	}
 }
 func (p *eagerPacket) LinkLayer() LinkLayer {
@@ -318,8 +342,8 @@ func (p *eagerPacket) LayerClass(lc LayerClass) Layer {
 	}
 	return nil
 }
-func (p *eagerPacket) String() string { return packetString(p.Layers()) }
-func (p *eagerPacket) Dump() string   { return packetDump(p.Layers()) }
+func (p *eagerPacket) String() string { return p.packetString() }
+func (p *eagerPacket) Dump() string   { return p.packetDump() }
 
 // lazyPacket does lazy decoding on its packet data.  On construction it does
 // no initial decoding.  For each function call, it decodes only as many layers
@@ -339,6 +363,7 @@ func (p *lazyPacket) NextDecoder(next Decoder) error {
 }
 func (p *lazyPacket) decodeNextLayer() {
 	if p.next == nil {
+		p.maybeAddTruncatedLayer()
 		return
 	}
 	d := p.data
@@ -350,12 +375,13 @@ func (p *lazyPacket) decodeNextLayer() {
 	// We've just set p.next to nil, so if we see we have no data, this should be
 	// the final call we get to decodeNextLayer if we return here.
 	if len(d) == 0 {
+		p.maybeAddTruncatedLayer()
 		return
 	}
 	defer p.recoverDecodeError()
 	err := next.Decode(d, p)
 	if err != nil {
-		panic(err)
+		p.addFinalDecodeError(err, nil)
 	}
 }
 func (p *lazyPacket) LinkLayer() LinkLayer {
@@ -430,8 +456,8 @@ func (p *lazyPacket) LayerClass(lc LayerClass) Layer {
 	}
 	return nil
 }
-func (p *lazyPacket) String() string { return packetString(p.Layers()) }
-func (p *lazyPacket) Dump() string   { return packetDump(p.Layers()) }
+func (p *lazyPacket) String() string { p.Layers(); return p.packetString() }
+func (p *lazyPacket) Dump() string   { p.Layers(); return p.packetDump() }
 
 // DecodeOptions tells gopacket how to decode a packet.
 type DecodeOptions struct {

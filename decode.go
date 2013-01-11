@@ -7,9 +7,7 @@
 package gopacket
 
 import (
-	"encoding/hex"
 	"errors"
-	"fmt"
 )
 
 // PacketBuilder is used by layer decoders to store the layers they've decoded,
@@ -49,6 +47,10 @@ type PacketBuilder interface {
 	// data will be dumped to stderr so you can create a test.  This should never
 	// be called from a production decoder.
 	DumpPacketData()
+	// SetTruncated should be called if during decoding you notice that a packet
+	// is shorter than internal layer variables (HeaderLength, or the like) say it
+	// should be.
+	SetTruncated()
 }
 
 // Decoder is an interface for logic to decode a packet layer.  Users may
@@ -86,13 +88,18 @@ var LayerTypeDecodeFailure LayerType = RegisterLayerType(0, LayerTypeMetadata{"D
 // but treat as a success, IE: an application-level payload.
 var LayerTypePayload LayerType = RegisterLayerType(1, LayerTypeMetadata{"Payload", DecodePayload})
 
+// LayerTypeTruncated is the layer type for the Truncated layer, a special empty
+// layer inserted at the end of truncated packets.
+var LayerTypeTruncated LayerType = RegisterLayerType(2, LayerTypeMetadata{"Truncated", nil})
+
 // DecodeFailure is a packet layer created if decoding of the packet data failed
 // for some reason.  It implements ErrorLayer.  LayerContents will be the entire
 // set of bytes that failed to parse, and Error will return the reason parsing
 // failed.
 type DecodeFailure struct {
-	data []byte
-	err  error
+	data  []byte
+	err   error
+	stack []byte
 }
 
 // Error returns the error encountered during decoding.
@@ -100,7 +107,10 @@ func (d *DecodeFailure) Error() error          { return d.err }
 func (d *DecodeFailure) LayerContents() []byte { return d.data }
 func (d *DecodeFailure) LayerPayload() []byte  { return nil }
 func (d *DecodeFailure) String() string {
-	return fmt.Sprintf("ERROR: %v\n%v", d.err, hex.Dump(d.data))
+	if d.stack != nil {
+		return "Packet decoding panic: " + d.Error().Error() + "\n" + string(d.stack)
+	}
+	return "Packet decoding error: " + d.Error().Error()
 }
 
 // LayerType returns LayerTypeDecodeFailure
@@ -119,3 +129,16 @@ func decodePayload(data []byte, p PacketBuilder) error {
 	p.SetApplicationLayer(payload)
 	return nil
 }
+
+// truncated is returned as the last layer type in a truncated packet.  It is an
+// ErrorLayer, containing no contents or payload.
+type truncated struct{}
+
+var truncatedSingleton = &truncated{}
+var truncatedError = errors.New("Packet truncated")
+
+func (t *truncated) Error() error          { return truncatedError }
+func (t *truncated) LayerContents() []byte { return nil }
+func (t *truncated) LayerPayload() []byte  { return nil }
+func (t *truncated) String() string        { return "Packet was truncated, not all bytes available" }
+func (t *truncated) LayerType() LayerType  { return LayerTypeTruncated }

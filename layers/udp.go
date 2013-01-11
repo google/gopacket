@@ -37,7 +37,12 @@ func decodeUDP(data []byte, p gopacket.PacketBuilder) error {
 	}
 	switch {
 	case udp.Length >= 8:
-		udp.payload = data[8:udp.Length]
+		hlen := int(udp.Length)
+		if hlen > len(data) {
+			p.SetTruncated()
+			hlen = len(data)
+		}
+		udp.payload = data[8:hlen]
 	case udp.Length == 0: // Jumbogram, use entire rest of data
 		udp.payload = data[8:]
 	default:

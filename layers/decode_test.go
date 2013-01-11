@@ -362,14 +362,7 @@ func TestDecodeVLANPacket(t *testing.T) {
 		t.Logf("Layer %d: %#v", i, l)
 	}
 	want := []gopacket.LayerType{LayerTypeEthernet, LayerTypeDot1Q, LayerTypeIPv4, LayerTypeTCP}
-	if len(p.Layers()) != len(want) {
-		t.Fatal("Incorrect number of headers:", len(p.Layers()))
-	}
-	for i, l := range p.Layers() {
-		if l.LayerType() != want[i] {
-			t.Errorf("At index %d, got layer type %s, want %s", i, l.LayerType(), want[i])
-		}
-	}
+	checkLayers(p, want, t)
 }
 
 func TestDecodeSCTPPackets(t *testing.T) {
@@ -514,18 +507,7 @@ func TestDecodeCiscoDiscovery(t *testing.T) {
 	}
 	p := gopacket.NewPacket(data, LinkTypeEthernet, gopacket.Default)
 	wantLayers := []gopacket.LayerType{LayerTypeEthernet, LayerTypeLLC, LayerTypeSNAP, LayerTypeCiscoDiscovery}
-	layers := p.Layers()
-	for i, l := range layers {
-		t.Logf("Layer %d is %v:\n%#v", i, l.LayerType(), l)
-	}
-	if len(wantLayers) != len(layers) {
-		t.Fatalf("Got %d layers, want %d", len(layers), len(wantLayers))
-	}
-	for i, e := range wantLayers {
-		if layers[i].LayerType() != e {
-			t.Errorf("Layer %d want %v got %v", i, e, layers[i].LayerType())
-		}
-	}
+	checkLayers(p, wantLayers, t)
 }
 
 func TestDecodeIPv6Jumbogram(t *testing.T) {
@@ -540,22 +522,26 @@ func TestDecodeIPv6Jumbogram(t *testing.T) {
 	payload := strings.Repeat("payload", 9996)
 	data := []byte(dataStr + payload)
 	p := gopacket.NewPacket(data, LinkTypeEthernet, gopacket.Default)
-	layers := p.Layers()
-	wantLayers := []gopacket.LayerType{LayerTypeEthernet, LayerTypeIPv6, LayerTypeIPv6HopByHop, LayerTypeTCP, gopacket.LayerTypePayload}
-	for i, l := range layers {
-		t.Logf("Layer %d is %v:\n%#v", i, l.LayerType(), l)
-	}
-	if len(wantLayers) != len(layers) {
-		t.Fatalf("Got %d layers, want %d", len(layers), len(wantLayers))
-	}
-	for i, e := range wantLayers {
-		if layers[i].LayerType() != e {
-			t.Errorf("Layer %d want %v got %v", i, e, layers[i].LayerType())
-		}
-	}
+	checkLayers(p, []gopacket.LayerType{LayerTypeEthernet, LayerTypeIPv6, LayerTypeIPv6HopByHop, LayerTypeTCP, gopacket.LayerTypePayload}, t)
 	if p.ApplicationLayer() == nil {
 		t.Error("Packet has no application layer")
 	} else if string(p.ApplicationLayer().Payload()) != payload {
 		t.Errorf("Jumbogram payload wrong")
 	}
+	// Check truncated for jumbograms
+	data = data[:len(data)-1]
+	p = gopacket.NewPacket(data, LinkTypeEthernet, gopacket.Default)
+	checkLayers(p, []gopacket.LayerType{LayerTypeEthernet, LayerTypeIPv6, LayerTypeIPv6HopByHop, LayerTypeTCP, gopacket.LayerTypePayload, gopacket.LayerTypeTruncated}, t)
+}
+
+func TestDecodeUDPPacketTooSmall(t *testing.T) {
+	data := []byte{
+		0x00, 0x15, 0x2c, 0x9d, 0xcc, 0x00, 0x00, 0x10, 0xdb, 0xff, 0x10, 0x00, 0x81, 0x00, 0x01, 0xf7,
+		0x08, 0x00, 0x45, 0x60, 0x00, 0x3c, 0x0f, 0xa9, 0x00, 0x00, 0x6e, 0x11, 0x01, 0x0a, 0x47, 0xe6,
+		0xee, 0x2e, 0xac, 0x16, 0x59, 0x73, 0x00, 0x50, 0x00, 0x50, 0x00, 0x28, 0x4d, 0xad, 0x00, 0x67,
+		0x00, 0x01, 0x00, 0x72, 0xd5, 0xc7, 0xf1, 0x07, 0x00, 0x00, 0x01, 0x01, 0x00, 0x0d, 0x00, 0x00,
+		0x00, 0x14, 0x00, 0x00, 0x19, 0xba,
+	}
+	p := gopacket.NewPacket(data, LinkTypeEthernet, gopacket.Default)
+	checkLayers(p, []gopacket.LayerType{LayerTypeEthernet, LayerTypeDot1Q, LayerTypeIPv4, LayerTypeUDP, gopacket.LayerTypePayload, gopacket.LayerTypeTruncated}, t)
 }
