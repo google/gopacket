@@ -53,6 +53,10 @@ func decodeIPv6(data []byte, p gopacket.PacketBuilder) error {
 	}
 	p.AddLayer(ip6)
 	p.SetNetworkLayer(ip6)
+
+	// The following is a good candidate for code clean-up... it treats hop-by-hop
+	// as a special part of the IPv6 packet, since we require its information to
+	// correctly compute jumbogram size.
 	if ip6.Length == 0 {
 		if ip6.NextHeader != IPProtocolIPv6HopByHop {
 			return fmt.Errorf("IPv6 length 0, but next header is %v, not HopByHop", ip6.NextHeader)
@@ -67,9 +71,9 @@ func decodeIPv6(data []byte, p gopacket.PacketBuilder) error {
 					return fmt.Errorf("Invalid jumbo packet option length")
 				}
 				payloadLength := binary.BigEndian.Uint32(o.OptionData)
-				pEnd := len(ip6.payload)
-				if pEnd > int(payloadLength) {
-					pEnd = int(payloadLength)
+				pEnd := len(data)
+				if pEnd > 40+int(payloadLength) {
+					pEnd = 40 + int(payloadLength)
 				}
 				ip6.payload = data[40:pEnd]
 				hopByHop.payload = data[40+len(hopByHop.contents) : pEnd]
@@ -83,11 +87,11 @@ func decodeIPv6(data []byte, p gopacket.PacketBuilder) error {
 
 func getIPv6HopByHop(data []byte) *IPv6HopByHop {
 	i := &IPv6HopByHop{
-		ipv6ExtensionBase: decodeIPv6ExensionBase(data),
+		ipv6ExtensionBase: decodeIPv6ExtensionBase(data),
 		Options:           make([]IPv6HopByHopOption, 0, 2),
 	}
 	var opt *IPv6HopByHopOption
-	for d := i.contents; len(d) > 0; d = d[:opt.OptionLength] {
+	for d := i.contents; len(d) > 0; d = d[opt.ActualLength:] {
 		i.Options = append(i.Options, IPv6HopByHopOption(decodeIPv6HeaderTLVOption(d)))
 		opt = &i.Options[len(i.Options)-1]
 	}
@@ -102,18 +106,19 @@ func decodeIPv6HopByHop(data []byte, p gopacket.PacketBuilder) error {
 
 type ipv6HeaderTLVOption struct {
 	OptionType, OptionLength uint8
+	ActualLength             int
 	OptionData               []byte
 }
 
 func decodeIPv6HeaderTLVOption(data []byte) (h ipv6HeaderTLVOption) {
 	if data[0] == 0 {
-		h.OptionLength = 1
+		h.ActualLength = 1
 		return
-	} else {
-		h.OptionType = data[0]
-		h.OptionLength = data[1]
-		h.OptionData = data[2 : h.OptionLength+2]
 	}
+	h.OptionType = data[0]
+	h.OptionLength = data[1]
+	h.ActualLength = int(h.OptionLength) + 2
+	h.OptionData = data[2:h.ActualLength]
 	return
 }
 
@@ -124,14 +129,15 @@ type ipv6ExtensionBase struct {
 	baseLayer
 	NextHeader   IPProtocol
 	HeaderLength uint8
+	ActualLength int
 }
 
-func decodeIPv6ExensionBase(data []byte) (i ipv6ExtensionBase) {
+func decodeIPv6ExtensionBase(data []byte) (i ipv6ExtensionBase) {
 	i.NextHeader = IPProtocol(data[0])
 	i.HeaderLength = data[1]
-	hlen := int(i.HeaderLength) * 8
-	i.contents = data[:hlen]
-	i.payload = data[hlen:]
+	i.ActualLength = int(i.HeaderLength)*8 + 8
+	i.contents = data[:i.ActualLength]
+	i.payload = data[i.ActualLength:]
 	return
 }
 
@@ -162,7 +168,7 @@ func (i *IPv6Routing) LayerType() gopacket.LayerType { return LayerTypeIPv6Routi
 
 func decodeIPv6Routing(data []byte, p gopacket.PacketBuilder) error {
 	i := &IPv6Routing{
-		ipv6ExtensionBase: decodeIPv6ExensionBase(data),
+		ipv6ExtensionBase: decodeIPv6ExtensionBase(data),
 		RoutingType:       data[2],
 		SegmentsLeft:      data[3],
 		Reserved:          data[4:8],
@@ -225,11 +231,11 @@ func (i *IPv6Destination) LayerType() gopacket.LayerType { return LayerTypeIPv6D
 
 func decodeIPv6Destination(data []byte, p gopacket.PacketBuilder) error {
 	i := &IPv6Destination{
-		ipv6ExtensionBase: decodeIPv6ExensionBase(data),
+		ipv6ExtensionBase: decodeIPv6ExtensionBase(data),
 		Options:           make([]IPv6DestinationOption, 0, 2),
 	}
 	var opt *IPv6DestinationOption
-	for d := i.contents; len(d) > 0; d = d[:opt.OptionLength] {
+	for d := i.contents; len(d) > 0; d = d[opt.ActualLength:] {
 		i.Options = append(i.Options, IPv6DestinationOption(decodeIPv6HeaderTLVOption(d)))
 		opt = &i.Options[len(i.Options)-1]
 	}
