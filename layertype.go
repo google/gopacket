@@ -33,6 +33,8 @@ type layerTypeMetadata struct {
 	LayerTypeMetadata
 }
 
+var DecodersByLayerName = map[string]Decoder{}
+
 const maxLayerType = 2000
 
 var ltMeta [maxLayerType]layerTypeMetadata
@@ -63,6 +65,7 @@ func RegisterLayerType(num int, meta LayerTypeMetadata) LayerType {
 			LayerTypeMetadata: meta,
 		}
 	}
+	DecodersByLayerName[meta.Name] = meta.Decoder
 	return LayerType(num)
 }
 
