@@ -44,6 +44,11 @@ type PacketBuilder interface {
 	// PacketBuilder calls have been made.  Set*Layer and AddLayer calls after
 	// NextDecoder calls will behave incorrectly.
 	NextDecoder(next Decoder) error
+	// DumpPacketData is used solely for decoding.  If you come across an error
+	// you need to diagnose while processing a packet, call this and your packet's
+	// data will be dumped to stderr so you can create a test.  This should never
+	// be called from a production decoder.
+	DumpPacketData()
 }
 
 // Decoder is an interface for logic to decode a packet layer.  Users may
@@ -111,5 +116,6 @@ func decodeUnknown(data []byte, p PacketBuilder) error {
 func decodePayload(data []byte, p PacketBuilder) error {
 	payload := &Payload{data: data}
 	p.AddLayer(payload)
+	p.SetApplicationLayer(payload)
 	return nil
 }

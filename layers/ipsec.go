@@ -28,7 +28,7 @@ func (i *IPSecAH) LayerType() gopacket.LayerType { return LayerTypeIPSecAH }
 
 func decodeIPSecAH(data []byte, p gopacket.PacketBuilder) error {
 	i := &IPSecAH{
-		ipv6ExtensionBase: decodeIPv6ExensionBase(data),
+		ipv6ExtensionBase: decodeIPv6ExtensionBase(data),
 		Reserved:          binary.BigEndian.Uint16(data[2:4]),
 		SPI:               binary.BigEndian.Uint32(data[4:8]),
 		Seq:               binary.BigEndian.Uint32(data[8:12]),

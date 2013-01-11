@@ -12,6 +12,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"os"
 	"reflect"
 	"time"
 	"unicode"
@@ -139,6 +140,11 @@ func (p *packet) SetErrorLayer(l ErrorLayer) {
 func (p *packet) AddLayer(l Layer) {
 	p.layers = append(p.layers, l)
 	p.last = l
+}
+
+func (p *packet) DumpPacketData() {
+	fmt.Fprintf(os.Stderr, "DumpPacketData: %#v\n", p.data)
+	os.Stderr.Sync()
 }
 
 func (p *packet) CaptureInfo() *CaptureInfo {

@@ -11,6 +11,7 @@ import (
 	"fmt"
 	"github.com/gconnell/gopacket"
 	"reflect"
+	"strings"
 	"testing"
 )
 
@@ -524,5 +525,37 @@ func TestDecodeCiscoDiscovery(t *testing.T) {
 		if layers[i].LayerType() != e {
 			t.Errorf("Layer %d want %v got %v", i, e, layers[i].LayerType())
 		}
+	}
+}
+
+func TestDecodeIPv6Jumbogram(t *testing.T) {
+	// Haven't found any of these in the wild or on example pcaps online, so had
+	// to generate one myself via scapy.  Unfortunately, scapy can only
+	// str(packet) for packets with length < 65536, due to limitations in python's
+	// struct library, so I generated the header with:
+	// Ether() / IPv6(src='::1', dst='::2') / IPv6ExtHdrHopByHop(options=[Jumbo(jumboplen=70000)]) / TCP(sport=8888, dport=80)
+	// then added the payload manually ("payload" * 9996).  The checksums here are
+	// not correct, but we don't check, so who cares ;)
+	dataStr := "\x00\x1f\xca\xb3v@$\xbe\x05'\x0b\x17\x86\xdd`\x00\x00\x00\x00\x00\x00@\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x01\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x02\x06\x00\xc2\x04\x00\x01\x11p\"\xb8\x00P\x00\x00\x00\x00\x00\x00\x00\x00P\x02 \x00l\xd8\x00\x00"
+	payload := strings.Repeat("payload", 9996)
+	data := []byte(dataStr + payload)
+	p := gopacket.NewPacket(data, LinkTypeEthernet, gopacket.Default)
+	layers := p.Layers()
+	wantLayers := []gopacket.LayerType{LayerTypeEthernet, LayerTypeIPv6, LayerTypeIPv6HopByHop, LayerTypeTCP, gopacket.LayerTypePayload}
+	for i, l := range layers {
+		t.Logf("Layer %d is %v:\n%#v", i, l.LayerType(), l)
+	}
+	if len(wantLayers) != len(layers) {
+		t.Fatalf("Got %d layers, want %d", len(layers), len(wantLayers))
+	}
+	for i, e := range wantLayers {
+		if layers[i].LayerType() != e {
+			t.Errorf("Layer %d want %v got %v", i, e, layers[i].LayerType())
+		}
+	}
+	if p.ApplicationLayer() == nil {
+		t.Error("Packet has no application layer")
+	} else if string(p.ApplicationLayer().Payload()) != payload {
+		t.Errorf("Jumbogram payload wrong")
 	}
 }

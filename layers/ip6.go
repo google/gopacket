@@ -34,6 +34,10 @@ func (i *IPv6) NetworkFlow() gopacket.Flow {
 	return gopacket.NewFlow(EndpointIPv6, i.SrcIP, i.DstIP)
 }
 
+const (
+	IPv6HopByHopOptionJumbogram = 0xC2 // RFC 2675
+)
+
 func decodeIPv6(data []byte, p gopacket.PacketBuilder) error {
 	ip6 := &IPv6{
 		Version:      uint8(data[0]) >> 4,
@@ -66,7 +70,7 @@ func decodeIPv6(data []byte, p gopacket.PacketBuilder) error {
 		hopByHop := getIPv6HopByHop(ip6.payload)
 		p.AddLayer(hopByHop)
 		for _, o := range hopByHop.Options {
-			if o.OptionType == 0xC6 { // Jumbogram option (RFC2675)
+			if o.OptionType == IPv6HopByHopOptionJumbogram {
 				if len(o.OptionData) != 4 {
 					return fmt.Errorf("Invalid jumbo packet option length")
 				}
@@ -88,10 +92,12 @@ func decodeIPv6(data []byte, p gopacket.PacketBuilder) error {
 func getIPv6HopByHop(data []byte) *IPv6HopByHop {
 	i := &IPv6HopByHop{
 		ipv6ExtensionBase: decodeIPv6ExtensionBase(data),
-		Options:           make([]IPv6HopByHopOption, 0, 2),
+		// We guess we'll 1-2 options, one regular option at least, then maybe one
+		// padding option.
+		Options: make([]IPv6HopByHopOption, 0, 2),
 	}
 	var opt *IPv6HopByHopOption
-	for d := i.contents; len(d) > 0; d = d[opt.ActualLength:] {
+	for d := i.contents[2:]; len(d) > 0; d = d[opt.ActualLength:] {
 		i.Options = append(i.Options, IPv6HopByHopOption(decodeIPv6HeaderTLVOption(d)))
 		opt = &i.Options[len(i.Options)-1]
 	}
@@ -232,10 +238,12 @@ func (i *IPv6Destination) LayerType() gopacket.LayerType { return LayerTypeIPv6D
 func decodeIPv6Destination(data []byte, p gopacket.PacketBuilder) error {
 	i := &IPv6Destination{
 		ipv6ExtensionBase: decodeIPv6ExtensionBase(data),
-		Options:           make([]IPv6DestinationOption, 0, 2),
+		// We guess we'll 1-2 options, one regular option at least, then maybe one
+		// padding option.
+		Options: make([]IPv6DestinationOption, 0, 2),
 	}
 	var opt *IPv6DestinationOption
-	for d := i.contents; len(d) > 0; d = d[opt.ActualLength:] {
+	for d := i.contents[2:]; len(d) > 0; d = d[opt.ActualLength:] {
 		i.Options = append(i.Options, IPv6DestinationOption(decodeIPv6HeaderTLVOption(d)))
 		opt = &i.Options[len(i.Options)-1]
 	}
