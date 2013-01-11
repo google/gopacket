@@ -16,8 +16,6 @@ import (
 	"reflect"
 	"runtime/debug"
 	"time"
-	"unicode"
-	"unicode/utf8"
 )
 
 // CaptureInfo contains capture metadata for a packet.  If a packet was captured
@@ -201,7 +199,7 @@ func (p *packet) maybeAddTruncatedLayer() {
 // Payload layer and it's internal 'data' field, which contains a large byte
 // array that would really mess up formatting.
 func LayerString(l Layer) string {
-	return fmt.Sprintf("%v\t%s", l.LayerType(), layerString(l))
+	return fmt.Sprintf("%v\t%s", l.LayerType(), layerString(l, false, false))
 }
 
 // LayerDump outputs a very verbose string representation of a layer.  Its
@@ -213,7 +211,14 @@ func LayerDump(l Layer) string {
 
 // layerString outputs, recursively, a layer in a "smart" way.  See docs for
 // LayerString for more details.
-func layerString(i interface{}) string {
+//
+// Params:
+//   i - value to write out
+//   anonymous:  if we're currently recursing an anonymous member of a struct
+//   writeSpace:  if we've already written a value in a struct, and need to
+//     write a space before writing more.  This happens when we write various
+//     anonymous values, and need to keep writing more.
+func layerString(i interface{}, anonymous bool, writeSpace bool) string {
 	// Let String() functions take precedence.
 	if s, ok := i.(fmt.Stringer); ok {
 		return s.String()
@@ -223,26 +228,32 @@ func layerString(i interface{}) string {
 	switch v.Type().Kind() {
 	case reflect.Interface, reflect.Ptr:
 		r := v.Elem()
-		return layerString(r.Interface())
+		return layerString(r.Interface(), anonymous, writeSpace)
 	case reflect.Struct:
 		var b bytes.Buffer
 		typ := v.Type()
-		b.WriteByte('{')
-		writeSpace := false
+		if !anonymous {
+			b.WriteByte('{')
+		}
 		for i := 0; i < v.NumField(); i++ {
 			// Check if this is upper-case.
-			first, _ := utf8.DecodeRuneInString(typ.Field(i).Name)
-			if !unicode.IsUpper(first) {
-				continue
-			}
+			ftype := typ.Field(i)
 			f := v.Field(i)
-			if writeSpace {
-				b.WriteByte(' ')
+			if ftype.Anonymous {
+				anonStr := layerString(f.Interface(), true, writeSpace)
+				writeSpace = writeSpace || anonStr != ""
+				b.WriteString(anonStr)
+			} else if ftype.PkgPath == "" { // exported
+				if writeSpace {
+					b.WriteByte(' ')
+				}
+				writeSpace = true
+				fmt.Fprintf(&b, "%s=%s", typ.Field(i).Name, layerString(f.Interface(), false, writeSpace))
 			}
-			writeSpace = true
-			fmt.Fprintf(&b, "%s=%s", typ.Field(i).Name, layerString(f.Interface()))
 		}
-		b.WriteByte('}')
+		if !anonymous {
+			b.WriteByte('}')
+		}
 		return b.String()
 	case reflect.Slice:
 		var b bytes.Buffer
@@ -251,7 +262,7 @@ func layerString(i interface{}) string {
 			if j != 0 {
 				b.WriteString(", ")
 			}
-			b.WriteString(layerString(v.Index(j).Interface()))
+			b.WriteString(layerString(v.Index(j).Interface(), false, false))
 		}
 		b.WriteByte(']')
 		return b.String()
