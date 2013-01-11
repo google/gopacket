@@ -72,6 +72,7 @@ fi
 go fmt ./...
 gofmt -w gen.go
 go build gen.go
+go test -i ./... 2>/dev/null >/dev/null || true
 go test
 pushd layers
 gofmt -w gen.go
@@ -80,18 +81,12 @@ go test
 popd
 if [ -f /usr/include/pcap.h ]; then
 	pushd pcap
-	go test
-	gofmt -w benchmark.go
-	go build benchmark.go
-	gofmt -w tcpdump.go
-	go build tcpdump.go
+	go test ./...
 	popd
 fi
 if [ -f /usr/include/pfring.h ]; then
 	pushd pfring
-	go test
-	gofmt -w simple.go
-	go build simple.go
+	go test ./...
 	popd
 fi
 
@@ -142,7 +137,7 @@ cat >> $COMMIT_FILE <<EOF
 
 PCAP BENCHMARK
 EOF
-go run pcap/benchmark.go 2>&1 | tee -a $COMMIT_FILE
+go run pcap/gopacket_benchmark/*.go 2>&1 | tee -a $COMMIT_FILE
 
 
 
@@ -164,7 +159,7 @@ cat >> $COMMIT_FILE <<EOF
 
 OLD PCAP BENCHMARK
 EOF
-go run pcap/benchmark.go 2>&1 | tee -a $COMMIT_FILE
+go run pcap/gopacket_benchmark/*.go 2>&1 | tee -a $COMMIT_FILE
 
 
 

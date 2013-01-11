@@ -4,8 +4,6 @@
 // that can be found in the LICENSE file in the root of the source
 // tree.
 
-// +build ignore
-
 // This benchmark reads in file <tempdir>/gopacket_benchmark.pcap and measures
 // the time it takes to decode all packets from that file.  If the file doesn't
 // exist, it's pulled down from a publicly available location.  However, you can

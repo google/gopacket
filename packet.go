@@ -663,7 +663,7 @@ func (p *PacketSource) packetsToChannel(c chan<- Packet) {
 //    handlePacket(packet)  // Do something with each packet.
 //  }
 func (p *PacketSource) Packets() chan Packet {
-	c := make(chan Packet)
+	c := make(chan Packet, 1000)
 	go p.packetsToChannel(c)
 	return c
 }

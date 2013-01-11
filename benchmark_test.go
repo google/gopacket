@@ -7,6 +7,7 @@
 package gopacket
 
 import (
+	"runtime"
 	"testing"
 )
 
@@ -97,5 +98,34 @@ func BenchmarkPassDecodeOptionsByValue(b *testing.B) {
 func BenchmarkPassDecodeOptionsByPointer(b *testing.B) {
 	for i := 0; i < b.N; i++ {
 		decodeOptsByPointer(&decodeOpts)
+	}
+}
+
+func BenchmarkLockOSThread(b *testing.B) {
+	for i := 0; i < b.N; i++ {
+		runtime.LockOSThread()
+	}
+}
+func BenchmarkUnlockOSThread(b *testing.B) {
+	for i := 0; i < b.N; i++ {
+		runtime.UnlockOSThread()
+	}
+}
+func lockUnlock() {
+	runtime.LockOSThread()
+	runtime.UnlockOSThread()
+}
+func lockDeferUnlock() {
+	runtime.LockOSThread()
+	defer runtime.UnlockOSThread()
+}
+func BenchmarkLockUnlockOSThread(b *testing.B) {
+	for i := 0; i < b.N; i++ {
+		lockUnlock()
+	}
+}
+func BenchmarkLockDeferUnlockOSThread(b *testing.B) {
+	for i := 0; i < b.N; i++ {
+		lockDeferUnlock()
 	}
 }

@@ -20,6 +20,7 @@ import (
 	"github.com/gconnell/gopacket/layers"
 	"io"
 	"net"
+	"runtime"
 	"strconv"
 	"syscall"
 	"time"
@@ -142,6 +143,7 @@ func (p *Handle) ReadPacketData() (data []byte, ci gopacket.CaptureInfo, err err
 	var buf_ptr *C.u_char
 	var buf unsafe.Pointer
 
+	runtime.LockOSThread()
 	result := NextError(C.pcap_next_ex(p.cptr, &pkthdr, &buf_ptr))
 
 	buf = unsafe.Pointer(buf_ptr)
@@ -152,12 +154,14 @@ func (p *Handle) ReadPacketData() (data []byte, ci gopacket.CaptureInfo, err err
 		} else {
 			err = result
 		}
+		runtime.UnlockOSThread()
 		return
 	}
 	data = C.GoBytes(buf, C.int(pkthdr.caplen))
 	ci.Timestamp = time.Unix(int64(pkthdr.ts.tv_sec), int64(pkthdr.ts.tv_usec))
 	ci.CaptureLength = int(pkthdr.caplen)
 	ci.Length = int(pkthdr.len)
+	runtime.UnlockOSThread()
 	return
 }
 

@@ -20,6 +20,7 @@ import (
 	"fmt"
 	"github.com/gconnell/gopacket"
 	"os"
+	"runtime"
 	"strconv"
 	"time"
 	"unsafe"
@@ -97,8 +98,12 @@ func (n NextResult) Error() string {
 // returned error is nil.
 func (r *Ring) ReadPacketData() (data []byte, ci gopacket.CaptureInfo, err error) {
 	var pkthdr C.struct_pfring_pkthdr
-
 	data = make([]byte, r.snaplen)
+	runtime.LockOSThread()
+	// Note:  We don't 'defer runtime.UnlockOSThread()', since it appears to take
+	// about 17x longer to lock/defer than to simply lock/unlock.  (7ns vs 120ns).
+	// Thus, we have to be careful to unlock for each return.
+
 	// This tricky buf_ptr points to the start of our slice data, so pfring_recv
 	// will actually write directly into our Go slice.  Nice!
 	var buf_ptr *C.u_char = (*C.u_char)(unsafe.Pointer(&data[0]))
@@ -106,11 +111,16 @@ func (r *Ring) ReadPacketData() (data []byte, ci gopacket.CaptureInfo, err error
 	if result != NextOk {
 		err = result
 		data = nil
+		runtime.UnlockOSThread()
 		return
 	}
 	ci.Timestamp = time.Unix(int64(pkthdr.ts.tv_sec), int64(pkthdr.ts.tv_usec))
 	ci.CaptureLength = int(pkthdr.caplen)
 	ci.Length = int(pkthdr.len)
+	runtime.UnlockOSThread()
+	// Do this after unlocking, since a panic caused by an invalid slice, while it
+	// should never happen, would result in not unlocking the thread.
+	data = data[:ci.Length]
 	return
 }
 
