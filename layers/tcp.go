@@ -77,6 +77,9 @@ func decodeTCP(data []byte, p gopacket.PacketBuilder) error {
 	p.AddLayer(tcp)
 	p.SetTransportLayer(tcp)
 	hlen := int(tcp.DataOffset) * 4
+	if hlen < 20 {
+		return fmt.Errorf("Invalid TCP data offset %d < 20 bytes", hlen)
+	}
 	if hlen > len(data) {
 		hlen = len(data)
 		p.SetTruncated()
@@ -99,6 +102,9 @@ func decodeTCP(data []byte, p gopacket.PacketBuilder) error {
 			opt.OptionLength = 1
 		default:
 			opt.OptionLength = d[1]
+			if opt.OptionLength < 2 {
+				return fmt.Errorf("Invalid TCP option length %d < 2", opt.OptionLength)
+			}
 			if len(d) < int(opt.OptionLength) {
 				p.SetTruncated()
 				truncated = true
