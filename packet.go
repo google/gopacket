@@ -110,7 +110,25 @@ type packet struct {
 }
 
 func (p *packet) SetTruncated() {
-	p.truncated = true
+	if !p.truncated {
+		p.truncated = true
+		// the truncated layer acts a little differently than any other layer.  It
+		// has no contents or payload, and is only set in place to mark that the
+		// rest of the packet is truncated, and thus future error layers are
+		// probably caused by this problem.  The fact that it has no contents,
+		// though, doesn't really work for the packet object, which uses
+		// last.LayerContents() to find the next set of bytes to decode.  Because of
+		// this, when we insert the Truncated layer, we reset p.last to the value
+		// before it, thus keeping the decoding going.  Another alternative was to
+		// make TruncatedLayer.LayerContents() return the previous layer's
+		// LayerContents(), but this would have shown duplicate layer contents in
+		// LayerDump, required TruncatedLayer to no longer be a singleton, and
+		// overall just been sad.
+		last := p.last
+		p.AddLayer(TruncatedLayer)
+		p.SetErrorLayer(TruncatedLayer)
+		p.last = last
+	}
 }
 
 func (p *packet) SetLinkLayer(l LinkLayer) {
@@ -170,19 +188,11 @@ func (p *packet) addFinalDecodeError(err error, stack []byte) {
 	}
 	p.AddLayer(fail)
 	p.SetErrorLayer(fail)
-	p.maybeAddTruncatedLayer()
 }
 
 func (p *packet) recoverDecodeError() {
 	if r := recover(); r != nil {
 		p.addFinalDecodeError(fmt.Errorf("%v", r), debug.Stack())
-	}
-}
-
-func (p *packet) maybeAddTruncatedLayer() {
-	if p.truncated {
-		p.AddLayer(truncatedSingleton)
-		p.SetErrorLayer(truncatedSingleton)
 	}
 }
 
@@ -334,8 +344,6 @@ func (p *eagerPacket) initialDecode(dec Decoder) {
 	err := dec.Decode(p.data, p)
 	if err != nil {
 		p.addFinalDecodeError(err, nil)
-	} else {
-		p.maybeAddTruncatedLayer()
 	}
 }
 func (p *eagerPacket) LinkLayer() LinkLayer {
@@ -393,7 +401,6 @@ func (p *lazyPacket) NextDecoder(next Decoder) error {
 }
 func (p *lazyPacket) decodeNextLayer() {
 	if p.next == nil {
-		p.maybeAddTruncatedLayer()
 		return
 	}
 	d := p.data
@@ -405,7 +412,6 @@ func (p *lazyPacket) decodeNextLayer() {
 	// We've just set p.next to nil, so if we see we have no data, this should be
 	// the final call we get to decodeNextLayer if we return here.
 	if len(d) == 0 {
-		p.maybeAddTruncatedLayer()
 		return
 	}
 	defer p.recoverDecodeError()
