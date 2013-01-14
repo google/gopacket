@@ -531,7 +531,10 @@ func TestDecodeIPv6Jumbogram(t *testing.T) {
 	// Check truncated for jumbograms
 	data = data[:len(data)-1]
 	p = gopacket.NewPacket(data, LinkTypeEthernet, gopacket.Default)
-	checkLayers(p, []gopacket.LayerType{LayerTypeEthernet, LayerTypeIPv6, LayerTypeIPv6HopByHop, gopacket.LayerTypeTruncated, LayerTypeTCP, gopacket.LayerTypePayload}, t)
+	checkLayers(p, []gopacket.LayerType{LayerTypeEthernet, LayerTypeIPv6, LayerTypeIPv6HopByHop, LayerTypeTCP, gopacket.LayerTypePayload}, t)
+	if !p.Metadata().Truncated {
+		t.Error("Jumbogram should be truncated")
+	}
 }
 
 func TestDecodeUDPPacketTooSmall(t *testing.T) {
@@ -543,5 +546,8 @@ func TestDecodeUDPPacketTooSmall(t *testing.T) {
 		0x00, 0x14, 0x00, 0x00, 0x19, 0xba,
 	}
 	p := gopacket.NewPacket(data, LinkTypeEthernet, gopacket.Default)
-	checkLayers(p, []gopacket.LayerType{LayerTypeEthernet, LayerTypeDot1Q, LayerTypeIPv4, gopacket.LayerTypeTruncated, LayerTypeUDP, gopacket.LayerTypePayload}, t)
+	checkLayers(p, []gopacket.LayerType{LayerTypeEthernet, LayerTypeDot1Q, LayerTypeIPv4, LayerTypeUDP, gopacket.LayerTypePayload}, t)
+	if !p.Metadata().Truncated {
+		t.Error("UDP short packet should be truncated")
+	}
 }

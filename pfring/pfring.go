@@ -108,7 +108,6 @@ func (r *Ring) ReadPacketData() (data []byte, ci gopacket.CaptureInfo, err error
 		data = nil
 		return
 	}
-	ci.Populated = true
 	ci.Timestamp = time.Unix(int64(pkthdr.ts.tv_sec), int64(pkthdr.ts.tv_usec))
 	ci.CaptureLength = int(pkthdr.caplen)
 	ci.Length = int(pkthdr.len)

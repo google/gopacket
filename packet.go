@@ -18,16 +18,25 @@ import (
 	"time"
 )
 
-// CaptureInfo contains capture metadata for a packet.  If a packet was captured
-// off the wire or read from a pcap file (see the 'pcap' subdirectory), this
-// information will be attached to the packet.
 type CaptureInfo struct {
-	// Populated is set to true if the rest of the CaptureInfo has been populated
-	// with actual information.  If Populated is false, there's no point in
-	// reading any of the other fields.
-	Populated             bool
-	Timestamp             time.Time
-	CaptureLength, Length int
+	// Timestamp is the time the packet was captured, if that is known.
+	Timestamp time.Time
+	// CaptureLength is the total number of bytes read off of the wire.
+	CaptureLength int
+	// Length is the size of the original packet.  Should always be >=
+	// CaptureLength.
+	Length int
+}
+
+// PacketMetadata contains metadata for a packet.
+type PacketMetadata struct {
+	CaptureInfo
+	// Truncated is true if packet decoding logic detects that there are fewer
+	// bytes in the packet than are detailed in various headers (for example, if
+	// the number of bytes in the IPv4 contents/payload is less than IPv4.Length).
+	// This is also set automatically for packets captured off the wire if
+	// CaptureInfo.CaptureLength < CaptureInfo.Length.
+	Truncated bool
 }
 
 // Packet is the primary object used by gopacket.  Packets are created by a
@@ -75,10 +84,8 @@ type Packet interface {
 	//// ------------------------------------------------------------------
 	// Data returns the set of bytes that make up this entire packet.
 	Data() []byte
-	// CaptureInfo returns the caputure information for this packet.  This returns
-	// a pointer to the packet's struct, so it can be used both for reading and
-	// writing the information.
-	CaptureInfo() *CaptureInfo
+	// Metadata returns packet metadata associated with this packet.
+	Metadata() PacketMetadata
 }
 
 // packet contains all the information we need to fulfill the Packet interface,
@@ -95,8 +102,8 @@ type packet struct {
 	layers []Layer
 	// last is the last layer added to the packet
 	last Layer
-	// capInfo is the CaptureInfo for this packet
-	capInfo CaptureInfo
+	// metadata is the PacketMetadata for this packet
+	metadata PacketMetadata
 
 	// Pointers to the various important layers
 	link        LinkLayer
@@ -104,31 +111,10 @@ type packet struct {
 	transport   TransportLayer
 	application ApplicationLayer
 	failure     ErrorLayer
-
-	// truncated is true if this packet was truncated during capture.
-	truncated bool
 }
 
 func (p *packet) SetTruncated() {
-	if !p.truncated {
-		p.truncated = true
-		// the truncated layer acts a little differently than any other layer.  It
-		// has no contents or payload, and is only set in place to mark that the
-		// rest of the packet is truncated, and thus future error layers are
-		// probably caused by this problem.  The fact that it has no contents,
-		// though, doesn't really work for the packet object, which uses
-		// last.LayerContents() to find the next set of bytes to decode.  Because of
-		// this, when we insert the Truncated layer, we reset p.last to the value
-		// before it, thus keeping the decoding going.  Another alternative was to
-		// make TruncatedLayer.LayerContents() return the previous layer's
-		// LayerContents(), but this would have shown duplicate layer contents in
-		// LayerDump, required TruncatedLayer to no longer be a singleton, and
-		// overall just been sad.
-		last := p.last
-		p.AddLayer(TruncatedLayer)
-		p.SetErrorLayer(TruncatedLayer)
-		p.last = last
-	}
+	p.metadata.Truncated = true
 }
 
 func (p *packet) SetLinkLayer(l LinkLayer) {
@@ -171,8 +157,8 @@ func (p *packet) DumpPacketData() {
 	os.Stderr.Sync()
 }
 
-func (p *packet) CaptureInfo() *CaptureInfo {
-	return &p.capInfo
+func (p *packet) Metadata() PacketMetadata {
+	return p.metadata
 }
 
 func (p *packet) Data() []byte {
@@ -301,6 +287,17 @@ func layerString(i interface{}, anonymous bool, writeSpace bool) string {
 
 func (p *packet) packetString() string {
 	var b bytes.Buffer
+	fmt.Fprintf(&b, "PACKET: %d bytes", len(p.Data()))
+	if p.metadata.Truncated {
+		b.WriteString(", truncated")
+	}
+	if p.metadata.Length > 0 {
+		fmt.Fprintf(&b, ", wire length %d cap length %d", p.metadata.Length, p.metadata.CaptureLength)
+	}
+	if !p.metadata.Timestamp.IsZero() {
+		fmt.Fprintf(&b, " @ %v", p.metadata.Timestamp)
+	}
+	b.WriteByte('\n')
 	for i, l := range p.layers {
 		fmt.Fprintf(&b, "- Layer %d=%s\n", i+1, LayerString(l))
 	}
@@ -528,7 +525,14 @@ var NoCopy DecodeOptions = DecodeOptions{NoCopy: true}
 // NewPacket creates a new Packet object from a set of bytes.  The
 // firstLayerDecoder tells it how to interpret the first layer from the bytes,
 // future layers will be generated from that first layer automatically.
-func NewPacket(data []byte, firstLayerDecoder Decoder, options DecodeOptions) Packet {
+func NewPacket(data []byte, firstLayerDecoder Decoder, options DecodeOptions) (p Packet) {
+	p, _ = newPacket(data, firstLayerDecoder, options)
+	return
+}
+
+// newPacket is an internal version of NewPacket that also returns the
+// underlying *packet.
+func newPacket(data []byte, firstLayerDecoder Decoder, options DecodeOptions) (Packet, *packet) {
 	if !options.NoCopy {
 		dataCopy := make([]byte, len(data))
 		copy(dataCopy, data)
@@ -550,14 +554,14 @@ func NewPacket(data []byte, firstLayerDecoder Decoder, options DecodeOptions) Pa
 		// runtime.morestack/runtime.lessstack.  We'll hope the compiler gets better
 		// over time and we get this optimization for free.  Until then, we'll have
 		// to live with slower packet processing.
-		return p
+		return p, &p.packet
 	}
 	p := &eagerPacket{
 		packet: packet{data: data},
 	}
 	p.layers = p.initialLayers[:0]
 	p.initialDecode(firstLayerDecoder)
-	return p
+	return p, &p.packet
 }
 
 // PacketDataSource is an interface for some source of packet data.  Users may
@@ -634,8 +638,9 @@ func (p *PacketSource) NextPacket() (Packet, error) {
 	if err != nil {
 		return nil, err
 	}
-	packet := NewPacket(data, p.decoder, p.DecodeOptions)
-	*packet.CaptureInfo() = ci
+	packet, packetInternal := newPacket(data, p.decoder, p.DecodeOptions)
+	packetInternal.metadata.CaptureInfo = ci
+	packetInternal.metadata.Truncated = ci.CaptureLength < ci.Length
 	return packet, nil
 }
 

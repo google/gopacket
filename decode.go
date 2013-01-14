@@ -49,20 +49,7 @@ type PacketBuilder interface {
 	DumpPacketData()
 	// SetTruncated should be called if during decoding you notice that a packet
 	// is shorter than internal layer variables (HeaderLength, or the like) say it
-	// should be.
-	//
-	// This function adds a TruncatedLayer to the packet that's being built.
-	// Decoders should never add TruncatedLayer directly... instead, they should call
-	// SetTruncated.  As well as adding a TruncatedLayer, it also sets the error
-	// layer to that layer.  Again, decoders should never
-	// SetErrorLayer(TruncatedLayer)... just call SetTruncated().
-	//
-	// TruncatedLayer is very nice, since it gives a good reason why future error
-	// layers, specifically DecodeFailure, are around.  If a decoder calls
-	// SetTruncated, then a future decoder fails because there aren't enough bytes,
-	// it's obvious that the second error was caused by the first.  And since
-	// ErrorLayer returns the first error layer set (IE: TruncatedLayer), the
-	// correct reason for the packet decoding issue is returned correctly.
+	// should be.  It sets packet.Metadata().Truncated.
 	SetTruncated()
 }
 
@@ -100,10 +87,6 @@ var LayerTypeDecodeFailure LayerType = RegisterLayerType(0, LayerTypeMetadata{"D
 // LayerTypePayload is the layer type for a payload that we don't try to decode
 // but treat as a success, IE: an application-level payload.
 var LayerTypePayload LayerType = RegisterLayerType(1, LayerTypeMetadata{"Payload", DecodePayload})
-
-// LayerTypeTruncated is the layer type for the Truncated layer, a special empty
-// layer inserted at the end of truncated packets.
-var LayerTypeTruncated LayerType = RegisterLayerType(2, LayerTypeMetadata{"Truncated", nil})
 
 // DecodeFailure is a packet layer created if decoding of the packet data failed
 // for some reason.  It implements ErrorLayer.  LayerContents will be the entire
@@ -145,25 +128,3 @@ func decodePayload(data []byte, p PacketBuilder) error {
 	p.SetApplicationLayer(payload)
 	return nil
 }
-
-// truncated is returned as the last layer type in a truncated packet.  It is an
-// ErrorLayer, containing no contents or payload.
-type truncated struct{}
-
-// TruncatedLayer is an error layer added to a packet whenever another layer
-// detects that the packet is truncated (not all of the packet's bytes were
-// captured, only the first N of them).  TruncatedLayer acts in a somewhat
-// special fashion... it has no LayerContents or LayerPayload, and since it's a
-// singleton, you can check for it with
-//
-//   if packet.ErrorLayer() == gopacket.TruncatedLayer {
-//     fmt.Println("Truncated packet")
-//   }
-var TruncatedLayer = ErrorLayer(&truncated{})
-var truncatedError = errors.New("Packet truncated")
-
-func (t *truncated) Error() error          { return truncatedError }
-func (t *truncated) LayerContents() []byte { return nil }
-func (t *truncated) LayerPayload() []byte  { return nil }
-func (t *truncated) String() string        { return "Packet was truncated, not all bytes available" }
-func (t *truncated) LayerType() LayerType  { return LayerTypeTruncated }

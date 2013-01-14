@@ -155,7 +155,6 @@ func (p *Handle) ReadPacketData() (data []byte, ci gopacket.CaptureInfo, err err
 		return
 	}
 	data = C.GoBytes(buf, C.int(pkthdr.caplen))
-	ci.Populated = true
 	ci.Timestamp = time.Unix(int64(pkthdr.ts.tv_sec), int64(pkthdr.ts.tv_usec))
 	ci.CaptureLength = int(pkthdr.caplen)
 	ci.Length = int(pkthdr.len)
