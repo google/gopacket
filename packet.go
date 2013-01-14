@@ -85,7 +85,7 @@ type Packet interface {
 	// Data returns the set of bytes that make up this entire packet.
 	Data() []byte
 	// Metadata returns packet metadata associated with this packet.
-	Metadata() PacketMetadata
+	Metadata() *PacketMetadata
 }
 
 // packet contains all the information we need to fulfill the Packet interface,
@@ -157,8 +157,8 @@ func (p *packet) DumpPacketData() {
 	os.Stderr.Sync()
 }
 
-func (p *packet) Metadata() PacketMetadata {
-	return p.metadata
+func (p *packet) Metadata() *PacketMetadata {
+	return &p.metadata
 }
 
 func (p *packet) Data() []byte {
@@ -525,14 +525,7 @@ var NoCopy DecodeOptions = DecodeOptions{NoCopy: true}
 // NewPacket creates a new Packet object from a set of bytes.  The
 // firstLayerDecoder tells it how to interpret the first layer from the bytes,
 // future layers will be generated from that first layer automatically.
-func NewPacket(data []byte, firstLayerDecoder Decoder, options DecodeOptions) (p Packet) {
-	p, _ = newPacket(data, firstLayerDecoder, options)
-	return
-}
-
-// newPacket is an internal version of NewPacket that also returns the
-// underlying *packet.
-func newPacket(data []byte, firstLayerDecoder Decoder, options DecodeOptions) (Packet, *packet) {
+func NewPacket(data []byte, firstLayerDecoder Decoder, options DecodeOptions) Packet {
 	if !options.NoCopy {
 		dataCopy := make([]byte, len(data))
 		copy(dataCopy, data)
@@ -554,14 +547,14 @@ func newPacket(data []byte, firstLayerDecoder Decoder, options DecodeOptions) (P
 		// runtime.morestack/runtime.lessstack.  We'll hope the compiler gets better
 		// over time and we get this optimization for free.  Until then, we'll have
 		// to live with slower packet processing.
-		return p, &p.packet
+		return p
 	}
 	p := &eagerPacket{
 		packet: packet{data: data},
 	}
 	p.layers = p.initialLayers[:0]
 	p.initialDecode(firstLayerDecoder)
-	return p, &p.packet
+	return p
 }
 
 // PacketDataSource is an interface for some source of packet data.  Users may
@@ -638,9 +631,9 @@ func (p *PacketSource) NextPacket() (Packet, error) {
 	if err != nil {
 		return nil, err
 	}
-	packet, packetInternal := newPacket(data, p.decoder, p.DecodeOptions)
-	packetInternal.metadata.CaptureInfo = ci
-	packetInternal.metadata.Truncated = ci.CaptureLength < ci.Length
+	packet := NewPacket(data, p.decoder, p.DecodeOptions)
+	packet.Metadata().CaptureInfo = ci
+	packet.Metadata().Truncated = ci.CaptureLength < ci.Length
 	return packet, nil
 }
 
