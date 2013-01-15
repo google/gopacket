@@ -64,37 +64,53 @@ func decodeIPv4(data []byte, p gopacket.PacketBuilder) error {
 		Checksum:   binary.BigEndian.Uint16(data[10:12]),
 		SrcIP:      data[12:16],
 		DstIP:      data[16:20],
+		// Set up an initial guess for contents/payload... we'll reset these soon.
+		baseLayer: baseLayer{data[:20], data[20:]},
 	}
-	pEnd := int(ip.Length)
-	if pEnd > len(data) {
-		pEnd = len(data)
+	p.AddLayer(ip)
+	p.SetNetworkLayer(ip)
+	if ip.Length < 20 {
+		return fmt.Errorf("Invalid (too small) IP length (%d < 20)", ip.Length)
+	} else if ip.IHL < 5 {
+		return fmt.Errorf("Invalid (too small) IP header length (%d < 5)", ip.IHL)
+	} else if int(ip.IHL*4) > int(ip.Length) {
+		return fmt.Errorf("Invalid IP header length > IP length (%d > %d)", ip.IHL, ip.Length)
 	}
-	d := data[20 : ip.IHL*4]
+	if int(ip.Length) > len(data) {
+		p.SetTruncated()
+		if int(ip.IHL)*4 > len(data) {
+			ip.contents = data
+			ip.payload = nil
+			return fmt.Errorf("Not all IP header bytes available")
+		}
+	} else {
+		data = data[:ip.Length]
+		ip.contents = data[:ip.IHL*4]
+		ip.payload = data[ip.IHL*4:]
+	}
+	// From here on, data contains the header options.
+	data = data[20 : ip.IHL*4]
 	// Pull out IP options
-	for len(d) > 0 {
+	for len(data) > 0 {
 		if ip.Options == nil {
 			// Pre-allocate to avoid growing the slice too much.
 			ip.Options = make([]IPv4Option, 0, 4)
 		}
-		opt := IPv4Option{OptionType: d[0]}
+		opt := IPv4Option{OptionType: data[0]}
 		switch opt.OptionType {
 		case 0: // End of options
 			opt.OptionLength = 1
 			ip.Options = append(ip.Options, opt)
-			ip.Padding = d[1:]
+			ip.Padding = data[1:]
 			break
 		case 1: // 1 byte padding
 			opt.OptionLength = 1
 		default:
-			opt.OptionLength = d[1]
-			opt.OptionData = d[2:opt.OptionLength]
+			opt.OptionLength = data[1]
+			opt.OptionData = data[2:opt.OptionLength]
 		}
 		ip.Options = append(ip.Options, opt)
-		d = d[opt.OptionLength:]
+		data = data[opt.OptionLength:]
 	}
-	ip.contents = data[:ip.IHL*4]
-	ip.payload = data[ip.IHL*4 : pEnd]
-	p.AddLayer(ip)
-	p.SetNetworkLayer(ip)
 	return p.NextDecoder(ip.Protocol)
 }
