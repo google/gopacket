@@ -299,7 +299,7 @@ func (p *packet) packetString() string {
 	}
 	b.WriteByte('\n')
 	for i, l := range p.layers {
-		fmt.Fprintf(&b, "- Layer %d=%s\n", i+1, LayerString(l))
+		fmt.Fprintf(&b, "- Layer %d (%02d bytes) = %s\n", i+1, len(l.LayerContents()), LayerString(l))
 	}
 	return b.String()
 }
@@ -634,7 +634,7 @@ func (p *PacketSource) NextPacket() (Packet, error) {
 	packet := NewPacket(data, p.decoder, p.DecodeOptions)
 	m := packet.Metadata()
 	m.CaptureInfo = ci
-	m.Truncated = ci.CaptureLength < ci.Length
+	m.Truncated = m.Truncated || ci.CaptureLength < ci.Length
 	return packet, nil
 }
 
