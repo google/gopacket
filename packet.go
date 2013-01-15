@@ -632,8 +632,9 @@ func (p *PacketSource) NextPacket() (Packet, error) {
 		return nil, err
 	}
 	packet := NewPacket(data, p.decoder, p.DecodeOptions)
-	packet.Metadata().CaptureInfo = ci
-	packet.Metadata().Truncated = ci.CaptureLength < ci.Length
+	m := packet.Metadata()
+	m.CaptureInfo = ci
+	m.Truncated = ci.CaptureLength < ci.Length
 	return packet, nil
 }
 

@@ -65,7 +65,7 @@ func decodeIPv4(data []byte, p gopacket.PacketBuilder) error {
 		SrcIP:      data[12:16],
 		DstIP:      data[16:20],
 		// Set up an initial guess for contents/payload... we'll reset these soon.
-		baseLayer: baseLayer{data[:20], data[20:]},
+		baseLayer: baseLayer{contents: data},
 	}
 	p.AddLayer(ip)
 	p.SetNetworkLayer(ip)
@@ -76,18 +76,16 @@ func decodeIPv4(data []byte, p gopacket.PacketBuilder) error {
 	} else if int(ip.IHL*4) > int(ip.Length) {
 		return fmt.Errorf("Invalid IP header length > IP length (%d > %d)", ip.IHL, ip.Length)
 	}
-	if int(ip.Length) > len(data) {
+	if cmp := len(data) - int(ip.Length); cmp > 0 {
+		data = data[:ip.Length]
+	} else if cmp < 0 {
 		p.SetTruncated()
 		if int(ip.IHL)*4 > len(data) {
-			ip.contents = data
-			ip.payload = nil
 			return fmt.Errorf("Not all IP header bytes available")
 		}
-	} else {
-		data = data[:ip.Length]
-		ip.contents = data[:ip.IHL*4]
-		ip.payload = data[ip.IHL*4:]
 	}
+	ip.contents = data[:ip.IHL*4]
+	ip.payload = data[ip.IHL*4:]
 	// From here on, data contains the header options.
 	data = data[20 : ip.IHL*4]
 	// Pull out IP options

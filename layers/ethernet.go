@@ -47,6 +47,12 @@ func decodeEthernet(data []byte, p gopacket.PacketBuilder) error {
 	if eth.EthernetType < 0x0600 {
 		eth.Length = uint16(eth.EthernetType)
 		eth.EthernetType = EthernetTypeLLC
+		if cmp := len(data) - int(eth.Length); cmp < 0 {
+			p.SetTruncated()
+		} else if cmp > 0 {
+			// Strip off bytes at the end, since we have too many bytes
+			eth.contents = eth.contents[:len(eth.contents)-cmp]
+		}
 	}
 	p.AddLayer(eth)
 	p.SetLinkLayer(eth)

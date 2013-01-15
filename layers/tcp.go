@@ -9,6 +9,7 @@ package layers
 
 import (
 	"encoding/binary"
+	"errors"
 	"fmt"
 	"github.com/gconnell/gopacket"
 )
@@ -76,50 +77,45 @@ func decodeTCP(data []byte, p gopacket.PacketBuilder) error {
 	}
 	p.AddLayer(tcp)
 	p.SetTransportLayer(tcp)
-	hlen := int(tcp.DataOffset) * 4
-	if hlen < 20 {
-		return fmt.Errorf("Invalid TCP data offset %d < 20 bytes", hlen)
+	if tcp.DataOffset < 5 {
+		return fmt.Errorf("Invalid TCP data offset %d < 5", tcp.DataOffset)
 	}
-	if hlen > len(data) {
-		hlen = len(data)
+	dataStart := int(tcp.DataOffset) * 4
+	if dataStart > len(data) {
 		p.SetTruncated()
+		tcp.payload = nil
+		tcp.contents = data
+		return errors.New("TCP data offset greater than packet length")
 	}
-	d := data[20:hlen]
-	for len(d) > 0 {
-		truncated := false
+	tcp.contents = data[:dataStart]
+	tcp.payload = data[dataStart:]
+	// From here on, data points just to the header options.
+	data = data[20:dataStart]
+	for len(data) > 0 {
 		if tcp.Options == nil {
 			// Pre-allocate to avoid growing the slice too much.
 			tcp.Options = make([]TCPOption, 0, 4)
 		}
-		opt := TCPOption{OptionType: d[0]}
+		tcp.Options = append(tcp.Options, TCPOption{OptionType: data[0]})
+		opt := &tcp.Options[len(tcp.Options)-1]
 		switch opt.OptionType {
 		case 0: // End of options
 			opt.OptionLength = 1
-			tcp.Options = append(tcp.Options, opt)
-			tcp.Padding = d[1:]
+			tcp.Padding = data[1:]
 			break
 		case 1: // 1 byte padding
 			opt.OptionLength = 1
 		default:
-			opt.OptionLength = d[1]
+			opt.OptionLength = data[1]
 			if opt.OptionLength < 2 {
 				return fmt.Errorf("Invalid TCP option length %d < 2", opt.OptionLength)
+			} else if int(opt.OptionLength) > len(data) {
+				return fmt.Errorf("Invalid TCP option length %d exceeds remaining %d bytes", opt.OptionLength, len(data))
 			}
-			if len(d) < int(opt.OptionLength) {
-				p.SetTruncated()
-				truncated = true
-			} else {
-				opt.OptionData = d[2:opt.OptionLength]
-			}
+			opt.OptionData = data[2:opt.OptionLength]
 		}
-		if truncated {
-			break
-		}
-		tcp.Options = append(tcp.Options, opt)
-		d = d[opt.OptionLength:]
+		data = data[opt.OptionLength:]
 	}
-	tcp.contents = data[:hlen]
-	tcp.payload = data[hlen:]
 	return p.NextDecoder(gopacket.LayerTypePayload)
 }
 
