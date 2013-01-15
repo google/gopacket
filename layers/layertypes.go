@@ -20,7 +20,7 @@ var (
 	LayerTypeEtherIP                = gopacket.RegisterLayerType(16, gopacket.LayerTypeMetadata{"EtherIP", gopacket.DecodeFunc(decodeEtherIP)})
 	LayerTypeEthernet               = gopacket.RegisterLayerType(17, gopacket.LayerTypeMetadata{"Ethernet", gopacket.DecodeFunc(decodeEthernet)})
 	LayerTypeGRE                    = gopacket.RegisterLayerType(18, gopacket.LayerTypeMetadata{"GRE", gopacket.DecodeFunc(decodeGRE)})
-	LayerTypeICMP                   = gopacket.RegisterLayerType(19, gopacket.LayerTypeMetadata{"ICMP", gopacket.DecodeFunc(decodeICMP)})
+	LayerTypeICMPv4                 = gopacket.RegisterLayerType(19, gopacket.LayerTypeMetadata{"ICMPv4", gopacket.DecodeFunc(decodeICMPv4)})
 	LayerTypeIPv4                   = gopacket.RegisterLayerType(20, gopacket.LayerTypeMetadata{"IPv4", gopacket.DecodeFunc(decodeIPv4)})
 	LayerTypeIPv6                   = gopacket.RegisterLayerType(21, gopacket.LayerTypeMetadata{"IPv6", gopacket.DecodeFunc(decodeIPv6)})
 	LayerTypeLLC                    = gopacket.RegisterLayerType(22, gopacket.LayerTypeMetadata{"LLC", gopacket.DecodeFunc(decodeLLC)})
@@ -58,6 +58,7 @@ var (
 	LayerTypeLoopback               = gopacket.RegisterLayerType(54, gopacket.LayerTypeMetadata{"Loopback", gopacket.DecodeFunc(decodeLoopback)})
 	LayerTypeEAP                    = gopacket.RegisterLayerType(55, gopacket.LayerTypeMetadata{"EAP", gopacket.DecodeFunc(decodeEAP)})
 	LayerTypeEAPOL                  = gopacket.RegisterLayerType(56, gopacket.LayerTypeMetadata{"EAPOL", gopacket.DecodeFunc(decodeEAPOL)})
+	LayerTypeICMPv6                 = gopacket.RegisterLayerType(57, gopacket.LayerTypeMetadata{"ICMPv6", gopacket.DecodeFunc(decodeICMPv6)})
 )
 
 var (
@@ -74,8 +75,8 @@ var (
 	})
 	// LayerClassIPControl contains TCP/IP control protocols.
 	LayerClassIPControl = gopacket.NewLayerClass([]gopacket.LayerType{
-		LayerTypeICMP,
-		// soon, ICMPv6
+		LayerTypeICMPv4,
+		LayerTypeICMPv6,
 	})
 	// LayerClassSCTPChunk contains SCTP chunk types (not the top-level SCTP
 	// layer).

@@ -58,7 +58,7 @@ type IPProtocol uint8
 
 const (
 	IPProtocolIPv6HopByHop IPProtocol = 0
-	IPProtocolICMP         IPProtocol = 1
+	IPProtocolICMPv4       IPProtocol = 1
 	IPProtocolTCP          IPProtocol = 6
 	IPProtocolUDP          IPProtocol = 17
 	IPProtocolRUDP         IPProtocol = 27
@@ -68,6 +68,7 @@ const (
 	IPProtocolGRE          IPProtocol = 47
 	IPProtocolESP          IPProtocol = 50
 	IPProtocolAH           IPProtocol = 51
+	IPProtocolICMPv6       IPProtocol = 58
 	IPProtocolNoNextHeader IPProtocol = 59
 	IPProtocolIPIP         IPProtocol = 94
 	IPProtocolEtherIP      IPProtocol = 97
@@ -320,7 +321,8 @@ func init() {
 
 	IPProtocolMetadata[IPProtocolTCP] = EnumMetadata{DecodeWith: gopacket.DecodeFunc(decodeTCP), Name: "TCP"}
 	IPProtocolMetadata[IPProtocolUDP] = EnumMetadata{DecodeWith: gopacket.DecodeFunc(decodeUDP), Name: "UDP"}
-	IPProtocolMetadata[IPProtocolICMP] = EnumMetadata{DecodeWith: gopacket.DecodeFunc(decodeICMP), Name: "ICMP"}
+	IPProtocolMetadata[IPProtocolICMPv4] = EnumMetadata{DecodeWith: gopacket.DecodeFunc(decodeICMPv4), Name: "ICMPv4"}
+	IPProtocolMetadata[IPProtocolICMPv6] = EnumMetadata{DecodeWith: gopacket.DecodeFunc(decodeICMPv6), Name: "ICMPv6"}
 	IPProtocolMetadata[IPProtocolSCTP] = EnumMetadata{DecodeWith: gopacket.DecodeFunc(decodeSCTP), Name: "SCTP"}
 	IPProtocolMetadata[IPProtocolIPv6] = EnumMetadata{DecodeWith: gopacket.DecodeFunc(decodeIPv6), Name: "IPv6"}
 	IPProtocolMetadata[IPProtocolIPIP] = EnumMetadata{DecodeWith: gopacket.DecodeFunc(decodeIPv4), Name: "IPv4"}
