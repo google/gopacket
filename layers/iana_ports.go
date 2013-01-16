@@ -3,7 +3,7 @@
 package layers
 
 // Created by gen.go, don't edit manually
-// Generated at 2013-01-11 16:06:53.894334 -0700 MST
+// Generated at 2013-01-15 17:58:15.946565 -0700 MST
 // Fetched from "http://www.iana.org/assignments/service-names-port-numbers/service-names-port-numbers.xml"
 
 // TCPPortNames contains the port names for all TCP ports.
@@ -5480,6 +5480,7 @@ var tcpPortNames = map[TCPPort]string{
 	27442: "jesmsjc",
 	27504: "kopek-httphead",
 	27782: "ars-vista",
+	27876: "astrolink",
 	27999: "tw-auth-key",
 	28000: "nxlmd",
 	28001: "pqsp",
@@ -9559,6 +9560,7 @@ var udpPortNames = map[UDPPort]string{
 	4743:  "openhpid",
 	4744:  "ifsp",
 	4745:  "fmp",
+	4747:  "buschtrommel",
 	4749:  "profilemac",
 	4750:  "ssad",
 	4751:  "spocp",
@@ -10688,6 +10690,7 @@ var udpPortNames = map[UDPPort]string{
 	13929: "dta-systems",
 	14000: "scotty-ft",
 	14001: "sua",
+	14002: "scotty-disc",
 	14033: "sage-best-com1",
 	14034: "sage-best-com2",
 	14141: "vcs-app",
