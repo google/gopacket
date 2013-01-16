@@ -16,7 +16,7 @@ The following code can be used to read in data from a pcap file.
    panic(err)
  } else {
    packetSource := gopacket.NewPacketSource(handle, handle.LinkType())
-	 for packet := range packetSource.Packets() {
+   for packet := range packetSource.Packets() {
      handlePacket(packet)  // Do something with a packet here.
    }
  }
@@ -32,7 +32,7 @@ The following code can be used to read in data from a live device, in this case
    panic(err)
  } else {
    packetSource := gopacket.NewPacketSource(handle, handle.LinkType())
-	 for packet := range packetSource.Packets() {
+   for packet := range packetSource.Packets() {
      handlePacket(packet)  // Do something with a packet here.
    }
  }

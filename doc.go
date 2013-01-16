@@ -234,5 +234,16 @@ in a 4-byte header.
 See the docs for Decoder and PacketBuilder for more details on how coding
 decoders works, or look at RegisterLayerType and RegisterEndpointType to see how
 to add layer/endpoint types to gopacket.
+
+A Final Note
+
+If you use gopacket, you'll almost definitely want to make sure gopacket/layers 
+is imported, since when imported it sets all the LayerType variables and fills
+in a lot of interesting variables/maps (DecodersByLayerName, etc).  Therefore,
+it's recommended that even if you don't use any layers functions directly, you still import with:
+
+  import (
+    _ "github.com/gconnell/gopacket/layers"
+  )
 */
 package gopacket
