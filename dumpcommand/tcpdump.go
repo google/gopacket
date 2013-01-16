@@ -13,6 +13,7 @@ import (
 	"flag"
 	"fmt"
 	"github.com/gconnell/gopacket"
+	_ "github.com/gconnell/gopacket/layers" // pulls in all layers decoders
 	"log"
 	"os"
 	"time"
@@ -29,7 +30,12 @@ func Run(src gopacket.PacketDataSource) {
 	if !flag.Parsed() {
 		log.Fatalln("Run called without flags.Parse() being called")
 	}
-	source := gopacket.NewPacketSource(src, gopacket.DecodersByLayerName[*decoder])
+	var dec gopacket.Decoder
+	var ok bool
+	if dec, ok = gopacket.DecodersByLayerName[*decoder]; !ok {
+		log.Fatalln("No decoder named", *decoder)
+	}
+	source := gopacket.NewPacketSource(src, dec)
 	source.Lazy = false
 	source.NoCopy = true
 	fmt.Fprintln(os.Stderr, "Starting to read packets")
@@ -41,7 +47,9 @@ func Run(src gopacket.PacketDataSource) {
 	for packet := range source.Packets() {
 		count++
 		bytes += int64(len(packet.Data()))
-		if *print {
+		if *dump {
+			fmt.Println(packet.Dump())
+		} else if *print {
 			fmt.Println(packet)
 		}
 		if packet.Metadata().Truncated {
