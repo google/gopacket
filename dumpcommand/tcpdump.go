@@ -25,6 +25,7 @@ var decoder = flag.String("decoder", "Ethernet", "Name of the decoder to use")
 var dump = flag.Bool("X", false, "If true, dump very verbose info on each packet")
 var statsevery = flag.Int("stats", 1000, "Output statistics every N packets")
 var printErrors = flag.Bool("errors", false, "Print out packet dumps of decode errors, useful for checking decoders against live traffic")
+var lazy = flag.Bool("lazy", false, "If true, do lazy decoding")
 
 func Run(src gopacket.PacketDataSource) {
 	if !flag.Parsed() {
@@ -36,7 +37,7 @@ func Run(src gopacket.PacketDataSource) {
 		log.Fatalln("No decoder named", *decoder)
 	}
 	source := gopacket.NewPacketSource(src, dec)
-	source.Lazy = false
+	source.Lazy = *lazy
 	source.NoCopy = true
 	fmt.Fprintln(os.Stderr, "Starting to read packets")
 	count := 0
@@ -52,15 +53,17 @@ func Run(src gopacket.PacketDataSource) {
 		} else if *print {
 			fmt.Println(packet)
 		}
-		if packet.Metadata().Truncated {
-			truncated++
-		}
-		if errLayer := packet.ErrorLayer(); errLayer != nil {
-			errors++
-			if *printErrors {
-				fmt.Println("Error:", errLayer.Error())
-				fmt.Println("--- Packet ---")
-				fmt.Println(packet.Dump())
+		if !*lazy && !(*print || *dump) {
+			if packet.Metadata().Truncated {
+				truncated++
+			}
+			if errLayer := packet.ErrorLayer(); errLayer != nil {
+				errors++
+				if *printErrors {
+					fmt.Println("Error:", errLayer.Error())
+					fmt.Println("--- Packet ---")
+					fmt.Println(packet.Dump())
+				}
 			}
 		}
 		done := *maxcount > 0 && count >= *maxcount
