@@ -74,6 +74,7 @@ gofmt -w gen.go
 go build gen.go
 go test -i ./... 2>/dev/null >/dev/null || true
 go test
+go build
 pushd layers
 gofmt -w gen.go
 go build gen.go
@@ -82,11 +83,13 @@ popd
 if [ -f /usr/include/pcap.h ]; then
 	pushd pcap
 	go test ./...
+  go build ./...
 	popd
 fi
 if [ -f /usr/include/pfring.h ]; then
 	pushd pfring
 	go test ./...
+  go build ./...
 	popd
 fi
 

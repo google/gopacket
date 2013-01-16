@@ -32,7 +32,7 @@ func main() {
 			log.Fatalln("PCAP OpenOffline error:", err)
 		}
 	} else {
-		if handle, err = pcap.OpenLive(*iface, *snaplen, true, time.Second); err != nil {
+		if handle, err = pcap.OpenLive(*iface, int32(*snaplen), true, time.Second); err != nil {
 			log.Fatalln("PCAP OpenLive error:", err)
 		}
 		if len(flag.Args()) > 0 {
