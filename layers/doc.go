@@ -28,6 +28,9 @@ protocol may fulfill the capabilities of interesting layers (SCTPData implements
 ApplicationLayer, while base SCTP implements TransportLayer), or possibly
 because splitting a protocol into a few layers makes decoding easier.
 
+This package is meant to be used with its parent,
+http://code.google.com/p/gopacket.
+
 Port Types
 
 Instead of using raw uint16 or uint8 values for ports, we use a different port

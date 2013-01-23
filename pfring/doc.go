@@ -10,6 +10,10 @@ PF_RING is a high-performance packet capture library written by ntop.org (see
 http://www.ntop.org/products/pf_ring/).  This library allows you to utilize the
 PF_RING library with gopacket to read packet data and decode it.
 
+This package is meant to be used with its parent,
+http://code.google.com/p/gopacket, although it can also be used independently
+if you just want to get packet data from the wire.
+
 Simple Example
 
 This is probably the simplest code you can use to start getting packets through

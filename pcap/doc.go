@@ -8,6 +8,10 @@
 Package pcap allows users of gopacket to read packets off the wire or from
 pcap files.
 
+This package is meant to be used with its parent,
+http://code.google.com/p/gopacket, although it can also be used independently
+if you just want to get packet data from the wire.
+
 Reading PCAP Files
 
 The following code can be used to read in data from a pcap file.
