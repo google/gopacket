@@ -15,9 +15,9 @@ package pcap
 import "C"
 
 import (
+	"code.google.com/p/gopacket"
+	"code.google.com/p/gopacket/layers"
 	"errors"
-	"github.com/gconnell/gopacket"
-	"github.com/gconnell/gopacket/layers"
 	"io"
 	"net"
 	"runtime"

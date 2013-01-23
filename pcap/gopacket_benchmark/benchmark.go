@@ -18,12 +18,12 @@
 package main
 
 import (
+	"code.google.com/p/gopacket"
+	"code.google.com/p/gopacket/pcap"
 	"compress/gzip"
 	"encoding/hex"
 	"flag"
 	"fmt"
-	"github.com/gconnell/gopacket"
-	"github.com/gconnell/gopacket/pcap"
 	"io"
 	"io/ioutil"
 	"net/http"

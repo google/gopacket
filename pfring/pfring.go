@@ -16,9 +16,9 @@ package pfring
 import "C"
 
 import (
+	"code.google.com/p/gopacket"
 	"errors"
 	"fmt"
-	"github.com/gconnell/gopacket"
 	"os"
 	"runtime"
 	"strconv"

@@ -8,9 +8,9 @@
 package layers
 
 import (
+	"code.google.com/p/gopacket"
 	"errors"
 	"fmt"
-	"github.com/gconnell/gopacket"
 )
 
 // EnumMetadata keeps track of a set of metadata for each enumeration value

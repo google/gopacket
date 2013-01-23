@@ -9,10 +9,10 @@
 package main
 
 import (
+	"code.google.com/p/gopacket/dumpcommand"
+	"code.google.com/p/gopacket/pcap"
 	"flag"
 	"fmt"
-	"github.com/gconnell/gopacket/dumpcommand"
-	"github.com/gconnell/gopacket/pcap"
 	"log"
 	"os"
 	"strings"

@@ -7,9 +7,9 @@
 package layers
 
 import (
+	"code.google.com/p/gopacket"
 	"encoding/binary"
 	"fmt"
-	"github.com/gconnell/gopacket"
 )
 
 // SCTP contains information on the top level of an SCTP packet.

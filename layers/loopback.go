@@ -7,9 +7,9 @@
 package layers
 
 import (
+	"code.google.com/p/gopacket"
 	"encoding/binary"
 	"fmt"
-	"github.com/gconnell/gopacket"
 )
 
 // Loopback contains the header for loopback encapsulation.  This header is

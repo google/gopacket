@@ -8,8 +8,8 @@
 package layers
 
 import (
+	"code.google.com/p/gopacket"
 	"encoding/binary"
-	"github.com/gconnell/gopacket"
 )
 
 // ARP is a ARP packet header.

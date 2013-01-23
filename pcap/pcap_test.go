@@ -7,8 +7,8 @@
 package pcap
 
 import (
-	"github.com/gconnell/gopacket"
-	"github.com/gconnell/gopacket/layers"
+	"code.google.com/p/gopacket"
+	"code.google.com/p/gopacket/layers"
 	"testing"
 )
 

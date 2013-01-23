@@ -7,9 +7,9 @@
 package layers
 
 import (
+	"code.google.com/p/gopacket"
 	"encoding/binary"
 	"errors"
-	"github.com/gconnell/gopacket"
 )
 
 // MPLS is the MPLS packet header.

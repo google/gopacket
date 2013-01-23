@@ -9,10 +9,10 @@
 package main
 
 import (
+	"code.google.com/p/gopacket/dumpcommand"
+	"code.google.com/p/gopacket/pfring"
 	"flag"
 	"fmt"
-	"github.com/gconnell/gopacket/dumpcommand"
-	"github.com/gconnell/gopacket/pfring"
 	"log"
 	"os"
 	"strings"
