@@ -8,7 +8,11 @@
 package pcap
 
 /*
-#cgo LDFLAGS: -lpcap
+#cgo linux LDFLAGS: -lpcap
+#cgo freebsd LDFLAGS: -lpcap
+#cgo darwin LDFLAGS: -lpcap
+#cgo windows CFLAGS: -I C:/WpdPack/Include
+#cgo windows LDFLAGS: -L C:/WpdPack/Lib -lwpcap
 #include <stdlib.h>
 #include <pcap.h>
 */
@@ -292,12 +296,12 @@ func sockaddr_to_IP(rsa *syscall.RawSockaddr) (IP []byte, err error) {
 	return
 }
 
-// WritePacketData calls pcap_inject, injecting the given data into the pcap handle.
+// WritePacketData calls pcap_sendpacket, injecting the given data into the pcap handle.
 func (p *Handle) WritePacketData(data []byte) (err error) {
 	buf := C.CString(string(data))
 	defer C.free(unsafe.Pointer(buf))
 
-	if -1 == C.pcap_inject(p.cptr, unsafe.Pointer(buf), (C.size_t)(len(data))) {
+	if -1 == C.pcap_sendpacket(p.cptr, (*C.u_char)(unsafe.Pointer(buf)), (C.int)(len(data))) {
 		err = p.Error()
 	}
 	return
