@@ -45,6 +45,7 @@ func Run(src gopacket.PacketDataSource) {
 	start := time.Now()
 	errors := 0
 	truncated := 0
+	layertypes := map[gopacket.LayerType]int{}
 	for packet := range source.Packets() {
 		count++
 		bytes += int64(len(packet.Data()))
@@ -53,7 +54,10 @@ func Run(src gopacket.PacketDataSource) {
 		} else if *print {
 			fmt.Println(packet)
 		}
-		if !*lazy && !(*print || *dump) {
+		if !*lazy || *print || *dump { // if we've already decoded all layers...
+			for _, layer := range packet.Layers() {
+				layertypes[layer.LayerType()]++
+			}
 			if packet.Metadata().Truncated {
 				truncated++
 			}
@@ -69,6 +73,9 @@ func Run(src gopacket.PacketDataSource) {
 		done := *maxcount > 0 && count >= *maxcount
 		if count%*statsevery == 0 || done {
 			fmt.Fprintf(os.Stderr, "Processed %v packets (%v bytes) in %v, %v errors and %v truncated packets\n", count, bytes, time.Since(start), errors, truncated)
+			if len(layertypes) > 0 {
+				fmt.Fprintf(os.Stderr, "Layer types seen: %+v\n", layertypes)
+			}
 		}
 		if done {
 			break

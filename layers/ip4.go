@@ -107,8 +107,12 @@ func decodeIPv4(data []byte, p gopacket.PacketBuilder) error {
 			opt.OptionLength = data[1]
 			opt.OptionData = data[2:opt.OptionLength]
 		}
+		if len(data) >= int(opt.OptionLength) {
+			data = data[opt.OptionLength:]
+		} else {
+			return fmt.Errorf("IP option length exceeds remaining IP header size, option type %v length %v", opt.OptionType, opt.OptionLength)
+		}
 		ip.Options = append(ip.Options, opt)
-		data = data[opt.OptionLength:]
 	}
 	return p.NextDecoder(ip.Protocol)
 }
