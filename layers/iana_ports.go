@@ -3,7 +3,7 @@
 package layers
 
 // Created by gen.go, don't edit manually
-// Generated at 2013-01-15 17:58:15.946565 -0700 MST
+// Generated at 2013-01-24 11:12:24.513772 -0700 MST
 // Fetched from "http://www.iana.org/assignments/service-names-port-numbers/service-names-port-numbers.xml"
 
 // TCPPortNames contains the port names for all TCP ports.
@@ -4954,6 +4954,7 @@ var tcpPortNames = map[TCPPort]string{
 	8763:  "mc-appserver",
 	8764:  "openqueue",
 	8765:  "ultraseek-http",
+	8766:  "amcs",
 	8770:  "dpap",
 	8786:  "msgclnt",
 	8787:  "msgsrvr",
@@ -10397,6 +10398,7 @@ var udpPortNames = map[UDPPort]string{
 	8763:  "mc-appserver",
 	8764:  "openqueue",
 	8765:  "ultraseek-http",
+	8766:  "amcs",
 	8770:  "dpap",
 	8786:  "msgclnt",
 	8787:  "msgsrvr",

@@ -23,6 +23,12 @@ const (
 	ICMPv6TypeParameterProblem       = 4
 	ICMPv6TypeEchoRequest            = 128
 	ICMPv6TypeEchoReply              = 129
+	// The following are from RFC 4861
+	ICMPv6TypeRouterSolicitation    = 133
+	ICMPv6TypeRouterAdvertisement   = 134
+	ICMPv6TypeNeighborSolicitation  = 135
+	ICMPv6TypeNeighborAdvertisement = 136
+	ICMPv6TypeRedirect              = 137
 )
 
 func (a ICMPv6TypeCode) String() string {
@@ -66,6 +72,16 @@ func (a ICMPv6TypeCode) String() string {
 		typeStr = "EchoRequest"
 	case ICMPv6TypeEchoReply:
 		typeStr = "EchoReply"
+	case ICMPv6TypeRouterSolicitation:
+		typeStr = "RouterSolicitation"
+	case ICMPv6TypeRouterAdvertisement:
+		typeStr = "RouterAdvertisement"
+	case ICMPv6TypeNeighborSolicitation:
+		typeStr = "NeighborSolicitation"
+	case ICMPv6TypeNeighborAdvertisement:
+		typeStr = "NeighborAdvertisement"
+	case ICMPv6TypeRedirect:
+		typeStr = "Redirect"
 	default:
 		typeStr = strconv.Itoa(int(typ))
 	}
