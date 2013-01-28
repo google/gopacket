@@ -12,7 +12,8 @@ package pcap
 #cgo freebsd LDFLAGS: -lpcap
 #cgo darwin LDFLAGS: -lpcap
 #cgo windows CFLAGS: -I C:/WpdPack/Include
-#cgo windows LDFLAGS: -L C:/WpdPack/Lib -lwpcap
+#cgo windows,386 LDFLAGS: -L C:/WpdPack/Lib -lwpcap
+#cgo windows,amd64 LDFLAGS: -L C:/WpdPack/Lib/x64 -lwpcap
 #include <stdlib.h>
 #include <pcap.h>
 */
@@ -272,27 +273,6 @@ func findalladdresses(addresses *_Ctype_struct_pcap_addr) (retval []InterfaceAdd
 		}
 		retval = append(retval, a)
 	}
-	return
-}
-
-func sockaddr_to_IP(rsa *syscall.RawSockaddr) (IP []byte, err error) {
-	switch rsa.Family {
-	case syscall.AF_INET:
-		pp := (*syscall.RawSockaddrInet4)(unsafe.Pointer(rsa))
-		IP = make([]byte, 4)
-		for i := 0; i < len(IP); i++ {
-			IP[i] = pp.Addr[i]
-		}
-		return
-	case syscall.AF_INET6:
-		pp := (*syscall.RawSockaddrInet6)(unsafe.Pointer(rsa))
-		IP = make([]byte, 16)
-		for i := 0; i < len(IP); i++ {
-			IP[i] = pp.Addr[i]
-		}
-		return
-	}
-	err = errors.New("Unsupported address type")
 	return
 }
 

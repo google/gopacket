@@ -4,6 +4,8 @@
 // that can be found in the LICENSE file in the root of the source
 // tree.
 
+// +build linux,cgo darwin,cgo
+
 package layers
 
 // #include <sys/socket.h>
