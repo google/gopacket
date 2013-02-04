@@ -276,6 +276,27 @@ func findalladdresses(addresses *_Ctype_struct_pcap_addr) (retval []InterfaceAdd
 	return
 }
 
+func sockaddr_to_IP(rsa *syscall.RawSockaddr) (IP []byte, err error) {
+	switch rsa.Family {
+	case syscall.AF_INET:
+		pp := (*syscall.RawSockaddrInet4)(unsafe.Pointer(rsa))
+		IP = make([]byte, 4)
+		for i := 0; i < len(IP); i++ {
+			IP[i] = pp.Addr[i]
+		}
+		return
+	case syscall.AF_INET6:
+		pp := (*syscall.RawSockaddrInet6)(unsafe.Pointer(rsa))
+		IP = make([]byte, 16)
+		for i := 0; i < len(IP); i++ {
+			IP[i] = pp.Addr[i]
+		}
+		return
+	}
+	err = errors.New("Unsupported address type")
+	return
+}
+
 // WritePacketData calls pcap_sendpacket, injecting the given data into the pcap handle.
 func (p *Handle) WritePacketData(data []byte) (err error) {
 	buf := C.CString(string(data))
