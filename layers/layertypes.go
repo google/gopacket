@@ -24,6 +24,7 @@ var (
 	LayerTypeIPv4                   = gopacket.RegisterLayerType(20, gopacket.LayerTypeMetadata{"IPv4", gopacket.DecodeFunc(decodeIPv4)})
 	LayerTypeIPv6                   = gopacket.RegisterLayerType(21, gopacket.LayerTypeMetadata{"IPv6", gopacket.DecodeFunc(decodeIPv6)})
 	LayerTypeLLC                    = gopacket.RegisterLayerType(22, gopacket.LayerTypeMetadata{"LLC", gopacket.DecodeFunc(decodeLLC)})
+	LayerTypeLinkLayerDiscovery     = gopacket.RegisterLayerType(99, gopacket.LayerTypeMetadata{"LinkLayerDiscovery", gopacket.DecodeFunc(decodeLinkLayerDiscovery)})
 	LayerTypeSNAP                   = gopacket.RegisterLayerType(23, gopacket.LayerTypeMetadata{"SNAP", gopacket.DecodeFunc(decodeSNAP)})
 	LayerTypeMPLS                   = gopacket.RegisterLayerType(24, gopacket.LayerTypeMetadata{"MPLS", gopacket.DecodeFunc(decodeMPLS)})
 	LayerTypePPP                    = gopacket.RegisterLayerType(25, gopacket.LayerTypeMetadata{"PPP", gopacket.DecodeFunc(decodePPP)})
