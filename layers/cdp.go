@@ -51,6 +51,23 @@ const (
 	CDPTLVSparePairPOE       CDPTLVType = 0x001f
 )
 
+// CiscoDiscoveryValue is a TLV value inside a CiscoDiscovery packet layer.
+type CiscoDiscoveryValue struct {
+	Type   CDPTLVType
+	Length uint16
+	Value  []byte
+}
+
+// CiscoDiscovery is a packet layer containing the Cisco Discovery Protocol.
+// See http://www.cisco.com/univercd/cc/td/doc/product/lan/trsrb/frames.htm#31885
+type CiscoDiscovery struct {
+	baseLayer
+	Version  byte
+	TTL      byte
+	Checksum uint16
+	Values   []CiscoDiscoveryValue
+}
+
 type CDPCapability uint32
 
 const (
@@ -110,16 +127,6 @@ type CDPLocation struct {
 	Location string
 }
 
-// CiscoDiscovery is a packet layer containing the Cisco Discovery Protocol.
-// See http://www.cisco.com/univercd/cc/td/doc/product/lan/trsrb/frames.htm#31885
-type CiscoDiscovery struct {
-	baseLayer
-	Version  byte
-	TTL      byte
-	Checksum uint16
-	Values   []CiscoDiscoveryValue
-}
-
 // CDPHello is a Cisco Hello message (undocumented, hence the "Unknown" fields)
 type CDPHello struct {
 	OUI              [3]byte
@@ -138,6 +145,7 @@ type CDPHello struct {
 
 // CiscoDiscoveryInfo represents the decoded details for a set of CiscoDiscoveryValues
 type CiscoDiscoveryInfo struct {
+	baseLayer
 	CDPHello
 	DeviceID         string
 	Addresses        []net.IP
@@ -170,13 +178,6 @@ func (c *CiscoDiscovery) LayerType() gopacket.LayerType {
 	return LayerTypeCiscoDiscovery
 }
 
-// CiscoDiscoveryValue is a TLV value inside a CiscoDiscovery packet layer.
-type CiscoDiscoveryValue struct {
-	Type   CDPTLVType
-	Length uint16
-	Value  []byte
-}
-
 func decodeCiscoDiscovery(data []byte, p gopacket.PacketBuilder) error {
 	c := &CiscoDiscovery{
 		Version:  data[0],
@@ -186,29 +187,48 @@ func decodeCiscoDiscovery(data []byte, p gopacket.PacketBuilder) error {
 	if c.Version != 1 && c.Version != 2 {
 		return fmt.Errorf("Invalid CiscoDiscovery version number %d", c.Version)
 	}
-	vData := data[4:]
-	for len(vData) > 0 {
-		val := CiscoDiscoveryValue{
-			Type:   CDPTLVType(binary.BigEndian.Uint16(vData[:2])),
-			Length: binary.BigEndian.Uint16(vData[2:4]),
-		}
-		if val.Length < 4 {
-			return fmt.Errorf("Invalid CiscoDiscovery value length %d", val.Length)
-		}
-		val.Value = vData[4:val.Length]
-		c.Values = append(c.Values, val)
-		vData = vData[val.Length:]
+	var err error
+	c.Values,err = decodeCiscoDiscoveryTLVs(data[4:])
+	if err != nil {
+		return err
 	}
-	c.contents = data
+	c.contents = data[0:4]
+	c.payload = data[4:]
 	p.AddLayer(c)
-	return nil
+	return  p.NextDecoder(gopacket.DecodeFunc(decodeCiscoDiscoveryInfo))
 }
 
-// DecodeValues marshals CiscoDiscoveryValues into a CiscoDiscoveryInfo struct
-func (c *CiscoDiscovery) DecodeValues() (info CiscoDiscoveryInfo, errors []error) {
+// LayerType returns gopacket.LayerTypeCiscoDiscoveryInfo.
+func (c *CiscoDiscoveryInfo) LayerType() gopacket.LayerType {
+	return LayerTypeCiscoDiscoveryInfo
+}
+
+func decodeCiscoDiscoveryTLVs(data []byte) (values []CiscoDiscoveryValue, err error) {
+	for len(data) > 0 {
+		val := CiscoDiscoveryValue{
+			Type:   CDPTLVType(binary.BigEndian.Uint16(data[:2])),
+			Length: binary.BigEndian.Uint16(data[2:4]),
+		}
+		if val.Length < 4 {
+			err = fmt.Errorf("Invalid CiscoDiscovery value length %d", val.Length)
+			break
+		}
+		val.Value = data[4:val.Length]
+		values = append(values, val)
+		data = data[val.Length:]
+	}
+	return
+}
+
+
+func decodeCiscoDiscoveryInfo(data []byte, p gopacket.PacketBuilder) error {
 	var err error
+	var errors []error
 	var ok bool
-	for _, val := range c.Values {
+	info := &CiscoDiscoveryInfo{}
+	info.payload = data
+	values,_ := decodeCiscoDiscoveryTLVs(data)
+	for _, val := range values {
 		switch val.Type {
 		case CDPTLVDevID:
 			info.DeviceID = string(val.Value)
@@ -354,7 +374,11 @@ func (c *CiscoDiscovery) DecodeValues() (info CiscoDiscoveryInfo, errors []error
 			info.Unknown = append(info.Unknown, val)
 		}
 	}
-	return
+	p.AddLayer(info)
+	if len(errors) > 0 {
+		return errors[0]
+	}
+	return nil
 }
 
 // CDP Protocol Types

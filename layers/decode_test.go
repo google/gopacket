@@ -510,10 +510,10 @@ func TestDecodeCiscoDiscovery(t *testing.T) {
 		0xfd,
 	}
 	p := gopacket.NewPacket(data, LinkTypeEthernet, gopacket.Default)
-	wantLayers := []gopacket.LayerType{LayerTypeEthernet, LayerTypeLLC, LayerTypeSNAP, LayerTypeCiscoDiscovery}
+	wantLayers := []gopacket.LayerType{LayerTypeEthernet, LayerTypeLLC, LayerTypeSNAP, LayerTypeCiscoDiscovery, LayerTypeCiscoDiscoveryInfo}
 	checkLayers(p, wantLayers, t)
 
-	want := CiscoDiscoveryInfo{
+	want := &CiscoDiscoveryInfo{
 		CDPHello: CDPHello{
 			OUI:              [...]byte{0, 0, 12},
 			ProtocolID:       274,
@@ -539,12 +539,9 @@ func TestDecodeCiscoDiscovery(t *testing.T) {
 		FullDuplex:    true,
 		MgmtAddresses: []net.IP{net.IPv4(192, 168, 0, 253)},
 	}
-	cdpL := p.Layer(LayerTypeCiscoDiscovery)
-	cdp, _ := cdpL.(*CiscoDiscovery)
-	info, errs := cdp.DecodeValues()
-	if errs != nil {
-		t.Errorf("Values decode error: %v", errs)
-	}
+	want.payload = data[26:]
+	cdpL := p.Layer(LayerTypeCiscoDiscoveryInfo)
+	info, _ := cdpL.(*CiscoDiscoveryInfo)
 	if !reflect.DeepEqual(info, want) {
 		t.Errorf("Values mismatch, \ngot  %#v\nwant %#v\n", info, want)
 	}
