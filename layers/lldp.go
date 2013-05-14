@@ -7,38 +7,39 @@
 package layers
 
 import (
-	"bytes"
 	"code.google.com/p/gopacket"
 	"encoding/binary"
 	"fmt"
 )
 
-// LinkLayerDiscoveryType is the type of each TLV value in a LinkLayerDiscovery packet.
-type LinkLayerDiscoveryType byte
+// LLDPTLVType is the type of each TLV value in a LinkLayerDiscovery packet.
+type LLDPTLVType byte
 
 const (
-	LLDP_TLV_END          LinkLayerDiscoveryType = 0
-	LLDP_TLV_CHID         LinkLayerDiscoveryType = 1
-	LLDP_TLV_PID          LinkLayerDiscoveryType = 2
-	LLDP_TLV_TTL          LinkLayerDiscoveryType = 3
-	LLDP_TLV_PORT_DESCR   LinkLayerDiscoveryType = 4
-	LLDP_TLV_SYS_NAME     LinkLayerDiscoveryType = 5
-	LLDP_TLV_SYS_DESCR    LinkLayerDiscoveryType = 6
-	LLDP_TLV_SYS_CAPS     LinkLayerDiscoveryType = 7
-	LLDP_TLV_MGMT_ADDR    LinkLayerDiscoveryType = 8
-	LLDP_TLV_ORG_SPECIFIC LinkLayerDiscoveryType = 127
+	LLDPTLVEnd             LLDPTLVType = 0
+	LLDPTLVChassisID       LLDPTLVType = 1
+	LLDPTLVPortID          LLDPTLVType = 2
+	LLDPTLVTTL             LLDPTLVType = 3
+	LLDPTLVPortDescription LLDPTLVType = 4
+	LLDPTLVSysName         LLDPTLVType = 5
+	LLDPTLVSysDescription  LLDPTLVType = 6
+	LLDPTLVSysCapabilities LLDPTLVType = 7
+	LLDPTLVMgmtAddress     LLDPTLVType = 8
+	LLDPTLVOrgSpecific     LLDPTLVType = 127
 )
 
+// LLDPChassisIDSubType specifies the value type for a single LLDPChassisID.ID
 type LLDPChassisIDSubType byte
 
 const (
-	LLDP_CHASSIS_CHASSIS_COMP_SUBTYPE LLDPChassisIDSubType = 1
-	LLDP_CHASSIS_INTF_ALIAS_SUBTYPE   LLDPChassisIDSubType = 2
-	LLDP_CHASSIS_PORT_COMP_SUBTYPE    LLDPChassisIDSubType = 3
-	LLDP_CHASSIS_MAC_ADDR_SUBTYPE     LLDPChassisIDSubType = 4
-	LLDP_CHASSIS_NETWORK_ADDR_SUBTYPE LLDPChassisIDSubType = 5
-	LLDP_CHASSIS_INTF_NAME_SUBTYPE    LLDPChassisIDSubType = 6
-	LLDP_CHASSIS_LOCAL_SUBTYPE        LLDPChassisIDSubType = 7
+	LLDPChassisIDSubTypeReserved    LLDPChassisIDSubType = 0
+	LLDPChassisIDSubTypeChassisComp LLDPChassisIDSubType = 1
+	LLDPChassisIDSubtypeIfaceAlias  LLDPChassisIDSubType = 2
+	LLDPChassisIDSubTypePortComp    LLDPChassisIDSubType = 3
+	LLDPChassisIDSubTypeMACAddr     LLDPChassisIDSubType = 4
+	LLDPChassisIDSubTypeNetworkAddr LLDPChassisIDSubType = 5
+	LLDPChassisIDSubtypeIfaceName   LLDPChassisIDSubType = 6
+	LLDPChassisIDSubTypeLocal       LLDPChassisIDSubType = 7
 )
 
 type LLDPChassisID struct {
@@ -46,16 +47,18 @@ type LLDPChassisID struct {
 	ID      []byte
 }
 
+// LLDPPortIDSubType specifies the value type for a single LLDPPortID.ID
 type LLDPPortIDSubType byte
 
 const (
-	LLDP_PORT_INTF_ALIAS_SUBTYPE    LLDPPortIDSubType = 1
-	LLDP_PORT_PORT_COMP_SUBTYPE     LLDPPortIDSubType = 2
-	LLDP_PORT_MAC_ADDR_SUBTYPE      LLDPPortIDSubType = 3
-	LLDP_PORT_NETWORK_ADDR_SUBTYPE  LLDPPortIDSubType = 4
-	LLDP_PORT_INTF_NAME_SUBTYPE     LLDPPortIDSubType = 5
-	LLDP_PORT_AGENT_CIRC_ID_SUBTYPE LLDPPortIDSubType = 6
-	LLDP_PORT_LOCAL_SUBTYPE         LLDPPortIDSubType = 7
+	LLDPPortIDSubtypeReserved    LLDPPortIDSubType = 0
+	LLDPPortIDSubtypeIfaceAlias  LLDPPortIDSubType = 1
+	LLDPPortIDSubTypePortComp    LLDPPortIDSubType = 2
+	LLDPPortIDSubTypeMACAddr     LLDPPortIDSubType = 3
+	LLDPPortIDSubTypeNetworkAddr LLDPPortIDSubType = 4
+	LLDPPortIDSubtypeIfaceName   LLDPPortIDSubType = 5
+	LLDPPortIDSubTypeAgentCircID LLDPPortIDSubType = 6
+	LLDPPortIDSubTypeLocal       LLDPPortIDSubType = 7
 )
 
 type LLDPPortID struct {
@@ -63,23 +66,23 @@ type LLDPPortID struct {
 	ID      []byte
 }
 
-//LLDPCaps Types
+// LLDPCapabilities Types
 const (
-	LLDP_CAP_OTHER        uint16 = (1 << 0)
-	LLDP_CAP_REPEATER     uint16 = (1 << 1)
-	LLDP_CAP_BRIDGE       uint16 = (1 << 2)
-	LLDP_CAP_WLAN_AP      uint16 = (1 << 3)
-	LLDP_CAP_ROUTER       uint16 = (1 << 4)
-	LLDP_CAP_PHONE        uint16 = (1 << 5)
-	LLDP_CAP_DOCSIS       uint16 = (1 << 6)
-	LLDP_CAP_STATION_ONLY uint16 = (1 << 7)
-	LLDP_CAP_CVLAN        uint16 = (1 << 8)
-	LLDP_CAP_SVLAN        uint16 = (1 << 9)
-	LLDP_CAP_TMPR         uint16 = (1 << 10)
+	LLDPCapsOther       uint16 = 1 << 0
+	LLDPCapsRepeater    uint16 = 1 << 1
+	LLDPCapsBridge      uint16 = 1 << 2
+	LLDPCapsWLANAP      uint16 = 1 << 3
+	LLDPCapsRouter      uint16 = 1 << 4
+	LLDPCapsPhone       uint16 = 1 << 5
+	LLDPCapsDocSis      uint16 = 1 << 6
+	LLDPCapsStationOnly uint16 = 1 << 7
+	LLDPCapsCVLAN       uint16 = 1 << 8
+	LLDPCapsSVLAN       uint16 = 1 << 9
+	LLDPCapsTmpr        uint16 = 1 << 10
 )
 
-// LLDPCaps represents the capabilites of a device
-type LLDPCaps struct {
+// LLDPCapabilities represents the capabilities of a device
+type LLDPCapabilities struct {
 	Other       bool
 	Repeater    bool
 	Bridge      bool
@@ -93,16 +96,58 @@ type LLDPCaps struct {
 	TMPR        bool
 }
 
-type LLDPSysCaps struct {
-	ChassisID  byte
-	SystemCap  LLDPCaps
-	EnabledCap LLDPCaps
+type LLDPSysCapabilities struct {
+	SystemCap  LLDPCapabilities
+	EnabledCap LLDPCapabilities
 }
 
-type LLDPMgmtAddr struct {
-	Subtype          byte
+// LLDPEVBCapabilities Types
+const (
+	LLDPEVBCapsSTD uint16 = 1 << 0
+	LLDPEVBCapsRR  uint16 = 1 << 1
+	LLDPEVBCapsRTE uint16 = 1 << 2
+	LLDPEVBCapsECP uint16 = 1 << 3
+	LLDPEVBCapsVDP uint16 = 1 << 4
+)
+
+// LLDPEVBCapabilities represents the EVB capabilities of a device
+type LLDPEVBCapabilities struct {
+	StandardBridging            bool
+	ReflectiveRelay             bool
+	RetransmissionTimerExponent bool
+	EdgeControlProtocol         bool
+	VSIDiscoveryProtocol        bool
+}
+
+type LLDPEVBSettings struct {
+	Supported      LLDPEVBCapabilities
+	Enabled        LLDPEVBCapabilities
+	SupportedVSIs  uint16
+	ConfiguredVSIs uint16
+	RTEExponent    uint8
+}
+
+type LLDPMgmtAddressSubtype byte
+
+// LLDP Management Address Subtypes
+const (
+	LLDPMgmtAddressSubtypeIPV4 LLDPMgmtAddressSubtype = 1
+	LLDPMgmtAddressSubtypeIPV6 LLDPMgmtAddressSubtype = 2
+)
+
+type LLDPInterfaceSubtype byte
+
+// LLDP Interface Subtypes
+const (
+	LLDPInterfaceSubtypeUnknown LLDPInterfaceSubtype = 1
+	LLDPInterfaceSubtypeifIndex LLDPInterfaceSubtype = 2
+	LLDPInterfaceSubtypeSysPort LLDPInterfaceSubtype = 3
+)
+
+type LLDPMgmtAddress struct {
+	Subtype          LLDPMgmtAddressSubtype
 	Address          []byte
-	InterfaceSubtype byte
+	InterfaceSubtype LLDPInterfaceSubtype
 	InterfaceNumber  uint32
 	OID              string
 }
@@ -121,8 +166,8 @@ type LinkLayerDiscovery struct {
 
 // VLAN Port Protocol ID options
 const (
-	LLDP_PROTOCOLVLANID_CAPABILITY byte = (1 << 0)
-	LLDP_PROTOCOLVLANID_STATUS     byte = (1 << 1)
+	LLDPProtocolVLANIDCapability byte = 1 << 0
+	LLDPProtocolVLANIDStatus     byte = 1 << 1
 )
 
 type PortProtocolVLANID struct {
@@ -140,114 +185,121 @@ type ProtocolIdentity []byte
 
 // LACP options
 const (
-	LLDP_AGGREGATION_CAPABILITY byte = (1 << 0)
-	LLDP_AGGREGATION_STATUS     byte = (1 << 1)
+	LLDPAggregationCapability byte = 1 << 0
+	LLDPAggregationStatus     byte = 1 << 1
 )
 
-type LinkAggregation struct {
+// IEEE 802.1 Link Aggregation parameters
+type LinkAggregation8021 struct {
 	Supported bool
 	Enabled   bool
 	PortID    uint32
 }
 
+// IEEE 802.3 Link Aggregation parameters
+type LinkAggregation8023 struct {
+	Status byte
+	PortID uint32
+}
+
 // MACPHY options
 const (
-	LLDP_MACPHY_CAPABILITY byte = (1 << 0)
-	LLDP_MACPHY_STATUS     byte = (1 << 1)
+	LLDPMACPHYCapability byte = 1 << 0
+	LLDPMACPHYStatus     byte = 1 << 1
 )
 
 // From IANA-MAU-MIB (introduced by RFC 4836) - dot3MauType
 const (
-	LLDP_MAU_TYPE_UNKNOWN          uint16 = 0
-	LLDP_MAU_TYPE_AUI              uint16 = 1
-	LLDP_MAU_TYPE_10BASE_5         uint16 = 2
-	LLDP_MAU_TYPE_FOIRL            uint16 = 3
-	LLDP_MAU_TYPE_10BASE_2         uint16 = 4
-	LLDP_MAU_TYPE_10BASE_T         uint16 = 5
-	LLDP_MAU_TYPE_10BASE_FP        uint16 = 6
-	LLDP_MAU_TYPE_10BASE_FB        uint16 = 7
-	LLDP_MAU_TYPE_10BASE_FL        uint16 = 8
-	LLDP_MAU_TYPE_10BROAD36        uint16 = 9
-	LLDP_MAU_TYPE_10BASE_T_HD      uint16 = 10
-	LLDP_MAU_TYPE_10BASE_T_FD      uint16 = 11
-	LLDP_MAU_TYPE_10BASE_FL_HD     uint16 = 12
-	LLDP_MAU_TYPE_10BASE_FL_FD     uint16 = 13
-	LLDP_MAU_TYPE_100BASE_T4       uint16 = 14
-	LLDP_MAU_TYPE_100BASE_TX_HD    uint16 = 15
-	LLDP_MAU_TYPE_100BASE_TX_FD    uint16 = 16
-	LLDP_MAU_TYPE_100BASE_FX_HD    uint16 = 17
-	LLDP_MAU_TYPE_100BASE_FX_FD    uint16 = 18
-	LLDP_MAU_TYPE_100BASE_T2_HD    uint16 = 19
-	LLDP_MAU_TYPE_100BASE_T2_FD    uint16 = 20
-	LLDP_MAU_TYPE_1000BASE_X_HD    uint16 = 21
-	LLDP_MAU_TYPE_1000BASE_X_FD    uint16 = 22
-	LLDP_MAU_TYPE_1000BASE_LX_HD   uint16 = 23
-	LLDP_MAU_TYPE_1000BASE_LX_FD   uint16 = 24
-	LLDP_MAU_TYPE_1000BASE_SX_HD   uint16 = 25
-	LLDP_MAU_TYPE_1000BASE_SX_FD   uint16 = 26
-	LLDP_MAU_TYPE_1000BASE_CX_HD   uint16 = 27
-	LLDP_MAU_TYPE_1000BASE_CX_FD   uint16 = 28
-	LLDP_MAU_TYPE_1000BASE_T_HD    uint16 = 29
-	LLDP_MAU_TYPE_1000BASE_T_FD    uint16 = 30
-	LLDP_MAU_TYPE_10GBASE_X        uint16 = 31
-	LLDP_MAU_TYPE_10GBASE_LX4      uint16 = 32
-	LLDP_MAU_TYPE_10GBASE_R        uint16 = 33
-	LLDP_MAU_TYPE_10GBASE_ER       uint16 = 34
-	LLDP_MAU_TYPE_10GBASE_LR       uint16 = 35
-	LLDP_MAU_TYPE_10GBASE_SR       uint16 = 36
-	LLDP_MAU_TYPE_10GBASE_W        uint16 = 37
-	LLDP_MAU_TYPE_10GBASE_EW       uint16 = 38
-	LLDP_MAU_TYPE_10GBASE_LW       uint16 = 39
-	LLDP_MAU_TYPE_10GBASE_SW       uint16 = 40
-	LLDP_MAU_TYPE_10GBASE_CX4      uint16 = 41
-	LLDP_MAU_TYPE_2BASE_TL         uint16 = 42
-	LLDP_MAU_TYPE_10PASS_TS        uint16 = 43
-	LLDP_MAU_TYPE_100BASE_BX10D    uint16 = 44
-	LLDP_MAU_TYPE_100BASE_BX10U    uint16 = 45
-	LLDP_MAU_TYPE_100BASE_LX10     uint16 = 46
-	LLDP_MAU_TYPE_1000BASE_BX10D   uint16 = 47
-	LLDP_MAU_TYPE_1000BASE_BX10U   uint16 = 48
-	LLDP_MAU_TYPE_1000BASE_LX10    uint16 = 49
-	LLDP_MAU_TYPE_1000BASE_PX10D   uint16 = 50
-	LLDP_MAU_TYPE_1000BASE_PX10U   uint16 = 51
-	LLDP_MAU_TYPE_1000BASE_PX20D   uint16 = 52
-	LLDP_MAU_TYPE_1000BASE_PX20U   uint16 = 53
-	LLDP_MAU_TYPE_10GBASE_T        uint16 = 54
-	LLDP_MAU_TYPE_10GBASE_LRM      uint16 = 55
-	LLDP_MAU_TYPE_1000BASE_KX      uint16 = 56
-	LLDP_MAU_TYPE_10GBASE_KX4      uint16 = 57
-	LLDP_MAU_TYPE_10GBASE_KR       uint16 = 58
-	LLDP_MAU_TYPE_10_1GBASE_PRX_D1 uint16 = 59
-	LLDP_MAU_TYPE_10_1GBASE_PRX_D2 uint16 = 60
-	LLDP_MAU_TYPE_10_1GBASE_PRX_D3 uint16 = 61
-	LLDP_MAU_TYPE_10_1GBASE_PRX_U1 uint16 = 62
-	LLDP_MAU_TYPE_10_1GBASE_PRX_U2 uint16 = 63
-	LLDP_MAU_TYPE_10_1GBASE_PRX_U3 uint16 = 64
-	LLDP_MAU_TYPE_10GBASE_PR_D1    uint16 = 65
-	LLDP_MAU_TYPE_10GBASE_PR_D2    uint16 = 66
-	LLDP_MAU_TYPE_10GBASE_PR_D3    uint16 = 67
-	LLDP_MAU_TYPE_10GBASE_PR_U1    uint16 = 68
-	LLDP_MAU_TYPE_10GBASE_PR_U3    uint16 = 69
+	LLDPMAUTypeUnknown         uint16 = 0
+	LLDPMAUTypeAUI             uint16 = 1
+	LLDPMAUType10Base5         uint16 = 2
+	LLDPMAUTypeFOIRL           uint16 = 3
+	LLDPMAUType10Base2         uint16 = 4
+	LLDPMAUType10BaseT         uint16 = 5
+	LLDPMAUType10BaseFP        uint16 = 6
+	LLDPMAUType10BaseFB        uint16 = 7
+	LLDPMAUType10BaseFL        uint16 = 8
+	LLDPMAUType10BROAD36       uint16 = 9
+	LLDPMAUType10BaseT_HD      uint16 = 10
+	LLDPMAUType10BaseT_FD      uint16 = 11
+	LLDPMAUType10BaseFL_HD     uint16 = 12
+	LLDPMAUType10BaseFL_FD     uint16 = 13
+	LLDPMAUType100BaseT4       uint16 = 14
+	LLDPMAUType100BaseTX_HD    uint16 = 15
+	LLDPMAUType100BaseTX_FD    uint16 = 16
+	LLDPMAUType100BaseFX_HD    uint16 = 17
+	LLDPMAUType100BaseFX_FD    uint16 = 18
+	LLDPMAUType100BaseT2_HD    uint16 = 19
+	LLDPMAUType100BaseT2_FD    uint16 = 20
+	LLDPMAUType1000BaseX_HD    uint16 = 21
+	LLDPMAUType1000BaseX_FD    uint16 = 22
+	LLDPMAUType1000BaseLX_HD   uint16 = 23
+	LLDPMAUType1000BaseLX_FD   uint16 = 24
+	LLDPMAUType1000BaseSX_HD   uint16 = 25
+	LLDPMAUType1000BaseSX_FD   uint16 = 26
+	LLDPMAUType1000BaseCX_HD   uint16 = 27
+	LLDPMAUType1000BaseCX_FD   uint16 = 28
+	LLDPMAUType1000BaseT_HD    uint16 = 29
+	LLDPMAUType1000BaseT_FD    uint16 = 30
+	LLDPMAUType10GBaseX        uint16 = 31
+	LLDPMAUType10GBaseLX4      uint16 = 32
+	LLDPMAUType10GBaseR        uint16 = 33
+	LLDPMAUType10GBaseER       uint16 = 34
+	LLDPMAUType10GBaseLR       uint16 = 35
+	LLDPMAUType10GBaseSR       uint16 = 36
+	LLDPMAUType10GBaseW        uint16 = 37
+	LLDPMAUType10GBaseEW       uint16 = 38
+	LLDPMAUType10GBaseLW       uint16 = 39
+	LLDPMAUType10GBaseSW       uint16 = 40
+	LLDPMAUType10GBaseCX4      uint16 = 41
+	LLDPMAUType2BaseTL         uint16 = 42
+	LLDPMAUType10PASS_TS       uint16 = 43
+	LLDPMAUType100BaseBX10D    uint16 = 44
+	LLDPMAUType100BaseBX10U    uint16 = 45
+	LLDPMAUType100BaseLX10     uint16 = 46
+	LLDPMAUType1000BaseBX10D   uint16 = 47
+	LLDPMAUType1000BaseBX10U   uint16 = 48
+	LLDPMAUType1000BaseLX10    uint16 = 49
+	LLDPMAUType1000BasePX10D   uint16 = 50
+	LLDPMAUType1000BasePX10U   uint16 = 51
+	LLDPMAUType1000BasePX20D   uint16 = 52
+	LLDPMAUType1000BasePX20U   uint16 = 53
+	LLDPMAUType10GBaseT        uint16 = 54
+	LLDPMAUType10GBaseLRM      uint16 = 55
+	LLDPMAUType1000BaseKX      uint16 = 56
+	LLDPMAUType10GBaseKX4      uint16 = 57
+	LLDPMAUType10GBaseKR       uint16 = 58
+	LLDPMAUType10_1GBasePRX_D1 uint16 = 59
+	LLDPMAUType10_1GBasePRX_D2 uint16 = 60
+	LLDPMAUType10_1GBasePRX_D3 uint16 = 61
+	LLDPMAUType10_1GBasePRX_U1 uint16 = 62
+	LLDPMAUType10_1GBasePRX_U2 uint16 = 63
+	LLDPMAUType10_1GBasePRX_U3 uint16 = 64
+	LLDPMAUType10GBasePR_D1    uint16 = 65
+	LLDPMAUType10GBasePR_D2    uint16 = 66
+	LLDPMAUType10GBasePR_D3    uint16 = 67
+	LLDPMAUType10GBasePR_U1    uint16 = 68
+	LLDPMAUType10GBasePR_U3    uint16 = 69
 )
 
 // From RFC 3636 - ifMauAutoNegCapAdvertisedBits
 const (
-	LLDP_MAU_PMD_OTHER         uint16 = (1 << 15)
-	LLDP_MAU_PMD_10BASE_T      uint16 = (1 << 14)
-	LLDP_MAU_PMD_10BASE_T_FD   uint16 = (1 << 13)
-	LLDP_MAU_PMD_100BASE_T4    uint16 = (1 << 12)
-	LLDP_MAU_PMD_100BASE_TX    uint16 = (1 << 11)
-	LLDP_MAU_PMD_100BASE_TX_FD uint16 = (1 << 10)
-	LLDP_MAU_PMD_100BASE_T2    uint16 = (1 << 9)
-	LLDP_MAU_PMD_100BASE_T2_FD uint16 = (1 << 8)
-	LLDP_MAU_PMD_FDXPAUSE      uint16 = (1 << 7)
-	LLDP_MAU_PMD_FDXAPAUSE     uint16 = (1 << 6)
-	LLDP_MAU_PMD_FDXSPAUSE     uint16 = (1 << 5)
-	LLDP_MAU_PMD_FDXBPAUSE     uint16 = (1 << 4)
-	LLDP_MAU_PMD_1000BASE_X    uint16 = (1 << 3)
-	LLDP_MAU_PMD_1000BASE_X_FD uint16 = (1 << 2)
-	LLDP_MAU_PMD_1000BASE_T    uint16 = (1 << 1)
-	LLDP_MAU_PMD_1000BASE_T_FD uint16 = (1 << 0)
+	LLDPMAUPMDOther        uint16 = 1 << 15
+	LLDPMAUPMD10BaseT      uint16 = 1 << 14
+	LLDPMAUPMD10BaseT_FD   uint16 = 1 << 13
+	LLDPMAUPMD100BaseT4    uint16 = 1 << 12
+	LLDPMAUPMD100BaseTX    uint16 = 1 << 11
+	LLDPMAUPMD100BaseTX_FD uint16 = 1 << 10
+	LLDPMAUPMD100BaseT2    uint16 = 1 << 9
+	LLDPMAUPMD100BaseT2_FD uint16 = 1 << 8
+	LLDPMAUPMDFDXPAUSE     uint16 = 1 << 7
+	LLDPMAUPMDFDXAPAUSE    uint16 = 1 << 6
+	LLDPMAUPMDFDXSPAUSE    uint16 = 1 << 5
+	LLDPMAUPMDFDXBPAUSE    uint16 = 1 << 4
+	LLDPMAUPMD1000BaseX    uint16 = 1 << 3
+	LLDPMAUPMD1000BaseX_FD uint16 = 1 << 2
+	LLDPMAUPMD1000BaseT    uint16 = 1 << 1
+	LLDPMAUPMD1000BaseT_FD uint16 = 1 << 0
 )
 
 type MACPHYConfigStatus struct {
@@ -259,11 +311,17 @@ type MACPHYConfigStatus struct {
 
 // MDI Power options
 const (
-	LLDP_MDIPOWER_PORTCLASS    byte = (1 << 0)
-	LLDP_MDIPOWER_CAPABILITY   byte = (1 << 1)
-	LLDP_MDIPOWER_STATUS       byte = (1 << 2)
-	LLDP_MDIPOWER_PAIRSABILITY byte = (1 << 3)
+	LLDPMDIPowerPortClass    byte = 1 << 0
+	LLDPMDIPowerCapability   byte = 1 << 1
+	LLDPMDIPowerStatus       byte = 1 << 2
+	LLDPMDIPowerPairsAbility byte = 1 << 3
 )
+
+type LLDPPowerType byte
+
+type LLDPPowerSource byte
+
+type LLDPPowerPriority byte
 
 type PowerViaMDI struct {
 	PortClassPSE    bool // false = PD
@@ -272,40 +330,72 @@ type PowerViaMDI struct {
 	PSEPairsAbility bool
 	PSEPowerPair    uint8
 	PSEClass        uint8
+	PowerType       LLDPPowerType
+	PowerSource     LLDPPowerSource
+	PowerPriority   LLDPPowerPriority
+	RequestedPower  uint16 // 1-510 Watts
+	AllocatedPower  uint16 // 1-510 Watts
 }
 
-/// 802.1 TLV Subtypes
+type IEEEOUI uint32
+
+// http://standards.ieee.org/develop/regauth/oui/oui.txt
 const (
-	LLDP_PRIVATE_8021_SUBTYPE_PORT_VLAN_ID      uint8 = 1
-	LLDP_PRIVATE_8021_SUBTYPE_PROTOCOL_VLAN_ID  uint8 = 2
-	LLDP_PRIVATE_8021_SUBTYPE_VLAN_NAME         uint8 = 3
-	LLDP_PRIVATE_8021_SUBTYPE_PROTOCOL_IDENTITY uint8 = 4
-	LLDP_PRIVATE_8021_SUBTYPE_VDI_USAGE_DIGEST  uint8 = 5
-	LLDP_PRIVATE_8021_SUBTYPE_MANAGEMENT_VID    uint8 = 6
-	LLDP_PRIVATE_8021_SUBTYPE_LINKAGGR          uint8 = 7
+	IEEEOUI8021     IEEEOUI = 0x0080c2
+	IEEEOUI8023     IEEEOUI = 0x00120f
+	IEEEOUI8021Qbg  IEEEOUI = 0x0013BF
+	IEEEOUICisco2   IEEEOUI = 0x000142
+	IEEEOUITR41     IEEEOUI = 0x0012bb
+	IEEEOUIProfinet IEEEOUI = 0x000ecf
 )
 
-// 802.3 TLV Subtypes
+/// IEEE 802.1 TLV Subtypes
 const (
-	LLDP_PRIVATE_8023_SUBTYPE_MACPHY   uint8 = 1
-	LLDP_PRIVATE_8023_SUBTYPE_MDIPOWER uint8 = 2
-	LLDP_PRIVATE_8023_SUBTYPE_LINKAGGR uint8 = 3
-	LLDP_PRIVATE_8023_SUBTYPE_MTU      uint8 = 4
+	LLDP8021SubtypePortVLANID       uint8 = 1
+	LLDP8021SubtypeProtocolVLANID   uint8 = 2
+	LLDP8021SubtypeVLANName         uint8 = 3
+	LLDP8021SubtypeProtocolIdentity uint8 = 4
+	LLDP8021SubtypeVDIUsageDigest   uint8 = 5
+	LLDP8021SubtypeManagementVID    uint8 = 6
+	LLDP8021SubtypeLinkAggregation  uint8 = 7
 )
 
-type OrgSpecificTLV struct {
-	OUI     [3]byte
+// IEEE 802.3 TLV Subtypes
+const (
+	LLDP8023SubtypeMACPHY          uint8 = 1
+	LLDP8023SubtypeMDIPower        uint8 = 2
+	LLDP8023SubtypeLinkAggregation uint8 = 3
+	LLDP8023SubtypeMTU             uint8 = 4
+)
+
+// IEEE 802.1Qbg TLV Subtypes
+const (
+	LLDP8021QbgEVB  uint8 = 0
+	LLDP8021QbgCDCP uint8 = 1
+	LLDP8021QbgVDP  uint8 = 2
+)
+
+// LinkLayerDiscoveryValue is a TLV value inside a LinkLayerDiscovery packet layer.
+type LinkLayerDiscoveryValue struct {
+	Type   LLDPTLVType
+	Length uint16
+	Value  []byte
+}
+
+// LLDPOrgSpecificTLV is an Organisation-specific TLV
+type LLDPOrgSpecificTLV struct {
+	OUI     IEEEOUI
 	SubType uint8
 	Info    []byte
 }
 
 // LinkLayerDiscoveryInfo represents the decoded details for a set of LinkLayerDiscoveryValues
 type LinkLayerDiscoveryInfo struct {
-	PortDesc string
-	SysName  string
-	SysDesc  string
-	SysCaps  LLDPSysCaps
-	MgmtAddr LLDPMgmtAddr
+	PortDescription string
+	SysName         string
+	SysDescription  string
+	SysCapabilities LLDPSysCapabilities
+	MgmtAddress     LLDPMgmtAddress
 	// 802.1 Subtypes
 	PVID               uint16
 	PPVIDs             []PortProtocolVLANID
@@ -313,12 +403,16 @@ type LinkLayerDiscoveryInfo struct {
 	ProtocolIdentities []ProtocolIdentity
 	VIDUsageDigest     uint32
 	ManagementVID      uint16
-	LinkAggregation
+	LinkAggregation8021
 	// 802.3 Subtypes
 	MACPHYConfigStatus
 	PowerViaMDI
-	MTU     uint16
-	OrgTLVs []OrgSpecificTLV          // undecoded Private TLVs
+	LinkAggregation8023
+	MTU uint16
+	// 802.1Qbg Subtypes
+	EVBSettings LLDPEVBSettings
+
+	OrgTLVs []LLDPOrgSpecificTLV      // undecoded Private TLVs
 	Unknown []LinkLayerDiscoveryValue // undecoded TLVs
 }
 
@@ -327,25 +421,18 @@ func (c *LinkLayerDiscovery) LayerType() gopacket.LayerType {
 	return LayerTypeLinkLayerDiscovery
 }
 
-// LinkLayerDiscoveryValue is a TLV value inside a LinkLayerDiscovery packet layer.
-type LinkLayerDiscoveryValue struct {
-	Type   LinkLayerDiscoveryType
-	Length uint16
-	Value  []byte
-}
-
 func decodeLinkLayerDiscovery(data []byte, p gopacket.PacketBuilder) error {
 	var vals []LinkLayerDiscoveryValue
 	vData := data[0:]
 	for len(vData) > 0 {
 		nbit := vData[0] & 0x01
-		t := LinkLayerDiscoveryType(vData[0] >> 1)
+		t := LLDPTLVType(vData[0] >> 1)
 		val := LinkLayerDiscoveryValue{Type: t, Length: uint16(nbit<<8 + vData[1])}
 		if val.Length > 0 {
 			val.Value = vData[2 : val.Length+2]
 		}
 		vals = append(vals, val)
-		if t == LLDP_TLV_END {
+		if t == LLDPTLVEnd {
 			break
 		}
 		if len(vData) < int(2+val.Length) {
@@ -357,24 +444,24 @@ func decodeLinkLayerDiscovery(data []byte, p gopacket.PacketBuilder) error {
 		return fmt.Errorf("Missing mandatory LinkLayerDiscovery TLV")
 	}
 	c := &LinkLayerDiscovery{}
-	gotend := false
+	gotEnd := false
 	for _, v := range vals {
 		switch v.Type {
-		case LLDP_TLV_END:
-			gotend = true
-		case LLDP_TLV_CHID:
+		case LLDPTLVEnd:
+			gotEnd = true
+		case LLDPTLVChassisID:
 			if len(v.Value) < 2 {
 				return fmt.Errorf("Malformed LinkLayerDiscovery ChassisID TLV")
 			}
 			c.ChassisID.Subtype = LLDPChassisIDSubType(v.Value[0])
 			c.ChassisID.ID = v.Value[1:]
-		case LLDP_TLV_PID:
+		case LLDPTLVPortID:
 			if len(v.Value) < 2 {
 				return fmt.Errorf("Malformed LinkLayerDiscovery PortID TLV")
 			}
 			c.PortID.Subtype = LLDPPortIDSubType(v.Value[0])
 			c.PortID.ID = v.Value[1:]
-		case LLDP_TLV_TTL:
+		case LLDPTLVTTL:
 			if len(v.Value) < 2 {
 				return fmt.Errorf("Malformed LinkLayerDiscovery TTL TLV")
 			}
@@ -383,7 +470,7 @@ func decodeLinkLayerDiscovery(data []byte, p gopacket.PacketBuilder) error {
 			c.Values = append(c.Values, v)
 		}
 	}
-	if c.ChassisID.Subtype == 0 || c.PortID.Subtype == 0 || !gotend {
+	if c.ChassisID.Subtype == 0 || c.PortID.Subtype == 0 || !gotEnd {
 		return fmt.Errorf("Missing mandatory LinkLayerDiscovery TLV")
 	}
 	c.contents = data
@@ -391,113 +478,148 @@ func decodeLinkLayerDiscovery(data []byte, p gopacket.PacketBuilder) error {
 	return nil
 }
 
-func (l *LinkLayerDiscovery) DecodeValues() (info LinkLayerDiscoveryInfo) {
+// DecodeValues marshals LinkLayerDiscoveryValues into a LinkLayerDiscoveryInfo struct
+func (l *LinkLayerDiscovery) DecodeValues() (info LinkLayerDiscoveryInfo, errors []error) {
+	var ok bool
 	for _, v := range l.Values {
 		switch v.Type {
-		case LLDP_TLV_PORT_DESCR:
-			info.PortDesc = string(v.Value)
-		case LLDP_TLV_SYS_NAME:
+		case LLDPTLVPortDescription:
+			info.PortDescription = string(v.Value)
+		case LLDPTLVSysName:
 			info.SysName = string(v.Value)
-		case LLDP_TLV_SYS_DESCR:
-			info.SysDesc = string(v.Value)
-		case LLDP_TLV_SYS_CAPS:
-			if len(v.Value) > 4 {
-				info.SysCaps.ChassisID = v.Value[0]
-				info.SysCaps.SystemCap = getCaps(binary.BigEndian.Uint16(v.Value[1:3]))
-				info.SysCaps.EnabledCap = getCaps(binary.BigEndian.Uint16(v.Value[3:5]))
+		case LLDPTLVSysDescription:
+			info.SysDescription = string(v.Value)
+		case LLDPTLVSysCapabilities:
+			if ok, errors = checkLLDPTLVLen(v, 4, errors); ok {
+				info.SysCapabilities.SystemCap = getCapabilities(binary.BigEndian.Uint16(v.Value[0:2]))
+				info.SysCapabilities.EnabledCap = getCapabilities(binary.BigEndian.Uint16(v.Value[2:4]))
 			}
-		case LLDP_TLV_MGMT_ADDR:
-			if len(v.Value) < 9 {
+		case LLDPTLVMgmtAddress:
+			if ok, errors = checkLLDPTLVLen(v, 9, errors); ok {
+				mlen := v.Value[0]
+				if ok, errors = checkLLDPTLVLen(v, int(mlen+7), errors); !ok {
+					continue
+				}
+				info.MgmtAddress.Subtype = LLDPMgmtAddressSubtype(v.Value[1])
+				info.MgmtAddress.Address = v.Value[2 : mlen+1]
+				info.MgmtAddress.InterfaceSubtype = LLDPInterfaceSubtype(v.Value[mlen+1])
+				info.MgmtAddress.InterfaceNumber = binary.BigEndian.Uint32(v.Value[mlen+2 : mlen+6])
+				olen := v.Value[mlen+6]
+				if ok, errors = checkLLDPTLVLen(v, int(mlen+6+olen), errors); ok {
+					info.MgmtAddress.OID = string(v.Value[mlen+9 : mlen+9+olen])
+				}
+			}
+		case LLDPTLVOrgSpecific:
+			if ok, errors = checkLLDPTLVLen(v, 4, errors); !ok {
 				continue
 			}
-			mlen := v.Value[0]
-			if len(v.Value) < int(mlen+8) {
-				continue
-			}
-			info.MgmtAddr.Subtype = v.Value[1]
-			info.MgmtAddr.Address = v.Value[2 : mlen+1]
-			info.MgmtAddr.InterfaceSubtype = v.Value[mlen+1]
-			info.MgmtAddr.InterfaceNumber = binary.BigEndian.Uint32(v.Value[mlen+2 : mlen+6])
-			olen := v.Value[mlen+6]
-			if len(v.Value) < int(mlen+6+olen) {
-				continue //return fmt.Errorf("Malformed LinkLayerDiscovery MgmtAddr TLV")
-			}
-			info.MgmtAddr.OID = string(v.Value[mlen+9 : mlen+9+olen])
-		case LLDP_TLV_ORG_SPECIFIC:
-			if len(v.Value) < 4 {
-				continue
-			}
-			o := OrgSpecificTLV{[3]byte{v.Value[0], v.Value[1], v.Value[2]}, uint8(v.Value[3]), v.Value[4:]}
-			if bytes.Equal(o.OUI[0:3], []byte{0x00, 0x80, 0xc2}) { // IEEE 802.1
+			o := LLDPOrgSpecificTLV{IEEEOUI(binary.BigEndian.Uint32(append([]byte{byte(0)}, v.Value[0:3]...))), uint8(v.Value[3]), v.Value[4:]}
+			switch o.OUI {
+			case IEEEOUI8021:
 				switch o.SubType {
-				case LLDP_PRIVATE_8021_SUBTYPE_PORT_VLAN_ID:
-					if len(v.Value) > 1 {
+				case LLDP8021SubtypePortVLANID:
+					if ok, errors = checkLLDPOrgSpecificLen(o, 2, errors); ok {
 						info.PVID = binary.BigEndian.Uint16(o.Info[0:2])
 					}
-				case LLDP_PRIVATE_8021_SUBTYPE_PROTOCOL_VLAN_ID:
-					if len(v.Value) > 2 {
-						sup := (o.Info[0]&LLDP_PROTOCOLVLANID_CAPABILITY > 0)
-						en := (o.Info[0]&LLDP_AGGREGATION_STATUS > 0)
+				case LLDP8021SubtypeProtocolVLANID:
+					if ok, errors = checkLLDPOrgSpecificLen(o, 3, errors); ok {
+						sup := (o.Info[0]&LLDPProtocolVLANIDCapability > 0)
+						en := (o.Info[0]&LLDPAggregationStatus > 0)
 						id := binary.BigEndian.Uint16(o.Info[1:3])
 						info.PPVIDs = append(info.PPVIDs, PortProtocolVLANID{sup, en, id})
 					}
-				case LLDP_PRIVATE_8021_SUBTYPE_VLAN_NAME:
-					if len(v.Value) > 1 {
+				case LLDP8021SubtypeVLANName:
+					if ok, errors = checkLLDPOrgSpecificLen(o, 2, errors); ok {
 						id := binary.BigEndian.Uint16(o.Info[0:2])
 						info.VLANNames = append(info.VLANNames, VLANName{id, string(o.Info[3:])})
 					}
-				case LLDP_PRIVATE_8021_SUBTYPE_PROTOCOL_IDENTITY:
-					if len(v.Value) > 1 {
-						info.ProtocolIdentities = append(info.ProtocolIdentities, o.Info[1:])
+				case LLDP8021SubtypeProtocolIdentity:
+					if ok, errors = checkLLDPOrgSpecificLen(o, 1, errors); ok {
+						l := int(o.Info[0])
+						if l > 0 {
+							info.ProtocolIdentities = append(info.ProtocolIdentities, o.Info[1:1+l])
+						}
 					}
-				case LLDP_PRIVATE_8021_SUBTYPE_VDI_USAGE_DIGEST:
-					if len(v.Value) > 3 {
+				case LLDP8021SubtypeVDIUsageDigest:
+					if ok, errors = checkLLDPOrgSpecificLen(o, 4, errors); ok {
 						info.VIDUsageDigest = binary.BigEndian.Uint32(o.Info[0:4])
 					}
-				case LLDP_PRIVATE_8021_SUBTYPE_MANAGEMENT_VID:
-					if len(v.Value) > 1 {
+				case LLDP8021SubtypeManagementVID:
+					if ok, errors = checkLLDPOrgSpecificLen(o, 2, errors); ok {
 						info.ManagementVID = binary.BigEndian.Uint16(o.Info[0:2])
 					}
-				case LLDP_PRIVATE_8021_SUBTYPE_LINKAGGR:
-					if len(v.Value) > 4 {
-						sup := (o.Info[0]&LLDP_AGGREGATION_CAPABILITY > 0)
-						en := (o.Info[0]&LLDP_AGGREGATION_STATUS > 0)
+				case LLDP8021SubtypeLinkAggregation:
+					if ok, errors = checkLLDPOrgSpecificLen(o, 5, errors); ok {
+						sup := (o.Info[0]&LLDPAggregationCapability > 0)
+						en := (o.Info[0]&LLDPAggregationStatus > 0)
 						id := binary.BigEndian.Uint32(o.Info[1:5])
-						info.LinkAggregation = LinkAggregation{sup, en, id}
+						info.LinkAggregation8021 = LinkAggregation8021{sup, en, id}
 					}
 				default:
 					info.OrgTLVs = append(info.OrgTLVs, o)
 				}
-			} else if bytes.Equal(o.OUI[0:3], []byte{0x00, 0x12, 0x0f}) { // IEEE 802.3
+			case IEEEOUI8023:
 				switch o.SubType {
-				case LLDP_PRIVATE_8023_SUBTYPE_MACPHY:
-					if len(v.Value) > 4 {
-						sup := (o.Info[0]&LLDP_MACPHY_CAPABILITY > 0)
-						en := (o.Info[0]&LLDP_MACPHY_STATUS > 0)
+				case LLDP8023SubtypeMACPHY:
+					if ok, errors = checkLLDPOrgSpecificLen(o, 5, errors); ok {
+						sup := (o.Info[0]&LLDPMACPHYCapability > 0)
+						en := (o.Info[0]&LLDPMACPHYStatus > 0)
 						ca := binary.BigEndian.Uint16(o.Info[1:3])
 						mau := binary.BigEndian.Uint16(o.Info[3:5])
 						info.MACPHYConfigStatus = MACPHYConfigStatus{sup, en, ca, mau}
 					}
-				case LLDP_PRIVATE_8023_SUBTYPE_MDIPOWER:
-					if len(v.Value) > 2 {
-						pse := (o.Info[0]&LLDP_MDIPOWER_PORTCLASS > 0)
-						sup := (o.Info[0]&LLDP_MDIPOWER_CAPABILITY > 0)
-						en := (o.Info[0]&LLDP_MDIPOWER_STATUS > 0)
-						pairs := (o.Info[0]&LLDP_MDIPOWER_PAIRSABILITY > 0)
-						pair := uint8(o.Info[1])
-						class := uint8(o.Info[2])
-						info.PowerViaMDI = PowerViaMDI{pse, sup, en, pairs, pair, class}
+				case LLDP8023SubtypeMDIPower:
+					if ok, errors = checkLLDPOrgSpecificLen(o, 3, errors); ok {
+						info.PowerViaMDI.PortClassPSE = (o.Info[0]&LLDPMDIPowerPortClass > 0)
+						info.PowerViaMDI.PSESupported = (o.Info[0]&LLDPMDIPowerCapability > 0)
+						info.PowerViaMDI.PSEEnabled = (o.Info[0]&LLDPMDIPowerStatus > 0)
+						info.PowerViaMDI.PSEPairsAbility = (o.Info[0]&LLDPMDIPowerPairsAbility > 0)
+						info.PowerViaMDI.PSEPowerPair = uint8(o.Info[1])
+						info.PowerViaMDI.PSEClass = uint8(o.Info[2])
+						if len(o.Info) >= 8 {
+							info.PowerViaMDI.PowerType = LLDPPowerType((o.Info[3] & 0xc0) >> 6)
+							info.PowerViaMDI.PowerSource = LLDPPowerSource((o.Info[3] & 0x30) >> 4)
+							if info.PowerViaMDI.PowerType == 1 || info.PowerViaMDI.PowerType == 3 {
+								info.PowerViaMDI.PowerSource += 128 // For Stringify purposes
+							}
+							info.PowerViaMDI.PowerPriority = LLDPPowerPriority(o.Info[4] & 0x0f)
+							info.PowerViaMDI.RequestedPower = binary.BigEndian.Uint16(o.Info[5:7])
+							info.PowerViaMDI.AllocatedPower = binary.BigEndian.Uint16(o.Info[7:8])
+						}
 					}
-				case LLDP_PRIVATE_8023_SUBTYPE_LINKAGGR:
-					// deprecated
-				case LLDP_PRIVATE_8023_SUBTYPE_MTU:
-					if len(v.Value) > 1 {
+				case LLDP8023SubtypeLinkAggregation:
+					if ok, errors = checkLLDPOrgSpecificLen(o, 5, errors); ok {
+						id := binary.BigEndian.Uint32(o.Info[1:5])
+						info.LinkAggregation8023 = LinkAggregation8023{v.Value[0], id}
+					}
+				case LLDP8023SubtypeMTU:
+					if ok, errors = checkLLDPOrgSpecificLen(o, 2, errors); ok {
 						info.MTU = binary.BigEndian.Uint16(o.Info[0:2])
 					}
 				default:
 					info.OrgTLVs = append(info.OrgTLVs, o)
 				}
-			} else {
+			case IEEEOUI8021Qbg:
+				switch o.SubType {
+				case LLDP8021QbgEVB:
+					if ok, errors = checkLLDPOrgSpecificLen(o, 9, errors); ok {
+						info.EVBSettings.Supported = getEVBCapabilities(binary.BigEndian.Uint16(o.Info[0:2]))
+						info.EVBSettings.Enabled = getEVBCapabilities(binary.BigEndian.Uint16(o.Info[2:4]))
+						info.EVBSettings.SupportedVSIs = binary.BigEndian.Uint16(o.Info[4:6])
+						info.EVBSettings.ConfiguredVSIs = binary.BigEndian.Uint16(o.Info[6:8])
+						info.EVBSettings.RTEExponent = uint8(o.Info[8])
+					}
+				default:
+					info.OrgTLVs = append(info.OrgTLVs, o)
+				}
+
+			case IEEEOUITR41: // TODO
+				info.OrgTLVs = append(info.OrgTLVs, o)
+			case IEEEOUIProfinet: // TODO
+				info.OrgTLVs = append(info.OrgTLVs, o)
+			case IEEEOUICisco2: // TODO
+				info.OrgTLVs = append(info.OrgTLVs, o)
+			default:
 				info.OrgTLVs = append(info.OrgTLVs, o)
 			}
 		default:
@@ -507,17 +629,201 @@ func (l *LinkLayerDiscovery) DecodeValues() (info LinkLayerDiscoveryInfo) {
 	return
 }
 
-func getCaps(v uint16) (c LLDPCaps) {
-	c.Other = (v&LLDP_CAP_OTHER > 0)
-	c.Repeater = (v&LLDP_CAP_REPEATER > 0)
-	c.Bridge = (v&LLDP_CAP_BRIDGE > 0)
-	c.WLANAP = (v&LLDP_CAP_WLAN_AP > 0)
-	c.Router = (v&LLDP_CAP_ROUTER > 0)
-	c.Phone = (v&LLDP_CAP_PHONE > 0)
-	c.DocSis = (v&LLDP_CAP_DOCSIS > 0)
-	c.StationOnly = (v&LLDP_CAP_STATION_ONLY > 0)
-	c.CVLAN = (v&LLDP_CAP_CVLAN > 0)
-	c.SVLAN = (v&LLDP_CAP_SVLAN > 0)
-	c.TMPR = (v&LLDP_CAP_TMPR > 0)
+func getCapabilities(v uint16) (c LLDPCapabilities) {
+	c.Other = (v&LLDPCapsOther > 0)
+	c.Repeater = (v&LLDPCapsRepeater > 0)
+	c.Bridge = (v&LLDPCapsBridge > 0)
+	c.WLANAP = (v&LLDPCapsWLANAP > 0)
+	c.Router = (v&LLDPCapsRouter > 0)
+	c.Phone = (v&LLDPCapsPhone > 0)
+	c.DocSis = (v&LLDPCapsDocSis > 0)
+	c.StationOnly = (v&LLDPCapsStationOnly > 0)
+	c.CVLAN = (v&LLDPCapsCVLAN > 0)
+	c.SVLAN = (v&LLDPCapsSVLAN > 0)
+	c.TMPR = (v&LLDPCapsTmpr > 0)
+	return
+}
+
+func getEVBCapabilities(v uint16) (c LLDPEVBCapabilities) {
+	c.StandardBridging = (v & LLDPEVBCapsSTD) > 0
+	c.StandardBridging = (v & LLDPEVBCapsSTD) > 0
+	c.ReflectiveRelay = (v & LLDPEVBCapsRR) > 0
+	c.RetransmissionTimerExponent = (v & LLDPEVBCapsRTE) > 0
+	c.EdgeControlProtocol = (v & LLDPEVBCapsECP) > 0
+	c.VSIDiscoveryProtocol = (v & LLDPEVBCapsVDP) > 0
+	return
+}
+
+func (t LLDPTLVType) String() (s string) {
+	switch t {
+	case LLDPTLVEnd:
+		s = "TLV End"
+	case LLDPTLVChassisID:
+		s = "Chassis ID"
+	case LLDPTLVPortID:
+		s = "Port ID"
+	case LLDPTLVTTL:
+		s = "TTL"
+	case LLDPTLVPortDescription:
+		s = "Port Description"
+	case LLDPTLVSysName:
+		s = "System Name"
+	case LLDPTLVSysDescription:
+		s = "System Description"
+	case LLDPTLVSysCapabilities:
+		s = "System Capabilities"
+	case LLDPTLVMgmtAddress:
+		s = "Management Address"
+	case LLDPTLVOrgSpecific:
+		s = "Organisation Specific"
+	default:
+		s = "Unknown"
+	}
+	return
+}
+
+func (t LLDPChassisIDSubType) String() (s string) {
+	switch t {
+	case LLDPChassisIDSubTypeReserved:
+		s = "Reserved"
+	case LLDPChassisIDSubTypeChassisComp:
+		s = "Chassis Component"
+	case LLDPChassisIDSubtypeIfaceAlias:
+		s = "Interface Alias"
+	case LLDPChassisIDSubTypePortComp:
+		s = "Port Component"
+	case LLDPChassisIDSubTypeMACAddr:
+		s = "MAC Address"
+	case LLDPChassisIDSubTypeNetworkAddr:
+		s = "Network Address"
+	case LLDPChassisIDSubtypeIfaceName:
+		s = "Interface Name"
+	case LLDPChassisIDSubTypeLocal:
+		s = "Local"
+	default:
+		s = "Unknown"
+	}
+	return
+}
+
+func (t LLDPPortIDSubType) String() (s string) {
+	switch t {
+	case LLDPPortIDSubtypeReserved:
+		s = "Reserved"
+	case LLDPPortIDSubtypeIfaceAlias:
+		s = "Interface Alias"
+	case LLDPPortIDSubTypePortComp:
+		s = "Port Component"
+	case LLDPPortIDSubTypeMACAddr:
+		s = "MAC Address"
+	case LLDPPortIDSubTypeNetworkAddr:
+		s = "Network Address"
+	case LLDPPortIDSubtypeIfaceName:
+		s = "Interface Name"
+	case LLDPPortIDSubTypeAgentCircID:
+		s = "Agent Circuit ID"
+	case LLDPPortIDSubTypeLocal:
+		s = "Local"
+	default:
+		s = "Unknown"
+	}
+	return
+}
+
+func (t LLDPMgmtAddressSubtype) String() (s string) {
+	switch t {
+	case LLDPMgmtAddressSubtypeIPV4:
+		s = "IPv4"
+	case LLDPMgmtAddressSubtypeIPV6:
+		s = "IPv6"
+	default:
+		s = "Unknown"
+	}
+	return
+}
+
+func (t LLDPInterfaceSubtype) String() (s string) {
+	switch t {
+	case LLDPInterfaceSubtypeUnknown:
+		s = "Unknown"
+	case LLDPInterfaceSubtypeifIndex:
+		s = "IfIndex"
+	case LLDPInterfaceSubtypeSysPort:
+		s = "System Port Number"
+	default:
+		s = "Unknown"
+	}
+	return
+}
+
+func (t LLDPPowerType) String() (s string) {
+	switch t {
+	case 0:
+		s = "Type 2 PSE Device"
+	case 1:
+		s = "Type 2 PD Device"
+	case 2:
+		s = "Type 1 PSE Device"
+	case 3:
+		s = "Type 1 PD Device"
+	default:
+		s = "Unknown"
+	}
+	return
+}
+
+func (t LLDPPowerSource) String() (s string) {
+	switch t {
+	// PD Device
+	case 0:
+		s = "Unknown"
+	case 1:
+		s = "PSE"
+	case 2:
+		s = "Local"
+	case 3:
+		s = "PSE and Local"
+	// PSE Device  (Actual value  + 128)
+	case 128:
+		s = "Unknown"
+	case 129:
+		s = "Primary Power Source"
+	case 130:
+		s = "Backup Power Source"
+	default:
+		s = "Unknown"
+	}
+	return
+}
+
+func (t LLDPPowerPriority) String() (s string) {
+	switch t {
+	case 0:
+		s = "Unknown"
+	case 1:
+		s = "Critical"
+	case 2:
+		s = "High"
+	case 3:
+		s = "Low"
+	default:
+		s = "Unknown"
+	}
+	return
+}
+
+func checkLLDPTLVLen(v LinkLayerDiscoveryValue, l int, e []error) (ok bool, errors []error) {
+	errors = e
+	if ok = (len(v.Value) >= l); !ok {
+		errors = append(errors, fmt.Errorf("Invalid TLV %v length %d (wanted mimimum %v", v.Type, len(v.Value), l))
+	}
+	return
+}
+
+func checkLLDPOrgSpecificLen(o LLDPOrgSpecificTLV, l int, e []error) (ok bool, errors []error) {
+	errors = e
+	if ok = (len(o.Info) >= l); !ok {
+		errors = append(errors, fmt.Errorf("Invalid Org Specific TLV %v length %d (wanted minimum %v)", o.SubType, len(o.Info), l))
+	}
 	return
 }

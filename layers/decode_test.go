@@ -10,6 +10,7 @@ package layers
 import (
 	"code.google.com/p/gopacket"
 	"fmt"
+	"net"
 	"reflect"
 	"strings"
 	"testing"
@@ -511,10 +512,42 @@ func TestDecodeCiscoDiscovery(t *testing.T) {
 	p := gopacket.NewPacket(data, LinkTypeEthernet, gopacket.Default)
 	wantLayers := []gopacket.LayerType{LayerTypeEthernet, LayerTypeLLC, LayerTypeSNAP, LayerTypeCiscoDiscovery}
 	checkLayers(p, wantLayers, t)
-//	cdpL := p.Layer(LayerTypeCiscoDiscovery)
-//	cdp, _ := cdpL.(*CiscoDiscovery)
-//	info := cdp.DecodeValues()
-//	fmt.Println(info)
+
+	want := CiscoDiscoveryInfo{
+		CDPHello: CDPHello{
+			OUI:              [...]byte{0, 0, 12},
+			ProtocolID:       274,
+			ClusterMaster:    net.IPv4(0, 0, 0, 0),
+			Unknown1:         net.IPv4(255, 255, 255, 255),
+			Version:          1,
+			SubVersion:       2,
+			Status:           32,
+			Unknown2:         255,
+			ClusterCommander: net.HardwareAddr{0, 0, 0, 0, 0, 0},
+			SwitchMAC:        net.HardwareAddr{0, 0x0b, 0xbe, 0x18, 0x9a, 0x40},
+			Unknown3:         255,
+			ManagementVLAN:   0,
+		},
+		DeviceID:      "myswitch",
+		Addresses:     []net.IP{net.IPv4(192, 168, 0, 253)},
+		PortID:        "FastEthernet0/1",
+		Capabilities:  CDPCapabilities{false, false, false, true, false, true, false, false, false},
+		Version:       "Cisco Internetwork Operating System Software \nIOS (tm) C2950 Software (C2950-I6K2L2Q4-M), Version 12.1(22)EA14, RELEASE SOFTWARE (fc1)\nTechnical Support: http://www.cisco.com/techsupport\nCopyright (c) 1986-2010 by cisco Systems, Inc.\nCompiled Tue 26-Oct-10 10:35 by nburra",
+		Platform:      "cisco WS-C2950-12",
+		VTPDomain:     "MYDOMAIN",
+		NativeVLAN:    1,
+		FullDuplex:    true,
+		MgmtAddresses: []net.IP{net.IPv4(192, 168, 0, 253)},
+	}
+	cdpL := p.Layer(LayerTypeCiscoDiscovery)
+	cdp, _ := cdpL.(*CiscoDiscovery)
+	info, errs := cdp.DecodeValues()
+	if errs != nil {
+		t.Errorf("Values decode error: %v", errs)
+	}
+	if !reflect.DeepEqual(info, want) {
+		t.Errorf("Values mismatch, \ngot  %#v\nwant %#v\n", info, want)
+	}
 }
 
 func TestDecodeLinkLayerDiscovery(t *testing.T) {
@@ -546,10 +579,39 @@ func TestDecodeLinkLayerDiscovery(t *testing.T) {
 	p := gopacket.NewPacket(data, LinkTypeEthernet, gopacket.Default)
 	wantLayers := []gopacket.LayerType{LayerTypeEthernet, LayerTypeLinkLayerDiscovery}
 	checkLayers(p, wantLayers, t)
-//	lldpL := p.Layer(LayerTypeLinkLayerDiscovery)
-//	lldp, _ := lldpL.(*LinkLayerDiscovery)
-//	info := lldp.DecodeValues()
-//	fmt.Println(info, err)
+	lldpL := p.Layer(LayerTypeLinkLayerDiscovery)
+	lldp := lldpL.(*LinkLayerDiscovery)
+	info, errs := lldp.DecodeValues()
+	if errs != nil {
+		t.Errorf("Values decode error: %v", errs)
+	}
+	want := LinkLayerDiscoveryInfo{
+		PortDescription: "Summit300-48-Port 1001\x00",
+		SysName:         "Summit300-48\x00",
+		SysDescription:  "Summit300-48 - Version 7.4e.1 (Build 5) by Release_Master 05/27/05 04:53:11\x00",
+		SysCapabilities: LLDPSysCapabilities{
+			SystemCap:  LLDPCapabilities{false, false, true, false, true, false, false, false, false, false, false},
+			EnabledCap: LLDPCapabilities{false, false, true, false, true, false, false, false, false, false, false},
+		},
+		MgmtAddress:         LLDPMgmtAddress{6, []byte{0x00, 0x01, 0x30, 0xf9, 0xad, 0xa0}, 2, 1001, ""},
+		PVID:                488,
+		PPVIDs:              []PortProtocolVLANID{PortProtocolVLANID{true, false, 0}},
+		VLANNames:           []VLANName{VLANName{488, "v2-0488-03-0505\x00"}},
+		VIDUsageDigest:      0,
+		ManagementVID:       0,
+		LinkAggregation8021: LinkAggregation8021{false, false, 0},
+		LinkAggregation8023: LinkAggregation8023{0, 0},
+		MACPHYConfigStatus:  MACPHYConfigStatus{true, true, 27648, 16},
+		PowerViaMDI:         PowerViaMDI{true, true, true, false, 1, 0, 0, 0, 0, 0, 0},
+		ProtocolIdentities:  nil,
+		MTU:                 1522,
+		OrgTLVs:             nil,
+		Unknown:             nil,
+	}
+
+	if !reflect.DeepEqual(info, want) {
+		t.Errorf("Values mismatch, \ngot  %#v\nwant %#v\n", info, want)
+	}
 }
 
 func TestDecodeIPv6Jumbogram(t *testing.T) {
