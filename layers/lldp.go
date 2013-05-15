@@ -127,12 +127,37 @@ type LLDPSysCapabilities struct {
 	EnabledCap LLDPCapabilities
 }
 
-type LLDPMgmtAddressSubtype byte
+type IANAAddressFamily byte
 
 // LLDP Management Address Subtypes
+// http://www.iana.org/assignments/address-family-numbers/address-family-numbers.xml
 const (
-	LLDPMgmtAddressSubtypeIPV4 LLDPMgmtAddressSubtype = 1
-	LLDPMgmtAddressSubtypeIPV6 LLDPMgmtAddressSubtype = 2
+	IANAAddressFamilyReserved  IANAAddressFamily = 0
+	IANAAddressFamilyInet      IANAAddressFamily = 1
+	IANAAddressFamilyInet6     IANAAddressFamily = 2
+	IANAAddressFamilyNsap      IANAAddressFamily = 3
+	IANAAddressFamilyHdlc      IANAAddressFamily = 4
+	IANAAddressFamilyBbn1822   IANAAddressFamily = 5
+	IANAAddressFamily802       IANAAddressFamily = 6
+	IANAAddressFamilyE163      IANAAddressFamily = 7
+	IANAAddressFamilyE164      IANAAddressFamily = 8
+	IANAAddressFamilyF69       IANAAddressFamily = 9
+	IANAAddressFamilyX121      IANAAddressFamily = 10
+	IANAAddressFamilyIpx       IANAAddressFamily = 11
+	IANAAddressFamilyAtalk     IANAAddressFamily = 12
+	IANAAddressFamilyDecnet    IANAAddressFamily = 13
+	IANAAddressFamilyBanyan    IANAAddressFamily = 14
+	IANAAddressFamilyE164nsap  IANAAddressFamily = 15
+	IANAAddressFamilyDns       IANAAddressFamily = 16
+	IANAAddressFamilyDistname  IANAAddressFamily = 17
+	IANAAddressFamilyAs_number IANAAddressFamily = 18
+	IANAAddressFamilyXtp_ip4   IANAAddressFamily = 19
+	IANAAddressFamilyXtp_ip6   IANAAddressFamily = 20
+	IANAAddressFamilyXtp       IANAAddressFamily = 21
+	IANAAddressFamilyFc_wwpn   IANAAddressFamily = 22
+	IANAAddressFamilyFc_wwnn   IANAAddressFamily = 23
+	IANAAddressFamilyGwid      IANAAddressFamily = 24
+	IANAAddressFamilyL2vpn     IANAAddressFamily = 25
 )
 
 type LLDPInterfaceSubtype byte
@@ -145,7 +170,7 @@ const (
 )
 
 type LLDPMgmtAddress struct {
-	Subtype          LLDPMgmtAddressSubtype
+	Subtype          IANAAddressFamily
 	Address          []byte
 	InterfaceSubtype LLDPInterfaceSubtype
 	InterfaceNumber  uint32
@@ -189,8 +214,8 @@ const (
 
 // VLAN Port Protocol ID options
 const (
-	LLDPProtocolVLANIDCapability byte = 1 << 0
-	LLDPProtocolVLANIDStatus     byte = 1 << 1
+	LLDPProtocolVLANIDCapability byte = 1 << 1
+	LLDPProtocolVLANIDStatus     byte = 1 << 2
 )
 
 type PortProtocolVLANID struct {
@@ -212,8 +237,8 @@ const (
 	LLDPAggregationStatus     byte = 1 << 1
 )
 
-// IEEE 802.1 Link Aggregation parameters
-type LinkAggregation8021 struct {
+// IEEE 802 Link Aggregation parameters
+type LLDPLinkAggregation struct {
 	Supported bool
 	Enabled   bool
 	PortID    uint32
@@ -226,7 +251,7 @@ type LLDPInfo8021 struct {
 	ProtocolIdentities []ProtocolIdentity
 	VIDUsageDigest     uint32
 	ManagementVID      uint16
-	LinkAggregation LinkAggregation8021
+	LinkAggregation LLDPLinkAggregation
 }
 
 // IEEE 802.3 TLV Subtypes
@@ -394,16 +419,10 @@ type PowerViaMDI struct {
 	AllocatedPower  uint16 // 1-510 Watts
 }
 
-// IEEE 802.3 Link Aggregation parameters
-type LinkAggregation8023 struct {
-	Status byte
-	PortID uint32
-}
-
 type LLDPInfo8023 struct {
 	MACPHYConfigStatus
 	PowerViaMDI
-	LinkAggregation LinkAggregation8023
+	LinkAggregation LLDPLinkAggregation
 	MTU uint16
 }
 
@@ -528,7 +547,7 @@ func decodeLinkLayerDiscovery(data []byte, p gopacket.PacketBuilder) error {
 				if ok, errors = checkLLDPTLVLen(v, int(mlen+7), errors); !ok {
 					continue
 				}
-				info.MgmtAddress.Subtype = LLDPMgmtAddressSubtype(v.Value[1])
+				info.MgmtAddress.Subtype = IANAAddressFamily(v.Value[1])
 				info.MgmtAddress.Address = v.Value[2 : mlen+1]
 				info.MgmtAddress.InterfaceSubtype = LLDPInterfaceSubtype(v.Value[mlen+1])
 				info.MgmtAddress.InterfaceNumber = binary.BigEndian.Uint32(v.Value[mlen+2 : mlen+6])
@@ -566,7 +585,7 @@ func (l *LinkLayerDiscoveryInfo) Decode8021() (info LLDPInfo8021, err error) {
 		case LLDP8021SubtypeProtocolVLANID:
 			if ok, errors = checkLLDPOrgSpecificLen(o, 3, errors); ok {
 				sup := (o.Info[0]&LLDPProtocolVLANIDCapability > 0)
-				en := (o.Info[0]&LLDPAggregationStatus > 0)
+				en := (o.Info[0]&LLDPProtocolVLANIDStatus > 0)
 				id := binary.BigEndian.Uint16(o.Info[1:3])
 				info.PPVIDs = append(info.PPVIDs, PortProtocolVLANID{sup, en, id})
 			}
@@ -594,7 +613,7 @@ func (l *LinkLayerDiscoveryInfo) Decode8021() (info LLDPInfo8021, err error) {
 			if ok, errors = checkLLDPOrgSpecificLen(o, 5, errors); ok {
 				sup := (o.Info[0]&LLDPAggregationCapability > 0)
 				en := (o.Info[0]&LLDPAggregationStatus > 0)
-				info.LinkAggregation = LinkAggregation8021{sup, en, binary.BigEndian.Uint32(o.Info[1:5])}
+				info.LinkAggregation = LLDPLinkAggregation{sup, en, binary.BigEndian.Uint32(o.Info[1:5])}
 			}
 		}
 	}
@@ -641,7 +660,9 @@ func (l *LinkLayerDiscoveryInfo) Decode8023() (info LLDPInfo8023, err error) {
 			}
 		case LLDP8023SubtypeLinkAggregation:
 			if ok, errors = checkLLDPOrgSpecificLen(o, 5, errors); ok {
-				info.LinkAggregation = LinkAggregation8023{o.Info[0], binary.BigEndian.Uint32(o.Info[1:5])}
+				sup := (o.Info[0]&LLDPAggregationCapability > 0)
+				en := (o.Info[0]&LLDPAggregationStatus > 0)
+				info.LinkAggregation = LLDPLinkAggregation{sup, en, binary.BigEndian.Uint32(o.Info[1:5])}
 			}
 		case LLDP8023SubtypeMTU:
 			if ok, errors = checkLLDPOrgSpecificLen(o, 2, errors); ok {
@@ -786,12 +807,60 @@ func (t LLDPPortIDSubType) String() (s string) {
 	return
 }
 
-func (t LLDPMgmtAddressSubtype) String() (s string) {
+func (t IANAAddressFamily) String() (s string) {
 	switch t {
-	case LLDPMgmtAddressSubtypeIPV4:
-		s = "IPv4"
-	case LLDPMgmtAddressSubtypeIPV6:
-		s = "IPv6"
+	case IANAAddressFamilyReserved:
+		s = "Reserved"
+	case IANAAddressFamilyInet:
+		s = "IPv4" 
+	case IANAAddressFamilyInet6:
+		s = "IPv6" 
+	case IANAAddressFamilyNsap:
+		s = "NSAP" 
+	case IANAAddressFamilyHdlc:
+		s = "HDLC" 
+	case IANAAddressFamilyBbn1822:
+		s = "BBN 1822" 
+	case IANAAddressFamily802:
+		s = "802 media plus Ethernet 'canonical format'" 
+	case IANAAddressFamilyE163:
+		s = "E.163" 
+	case IANAAddressFamilyE164:
+		s = "E.164 (SMDS, Frame Relay, ATM)" 
+	case IANAAddressFamilyF69:
+		s = "F.69 (Telex)" 
+	case IANAAddressFamilyX121:
+		s = "X.121, X.25, Frame Relay" 
+	case IANAAddressFamilyIpx:
+		s = "IPX" 
+	case IANAAddressFamilyAtalk:
+		s = "Appletalk" 
+	case IANAAddressFamilyDecnet:
+		s = "Decnet IV" 
+	case IANAAddressFamilyBanyan:
+		s = "Banyan Vines" 
+	case IANAAddressFamilyE164nsap:
+		s = "E.164 with NSAP format subaddress" 
+	case IANAAddressFamilyDns:
+		s = "DNS" 
+	case IANAAddressFamilyDistname:
+		s = "Distinguished Name" 
+	case IANAAddressFamilyAs_number:
+		s = "AS Number" 
+	case IANAAddressFamilyXtp_ip4:
+		s = "XTP over IP version 4" 
+	case IANAAddressFamilyXtp_ip6:
+		s = "XTP over IP version 6" 
+	case IANAAddressFamilyXtp:
+		s = "XTP native mode XTP" 
+	case IANAAddressFamilyFc_wwpn:
+		s = "Fibre Channel World-Wide Port Name" 
+	case IANAAddressFamilyFc_wwnn:
+		s = "Fibre Channel World-Wide Node Name" 
+	case IANAAddressFamilyGwid:
+		s = "GWID" 
+	case IANAAddressFamilyL2vpn:
+		s = "AFI for Layer 2 VPN"
 	default:
 		s = "Unknown"
 	}
