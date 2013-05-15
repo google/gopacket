@@ -58,14 +58,14 @@ type LLDPChassisID struct {
 type LLDPPortIDSubType byte
 
 const (
-	LLDPPortIDSubtypeReserved    LLDPPortIDSubType = 0
-	LLDPPortIDSubtypeIfaceAlias  LLDPPortIDSubType = 1
-	LLDPPortIDSubTypePortComp    LLDPPortIDSubType = 2
-	LLDPPortIDSubTypeMACAddr     LLDPPortIDSubType = 3
-	LLDPPortIDSubTypeNetworkAddr LLDPPortIDSubType = 4
-	LLDPPortIDSubtypeIfaceName   LLDPPortIDSubType = 5
-	LLDPPortIDSubTypeAgentCircuitID LLDPPortIDSubType = 6
-	LLDPPortIDSubTypeLocal       LLDPPortIDSubType = 7
+	LLDPPortIDSubtypeReserved       LLDPPortIDSubType = 0
+	LLDPPortIDSubtypeIfaceAlias     LLDPPortIDSubType = 1
+	LLDPPortIDSubtypePortComp       LLDPPortIDSubType = 2
+	LLDPPortIDSubtypeMACAddr        LLDPPortIDSubType = 3
+	LLDPPortIDSubtypeNetworkAddr    LLDPPortIDSubType = 4
+	LLDPPortIDSubtypeIfaceName      LLDPPortIDSubType = 5
+	LLDPPortIDSubtypeAgentCircuitID LLDPPortIDSubType = 6
+	LLDPPortIDSubtypeLocal          LLDPPortIDSubType = 7
 )
 
 type LLDPPortID struct {
@@ -84,6 +84,18 @@ type LinkLayerDiscovery struct {
 	TTL       uint16
 	Values    []LinkLayerDiscoveryValue
 }
+
+type IEEEOUI uint32
+
+// http://standards.ieee.org/develop/regauth/oui/oui.txt
+const (
+	IEEEOUI8021     IEEEOUI = 0x0080c2
+	IEEEOUI8023     IEEEOUI = 0x00120f
+	IEEEOUI8021Qbg  IEEEOUI = 0x0013BF
+	IEEEOUICisco2   IEEEOUI = 0x000142
+	IEEEOUIMedia    IEEEOUI = 0x0012bb
+	IEEEOUIProfinet IEEEOUI = 0x000ecf
+)
 
 // LLDPOrgSpecificTLV is an Organisation-specific TLV
 type LLDPOrgSpecificTLV struct {
@@ -185,21 +197,9 @@ type LinkLayerDiscoveryInfo struct {
 	SysDescription  string
 	SysCapabilities LLDPSysCapabilities
 	MgmtAddress     LLDPMgmtAddress
-	OrgTLVs []LLDPOrgSpecificTLV      // Private TLVs
-	Unknown []LinkLayerDiscoveryValue // undecoded TLVs
+	OrgTLVs         []LLDPOrgSpecificTLV      // Private TLVs
+	Unknown         []LinkLayerDiscoveryValue // undecoded TLVs
 }
-
-type IEEEOUI uint32
-
-// http://standards.ieee.org/develop/regauth/oui/oui.txt
-const (
-	IEEEOUI8021     IEEEOUI = 0x0080c2
-	IEEEOUI8023     IEEEOUI = 0x00120f
-	IEEEOUI8021Qbg  IEEEOUI = 0x0013BF
-	IEEEOUICisco2   IEEEOUI = 0x000142
-	IEEEOUITR41     IEEEOUI = 0x0012bb
-	IEEEOUIProfinet IEEEOUI = 0x000ecf
-)
 
 /// IEEE 802.1 TLV Subtypes
 const (
@@ -251,7 +251,7 @@ type LLDPInfo8021 struct {
 	ProtocolIdentities []ProtocolIdentity
 	VIDUsageDigest     uint32
 	ManagementVID      uint16
-	LinkAggregation LLDPLinkAggregation
+	LinkAggregation    LLDPLinkAggregation
 }
 
 // IEEE 802.3 TLV Subtypes
@@ -363,7 +363,7 @@ const (
 )
 
 // Inverted ifMauAutoNegCapAdvertisedBits if required
-// (Some manufacturers misinterpreted the spec - 
+// (Some manufacturers misinterpreted the spec -
 // see https://bugs.wireshark.org/bugzilla/show_bug.cgi?id=1455)
 const (
 	LLDPMAUPMDOtherInv        uint16 = 1 << 0
@@ -384,7 +384,7 @@ const (
 	LLDPMAUPMD1000BaseT_FDInv uint16 = 1 << 15
 )
 
-type MACPHYConfigStatus struct {
+type LLDPMACPHYConfigStatus struct {
 	AutoNegSupported  bool
 	AutoNegEnabled    bool
 	AutoNegCapability uint16
@@ -405,25 +405,32 @@ type LLDPPowerSource byte
 
 type LLDPPowerPriority byte
 
-type PowerViaMDI struct {
+const (
+	LLDPPowerPriorityUnknown LLDPPowerPriority = 0
+	LLDPPowerPriorityMedium LLDPPowerPriority = 1
+	LLDPPowerPriorityHigh LLDPPowerPriority = 2
+	LLDPPowerPriorityLow LLDPPowerPriority = 3
+)
+
+type LLDPPowerViaMDI8023 struct {
 	PortClassPSE    bool // false = PD
 	PSESupported    bool
 	PSEEnabled      bool
 	PSEPairsAbility bool
 	PSEPowerPair    uint8
 	PSEClass        uint8
-	PowerType       LLDPPowerType
-	PowerSource     LLDPPowerSource
-	PowerPriority   LLDPPowerPriority
-	RequestedPower  uint16 // 1-510 Watts
-	AllocatedPower  uint16 // 1-510 Watts
+	Type            LLDPPowerType
+	Source          LLDPPowerSource
+	Priority        LLDPPowerPriority
+	Requested       uint16 // 1-510 Watts
+	Allocated       uint16 // 1-510 Watts
 }
 
 type LLDPInfo8023 struct {
-	MACPHYConfigStatus
-	PowerViaMDI
-	LinkAggregation LLDPLinkAggregation
-	MTU uint16
+	MACPHYConfigStatus LLDPMACPHYConfigStatus
+	PowerViaMDI        LLDPPowerViaMDI8023
+	LinkAggregation    LLDPLinkAggregation
+	MTU                uint16
 }
 
 // IEEE 802.1Qbg TLV Subtypes
@@ -432,7 +439,6 @@ const (
 	LLDP8021QbgCDCP uint8 = 1
 	LLDP8021QbgVDP  uint8 = 2
 )
-
 
 // LLDPEVBCapabilities Types
 const (
@@ -464,6 +470,177 @@ type LLDPInfo8021Qbg struct {
 	EVBSettings LLDPEVBSettings
 }
 
+type LLDPMediaSubtype uint8
+
+// Media TLV Subtypes
+const (
+	LLDPMediaTypeCapabilities LLDPMediaSubtype = 1
+	LLDPMediaTypeNetwork      LLDPMediaSubtype = 2
+	LLDPMediaTypeLocation     LLDPMediaSubtype = 3
+	LLDPMediaTypePower        LLDPMediaSubtype = 4
+	LLDPMediaTypeHardware     LLDPMediaSubtype = 5
+	LLDPMediaTypeFirmware     LLDPMediaSubtype = 6
+	LLDPMediaTypeSoftware     LLDPMediaSubtype = 7
+	LLDPMediaTypeSerial       LLDPMediaSubtype = 8
+	LLDPMediaTypeManufacturer LLDPMediaSubtype = 9
+	LLDPMediaTypeModel        LLDPMediaSubtype = 10
+	LLDPMediaTypeAssetID      LLDPMediaSubtype = 11
+)
+
+type LLDPMediaClass uint8
+
+// Media Class Values
+const (
+	LLDPMediaClassUndefined   LLDPMediaClass = 0
+	LLDPMediaClassEndpointI   LLDPMediaClass = 1
+	LLDPMediaClassEndpointII  LLDPMediaClass = 2
+	LLDPMediaClassEndpointIII LLDPMediaClass = 3
+	LLDPMediaClassNetwork     LLDPMediaClass = 4
+)
+
+// LLDPMediaCapabilities Types
+const (
+	LLDPMediaCapsLLDP      uint16 = 1 << 0
+	LLDPMediaCapsNetwork   uint16 = 1 << 1
+	LLDPMediaCapsLocation  uint16 = 1 << 2
+	LLDPMediaCapsPowerPSE  uint16 = 1 << 3
+	LLDPMediaCapsPowerPD   uint16 = 1 << 4
+	LLDPMediaCapsInventory uint16 = 1 << 5
+)
+
+// LLDPMediaCapabilities represents the LLDP Media capabilities of a device
+type LLDPMediaCapabilities struct {
+	Capabilities  bool
+	NetworkPolicy bool
+	Location      bool
+	PowerPSE      bool
+	PowerPD       bool
+	Inventory     bool
+	Class         LLDPMediaClass
+}
+
+type LLDPApplicationType uint8
+
+const (
+	LLDPAppTypeReserved            LLDPApplicationType = 0
+	LLDPAppTypeVoice               LLDPApplicationType = 1
+	LLDPappTypeVoiceSignaling      LLDPApplicationType = 2
+	LLDPappTypeGuestVoice          LLDPApplicationType = 3
+	LLDPappTypeGuestVoiceSignaling LLDPApplicationType = 4
+	LLDPappTypeSoftphoneVoice      LLDPApplicationType = 5
+	LLDPappTypeVideoConferencing   LLDPApplicationType = 6
+	LLDPappTypeStreamingVideo      LLDPApplicationType = 7
+	LLDPappTypeVideoSignaling      LLDPApplicationType = 8
+)
+
+type LLDPNetworkPolicy struct {
+	ApplicationType LLDPApplicationType
+	Defined         bool
+	Tagged          bool
+	VLANId          uint16
+	L2Priority      uint16
+	DSCPValue       uint8
+}
+
+type LLDPLocationFormat uint8
+
+const (
+	LLDPLocationFormatInvalid    LLDPLocationFormat = 0
+	LLDPLocationFormatCoordinate LLDPLocationFormat = 1
+	LLDPLocationFormatAddress    LLDPLocationFormat = 2
+	LLDPLocationFormatECS        LLDPLocationFormat = 3
+)
+
+type LLDPLocationAddressWhat uint8
+
+const (
+	LLDPLocationAddressWhatDHCP    LLDPLocationAddressWhat = 0
+	LLDPLocationAddressWhatNetwork LLDPLocationAddressWhat = 1
+	LLDPLocationAddressWhatClient  LLDPLocationAddressWhat = 2
+)
+
+type LLDPLocationAddressType uint8
+
+const (
+	LLDPLocationAddressTypeLanguage       LLDPLocationAddressType = 0   //    "Language" },
+	LLDPLocationAddressTypeNational       LLDPLocationAddressType = 1   //    "National subdivisions (province, state, etc)" },
+	LLDPLocationAddressTypeCounty         LLDPLocationAddressType = 2   //    "County, parish, district" },
+	LLDPLocationAddressTypeCity           LLDPLocationAddressType = 3   //    "City, township" },
+	LLDPLocationAddressTypeCityDivision   LLDPLocationAddressType = 4   //    "City division, borough, ward" },
+	LLDPLocationAddressTypeNeighborhood   LLDPLocationAddressType = 5   //    "Neighborhood, block" },
+	LLDPLocationAddressTypeStreet         LLDPLocationAddressType = 6   //    "Street" },
+	LLDPLocationAddressTypeLeadingStreet  LLDPLocationAddressType = 16  //   "Leading street direction" },
+	LLDPLocationAddressTypeTrailingStreet LLDPLocationAddressType = 17  //   "Trailing street suffix" },
+	LLDPLocationAddressTypeStreetSuffix   LLDPLocationAddressType = 18  //   "Street suffix" },
+	LLDPLocationAddressTypeHouseNum       LLDPLocationAddressType = 19  //   "House number" },
+	LLDPLocationAddressTypeHouseSuffix    LLDPLocationAddressType = 20  //   "House number suffix" },
+	LLDPLocationAddressTypeLandmark       LLDPLocationAddressType = 21  //   "Landmark or vanity address" },
+	LLDPLocationAddressTypeAdditional     LLDPLocationAddressType = 22  //   "Additional location information" },
+	LLDPLocationAddressTypeName           LLDPLocationAddressType = 23  //   "Name" },
+	LLDPLocationAddressTypePostal         LLDPLocationAddressType = 24  //   "Postal/ZIP code" },
+	LLDPLocationAddressTypeBuilding       LLDPLocationAddressType = 25  //   "Building" },
+	LLDPLocationAddressTypeUnit           LLDPLocationAddressType = 26  //   "Unit" },
+	LLDPLocationAddressTypeFloor          LLDPLocationAddressType = 27  //   "Floor" },
+	LLDPLocationAddressTypeRoom           LLDPLocationAddressType = 28  //   "Room number" },
+	LLDPLocationAddressTypePlace          LLDPLocationAddressType = 29  //   "Place type" },
+	LLDPLocationAddressTypeScript         LLDPLocationAddressType = 128 //  "Script" },
+)
+
+type LLDPLocationCoordinate struct {
+	LatitudeResolution  uint8
+	Latitude            uint64
+	LongitudeResolution uint8
+	Longitude           uint64
+	AltitudeType        uint8
+	AltitudeResolution  uint16
+	Altitude            uint32
+	Datum               uint8
+}
+
+type LLDPLocationAddressLine struct {
+	Type  LLDPLocationAddressType
+	Value string
+}
+
+type LLDPLocationAddress struct {
+	What         LLDPLocationAddressWhat
+	CountryCode  string
+	AddressLines []LLDPLocationAddressLine
+}
+
+type LLDPLocationECS struct {
+	ELIN string
+}
+
+// LLDP represents a physical location.
+// Only one of the embedded types will contain values, depending on Format.
+type LLDPLocation struct {
+	Format     LLDPLocationFormat
+	Coordinate LLDPLocationCoordinate
+	Address    LLDPLocationAddress
+	ECS        LLDPLocationECS
+}
+
+type LLDPPowerViaMDI struct {
+	Type     LLDPPowerType
+	Source   LLDPPowerSource
+	Priority LLDPPowerPriority
+	Value    uint16
+}
+
+type LLDPInfoMedia struct {
+	MediaCapabilities LLDPMediaCapabilities
+	NetworkPolicy     LLDPNetworkPolicy
+	Location          LLDPLocation
+	PowerViaMDI       LLDPPowerViaMDI
+	HardwareRevision  string
+	FirmwareRevision  string
+	SoftwareRevision  string
+	SerialNumber      string
+	Manufacturer      string
+	Model             string
+	AssetID           string
+}
 
 // LayerType returns gopacket.LayerTypeLinkLayerDiscovery.
 func (c *LinkLayerDiscovery) LayerType() gopacket.LayerType {
@@ -575,7 +752,7 @@ func (l *LinkLayerDiscoveryInfo) Decode8021() (info LLDPInfo8021, err error) {
 	var ok bool
 	for _, o := range l.OrgTLVs {
 		if o.OUI != IEEEOUI8021 {
-			continue;
+			continue
 		}
 		switch o.SubType {
 		case LLDP8021SubtypePortVLANID:
@@ -628,7 +805,7 @@ func (l *LinkLayerDiscoveryInfo) Decode8023() (info LLDPInfo8023, err error) {
 	var ok bool
 	for _, o := range l.OrgTLVs {
 		if o.OUI != IEEEOUI8023 {
-			continue;
+			continue
 		}
 		switch o.SubType {
 		case LLDP8023SubtypeMACPHY:
@@ -637,7 +814,7 @@ func (l *LinkLayerDiscoveryInfo) Decode8023() (info LLDPInfo8023, err error) {
 				en := (o.Info[0]&LLDPMACPHYStatus > 0)
 				ca := binary.BigEndian.Uint16(o.Info[1:3])
 				mau := binary.BigEndian.Uint16(o.Info[3:5])
-				info.MACPHYConfigStatus = MACPHYConfigStatus{sup, en, ca, mau}
+				info.MACPHYConfigStatus = LLDPMACPHYConfigStatus{sup, en, ca, mau}
 			}
 		case LLDP8023SubtypeMDIPower:
 			if ok, errors = checkLLDPOrgSpecificLen(o, 3, errors); ok {
@@ -647,15 +824,15 @@ func (l *LinkLayerDiscoveryInfo) Decode8023() (info LLDPInfo8023, err error) {
 				info.PowerViaMDI.PSEPairsAbility = (o.Info[0]&LLDPMDIPowerPairsAbility > 0)
 				info.PowerViaMDI.PSEPowerPair = uint8(o.Info[1])
 				info.PowerViaMDI.PSEClass = uint8(o.Info[2])
-				if len(o.Info) >= 8 {
-					info.PowerViaMDI.PowerType = LLDPPowerType((o.Info[3] & 0xc0) >> 6)
-					info.PowerViaMDI.PowerSource = LLDPPowerSource((o.Info[3] & 0x30) >> 4)
-					if info.PowerViaMDI.PowerType == 1 || info.PowerViaMDI.PowerType == 3 {
-						info.PowerViaMDI.PowerSource += 128 // For Stringify purposes
+				if len(o.Info) >= 7 {
+					info.PowerViaMDI.Type = LLDPPowerType((o.Info[3] & 0xc0) >> 6)
+					info.PowerViaMDI.Source = LLDPPowerSource((o.Info[3] & 0x30) >> 4)
+					if info.PowerViaMDI.Type == 1 || info.PowerViaMDI.Type == 3 {
+						info.PowerViaMDI.Source += 128 // For Stringify purposes
 					}
-					info.PowerViaMDI.PowerPriority = LLDPPowerPriority(o.Info[4] & 0x0f)
-					info.PowerViaMDI.RequestedPower = binary.BigEndian.Uint16(o.Info[5:7])
-					info.PowerViaMDI.AllocatedPower = binary.BigEndian.Uint16(o.Info[7:8])
+					info.PowerViaMDI.Priority = LLDPPowerPriority(o.Info[3] & 0x0f)
+					info.PowerViaMDI.Requested = binary.BigEndian.Uint16(o.Info[4:6])
+					info.PowerViaMDI.Allocated = binary.BigEndian.Uint16(o.Info[6:8])
 				}
 			}
 		case LLDP8023SubtypeLinkAggregation:
@@ -681,7 +858,7 @@ func (l *LinkLayerDiscoveryInfo) Decode8021Qbg() (info LLDPInfo8021Qbg, err erro
 	var ok bool
 	for _, o := range l.OrgTLVs {
 		if o.OUI != IEEEOUI8021Qbg {
-			continue;
+			continue
 		}
 		switch o.SubType {
 		case LLDP8021QbgEVB:
@@ -700,11 +877,114 @@ func (l *LinkLayerDiscoveryInfo) Decode8021Qbg() (info LLDPInfo8021Qbg, err erro
 	return
 }
 
+func (l *LinkLayerDiscoveryInfo) DecodeMedia() (info LLDPInfoMedia, err error) {
+	var errors []error
+	var ok bool
+	for _, o := range l.OrgTLVs {
+		if o.OUI != IEEEOUIMedia {
+			continue
+		}
+		switch LLDPMediaSubtype(o.SubType) {
+		case LLDPMediaTypeCapabilities:
+			if ok, errors = checkLLDPOrgSpecificLen(o, 3, errors); ok {
+				b := binary.BigEndian.Uint16(o.Info[0:2])
+				info.MediaCapabilities.Capabilities = (b & LLDPMediaCapsLLDP) > 0
+				info.MediaCapabilities.NetworkPolicy = (b & LLDPMediaCapsNetwork) > 0
+				info.MediaCapabilities.Location = (b & LLDPMediaCapsLocation) > 0
+				info.MediaCapabilities.PowerPSE = (b & LLDPMediaCapsPowerPSE) > 0
+				info.MediaCapabilities.PowerPD = (b & LLDPMediaCapsPowerPD) > 0
+				info.MediaCapabilities.Inventory = (b & LLDPMediaCapsInventory) > 0
+				info.MediaCapabilities.Class = LLDPMediaClass(o.Info[2])
+			}
+		case LLDPMediaTypeNetwork:
+			if ok, errors = checkLLDPOrgSpecificLen(o, 4, errors); ok {
+				info.NetworkPolicy.ApplicationType = LLDPApplicationType(o.Info[0])
+				b := binary.BigEndian.Uint16(o.Info[1:3])
+				info.NetworkPolicy.Defined = (b & 0x8000) == 0
+				info.NetworkPolicy.Tagged = (b & 0x4000) > 0
+				info.NetworkPolicy.VLANId = (b & 0x1ffe) >> 1
+				b = binary.BigEndian.Uint16(o.Info[2:4])
+				info.NetworkPolicy.L2Priority = (b & 0x01c0) >> 6
+				info.NetworkPolicy.DSCPValue = uint8(o.Info[3] & 0x3f)
+			}
+
+		case LLDPMediaTypeLocation:
+			if ok, errors = checkLLDPOrgSpecificLen(o, 1, errors); ok {
+				info.Location.Format = LLDPLocationFormat(o.Info[0])
+				o.Info = o.Info[1:]
+				switch info.Location.Format {
+				case LLDPLocationFormatCoordinate:
+					if ok, errors = checkLLDPOrgSpecificLen(o, 16, errors); ok {
+						info.Location.Coordinate.LatitudeResolution = uint8(o.Info[0]&0xfc) >> 2
+						b := binary.BigEndian.Uint64(o.Info[0:8])
+						info.Location.Coordinate.Latitude = (b & 0x03ffffffff000000) >> 24
+						info.Location.Coordinate.LongitudeResolution = uint8(o.Info[5]&0xfc) >> 2
+						b = binary.BigEndian.Uint64(o.Info[5:13])
+						info.Location.Coordinate.Longitude = (b & 0x03ffffffff000000) >> 24
+						info.Location.Coordinate.AltitudeType = uint8((o.Info[10] & 0x30) >> 4)
+						b1 := binary.BigEndian.Uint16(o.Info[10:12])
+						info.Location.Coordinate.AltitudeResolution = (b1 & 0xfc0) >> 6
+						b2 := binary.BigEndian.Uint32(o.Info[11:15])
+						info.Location.Coordinate.Altitude = b2 & 0x3fffffff
+						info.Location.Coordinate.Datum = uint8(o.Info[15])
+					}
+				case LLDPLocationFormatAddress:
+					if ok, errors = checkLLDPOrgSpecificLen(o, 3, errors); ok {
+						//ll := uint8(o.Info[0])
+						info.Location.Address.What = LLDPLocationAddressWhat(o.Info[1])
+						info.Location.Address.CountryCode = string(o.Info[2:4])
+						data := o.Info[4:]
+						for len(data) > 1 {
+							aType := LLDPLocationAddressType(data[0])
+							aLen := int(data[1])
+							if len(data) >= aLen+2 {
+								info.Location.Address.AddressLines = append(info.Location.Address.AddressLines, LLDPLocationAddressLine{aType, string(data[2 : aLen+2])})
+								data = data[aLen+2:]
+							} else {
+								break
+							}
+						}
+					}
+				case LLDPLocationFormatECS:
+					info.Location.ECS.ELIN = string(o.Info)
+				}
+			}
+		case LLDPMediaTypePower:
+			if ok, errors = checkLLDPOrgSpecificLen(o, 3, errors); ok {
+				info.PowerViaMDI.Type = LLDPPowerType((o.Info[0] & 0xc0) >> 6)
+				info.PowerViaMDI.Source = LLDPPowerSource((o.Info[0] & 0x30) >> 4)
+				if info.PowerViaMDI.Type == 1 || info.PowerViaMDI.Type == 3 {
+					info.PowerViaMDI.Source += 128 // For Stringify purposes
+				}
+				info.PowerViaMDI.Priority = LLDPPowerPriority(o.Info[0] & 0x0f)
+				info.PowerViaMDI.Value = binary.BigEndian.Uint16(o.Info[1:3]) * 100 // 0 to 102.3 w, 0.1W increments
+			}
+		case LLDPMediaTypeHardware:
+			info.HardwareRevision = string(o.Info)
+		case LLDPMediaTypeFirmware:
+			info.FirmwareRevision = string(o.Info)
+		case LLDPMediaTypeSoftware:
+			info.SoftwareRevision = string(o.Info)
+		case LLDPMediaTypeSerial:
+			info.SerialNumber = string(o.Info)
+		case LLDPMediaTypeManufacturer:
+			info.Manufacturer = string(o.Info)
+		case LLDPMediaTypeModel:
+			info.Model = string(o.Info)
+		case LLDPMediaTypeAssetID:
+			info.AssetID = string(o.Info)
+		}
+	}
+	if len(errors) > 0 {
+		err = errors[0]
+	}
+	return
+}
+
 // LayerType returns gopacket.LayerTypeLinkLayerDiscoveryInfo.
 func (c *LinkLayerDiscoveryInfo) LayerType() gopacket.LayerType {
 	return LayerTypeLinkLayerDiscoveryInfo
 }
-
 
 func getCapabilities(v uint16) (c LLDPCapabilities) {
 	c.Other = (v&LLDPCapsOther > 0)
@@ -789,17 +1069,17 @@ func (t LLDPPortIDSubType) String() (s string) {
 		s = "Reserved"
 	case LLDPPortIDSubtypeIfaceAlias:
 		s = "Interface Alias"
-	case LLDPPortIDSubTypePortComp:
+	case LLDPPortIDSubtypePortComp:
 		s = "Port Component"
-	case LLDPPortIDSubTypeMACAddr:
+	case LLDPPortIDSubtypeMACAddr:
 		s = "MAC Address"
-	case LLDPPortIDSubTypeNetworkAddr:
+	case LLDPPortIDSubtypeNetworkAddr:
 		s = "Network Address"
 	case LLDPPortIDSubtypeIfaceName:
 		s = "Interface Name"
-	case LLDPPortIDSubTypeAgentCircuitID:
+	case LLDPPortIDSubtypeAgentCircuitID:
 		s = "Agent Circuit ID"
-	case LLDPPortIDSubTypeLocal:
+	case LLDPPortIDSubtypeLocal:
 		s = "Local"
 	default:
 		s = "Unknown"
@@ -812,53 +1092,53 @@ func (t IANAAddressFamily) String() (s string) {
 	case IANAAddressFamilyReserved:
 		s = "Reserved"
 	case IANAAddressFamilyInet:
-		s = "IPv4" 
+		s = "IPv4"
 	case IANAAddressFamilyInet6:
-		s = "IPv6" 
+		s = "IPv6"
 	case IANAAddressFamilyNsap:
-		s = "NSAP" 
+		s = "NSAP"
 	case IANAAddressFamilyHdlc:
-		s = "HDLC" 
+		s = "HDLC"
 	case IANAAddressFamilyBbn1822:
-		s = "BBN 1822" 
+		s = "BBN 1822"
 	case IANAAddressFamily802:
-		s = "802 media plus Ethernet 'canonical format'" 
+		s = "802 media plus Ethernet 'canonical format'"
 	case IANAAddressFamilyE163:
-		s = "E.163" 
+		s = "E.163"
 	case IANAAddressFamilyE164:
-		s = "E.164 (SMDS, Frame Relay, ATM)" 
+		s = "E.164 (SMDS, Frame Relay, ATM)"
 	case IANAAddressFamilyF69:
-		s = "F.69 (Telex)" 
+		s = "F.69 (Telex)"
 	case IANAAddressFamilyX121:
-		s = "X.121, X.25, Frame Relay" 
+		s = "X.121, X.25, Frame Relay"
 	case IANAAddressFamilyIpx:
-		s = "IPX" 
+		s = "IPX"
 	case IANAAddressFamilyAtalk:
-		s = "Appletalk" 
+		s = "Appletalk"
 	case IANAAddressFamilyDecnet:
-		s = "Decnet IV" 
+		s = "Decnet IV"
 	case IANAAddressFamilyBanyan:
-		s = "Banyan Vines" 
+		s = "Banyan Vines"
 	case IANAAddressFamilyE164nsap:
-		s = "E.164 with NSAP format subaddress" 
+		s = "E.164 with NSAP format subaddress"
 	case IANAAddressFamilyDns:
-		s = "DNS" 
+		s = "DNS"
 	case IANAAddressFamilyDistname:
-		s = "Distinguished Name" 
+		s = "Distinguished Name"
 	case IANAAddressFamilyAs_number:
-		s = "AS Number" 
+		s = "AS Number"
 	case IANAAddressFamilyXtp_ip4:
-		s = "XTP over IP version 4" 
+		s = "XTP over IP version 4"
 	case IANAAddressFamilyXtp_ip6:
-		s = "XTP over IP version 6" 
+		s = "XTP over IP version 6"
 	case IANAAddressFamilyXtp:
-		s = "XTP native mode XTP" 
+		s = "XTP native mode XTP"
 	case IANAAddressFamilyFc_wwpn:
-		s = "Fibre Channel World-Wide Port Name" 
+		s = "Fibre Channel World-Wide Port Name"
 	case IANAAddressFamilyFc_wwnn:
-		s = "Fibre Channel World-Wide Node Name" 
+		s = "Fibre Channel World-Wide Node Name"
 	case IANAAddressFamilyGwid:
-		s = "GWID" 
+		s = "GWID"
 	case IANAAddressFamilyL2vpn:
 		s = "AFI for Layer 2 VPN"
 	default:
@@ -931,6 +1211,148 @@ func (t LLDPPowerPriority) String() (s string) {
 		s = "High"
 	case 3:
 		s = "Low"
+	default:
+		s = "Unknown"
+	}
+	return
+}
+
+func (t LLDPMediaSubtype) String() (s string) {
+	switch t {
+	case LLDPMediaTypeCapabilities:
+		s = "Media Capabilities "
+	case LLDPMediaTypeNetwork:
+		s = "Network Policy"
+	case LLDPMediaTypeLocation:
+		s = "Location Identification"
+	case LLDPMediaTypePower:
+		s = "Extended Power-via-MDI"
+	case LLDPMediaTypeHardware:
+		s = "Hardware Revision"
+	case LLDPMediaTypeFirmware:
+		s = "Firmware Revision"
+	case LLDPMediaTypeSoftware:
+		s = "Software Revision"
+	case LLDPMediaTypeSerial:
+		s = "Serial Number"
+	case LLDPMediaTypeManufacturer:
+		s = "Manufacturer"
+	case LLDPMediaTypeModel:
+		s = "Model"
+	case LLDPMediaTypeAssetID:
+		s = "Asset ID"
+	default:
+		s = "Unknown"
+	}
+	return
+}
+
+func (t LLDPMediaClass) String() (s string) {
+	switch t {
+	case LLDPMediaClassUndefined:
+		s = "Undefined"
+	case LLDPMediaClassEndpointI:
+		s = "Endpoint Class I"
+	case LLDPMediaClassEndpointII:
+		s = "Endpoint Class II"
+	case LLDPMediaClassEndpointIII:
+		s = "Endpoint Class III"
+	case LLDPMediaClassNetwork:
+		s = "Network connectivity "
+	default:
+		s = "Unknown"
+	}
+	return
+}
+
+func (t LLDPApplicationType) String() (s string) {
+	switch t {
+	case LLDPAppTypeReserved:
+		s = "Reserved"
+	case LLDPAppTypeVoice:
+		s = "Voice"
+	case LLDPappTypeVoiceSignaling:
+		s = "Voice Signaling"
+	case LLDPappTypeGuestVoice:
+		s = "Guest Voice"
+	case LLDPappTypeGuestVoiceSignaling:
+		s = "Guest Voice Signaling"
+	case LLDPappTypeSoftphoneVoice:
+		s = "Softphone Voice"
+	case LLDPappTypeVideoConferencing:
+		s = "Video Conferencing"
+	case LLDPappTypeStreamingVideo:
+		s = "Streaming Video"
+	case LLDPappTypeVideoSignaling:
+		s = "Video Signaling"
+	default:
+		s = "Unknown"
+	}
+	return
+}
+
+func (t LLDPLocationFormat) String() (s string) {
+	switch t {
+	case LLDPLocationFormatInvalid:
+		s = "Invalid"
+	case LLDPLocationFormatCoordinate:
+		s = "Coordinate-based LCI"
+	case LLDPLocationFormatAddress:
+		s = "Address-based LCO"
+	case LLDPLocationFormatECS:
+		s = "ECS ELIN"
+	default:
+		s = "Unknown"
+	}
+	return
+}
+
+func (t LLDPLocationAddressType) String() (s string) {
+	switch t {
+	case LLDPLocationAddressTypeLanguage:
+		s = "Language"
+	case LLDPLocationAddressTypeNational:
+		s = "National subdivisions (province, state, etc)"
+	case LLDPLocationAddressTypeCounty:
+		s = "County, parish, district"
+	case LLDPLocationAddressTypeCity:
+		s = "City, township"
+	case LLDPLocationAddressTypeCityDivision:
+		s = "City division, borough, ward"
+	case LLDPLocationAddressTypeNeighborhood:
+		s = "Neighborhood, block"
+	case LLDPLocationAddressTypeStreet:
+		s = "Street"
+	case LLDPLocationAddressTypeLeadingStreet:
+		s = "Leading street direction"
+	case LLDPLocationAddressTypeTrailingStreet:
+		s = "Trailing street suffix"
+	case LLDPLocationAddressTypeStreetSuffix:
+		s = "Street suffix"
+	case LLDPLocationAddressTypeHouseNum:
+		s = "House number"
+	case LLDPLocationAddressTypeHouseSuffix:
+		s = "House number suffix"
+	case LLDPLocationAddressTypeLandmark:
+		s = "Landmark or vanity address"
+	case LLDPLocationAddressTypeAdditional:
+		s = "Additional location information"
+	case LLDPLocationAddressTypeName:
+		s = "Name"
+	case LLDPLocationAddressTypePostal:
+		s = "Postal/ZIP code"
+	case LLDPLocationAddressTypeBuilding:
+		s = "Building"
+	case LLDPLocationAddressTypeUnit:
+		s = "Unit"
+	case LLDPLocationAddressTypeFloor:
+		s = "Floor"
+	case LLDPLocationAddressTypeRoom:
+		s = "Room number"
+	case LLDPLocationAddressTypePlace:
+		s = "Place type"
+	case LLDPLocationAddressTypeScript:
+		s = "Script"
 	default:
 		s = "Unknown"
 	}
