@@ -538,8 +538,8 @@ func TestDecodeCiscoDiscovery(t *testing.T) {
 		NativeVLAN:    1,
 		FullDuplex:    true,
 		MgmtAddresses: []net.IP{net.IPv4(192, 168, 0, 253)},
+		baseLayer:     baseLayer{contents: data[26:]},
 	}
-	want.payload = data[26:]
 	cdpL := p.Layer(LayerTypeCiscoDiscoveryInfo)
 	info, _ := cdpL.(*CiscoDiscoveryInfo)
 	if !reflect.DeepEqual(info, want) {
@@ -574,15 +574,11 @@ func TestDecodeLinkLayerDiscovery(t *testing.T) {
 	}
 
 	p := gopacket.NewPacket(data, LinkTypeEthernet, gopacket.Default)
-	wantLayers := []gopacket.LayerType{LayerTypeEthernet, LayerTypeLinkLayerDiscovery}
+	wantLayers := []gopacket.LayerType{LayerTypeEthernet, LayerTypeLinkLayerDiscovery, LayerTypeLinkLayerDiscoveryInfo}
 	checkLayers(p, wantLayers, t)
-	lldpL := p.Layer(LayerTypeLinkLayerDiscovery)
-	lldp := lldpL.(*LinkLayerDiscovery)
-	info, errs := lldp.DecodeValues()
-	if errs != nil {
-		t.Errorf("Values decode error: %v", errs)
-	}
-	want := LinkLayerDiscoveryInfo{
+	lldpL := p.Layer(LayerTypeLinkLayerDiscoveryInfo)
+	info := lldpL.(*LinkLayerDiscoveryInfo)
+	want := &LinkLayerDiscoveryInfo{
 		PortDescription: "Summit300-48-Port 1001\x00",
 		SysName:         "Summit300-48\x00",
 		SysDescription:  "Summit300-48 - Version 7.4e.1 (Build 5) by Release_Master 05/27/05 04:53:11\x00",
@@ -590,24 +586,51 @@ func TestDecodeLinkLayerDiscovery(t *testing.T) {
 			SystemCap:  LLDPCapabilities{false, false, true, false, true, false, false, false, false, false, false},
 			EnabledCap: LLDPCapabilities{false, false, true, false, true, false, false, false, false, false, false},
 		},
-		MgmtAddress:         LLDPMgmtAddress{6, []byte{0x00, 0x01, 0x30, 0xf9, 0xad, 0xa0}, 2, 1001, ""},
-		PVID:                488,
-		PPVIDs:              []PortProtocolVLANID{PortProtocolVLANID{true, false, 0}},
-		VLANNames:           []VLANName{VLANName{488, "v2-0488-03-0505\x00"}},
-		VIDUsageDigest:      0,
-		ManagementVID:       0,
-		LinkAggregation8021: LinkAggregation8021{false, false, 0},
-		LinkAggregation8023: LinkAggregation8023{0, 0},
-		MACPHYConfigStatus:  MACPHYConfigStatus{true, true, 27648, 16},
-		PowerViaMDI:         PowerViaMDI{true, true, true, false, 1, 0, 0, 0, 0, 0, 0},
-		ProtocolIdentities:  nil,
-		MTU:                 1522,
-		OrgTLVs:             nil,
-		Unknown:             nil,
+		MgmtAddress: LLDPMgmtAddress{6, []byte{0x00, 0x01, 0x30, 0xf9, 0xad, 0xa0}, 2, 1001, ""},
+		OrgTLVs: []LLDPOrgSpecificTLV{
+			LLDPOrgSpecificTLV{OUI: 0x120f, SubType: 0x2, Info: []uint8{0x7, 0x1, 0x0}},
+			LLDPOrgSpecificTLV{OUI: 0x120f, SubType: 0x1, Info: []uint8{0x3, 0x6c, 0x0, 0x0, 0x10}},
+			LLDPOrgSpecificTLV{OUI: 0x120f, SubType: 0x3, Info: []uint8{0x1, 0x0, 0x0, 0x0, 0x0}},
+			LLDPOrgSpecificTLV{OUI: 0x120f, SubType: 0x4, Info: []uint8{0x5, 0xf2}},
+			LLDPOrgSpecificTLV{OUI: 0x80c2, SubType: 0x1, Info: []uint8{0x1, 0xe8}},
+			LLDPOrgSpecificTLV{OUI: 0x80c2, SubType: 0x2, Info: []uint8{0x1, 0x0, 0x0}},
+			LLDPOrgSpecificTLV{OUI: 0x80c2, SubType: 0x3, Info: []uint8{0x1, 0xe8, 0x10, 0x76, 0x32, 0x2d, 0x30, 0x34, 0x38, 0x38, 0x2d, 0x30, 0x33, 0x2d, 0x30, 0x35, 0x30, 0x35, 0x0}},
+			LLDPOrgSpecificTLV{OUI: 0x80c2, SubType: 0x4, Info: []uint8{0x0}},
+		},
+		Unknown: nil,
 	}
-
 	if !reflect.DeepEqual(info, want) {
 		t.Errorf("Values mismatch, \ngot  %#v\nwant %#v\n", info, want)
+	}
+	info8021, err := info.Decode8021()
+	if err != nil {
+		t.Errorf("8021 Values decode error: %v", err)
+	}
+	want8021 := LLDPInfo8021{
+		PVID:               488,
+		PPVIDs:             []PortProtocolVLANID{PortProtocolVLANID{true, false, 0}},
+		VLANNames:          []VLANName{VLANName{488, "v2-0488-03-0505\x00"}},
+		ProtocolIdentities: nil,
+		VIDUsageDigest:     0,
+		ManagementVID:      0,
+		LinkAggregation:    LinkAggregation8021{false, false, 0},
+	}
+	if !reflect.DeepEqual(info8021, want8021) {
+		t.Errorf("Values mismatch, \ngot  %#v\nwant %#v\n", info8021, want8021)
+	}
+	info8023, err := info.Decode8023()
+	if err != nil {
+		t.Errorf("8023 Values decode error: %v", err)
+	}
+	want8023 := LLDPInfo8023{
+		LinkAggregation:    LinkAggregation8023{1, 0},
+		MACPHYConfigStatus: MACPHYConfigStatus{true, true, 27648, 16},
+		PowerViaMDI:        PowerViaMDI{true, true, true, false, 1, 0, 0, 0, 0, 0, 0},
+		MTU:                1522,
+	}
+
+	if !reflect.DeepEqual(info8023, want8023) {
+		t.Errorf("Values mismatch, \ngot  %#v\nwant %#v\n", info8023, want8023)
 	}
 }
 

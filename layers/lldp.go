@@ -28,6 +28,13 @@ const (
 	LLDPTLVOrgSpecific     LLDPTLVType = 127
 )
 
+// LinkLayerDiscoveryValue is a TLV value inside a LinkLayerDiscovery packet layer.
+type LinkLayerDiscoveryValue struct {
+	Type   LLDPTLVType
+	Length uint16
+	Value  []byte
+}
+
 // LLDPChassisIDSubType specifies the value type for a single LLDPChassisID.ID
 type LLDPChassisIDSubType byte
 
@@ -57,13 +64,32 @@ const (
 	LLDPPortIDSubTypeMACAddr     LLDPPortIDSubType = 3
 	LLDPPortIDSubTypeNetworkAddr LLDPPortIDSubType = 4
 	LLDPPortIDSubtypeIfaceName   LLDPPortIDSubType = 5
-	LLDPPortIDSubTypeAgentCircID LLDPPortIDSubType = 6
+	LLDPPortIDSubTypeAgentCircuitID LLDPPortIDSubType = 6
 	LLDPPortIDSubTypeLocal       LLDPPortIDSubType = 7
 )
 
 type LLDPPortID struct {
 	Subtype LLDPPortIDSubType
 	ID      []byte
+}
+
+// LinkLayerDiscovery is a packet layer containing the LinkLayer Discovery Protocol.
+// See http:http://standards.ieee.org/getieee802/download/802.1AB-2009.pdf
+// ChassisID, PortID and TTL are mandatory TLV's. Other values can be decoded
+// with DecodeValues()
+type LinkLayerDiscovery struct {
+	baseLayer
+	ChassisID LLDPChassisID
+	PortID    LLDPPortID
+	TTL       uint16
+	Values    []LinkLayerDiscoveryValue
+}
+
+// LLDPOrgSpecificTLV is an Organisation-specific TLV
+type LLDPOrgSpecificTLV struct {
+	OUI     IEEEOUI
+	SubType uint8
+	Info    []byte
 }
 
 // LLDPCapabilities Types
@@ -101,32 +127,6 @@ type LLDPSysCapabilities struct {
 	EnabledCap LLDPCapabilities
 }
 
-// LLDPEVBCapabilities Types
-const (
-	LLDPEVBCapsSTD uint16 = 1 << 0
-	LLDPEVBCapsRR  uint16 = 1 << 1
-	LLDPEVBCapsRTE uint16 = 1 << 2
-	LLDPEVBCapsECP uint16 = 1 << 3
-	LLDPEVBCapsVDP uint16 = 1 << 4
-)
-
-// LLDPEVBCapabilities represents the EVB capabilities of a device
-type LLDPEVBCapabilities struct {
-	StandardBridging            bool
-	ReflectiveRelay             bool
-	RetransmissionTimerExponent bool
-	EdgeControlProtocol         bool
-	VSIDiscoveryProtocol        bool
-}
-
-type LLDPEVBSettings struct {
-	Supported      LLDPEVBCapabilities
-	Enabled        LLDPEVBCapabilities
-	SupportedVSIs  uint16
-	ConfiguredVSIs uint16
-	RTEExponent    uint8
-}
-
 type LLDPMgmtAddressSubtype byte
 
 // LLDP Management Address Subtypes
@@ -152,17 +152,40 @@ type LLDPMgmtAddress struct {
 	OID              string
 }
 
-// LinkLayerDiscovery is a packet layer containing the LinkLayer Discovery Protocol.
-// See http:http://standards.ieee.org/getieee802/download/802.1AB-2009.pdf
-// ChassisID, PortID and TTL are mandatory TLV's. Other values can be decoded
-// with DecodeValues()
-type LinkLayerDiscovery struct {
+// LinkLayerDiscoveryInfo represents the decoded details for a set of LinkLayerDiscoveryValues
+type LinkLayerDiscoveryInfo struct {
 	baseLayer
-	ChassisID LLDPChassisID
-	PortID    LLDPPortID
-	TTL       uint16
-	Values    []LinkLayerDiscoveryValue
+	PortDescription string
+	SysName         string
+	SysDescription  string
+	SysCapabilities LLDPSysCapabilities
+	MgmtAddress     LLDPMgmtAddress
+	OrgTLVs []LLDPOrgSpecificTLV      // Private TLVs
+	Unknown []LinkLayerDiscoveryValue // undecoded TLVs
 }
+
+type IEEEOUI uint32
+
+// http://standards.ieee.org/develop/regauth/oui/oui.txt
+const (
+	IEEEOUI8021     IEEEOUI = 0x0080c2
+	IEEEOUI8023     IEEEOUI = 0x00120f
+	IEEEOUI8021Qbg  IEEEOUI = 0x0013BF
+	IEEEOUICisco2   IEEEOUI = 0x000142
+	IEEEOUITR41     IEEEOUI = 0x0012bb
+	IEEEOUIProfinet IEEEOUI = 0x000ecf
+)
+
+/// IEEE 802.1 TLV Subtypes
+const (
+	LLDP8021SubtypePortVLANID       uint8 = 1
+	LLDP8021SubtypeProtocolVLANID   uint8 = 2
+	LLDP8021SubtypeVLANName         uint8 = 3
+	LLDP8021SubtypeProtocolIdentity uint8 = 4
+	LLDP8021SubtypeVDIUsageDigest   uint8 = 5
+	LLDP8021SubtypeManagementVID    uint8 = 6
+	LLDP8021SubtypeLinkAggregation  uint8 = 7
+)
 
 // VLAN Port Protocol ID options
 const (
@@ -196,11 +219,23 @@ type LinkAggregation8021 struct {
 	PortID    uint32
 }
 
-// IEEE 802.3 Link Aggregation parameters
-type LinkAggregation8023 struct {
-	Status byte
-	PortID uint32
+type LLDPInfo8021 struct {
+	PVID               uint16
+	PPVIDs             []PortProtocolVLANID
+	VLANNames          []VLANName
+	ProtocolIdentities []ProtocolIdentity
+	VIDUsageDigest     uint32
+	ManagementVID      uint16
+	LinkAggregation LinkAggregation8021
 }
+
+// IEEE 802.3 TLV Subtypes
+const (
+	LLDP8023SubtypeMACPHY          uint8 = 1
+	LLDP8023SubtypeMDIPower        uint8 = 2
+	LLDP8023SubtypeLinkAggregation uint8 = 3
+	LLDP8023SubtypeMTU             uint8 = 4
+)
 
 // MACPHY options
 const (
@@ -302,6 +337,28 @@ const (
 	LLDPMAUPMD1000BaseT_FD uint16 = 1 << 0
 )
 
+// Inverted ifMauAutoNegCapAdvertisedBits if required
+// (Some manufacturers misinterpreted the spec - 
+// see https://bugs.wireshark.org/bugzilla/show_bug.cgi?id=1455)
+const (
+	LLDPMAUPMDOtherInv        uint16 = 1 << 0
+	LLDPMAUPMD10BaseTInv      uint16 = 1 << 1
+	LLDPMAUPMD10BaseT_FDInv   uint16 = 1 << 2
+	LLDPMAUPMD100BaseT4Inv    uint16 = 1 << 3
+	LLDPMAUPMD100BaseTXInv    uint16 = 1 << 4
+	LLDPMAUPMD100BaseTX_FDInv uint16 = 1 << 5
+	LLDPMAUPMD100BaseT2Inv    uint16 = 1 << 6
+	LLDPMAUPMD100BaseT2_FDInv uint16 = 1 << 7
+	LLDPMAUPMDFDXPAUSEInv     uint16 = 1 << 8
+	LLDPMAUPMDFDXAPAUSEInv    uint16 = 1 << 9
+	LLDPMAUPMDFDXSPAUSEInv    uint16 = 1 << 10
+	LLDPMAUPMDFDXBPAUSEInv    uint16 = 1 << 11
+	LLDPMAUPMD1000BaseXInv    uint16 = 1 << 12
+	LLDPMAUPMD1000BaseX_FDInv uint16 = 1 << 13
+	LLDPMAUPMD1000BaseTInv    uint16 = 1 << 14
+	LLDPMAUPMD1000BaseT_FDInv uint16 = 1 << 15
+)
+
 type MACPHYConfigStatus struct {
 	AutoNegSupported  bool
 	AutoNegEnabled    bool
@@ -337,36 +394,18 @@ type PowerViaMDI struct {
 	AllocatedPower  uint16 // 1-510 Watts
 }
 
-type IEEEOUI uint32
+// IEEE 802.3 Link Aggregation parameters
+type LinkAggregation8023 struct {
+	Status byte
+	PortID uint32
+}
 
-// http://standards.ieee.org/develop/regauth/oui/oui.txt
-const (
-	IEEEOUI8021     IEEEOUI = 0x0080c2
-	IEEEOUI8023     IEEEOUI = 0x00120f
-	IEEEOUI8021Qbg  IEEEOUI = 0x0013BF
-	IEEEOUICisco2   IEEEOUI = 0x000142
-	IEEEOUITR41     IEEEOUI = 0x0012bb
-	IEEEOUIProfinet IEEEOUI = 0x000ecf
-)
-
-/// IEEE 802.1 TLV Subtypes
-const (
-	LLDP8021SubtypePortVLANID       uint8 = 1
-	LLDP8021SubtypeProtocolVLANID   uint8 = 2
-	LLDP8021SubtypeVLANName         uint8 = 3
-	LLDP8021SubtypeProtocolIdentity uint8 = 4
-	LLDP8021SubtypeVDIUsageDigest   uint8 = 5
-	LLDP8021SubtypeManagementVID    uint8 = 6
-	LLDP8021SubtypeLinkAggregation  uint8 = 7
-)
-
-// IEEE 802.3 TLV Subtypes
-const (
-	LLDP8023SubtypeMACPHY          uint8 = 1
-	LLDP8023SubtypeMDIPower        uint8 = 2
-	LLDP8023SubtypeLinkAggregation uint8 = 3
-	LLDP8023SubtypeMTU             uint8 = 4
-)
+type LLDPInfo8023 struct {
+	MACPHYConfigStatus
+	PowerViaMDI
+	LinkAggregation LinkAggregation8023
+	MTU uint16
+}
 
 // IEEE 802.1Qbg TLV Subtypes
 const (
@@ -375,46 +414,37 @@ const (
 	LLDP8021QbgVDP  uint8 = 2
 )
 
-// LinkLayerDiscoveryValue is a TLV value inside a LinkLayerDiscovery packet layer.
-type LinkLayerDiscoveryValue struct {
-	Type   LLDPTLVType
-	Length uint16
-	Value  []byte
+
+// LLDPEVBCapabilities Types
+const (
+	LLDPEVBCapsSTD uint16 = 1 << 0
+	LLDPEVBCapsRR  uint16 = 1 << 1
+	LLDPEVBCapsRTE uint16 = 1 << 2
+	LLDPEVBCapsECP uint16 = 1 << 3
+	LLDPEVBCapsVDP uint16 = 1 << 4
+)
+
+// LLDPEVBCapabilities represents the EVB capabilities of a device
+type LLDPEVBCapabilities struct {
+	StandardBridging            bool
+	ReflectiveRelay             bool
+	RetransmissionTimerExponent bool
+	EdgeControlProtocol         bool
+	VSIDiscoveryProtocol        bool
 }
 
-// LLDPOrgSpecificTLV is an Organisation-specific TLV
-type LLDPOrgSpecificTLV struct {
-	OUI     IEEEOUI
-	SubType uint8
-	Info    []byte
+type LLDPEVBSettings struct {
+	Supported      LLDPEVBCapabilities
+	Enabled        LLDPEVBCapabilities
+	SupportedVSIs  uint16
+	ConfiguredVSIs uint16
+	RTEExponent    uint8
 }
 
-// LinkLayerDiscoveryInfo represents the decoded details for a set of LinkLayerDiscoveryValues
-type LinkLayerDiscoveryInfo struct {
-	PortDescription string
-	SysName         string
-	SysDescription  string
-	SysCapabilities LLDPSysCapabilities
-	MgmtAddress     LLDPMgmtAddress
-	// 802.1 Subtypes
-	PVID               uint16
-	PPVIDs             []PortProtocolVLANID
-	VLANNames          []VLANName
-	ProtocolIdentities []ProtocolIdentity
-	VIDUsageDigest     uint32
-	ManagementVID      uint16
-	LinkAggregation8021
-	// 802.3 Subtypes
-	MACPHYConfigStatus
-	PowerViaMDI
-	LinkAggregation8023
-	MTU uint16
-	// 802.1Qbg Subtypes
+type LLDPInfo8021Qbg struct {
 	EVBSettings LLDPEVBSettings
-
-	OrgTLVs []LLDPOrgSpecificTLV      // undecoded Private TLVs
-	Unknown []LinkLayerDiscoveryValue // undecoded TLVs
 }
+
 
 // LayerType returns gopacket.LayerTypeLinkLayerDiscovery.
 func (c *LinkLayerDiscovery) LayerType() gopacket.LayerType {
@@ -475,13 +505,11 @@ func decodeLinkLayerDiscovery(data []byte, p gopacket.PacketBuilder) error {
 	}
 	c.contents = data
 	p.AddLayer(c)
-	return nil
-}
 
-// DecodeValues marshals LinkLayerDiscoveryValues into a LinkLayerDiscoveryInfo struct
-func (l *LinkLayerDiscovery) DecodeValues() (info LinkLayerDiscoveryInfo, errors []error) {
+	info := &LinkLayerDiscoveryInfo{}
+	var errors []error
 	var ok bool
-	for _, v := range l.Values {
+	for _, v := range c.Values {
 		switch v.Type {
 		case LLDPTLVPortDescription:
 			info.PortDescription = string(v.Value)
@@ -513,121 +541,149 @@ func (l *LinkLayerDiscovery) DecodeValues() (info LinkLayerDiscoveryInfo, errors
 			if ok, errors = checkLLDPTLVLen(v, 4, errors); !ok {
 				continue
 			}
-			o := LLDPOrgSpecificTLV{IEEEOUI(binary.BigEndian.Uint32(append([]byte{byte(0)}, v.Value[0:3]...))), uint8(v.Value[3]), v.Value[4:]}
-			switch o.OUI {
-			case IEEEOUI8021:
-				switch o.SubType {
-				case LLDP8021SubtypePortVLANID:
-					if ok, errors = checkLLDPOrgSpecificLen(o, 2, errors); ok {
-						info.PVID = binary.BigEndian.Uint16(o.Info[0:2])
-					}
-				case LLDP8021SubtypeProtocolVLANID:
-					if ok, errors = checkLLDPOrgSpecificLen(o, 3, errors); ok {
-						sup := (o.Info[0]&LLDPProtocolVLANIDCapability > 0)
-						en := (o.Info[0]&LLDPAggregationStatus > 0)
-						id := binary.BigEndian.Uint16(o.Info[1:3])
-						info.PPVIDs = append(info.PPVIDs, PortProtocolVLANID{sup, en, id})
-					}
-				case LLDP8021SubtypeVLANName:
-					if ok, errors = checkLLDPOrgSpecificLen(o, 2, errors); ok {
-						id := binary.BigEndian.Uint16(o.Info[0:2])
-						info.VLANNames = append(info.VLANNames, VLANName{id, string(o.Info[3:])})
-					}
-				case LLDP8021SubtypeProtocolIdentity:
-					if ok, errors = checkLLDPOrgSpecificLen(o, 1, errors); ok {
-						l := int(o.Info[0])
-						if l > 0 {
-							info.ProtocolIdentities = append(info.ProtocolIdentities, o.Info[1:1+l])
-						}
-					}
-				case LLDP8021SubtypeVDIUsageDigest:
-					if ok, errors = checkLLDPOrgSpecificLen(o, 4, errors); ok {
-						info.VIDUsageDigest = binary.BigEndian.Uint32(o.Info[0:4])
-					}
-				case LLDP8021SubtypeManagementVID:
-					if ok, errors = checkLLDPOrgSpecificLen(o, 2, errors); ok {
-						info.ManagementVID = binary.BigEndian.Uint16(o.Info[0:2])
-					}
-				case LLDP8021SubtypeLinkAggregation:
-					if ok, errors = checkLLDPOrgSpecificLen(o, 5, errors); ok {
-						sup := (o.Info[0]&LLDPAggregationCapability > 0)
-						en := (o.Info[0]&LLDPAggregationStatus > 0)
-						id := binary.BigEndian.Uint32(o.Info[1:5])
-						info.LinkAggregation8021 = LinkAggregation8021{sup, en, id}
-					}
-				default:
-					info.OrgTLVs = append(info.OrgTLVs, o)
-				}
-			case IEEEOUI8023:
-				switch o.SubType {
-				case LLDP8023SubtypeMACPHY:
-					if ok, errors = checkLLDPOrgSpecificLen(o, 5, errors); ok {
-						sup := (o.Info[0]&LLDPMACPHYCapability > 0)
-						en := (o.Info[0]&LLDPMACPHYStatus > 0)
-						ca := binary.BigEndian.Uint16(o.Info[1:3])
-						mau := binary.BigEndian.Uint16(o.Info[3:5])
-						info.MACPHYConfigStatus = MACPHYConfigStatus{sup, en, ca, mau}
-					}
-				case LLDP8023SubtypeMDIPower:
-					if ok, errors = checkLLDPOrgSpecificLen(o, 3, errors); ok {
-						info.PowerViaMDI.PortClassPSE = (o.Info[0]&LLDPMDIPowerPortClass > 0)
-						info.PowerViaMDI.PSESupported = (o.Info[0]&LLDPMDIPowerCapability > 0)
-						info.PowerViaMDI.PSEEnabled = (o.Info[0]&LLDPMDIPowerStatus > 0)
-						info.PowerViaMDI.PSEPairsAbility = (o.Info[0]&LLDPMDIPowerPairsAbility > 0)
-						info.PowerViaMDI.PSEPowerPair = uint8(o.Info[1])
-						info.PowerViaMDI.PSEClass = uint8(o.Info[2])
-						if len(o.Info) >= 8 {
-							info.PowerViaMDI.PowerType = LLDPPowerType((o.Info[3] & 0xc0) >> 6)
-							info.PowerViaMDI.PowerSource = LLDPPowerSource((o.Info[3] & 0x30) >> 4)
-							if info.PowerViaMDI.PowerType == 1 || info.PowerViaMDI.PowerType == 3 {
-								info.PowerViaMDI.PowerSource += 128 // For Stringify purposes
-							}
-							info.PowerViaMDI.PowerPriority = LLDPPowerPriority(o.Info[4] & 0x0f)
-							info.PowerViaMDI.RequestedPower = binary.BigEndian.Uint16(o.Info[5:7])
-							info.PowerViaMDI.AllocatedPower = binary.BigEndian.Uint16(o.Info[7:8])
-						}
-					}
-				case LLDP8023SubtypeLinkAggregation:
-					if ok, errors = checkLLDPOrgSpecificLen(o, 5, errors); ok {
-						id := binary.BigEndian.Uint32(o.Info[1:5])
-						info.LinkAggregation8023 = LinkAggregation8023{v.Value[0], id}
-					}
-				case LLDP8023SubtypeMTU:
-					if ok, errors = checkLLDPOrgSpecificLen(o, 2, errors); ok {
-						info.MTU = binary.BigEndian.Uint16(o.Info[0:2])
-					}
-				default:
-					info.OrgTLVs = append(info.OrgTLVs, o)
-				}
-			case IEEEOUI8021Qbg:
-				switch o.SubType {
-				case LLDP8021QbgEVB:
-					if ok, errors = checkLLDPOrgSpecificLen(o, 9, errors); ok {
-						info.EVBSettings.Supported = getEVBCapabilities(binary.BigEndian.Uint16(o.Info[0:2]))
-						info.EVBSettings.Enabled = getEVBCapabilities(binary.BigEndian.Uint16(o.Info[2:4]))
-						info.EVBSettings.SupportedVSIs = binary.BigEndian.Uint16(o.Info[4:6])
-						info.EVBSettings.ConfiguredVSIs = binary.BigEndian.Uint16(o.Info[6:8])
-						info.EVBSettings.RTEExponent = uint8(o.Info[8])
-					}
-				default:
-					info.OrgTLVs = append(info.OrgTLVs, o)
-				}
-
-			case IEEEOUITR41: // TODO
-				info.OrgTLVs = append(info.OrgTLVs, o)
-			case IEEEOUIProfinet: // TODO
-				info.OrgTLVs = append(info.OrgTLVs, o)
-			case IEEEOUICisco2: // TODO
-				info.OrgTLVs = append(info.OrgTLVs, o)
-			default:
-				info.OrgTLVs = append(info.OrgTLVs, o)
-			}
-		default:
-			info.Unknown = append(info.Unknown, v)
+			info.OrgTLVs = append(info.OrgTLVs, LLDPOrgSpecificTLV{IEEEOUI(binary.BigEndian.Uint32(append([]byte{byte(0)}, v.Value[0:3]...))), uint8(v.Value[3]), v.Value[4:]})
 		}
+	}
+	p.AddLayer(info)
+	if len(errors) > 0 {
+		return errors[0]
+	}
+	return nil
+}
+
+func (l *LinkLayerDiscoveryInfo) Decode8021() (info LLDPInfo8021, err error) {
+	var errors []error
+	var ok bool
+	for _, o := range l.OrgTLVs {
+		if o.OUI != IEEEOUI8021 {
+			continue;
+		}
+		switch o.SubType {
+		case LLDP8021SubtypePortVLANID:
+			if ok, errors = checkLLDPOrgSpecificLen(o, 2, errors); ok {
+				info.PVID = binary.BigEndian.Uint16(o.Info[0:2])
+			}
+		case LLDP8021SubtypeProtocolVLANID:
+			if ok, errors = checkLLDPOrgSpecificLen(o, 3, errors); ok {
+				sup := (o.Info[0]&LLDPProtocolVLANIDCapability > 0)
+				en := (o.Info[0]&LLDPAggregationStatus > 0)
+				id := binary.BigEndian.Uint16(o.Info[1:3])
+				info.PPVIDs = append(info.PPVIDs, PortProtocolVLANID{sup, en, id})
+			}
+		case LLDP8021SubtypeVLANName:
+			if ok, errors = checkLLDPOrgSpecificLen(o, 2, errors); ok {
+				id := binary.BigEndian.Uint16(o.Info[0:2])
+				info.VLANNames = append(info.VLANNames, VLANName{id, string(o.Info[3:])})
+			}
+		case LLDP8021SubtypeProtocolIdentity:
+			if ok, errors = checkLLDPOrgSpecificLen(o, 1, errors); ok {
+				l := int(o.Info[0])
+				if l > 0 {
+					info.ProtocolIdentities = append(info.ProtocolIdentities, o.Info[1:1+l])
+				}
+			}
+		case LLDP8021SubtypeVDIUsageDigest:
+			if ok, errors = checkLLDPOrgSpecificLen(o, 4, errors); ok {
+				info.VIDUsageDigest = binary.BigEndian.Uint32(o.Info[0:4])
+			}
+		case LLDP8021SubtypeManagementVID:
+			if ok, errors = checkLLDPOrgSpecificLen(o, 2, errors); ok {
+				info.ManagementVID = binary.BigEndian.Uint16(o.Info[0:2])
+			}
+		case LLDP8021SubtypeLinkAggregation:
+			if ok, errors = checkLLDPOrgSpecificLen(o, 5, errors); ok {
+				sup := (o.Info[0]&LLDPAggregationCapability > 0)
+				en := (o.Info[0]&LLDPAggregationStatus > 0)
+				info.LinkAggregation = LinkAggregation8021{sup, en, binary.BigEndian.Uint32(o.Info[1:5])}
+			}
+		}
+	}
+	if len(errors) > 0 {
+		err = errors[0]
 	}
 	return
 }
+
+func (l *LinkLayerDiscoveryInfo) Decode8023() (info LLDPInfo8023, err error) {
+	var errors []error
+	var ok bool
+	for _, o := range l.OrgTLVs {
+		if o.OUI != IEEEOUI8023 {
+			continue;
+		}
+		switch o.SubType {
+		case LLDP8023SubtypeMACPHY:
+			if ok, errors = checkLLDPOrgSpecificLen(o, 5, errors); ok {
+				sup := (o.Info[0]&LLDPMACPHYCapability > 0)
+				en := (o.Info[0]&LLDPMACPHYStatus > 0)
+				ca := binary.BigEndian.Uint16(o.Info[1:3])
+				mau := binary.BigEndian.Uint16(o.Info[3:5])
+				info.MACPHYConfigStatus = MACPHYConfigStatus{sup, en, ca, mau}
+			}
+		case LLDP8023SubtypeMDIPower:
+			if ok, errors = checkLLDPOrgSpecificLen(o, 3, errors); ok {
+				info.PowerViaMDI.PortClassPSE = (o.Info[0]&LLDPMDIPowerPortClass > 0)
+				info.PowerViaMDI.PSESupported = (o.Info[0]&LLDPMDIPowerCapability > 0)
+				info.PowerViaMDI.PSEEnabled = (o.Info[0]&LLDPMDIPowerStatus > 0)
+				info.PowerViaMDI.PSEPairsAbility = (o.Info[0]&LLDPMDIPowerPairsAbility > 0)
+				info.PowerViaMDI.PSEPowerPair = uint8(o.Info[1])
+				info.PowerViaMDI.PSEClass = uint8(o.Info[2])
+				if len(o.Info) >= 8 {
+					info.PowerViaMDI.PowerType = LLDPPowerType((o.Info[3] & 0xc0) >> 6)
+					info.PowerViaMDI.PowerSource = LLDPPowerSource((o.Info[3] & 0x30) >> 4)
+					if info.PowerViaMDI.PowerType == 1 || info.PowerViaMDI.PowerType == 3 {
+						info.PowerViaMDI.PowerSource += 128 // For Stringify purposes
+					}
+					info.PowerViaMDI.PowerPriority = LLDPPowerPriority(o.Info[4] & 0x0f)
+					info.PowerViaMDI.RequestedPower = binary.BigEndian.Uint16(o.Info[5:7])
+					info.PowerViaMDI.AllocatedPower = binary.BigEndian.Uint16(o.Info[7:8])
+				}
+			}
+		case LLDP8023SubtypeLinkAggregation:
+			if ok, errors = checkLLDPOrgSpecificLen(o, 5, errors); ok {
+				info.LinkAggregation = LinkAggregation8023{o.Info[0], binary.BigEndian.Uint32(o.Info[1:5])}
+			}
+		case LLDP8023SubtypeMTU:
+			if ok, errors = checkLLDPOrgSpecificLen(o, 2, errors); ok {
+				info.MTU = binary.BigEndian.Uint16(o.Info[0:2])
+			}
+		}
+	}
+	if len(errors) > 0 {
+		err = errors[0]
+	}
+	return
+}
+
+func (l *LinkLayerDiscoveryInfo) Decode8021Qbg() (info LLDPInfo8021Qbg, err error) {
+	var errors []error
+	var ok bool
+	for _, o := range l.OrgTLVs {
+		if o.OUI != IEEEOUI8021Qbg {
+			continue;
+		}
+		switch o.SubType {
+		case LLDP8021QbgEVB:
+			if ok, errors = checkLLDPOrgSpecificLen(o, 9, errors); ok {
+				info.EVBSettings.Supported = getEVBCapabilities(binary.BigEndian.Uint16(o.Info[0:2]))
+				info.EVBSettings.Enabled = getEVBCapabilities(binary.BigEndian.Uint16(o.Info[2:4]))
+				info.EVBSettings.SupportedVSIs = binary.BigEndian.Uint16(o.Info[4:6])
+				info.EVBSettings.ConfiguredVSIs = binary.BigEndian.Uint16(o.Info[6:8])
+				info.EVBSettings.RTEExponent = uint8(o.Info[8])
+			}
+		}
+	}
+	if len(errors) > 0 {
+		err = errors[0]
+	}
+	return
+}
+
+// LayerType returns gopacket.LayerTypeLinkLayerDiscoveryInfo.
+func (c *LinkLayerDiscoveryInfo) LayerType() gopacket.LayerType {
+	return LayerTypeLinkLayerDiscoveryInfo
+}
+
 
 func getCapabilities(v uint16) (c LLDPCapabilities) {
 	c.Other = (v&LLDPCapsOther > 0)
@@ -720,7 +776,7 @@ func (t LLDPPortIDSubType) String() (s string) {
 		s = "Network Address"
 	case LLDPPortIDSubtypeIfaceName:
 		s = "Interface Name"
-	case LLDPPortIDSubTypeAgentCircID:
+	case LLDPPortIDSubTypeAgentCircuitID:
 		s = "Agent Circuit ID"
 	case LLDPPortIDSubTypeLocal:
 		s = "Local"

@@ -225,8 +225,7 @@ func decodeCiscoDiscoveryInfo(data []byte, p gopacket.PacketBuilder) error {
 	var err error
 	var errors []error
 	var ok bool
-	info := &CiscoDiscoveryInfo{}
-	info.payload = data
+	info := &CiscoDiscoveryInfo{baseLayer:baseLayer{contents:data}}
 	values,_ := decodeCiscoDiscoveryTLVs(data)
 	for _, val := range values {
 		switch val.Type {
