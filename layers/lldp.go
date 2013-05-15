@@ -703,8 +703,7 @@ func decodeLinkLayerDiscovery(data []byte, p gopacket.PacketBuilder) error {
 	p.AddLayer(c)
 
 	info := &LinkLayerDiscoveryInfo{}
-	var errors []error
-	var ok bool
+	p.AddLayer(info)
 	for _, v := range c.Values {
 		switch v.Type {
 		case LLDPTLVPortDescription:
@@ -714,251 +713,250 @@ func decodeLinkLayerDiscovery(data []byte, p gopacket.PacketBuilder) error {
 		case LLDPTLVSysDescription:
 			info.SysDescription = string(v.Value)
 		case LLDPTLVSysCapabilities:
-			if ok, errors = checkLLDPTLVLen(v, 4, errors); ok {
-				info.SysCapabilities.SystemCap = getCapabilities(binary.BigEndian.Uint16(v.Value[0:2]))
-				info.SysCapabilities.EnabledCap = getCapabilities(binary.BigEndian.Uint16(v.Value[2:4]))
+			if err := checkLLDPTLVLen(v, 4); err != nil {
+				return err
 			}
+			info.SysCapabilities.SystemCap = getCapabilities(binary.BigEndian.Uint16(v.Value[0:2]))
+			info.SysCapabilities.EnabledCap = getCapabilities(binary.BigEndian.Uint16(v.Value[2:4]))
 		case LLDPTLVMgmtAddress:
-			if ok, errors = checkLLDPTLVLen(v, 9, errors); ok {
-				mlen := v.Value[0]
-				if ok, errors = checkLLDPTLVLen(v, int(mlen+7), errors); !ok {
-					continue
-				}
-				info.MgmtAddress.Subtype = IANAAddressFamily(v.Value[1])
-				info.MgmtAddress.Address = v.Value[2 : mlen+1]
-				info.MgmtAddress.InterfaceSubtype = LLDPInterfaceSubtype(v.Value[mlen+1])
-				info.MgmtAddress.InterfaceNumber = binary.BigEndian.Uint32(v.Value[mlen+2 : mlen+6])
-				olen := v.Value[mlen+6]
-				if ok, errors = checkLLDPTLVLen(v, int(mlen+6+olen), errors); ok {
-					info.MgmtAddress.OID = string(v.Value[mlen+9 : mlen+9+olen])
-				}
+			if err := checkLLDPTLVLen(v, 9); err != nil {
+				return err
 			}
+			mlen := v.Value[0]
+			if err := checkLLDPTLVLen(v, int(mlen+7)); err != nil {
+				return err
+			}
+			info.MgmtAddress.Subtype = IANAAddressFamily(v.Value[1])
+			info.MgmtAddress.Address = v.Value[2 : mlen+1]
+			info.MgmtAddress.InterfaceSubtype = LLDPInterfaceSubtype(v.Value[mlen+1])
+			info.MgmtAddress.InterfaceNumber = binary.BigEndian.Uint32(v.Value[mlen+2 : mlen+6])
+			olen := v.Value[mlen+6]
+			if err := checkLLDPTLVLen(v, int(mlen+6+olen)); err != nil {
+				return err
+			}
+			info.MgmtAddress.OID = string(v.Value[mlen+9 : mlen+9+olen])
 		case LLDPTLVOrgSpecific:
-			if ok, errors = checkLLDPTLVLen(v, 4, errors); !ok {
-				continue
+			if err := checkLLDPTLVLen(v, 4); err != nil {
+				return err
 			}
 			info.OrgTLVs = append(info.OrgTLVs, LLDPOrgSpecificTLV{IEEEOUI(binary.BigEndian.Uint32(append([]byte{byte(0)}, v.Value[0:3]...))), uint8(v.Value[3]), v.Value[4:]})
 		}
-	}
-	p.AddLayer(info)
-	if len(errors) > 0 {
-		return errors[0]
 	}
 	return nil
 }
 
 func (l *LinkLayerDiscoveryInfo) Decode8021() (info LLDPInfo8021, err error) {
-	var errors []error
-	var ok bool
 	for _, o := range l.OrgTLVs {
 		if o.OUI != IEEEOUI8021 {
 			continue
 		}
 		switch o.SubType {
 		case LLDP8021SubtypePortVLANID:
-			if ok, errors = checkLLDPOrgSpecificLen(o, 2, errors); ok {
-				info.PVID = binary.BigEndian.Uint16(o.Info[0:2])
+			if err = checkLLDPOrgSpecificLen(o, 2); err != nil {
+				return
 			}
+			info.PVID = binary.BigEndian.Uint16(o.Info[0:2])
 		case LLDP8021SubtypeProtocolVLANID:
-			if ok, errors = checkLLDPOrgSpecificLen(o, 3, errors); ok {
-				sup := (o.Info[0]&LLDPProtocolVLANIDCapability > 0)
-				en := (o.Info[0]&LLDPProtocolVLANIDStatus > 0)
-				id := binary.BigEndian.Uint16(o.Info[1:3])
-				info.PPVIDs = append(info.PPVIDs, PortProtocolVLANID{sup, en, id})
+			if err= checkLLDPOrgSpecificLen(o, 3); err != nil {
+				return
 			}
+			sup := (o.Info[0]&LLDPProtocolVLANIDCapability > 0)
+			en := (o.Info[0]&LLDPProtocolVLANIDStatus > 0)
+			id := binary.BigEndian.Uint16(o.Info[1:3])
+			info.PPVIDs = append(info.PPVIDs, PortProtocolVLANID{sup, en, id})
 		case LLDP8021SubtypeVLANName:
-			if ok, errors = checkLLDPOrgSpecificLen(o, 2, errors); ok {
-				id := binary.BigEndian.Uint16(o.Info[0:2])
-				info.VLANNames = append(info.VLANNames, VLANName{id, string(o.Info[3:])})
+			if err= checkLLDPOrgSpecificLen(o, 2); err != nil {
+				return
 			}
+			id := binary.BigEndian.Uint16(o.Info[0:2])
+			info.VLANNames = append(info.VLANNames, VLANName{id, string(o.Info[3:])})
 		case LLDP8021SubtypeProtocolIdentity:
-			if ok, errors = checkLLDPOrgSpecificLen(o, 1, errors); ok {
-				l := int(o.Info[0])
-				if l > 0 {
-					info.ProtocolIdentities = append(info.ProtocolIdentities, o.Info[1:1+l])
-				}
+			if err= checkLLDPOrgSpecificLen(o, 1); err != nil {
+				return
 			}
-		case LLDP8021SubtypeVDIUsageDigest:
-			if ok, errors = checkLLDPOrgSpecificLen(o, 4, errors); ok {
-				info.VIDUsageDigest = binary.BigEndian.Uint32(o.Info[0:4])
-			}
-		case LLDP8021SubtypeManagementVID:
-			if ok, errors = checkLLDPOrgSpecificLen(o, 2, errors); ok {
-				info.ManagementVID = binary.BigEndian.Uint16(o.Info[0:2])
-			}
-		case LLDP8021SubtypeLinkAggregation:
-			if ok, errors = checkLLDPOrgSpecificLen(o, 5, errors); ok {
-				sup := (o.Info[0]&LLDPAggregationCapability > 0)
-				en := (o.Info[0]&LLDPAggregationStatus > 0)
-				info.LinkAggregation = LLDPLinkAggregation{sup, en, binary.BigEndian.Uint32(o.Info[1:5])}
-			}
+			l := int(o.Info[0])
+			if l > 0 {
+				info.ProtocolIdentities = append(info.ProtocolIdentities, o.Info[1:1+l])
 		}
-	}
-	if len(errors) > 0 {
-		err = errors[0]
+		case LLDP8021SubtypeVDIUsageDigest:
+			if err= checkLLDPOrgSpecificLen(o, 4); err != nil {
+				return
+			}
+			info.VIDUsageDigest = binary.BigEndian.Uint32(o.Info[0:4])
+		case LLDP8021SubtypeManagementVID:
+			if err= checkLLDPOrgSpecificLen(o, 2); err != nil {
+				return
+			}
+			info.ManagementVID = binary.BigEndian.Uint16(o.Info[0:2])
+		case LLDP8021SubtypeLinkAggregation:
+			if err= checkLLDPOrgSpecificLen(o, 5); err != nil {
+				return
+			}
+			sup := (o.Info[0]&LLDPAggregationCapability > 0)
+			en := (o.Info[0]&LLDPAggregationStatus > 0)
+			info.LinkAggregation = LLDPLinkAggregation{sup, en, binary.BigEndian.Uint32(o.Info[1:5])}
+		}
 	}
 	return
 }
 
 func (l *LinkLayerDiscoveryInfo) Decode8023() (info LLDPInfo8023, err error) {
-	var errors []error
-	var ok bool
 	for _, o := range l.OrgTLVs {
 		if o.OUI != IEEEOUI8023 {
 			continue
 		}
 		switch o.SubType {
 		case LLDP8023SubtypeMACPHY:
-			if ok, errors = checkLLDPOrgSpecificLen(o, 5, errors); ok {
-				sup := (o.Info[0]&LLDPMACPHYCapability > 0)
-				en := (o.Info[0]&LLDPMACPHYStatus > 0)
-				ca := binary.BigEndian.Uint16(o.Info[1:3])
-				mau := binary.BigEndian.Uint16(o.Info[3:5])
-				info.MACPHYConfigStatus = LLDPMACPHYConfigStatus{sup, en, ca, mau}
+			if err= checkLLDPOrgSpecificLen(o, 5); err != nil {
+				return
 			}
+			sup := (o.Info[0]&LLDPMACPHYCapability > 0)
+			en := (o.Info[0]&LLDPMACPHYStatus > 0)
+			ca := binary.BigEndian.Uint16(o.Info[1:3])
+			mau := binary.BigEndian.Uint16(o.Info[3:5])
+			info.MACPHYConfigStatus = LLDPMACPHYConfigStatus{sup, en, ca, mau}
 		case LLDP8023SubtypeMDIPower:
-			if ok, errors = checkLLDPOrgSpecificLen(o, 3, errors); ok {
-				info.PowerViaMDI.PortClassPSE = (o.Info[0]&LLDPMDIPowerPortClass > 0)
-				info.PowerViaMDI.PSESupported = (o.Info[0]&LLDPMDIPowerCapability > 0)
-				info.PowerViaMDI.PSEEnabled = (o.Info[0]&LLDPMDIPowerStatus > 0)
-				info.PowerViaMDI.PSEPairsAbility = (o.Info[0]&LLDPMDIPowerPairsAbility > 0)
-				info.PowerViaMDI.PSEPowerPair = uint8(o.Info[1])
-				info.PowerViaMDI.PSEClass = uint8(o.Info[2])
-				if len(o.Info) >= 7 {
-					info.PowerViaMDI.Type = LLDPPowerType((o.Info[3] & 0xc0) >> 6)
-					info.PowerViaMDI.Source = LLDPPowerSource((o.Info[3] & 0x30) >> 4)
-					if info.PowerViaMDI.Type == 1 || info.PowerViaMDI.Type == 3 {
-						info.PowerViaMDI.Source += 128 // For Stringify purposes
-					}
-					info.PowerViaMDI.Priority = LLDPPowerPriority(o.Info[3] & 0x0f)
-					info.PowerViaMDI.Requested = binary.BigEndian.Uint16(o.Info[4:6])
-					info.PowerViaMDI.Allocated = binary.BigEndian.Uint16(o.Info[6:8])
+			if err= checkLLDPOrgSpecificLen(o, 3); err != nil {
+				return
+			}
+			info.PowerViaMDI.PortClassPSE = (o.Info[0]&LLDPMDIPowerPortClass > 0)
+			info.PowerViaMDI.PSESupported = (o.Info[0]&LLDPMDIPowerCapability > 0)
+			info.PowerViaMDI.PSEEnabled = (o.Info[0]&LLDPMDIPowerStatus > 0)
+			info.PowerViaMDI.PSEPairsAbility = (o.Info[0]&LLDPMDIPowerPairsAbility > 0)
+			info.PowerViaMDI.PSEPowerPair = uint8(o.Info[1])
+			info.PowerViaMDI.PSEClass = uint8(o.Info[2])
+			if len(o.Info) >= 7 {
+				info.PowerViaMDI.Type = LLDPPowerType((o.Info[3] & 0xc0) >> 6)
+				info.PowerViaMDI.Source = LLDPPowerSource((o.Info[3] & 0x30) >> 4)
+				if info.PowerViaMDI.Type == 1 || info.PowerViaMDI.Type == 3 {
+					info.PowerViaMDI.Source += 128 // For Stringify purposes
 				}
+				info.PowerViaMDI.Priority = LLDPPowerPriority(o.Info[3] & 0x0f)
+				info.PowerViaMDI.Requested = binary.BigEndian.Uint16(o.Info[4:6])
+				info.PowerViaMDI.Allocated = binary.BigEndian.Uint16(o.Info[6:8])
 			}
 		case LLDP8023SubtypeLinkAggregation:
-			if ok, errors = checkLLDPOrgSpecificLen(o, 5, errors); ok {
-				sup := (o.Info[0]&LLDPAggregationCapability > 0)
-				en := (o.Info[0]&LLDPAggregationStatus > 0)
-				info.LinkAggregation = LLDPLinkAggregation{sup, en, binary.BigEndian.Uint32(o.Info[1:5])}
+			if err= checkLLDPOrgSpecificLen(o, 5); err != nil {
+				return
 			}
+			sup := (o.Info[0]&LLDPAggregationCapability > 0)
+			en := (o.Info[0]&LLDPAggregationStatus > 0)
+			info.LinkAggregation = LLDPLinkAggregation{sup, en, binary.BigEndian.Uint32(o.Info[1:5])}
 		case LLDP8023SubtypeMTU:
-			if ok, errors = checkLLDPOrgSpecificLen(o, 2, errors); ok {
-				info.MTU = binary.BigEndian.Uint16(o.Info[0:2])
+			if err= checkLLDPOrgSpecificLen(o, 2); err != nil {
+				return
 			}
+			info.MTU = binary.BigEndian.Uint16(o.Info[0:2])
 		}
-	}
-	if len(errors) > 0 {
-		err = errors[0]
 	}
 	return
 }
 
 func (l *LinkLayerDiscoveryInfo) Decode8021Qbg() (info LLDPInfo8021Qbg, err error) {
-	var errors []error
-	var ok bool
 	for _, o := range l.OrgTLVs {
 		if o.OUI != IEEEOUI8021Qbg {
 			continue
 		}
 		switch o.SubType {
 		case LLDP8021QbgEVB:
-			if ok, errors = checkLLDPOrgSpecificLen(o, 9, errors); ok {
-				info.EVBSettings.Supported = getEVBCapabilities(binary.BigEndian.Uint16(o.Info[0:2]))
-				info.EVBSettings.Enabled = getEVBCapabilities(binary.BigEndian.Uint16(o.Info[2:4]))
-				info.EVBSettings.SupportedVSIs = binary.BigEndian.Uint16(o.Info[4:6])
-				info.EVBSettings.ConfiguredVSIs = binary.BigEndian.Uint16(o.Info[6:8])
-				info.EVBSettings.RTEExponent = uint8(o.Info[8])
+			if err= checkLLDPOrgSpecificLen(o, 9); err != nil {
+				return
 			}
+			info.EVBSettings.Supported = getEVBCapabilities(binary.BigEndian.Uint16(o.Info[0:2]))
+			info.EVBSettings.Enabled = getEVBCapabilities(binary.BigEndian.Uint16(o.Info[2:4]))
+			info.EVBSettings.SupportedVSIs = binary.BigEndian.Uint16(o.Info[4:6])
+			info.EVBSettings.ConfiguredVSIs = binary.BigEndian.Uint16(o.Info[6:8])
+			info.EVBSettings.RTEExponent = uint8(o.Info[8])
 		}
-	}
-	if len(errors) > 0 {
-		err = errors[0]
 	}
 	return
 }
 
 func (l *LinkLayerDiscoveryInfo) DecodeMedia() (info LLDPInfoMedia, err error) {
-	var errors []error
-	var ok bool
 	for _, o := range l.OrgTLVs {
 		if o.OUI != IEEEOUIMedia {
 			continue
 		}
 		switch LLDPMediaSubtype(o.SubType) {
 		case LLDPMediaTypeCapabilities:
-			if ok, errors = checkLLDPOrgSpecificLen(o, 3, errors); ok {
-				b := binary.BigEndian.Uint16(o.Info[0:2])
-				info.MediaCapabilities.Capabilities = (b & LLDPMediaCapsLLDP) > 0
-				info.MediaCapabilities.NetworkPolicy = (b & LLDPMediaCapsNetwork) > 0
-				info.MediaCapabilities.Location = (b & LLDPMediaCapsLocation) > 0
-				info.MediaCapabilities.PowerPSE = (b & LLDPMediaCapsPowerPSE) > 0
-				info.MediaCapabilities.PowerPD = (b & LLDPMediaCapsPowerPD) > 0
-				info.MediaCapabilities.Inventory = (b & LLDPMediaCapsInventory) > 0
-				info.MediaCapabilities.Class = LLDPMediaClass(o.Info[2])
+			if err= checkLLDPOrgSpecificLen(o, 3); err != nil {
+				return
 			}
+			b := binary.BigEndian.Uint16(o.Info[0:2])
+			info.MediaCapabilities.Capabilities = (b & LLDPMediaCapsLLDP) > 0
+			info.MediaCapabilities.NetworkPolicy = (b & LLDPMediaCapsNetwork) > 0
+			info.MediaCapabilities.Location = (b & LLDPMediaCapsLocation) > 0
+			info.MediaCapabilities.PowerPSE = (b & LLDPMediaCapsPowerPSE) > 0
+			info.MediaCapabilities.PowerPD = (b & LLDPMediaCapsPowerPD) > 0
+			info.MediaCapabilities.Inventory = (b & LLDPMediaCapsInventory) > 0
+			info.MediaCapabilities.Class = LLDPMediaClass(o.Info[2])
 		case LLDPMediaTypeNetwork:
-			if ok, errors = checkLLDPOrgSpecificLen(o, 4, errors); ok {
-				info.NetworkPolicy.ApplicationType = LLDPApplicationType(o.Info[0])
-				b := binary.BigEndian.Uint16(o.Info[1:3])
-				info.NetworkPolicy.Defined = (b & 0x8000) == 0
-				info.NetworkPolicy.Tagged = (b & 0x4000) > 0
-				info.NetworkPolicy.VLANId = (b & 0x1ffe) >> 1
-				b = binary.BigEndian.Uint16(o.Info[2:4])
-				info.NetworkPolicy.L2Priority = (b & 0x01c0) >> 6
-				info.NetworkPolicy.DSCPValue = uint8(o.Info[3] & 0x3f)
+			if err= checkLLDPOrgSpecificLen(o, 4); err != nil {
+				return
 			}
-
+			info.NetworkPolicy.ApplicationType = LLDPApplicationType(o.Info[0])
+			b := binary.BigEndian.Uint16(o.Info[1:3])
+			info.NetworkPolicy.Defined = (b & 0x8000) == 0
+			info.NetworkPolicy.Tagged = (b & 0x4000) > 0
+			info.NetworkPolicy.VLANId = (b & 0x1ffe) >> 1
+			b = binary.BigEndian.Uint16(o.Info[2:4])
+			info.NetworkPolicy.L2Priority = (b & 0x01c0) >> 6
+			info.NetworkPolicy.DSCPValue = uint8(o.Info[3] & 0x3f)
 		case LLDPMediaTypeLocation:
-			if ok, errors = checkLLDPOrgSpecificLen(o, 1, errors); ok {
-				info.Location.Format = LLDPLocationFormat(o.Info[0])
-				o.Info = o.Info[1:]
-				switch info.Location.Format {
-				case LLDPLocationFormatCoordinate:
-					if ok, errors = checkLLDPOrgSpecificLen(o, 16, errors); ok {
-						info.Location.Coordinate.LatitudeResolution = uint8(o.Info[0]&0xfc) >> 2
-						b := binary.BigEndian.Uint64(o.Info[0:8])
-						info.Location.Coordinate.Latitude = (b & 0x03ffffffff000000) >> 24
-						info.Location.Coordinate.LongitudeResolution = uint8(o.Info[5]&0xfc) >> 2
-						b = binary.BigEndian.Uint64(o.Info[5:13])
-						info.Location.Coordinate.Longitude = (b & 0x03ffffffff000000) >> 24
-						info.Location.Coordinate.AltitudeType = uint8((o.Info[10] & 0x30) >> 4)
-						b1 := binary.BigEndian.Uint16(o.Info[10:12])
-						info.Location.Coordinate.AltitudeResolution = (b1 & 0xfc0) >> 6
-						b2 := binary.BigEndian.Uint32(o.Info[11:15])
-						info.Location.Coordinate.Altitude = b2 & 0x3fffffff
-						info.Location.Coordinate.Datum = uint8(o.Info[15])
-					}
-				case LLDPLocationFormatAddress:
-					if ok, errors = checkLLDPOrgSpecificLen(o, 3, errors); ok {
-						//ll := uint8(o.Info[0])
-						info.Location.Address.What = LLDPLocationAddressWhat(o.Info[1])
-						info.Location.Address.CountryCode = string(o.Info[2:4])
-						data := o.Info[4:]
-						for len(data) > 1 {
-							aType := LLDPLocationAddressType(data[0])
-							aLen := int(data[1])
-							if len(data) >= aLen+2 {
-								info.Location.Address.AddressLines = append(info.Location.Address.AddressLines, LLDPLocationAddressLine{aType, string(data[2 : aLen+2])})
-								data = data[aLen+2:]
-							} else {
-								break
-							}
-						}
-					}
-				case LLDPLocationFormatECS:
-					info.Location.ECS.ELIN = string(o.Info)
+			if err= checkLLDPOrgSpecificLen(o, 1); err != nil {
+				return
+			}
+			info.Location.Format = LLDPLocationFormat(o.Info[0])
+			o.Info = o.Info[1:]
+			switch info.Location.Format {
+			case LLDPLocationFormatCoordinate:
+				if err= checkLLDPOrgSpecificLen(o, 16); err != nil {
+					return
 				}
+				info.Location.Coordinate.LatitudeResolution = uint8(o.Info[0]&0xfc) >> 2
+				b := binary.BigEndian.Uint64(o.Info[0:8])
+				info.Location.Coordinate.Latitude = (b & 0x03ffffffff000000) >> 24
+				info.Location.Coordinate.LongitudeResolution = uint8(o.Info[5]&0xfc) >> 2
+				b = binary.BigEndian.Uint64(o.Info[5:13])
+				info.Location.Coordinate.Longitude = (b & 0x03ffffffff000000) >> 24
+				info.Location.Coordinate.AltitudeType = uint8((o.Info[10] & 0x30) >> 4)
+				b1 := binary.BigEndian.Uint16(o.Info[10:12])
+				info.Location.Coordinate.AltitudeResolution = (b1 & 0xfc0) >> 6
+				b2 := binary.BigEndian.Uint32(o.Info[11:15])
+				info.Location.Coordinate.Altitude = b2 & 0x3fffffff
+				info.Location.Coordinate.Datum = uint8(o.Info[15])
+			case LLDPLocationFormatAddress:
+				if err= checkLLDPOrgSpecificLen(o, 3); err != nil {
+					return
+				}
+				//ll := uint8(o.Info[0])
+				info.Location.Address.What = LLDPLocationAddressWhat(o.Info[1])
+				info.Location.Address.CountryCode = string(o.Info[2:4])
+				data := o.Info[4:]
+				for len(data) > 1 {
+					aType := LLDPLocationAddressType(data[0])
+					aLen := int(data[1])
+					if len(data) >= aLen+2 {
+						info.Location.Address.AddressLines = append(info.Location.Address.AddressLines, LLDPLocationAddressLine{aType, string(data[2 : aLen+2])})
+						data = data[aLen+2:]
+					} else {
+						break
+					}
+				}
+			case LLDPLocationFormatECS:
+				info.Location.ECS.ELIN = string(o.Info)
 			}
 		case LLDPMediaTypePower:
-			if ok, errors = checkLLDPOrgSpecificLen(o, 3, errors); ok {
-				info.PowerViaMDI.Type = LLDPPowerType((o.Info[0] & 0xc0) >> 6)
-				info.PowerViaMDI.Source = LLDPPowerSource((o.Info[0] & 0x30) >> 4)
-				if info.PowerViaMDI.Type == 1 || info.PowerViaMDI.Type == 3 {
-					info.PowerViaMDI.Source += 128 // For Stringify purposes
-				}
-				info.PowerViaMDI.Priority = LLDPPowerPriority(o.Info[0] & 0x0f)
-				info.PowerViaMDI.Value = binary.BigEndian.Uint16(o.Info[1:3]) * 100 // 0 to 102.3 w, 0.1W increments
+			if err= checkLLDPOrgSpecificLen(o, 3); err != nil {
+				return
 			}
+			info.PowerViaMDI.Type = LLDPPowerType((o.Info[0] & 0xc0) >> 6)
+			info.PowerViaMDI.Source = LLDPPowerSource((o.Info[0] & 0x30) >> 4)
+			if info.PowerViaMDI.Type == 1 || info.PowerViaMDI.Type == 3 {
+				info.PowerViaMDI.Source += 128 // For Stringify purposes
+			}
+			info.PowerViaMDI.Priority = LLDPPowerPriority(o.Info[0] & 0x0f)
+			info.PowerViaMDI.Value = binary.BigEndian.Uint16(o.Info[1:3]) * 100 // 0 to 102.3 w, 0.1W increments
 		case LLDPMediaTypeHardware:
 			info.HardwareRevision = string(o.Info)
 		case LLDPMediaTypeFirmware:
@@ -974,9 +972,6 @@ func (l *LinkLayerDiscoveryInfo) DecodeMedia() (info LLDPInfoMedia, err error) {
 		case LLDPMediaTypeAssetID:
 			info.AssetID = string(o.Info)
 		}
-	}
-	if len(errors) > 0 {
-		err = errors[0]
 	}
 	return
 }
@@ -1359,18 +1354,16 @@ func (t LLDPLocationAddressType) String() (s string) {
 	return
 }
 
-func checkLLDPTLVLen(v LinkLayerDiscoveryValue, l int, e []error) (ok bool, errors []error) {
-	errors = e
-	if ok = (len(v.Value) >= l); !ok {
-		errors = append(errors, fmt.Errorf("Invalid TLV %v length %d (wanted mimimum %v", v.Type, len(v.Value), l))
+func checkLLDPTLVLen(v LinkLayerDiscoveryValue, l int) (err error) {
+	if len(v.Value) < l {
+		err = fmt.Errorf("Invalid TLV %v length %d (wanted mimimum %v", v.Type, len(v.Value), l)
 	}
 	return
 }
 
-func checkLLDPOrgSpecificLen(o LLDPOrgSpecificTLV, l int, e []error) (ok bool, errors []error) {
-	errors = e
-	if ok = (len(o.Info) >= l); !ok {
-		errors = append(errors, fmt.Errorf("Invalid Org Specific TLV %v length %d (wanted minimum %v)", o.SubType, len(o.Info), l))
+func checkLLDPOrgSpecificLen(o LLDPOrgSpecificTLV, l int) (err error) {
+	if len(o.Info) < l {
+		err = fmt.Errorf("Invalid Org Specific TLV %v length %d (wanted minimum %v)", o.SubType, len(o.Info), l)
 	}
 	return
 }

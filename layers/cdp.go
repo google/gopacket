@@ -223,36 +223,37 @@ func decodeCiscoDiscoveryTLVs(data []byte) (values []CiscoDiscoveryValue, err er
 
 func decodeCiscoDiscoveryInfo(data []byte, p gopacket.PacketBuilder) error {
 	var err error
-	var errors []error
-	var ok bool
 	info := &CiscoDiscoveryInfo{baseLayer:baseLayer{contents:data}}
+	p.AddLayer(info)
 	values,_ := decodeCiscoDiscoveryTLVs(data)
 	for _, val := range values {
 		switch val.Type {
 		case CDPTLVDevID:
 			info.DeviceID = string(val.Value)
 		case CDPTLVAddress:
-			if ok, errors = checkCDPTLVLen(val, 4, errors); ok {
-				info.Addresses, err = decodeAddresses(val.Value)
-				if err != nil {
-					errors = append(errors, err)
-				}
+			if err= checkCDPTLVLen(val, 4); err != nil {
+				return err
+			}
+			info.Addresses, err = decodeAddresses(val.Value)
+			if err != nil {
+				return err
 			}
 		case CDPTLVPortID:
 			info.PortID = string(val.Value)
 		case CDPTLVCapabilities:
-			if ok, errors = checkCDPTLVLen(val, 4, errors); ok {
-				val := CDPCapability(binary.BigEndian.Uint32(val.Value[0:4]))
-				info.Capabilities.L3Router = (val&CDPCapMaskRouter > 0)
-				info.Capabilities.TBBridge = (val&CDPCapMaskTBBridge > 0)
-				info.Capabilities.SPBridge = (val&CDPCapMaskSPBridge > 0)
-				info.Capabilities.L2Switch = (val&CDPCapMaskSwitch > 0)
-				info.Capabilities.IsHost = (val&CDPCapMaskHost > 0)
-				info.Capabilities.IGMPFilter = (val&CDPCapMaskIGMPFilter > 0)
-				info.Capabilities.L1Repeater = (val&CDPCapMaskRepeater > 0)
-				info.Capabilities.IsPhone = (val&CDPCapMaskPhone > 0)
-				info.Capabilities.RemotelyManaged = (val&CDPCapMaskRemote > 0)
+			if err= checkCDPTLVLen(val, 4); err != nil {
+				return err
 			}
+			val := CDPCapability(binary.BigEndian.Uint32(val.Value[0:4]))
+			info.Capabilities.L3Router = (val&CDPCapMaskRouter > 0)
+			info.Capabilities.TBBridge = (val&CDPCapMaskTBBridge > 0)
+			info.Capabilities.SPBridge = (val&CDPCapMaskSPBridge > 0)
+			info.Capabilities.L2Switch = (val&CDPCapMaskSwitch > 0)
+			info.Capabilities.IsHost = (val&CDPCapMaskHost > 0)
+			info.Capabilities.IGMPFilter = (val&CDPCapMaskIGMPFilter > 0)
+			info.Capabilities.L1Repeater = (val&CDPCapMaskRepeater > 0)
+			info.Capabilities.IsPhone = (val&CDPCapMaskPhone > 0)
+			info.Capabilities.RemotelyManaged = (val&CDPCapMaskRemote > 0)
 		case CDPTLVVersion:
 			info.Version = string(val.Value)
 		case CDPTLVPlatform:
@@ -267,115 +268,124 @@ func decodeCiscoDiscoveryInfo(data []byte, p gopacket.PacketBuilder) error {
 					v = v[5:]
 				}
 			} else {
-				errors = append(errors, fmt.Errorf("Invalid TLV %v length %d", val.Type, len(val.Value)))
+				return fmt.Errorf("Invalid TLV %v length %d", val.Type, len(val.Value))
 			}
 		case CDPTLVHello:
-			if ok, errors = checkCDPTLVLen(val, 32, errors); ok {
-				v := val.Value
-				copy(info.CDPHello.OUI[0:3], v[0:3])
-				info.CDPHello.ProtocolID = binary.BigEndian.Uint16(v[3:5])
-				info.CDPHello.ClusterMaster = net.IPv4(v[5], v[6], v[7], v[8])
-				info.CDPHello.Unknown1 = net.IPv4(v[9], v[10], v[11], v[12])
-				info.CDPHello.Version = v[13]
-				info.CDPHello.SubVersion = v[14]
-				info.CDPHello.Status = v[15]
-				info.CDPHello.Unknown2 = v[16]
-				info.CDPHello.ClusterCommander = v[17:23]
-				info.CDPHello.SwitchMAC = v[23:29]
-				info.CDPHello.Unknown3 = v[29]
-				info.CDPHello.ManagementVLAN = binary.BigEndian.Uint16(v[30:32])
+			if err= checkCDPTLVLen(val, 32); err != nil {
+				return err
 			}
+			v := val.Value
+			copy(info.CDPHello.OUI[0:3], v[0:3])
+			info.CDPHello.ProtocolID = binary.BigEndian.Uint16(v[3:5])
+			info.CDPHello.ClusterMaster = net.IPv4(v[5], v[6], v[7], v[8])
+			info.CDPHello.Unknown1 = net.IPv4(v[9], v[10], v[11], v[12])
+			info.CDPHello.Version = v[13]
+			info.CDPHello.SubVersion = v[14]
+			info.CDPHello.Status = v[15]
+			info.CDPHello.Unknown2 = v[16]
+			info.CDPHello.ClusterCommander = v[17:23]
+			info.CDPHello.SwitchMAC = v[23:29]
+			info.CDPHello.Unknown3 = v[29]
+			info.CDPHello.ManagementVLAN = binary.BigEndian.Uint16(v[30:32])
 		case CDPTLVVTPDomain:
 			info.VTPDomain = string(val.Value)
 		case CDPTLVNativeVLAN:
-			if ok, errors = checkCDPTLVLen(val, 2, errors); ok {
-				info.NativeVLAN = binary.BigEndian.Uint16(val.Value[0:2])
+			if err= checkCDPTLVLen(val, 2); err != nil {
+				return err
 			}
+			info.NativeVLAN = binary.BigEndian.Uint16(val.Value[0:2])
 		case CDPTLVFullDuplex:
-			if ok, errors = checkCDPTLVLen(val, 1, errors); ok {
-				info.FullDuplex = (val.Value[0] == 1)
+			if err= checkCDPTLVLen(val, 1); err != nil {
+				return err
 			}
+			info.FullDuplex = (val.Value[0] == 1)
 		case CDPTLVVLANReply:
-			if ok, errors = checkCDPTLVLen(val, 3, errors); ok {
-				info.VLANReply.ID = uint8(val.Value[0])
-				info.VLANReply.VLAN = binary.BigEndian.Uint16(val.Value[1:3])
+			if err= checkCDPTLVLen(val, 3); err != nil {
+				return err
 			}
+			info.VLANReply.ID = uint8(val.Value[0])
+			info.VLANReply.VLAN = binary.BigEndian.Uint16(val.Value[1:3])
 		case CDPTLVVLANQuery:
-			if ok, errors = checkCDPTLVLen(val, 3, errors); ok {
-				info.VLANQuery.ID = uint8(val.Value[0])
-				info.VLANQuery.VLAN = binary.BigEndian.Uint16(val.Value[1:3])
+			if err= checkCDPTLVLen(val, 3); err != nil {
+				return err
 			}
+			info.VLANQuery.ID = uint8(val.Value[0])
+			info.VLANQuery.VLAN = binary.BigEndian.Uint16(val.Value[1:3])
 		case CDPTLVPower:
-			if ok, errors = checkCDPTLVLen(val, 2, errors); ok {
-				info.PowerConsumption = binary.BigEndian.Uint16(val.Value[0:2])
+			if err= checkCDPTLVLen(val, 2); err != nil {
+				return err
 			}
+			info.PowerConsumption = binary.BigEndian.Uint16(val.Value[0:2])
 		case CDPTLVMTU:
-			if ok, errors = checkCDPTLVLen(val, 4, errors); ok {
-				info.MTU = binary.BigEndian.Uint32(val.Value[0:4])
+			if err= checkCDPTLVLen(val, 4); err != nil {
+				return err
 			}
+			info.MTU = binary.BigEndian.Uint32(val.Value[0:4])
 		case CDPTLVExtendedTrust:
-			if ok, errors = checkCDPTLVLen(val, 1, errors); ok {
-				info.ExtendedTrust = uint8(val.Value[0])
+			if err= checkCDPTLVLen(val, 1); err != nil {
+				return err
 			}
+			info.ExtendedTrust = uint8(val.Value[0])
 		case CDPTLVUntrustedCOS:
-			if ok, errors = checkCDPTLVLen(val, 1, errors); ok {
-				info.UntrustedCOS = uint8(val.Value[0])
+			if err= checkCDPTLVLen(val, 1); err != nil {
+				return err
 			}
+			info.UntrustedCOS = uint8(val.Value[0])
 		case CDPTLVSysName:
 			info.SysName = string(val.Value)
 		case CDPTLVSysOID:
 			info.SysOID = string(val.Value)
 		case CDPTLVMgmtAddresses:
-			if ok, errors = checkCDPTLVLen(val, 4, errors); ok {
-				info.MgmtAddresses, err = decodeAddresses(val.Value)
-				if err != nil {
-					errors = append(errors, err)
-				}
+			if err= checkCDPTLVLen(val, 4); err != nil {
+				return err
+			}
+			info.MgmtAddresses, err = decodeAddresses(val.Value)
+			if err != nil {
+				return err
 			}
 		case CDPTLVLocation:
-			if ok, errors = checkCDPTLVLen(val, 2, errors); ok {
-				info.Location.Type = uint8(val.Value[0])
-				info.Location.Location = string(val.Value[1:])
+			if err= checkCDPTLVLen(val, 2); err != nil {
+				return err
 			}
+			info.Location.Type = uint8(val.Value[0])
+			info.Location.Location = string(val.Value[1:])
 
 			//		case CDPTLVLExternalPortID:
 			//			Undocumented
 		case CDPTLVPowerRequested:
-			if ok, errors = checkCDPTLVLen(val, 4, errors); ok {
-				info.PowerRequest.ID = binary.BigEndian.Uint16(val.Value[0:2])
-				info.PowerRequest.MgmtID = binary.BigEndian.Uint16(val.Value[2:4])
-				for n := 4; n < len(val.Value); n += 4 {
-					info.PowerRequest.Values = append(info.PowerRequest.Values, binary.BigEndian.Uint32(val.Value[n:n+4]))
-				}
+			if err= checkCDPTLVLen(val, 4); err != nil {
+				return err
 			}
-
+			info.PowerRequest.ID = binary.BigEndian.Uint16(val.Value[0:2])
+			info.PowerRequest.MgmtID = binary.BigEndian.Uint16(val.Value[2:4])
+			for n := 4; n < len(val.Value); n += 4 {
+				info.PowerRequest.Values = append(info.PowerRequest.Values, binary.BigEndian.Uint32(val.Value[n:n+4]))
+			}
 		case CDPTLVPowerAvailable:
-			if ok, errors = checkCDPTLVLen(val, 4, errors); ok {
-				info.PowerAvailable.ID = binary.BigEndian.Uint16(val.Value[0:2])
-				info.PowerAvailable.MgmtID = binary.BigEndian.Uint16(val.Value[2:4])
-				for n := 4; n < len(val.Value); n += 4 {
-					info.PowerAvailable.Values = append(info.PowerAvailable.Values, binary.BigEndian.Uint32(val.Value[n:n+4]))
-				}
+			if err= checkCDPTLVLen(val, 4); err != nil {
+				return err
+			}
+			info.PowerAvailable.ID = binary.BigEndian.Uint16(val.Value[0:2])
+			info.PowerAvailable.MgmtID = binary.BigEndian.Uint16(val.Value[2:4])
+			for n := 4; n < len(val.Value); n += 4 {
+				info.PowerAvailable.Values = append(info.PowerAvailable.Values, binary.BigEndian.Uint32(val.Value[n:n+4]))
 			}
 			//		case CDPTLVPortUnidirectional
 			//			Undocumented
 			//		case CDPTLVEnergyWise:
 			//			Undocumented
 		case CDPTLVSparePairPOE:
-			if ok, errors = checkCDPTLVLen(val, 1, errors); ok {
-				v := val.Value[0]
-				info.SparePairPoe.PSEFourWire = (v&CDPPoEFourWire > 0)
-				info.SparePairPoe.PDArchShared = (v&CDPPoEPDArch > 0)
-				info.SparePairPoe.PDRequestOn = (v&CDPPoEPDRequest > 0)
-				info.SparePairPoe.PSEOn = (v&CDPPoEPSE > 0)
+			if err= checkCDPTLVLen(val, 1); err != nil {
+				return err
 			}
+			v := val.Value[0]
+			info.SparePairPoe.PSEFourWire = (v&CDPPoEFourWire > 0)
+			info.SparePairPoe.PDArchShared = (v&CDPPoEPDArch > 0)
+			info.SparePairPoe.PDRequestOn = (v&CDPPoEPDRequest > 0)
+			info.SparePairPoe.PSEOn = (v&CDPPoEPSE > 0)
 		default:
 			info.Unknown = append(info.Unknown, val)
 		}
-	}
-	p.AddLayer(info)
-	if len(errors) > 0 {
-		return errors[0]
 	}
 	return nil
 }
@@ -525,10 +535,9 @@ func (a CDPAddressType) String() (s string) {
 	return
 }
 
-func checkCDPTLVLen(v CiscoDiscoveryValue, l int, e []error) (ok bool, errors []error) {
-	errors = e
-	if ok = (len(v.Value) >= l); !ok {
-		errors = append(errors, fmt.Errorf("Invalid TLV %v length %d", v.Type, len(v.Value)))
+func checkCDPTLVLen(v CiscoDiscoveryValue, l int) (err error) {
+	if len(v.Value) < l {
+		err = fmt.Errorf("Invalid TLV %v length %d", v.Type, len(v.Value))
 	}
 	return
 }
