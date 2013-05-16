@@ -756,6 +756,35 @@ func TestDecodeLinkLayerDiscovery(t *testing.T) {
 
 }
 
+func TestDecodeNortelDiscovery(t *testing.T) {
+	// http://www.thetechfirm.com/packets/nortel_btdp/btdp_nai.enc
+	data := []byte{
+		0x01, 0x00, 0x81, 0x00, 0x01, 0x00, 0x00, 0x04, 0x38, 0xe0, 0xcc, 0xde,
+		0x00, 0x13, 0xaa, 0xaa, 0x03, 0x00, 0x00, 0x81, 0x01, 0xa2, 0xac, 0x13,
+		0x58, 0x03, 0x00, 0x04, 0x15, 0x30, 0x0c, 0x02, 0x00, 0x00, 0x00, 0x00,
+		0x00, 0x04, 0x38, 0xe0, 0xcc, 0xde, 0x80, 0x6a, 0x00, 0x01, 0x14, 0x00,
+		0x02, 0x00, 0x0f, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 
+	}
+	p := gopacket.NewPacket(data, LinkTypeEthernet, gopacket.Default)
+	wantLayers := []gopacket.LayerType{LayerTypeEthernet, LayerTypeLLC, LayerTypeSNAP, LayerTypeNortelDiscovery}
+	checkLayers(p, wantLayers, t)
+
+	want := &NortelDiscovery{
+		IPAddress: net.IPv4(172,19,88,3),
+		SegmentID: [3]byte{0x00,0x04,0x15},
+		Chassis: NDPChassisBayStack450101001000Switches,
+		Backplane: NDPBackplaneEthernetFastEthernetGigabitEthernet,
+		State: NDPStateHeartbeat,
+		NumLinks: 0,
+	}
+	ndpL := p.Layer(LayerTypeNortelDiscovery)
+	info, _ := ndpL.(*NortelDiscovery)
+	if !reflect.DeepEqual(info, want) {
+		t.Errorf("Values mismatch, \ngot  %#v\nwant %#v\n", info, want)
+	}
+}
+
+
 func TestDecodeIPv6Jumbogram(t *testing.T) {
 	// Haven't found any of these in the wild or on example pcaps online, so had
 	// to generate one myself via scapy.  Unfortunately, scapy can only

@@ -62,6 +62,7 @@ var (
 	LayerTypeLinkLayerDiscovery     = gopacket.RegisterLayerType(58, gopacket.LayerTypeMetadata{"LinkLayerDiscovery", gopacket.DecodeFunc(decodeLinkLayerDiscovery)})
 	LayerTypeCiscoDiscoveryInfo     = gopacket.RegisterLayerType(59, gopacket.LayerTypeMetadata{"CiscoDiscoveryInfo", gopacket.DecodeFunc(decodeCiscoDiscoveryInfo)})
 	LayerTypeLinkLayerDiscoveryInfo = gopacket.RegisterLayerType(60, gopacket.LayerTypeMetadata{"LinkLayerDiscoveryInfo", nil})
+	LayerTypeNortelDiscovery        = gopacket.RegisterLayerType(61, gopacket.LayerTypeMetadata{"NortelDiscovery", gopacket.DecodeFunc(decodeNortelDiscovery)})
 )
 
 var (

@@ -39,10 +39,11 @@ const (
 	// placeholder we use in Ethernet frames that use the 802.3 standard of
 	// srcmac|dstmac|length|LLC instead of srcmac|dstmac|ethertype.
 	EthernetTypeLLC                EthernetType = 0
-	EthernetTypeCiscoDiscovery     EthernetType = 0x2000
 	EthernetTypeIPv4               EthernetType = 0x0800
 	EthernetTypeARP                EthernetType = 0x0806
 	EthernetTypeIPv6               EthernetType = 0x86DD
+	EthernetTypeCiscoDiscovery     EthernetType = 0x2000
+	EthernetTypeNortelDiscovery    EthernetType = 0x01a2
 	EthernetTypeDot1Q              EthernetType = 0x8100
 	EthernetTypePPPoEDiscovery     EthernetType = 0x8863
 	EthernetTypePPPoESession       EthernetType = 0x8864
@@ -316,6 +317,7 @@ func init() {
 	EthernetTypeMetadata[EthernetTypePPPoESession] = EnumMetadata{DecodeWith: gopacket.DecodeFunc(decodePPPoE), Name: "PPPoESession"}
 	EthernetTypeMetadata[EthernetTypeEthernetCTP] = EnumMetadata{DecodeWith: gopacket.DecodeFunc(decodeEthernetCTP), Name: "EthernetCTP"}
 	EthernetTypeMetadata[EthernetTypeCiscoDiscovery] = EnumMetadata{DecodeWith: gopacket.DecodeFunc(decodeCiscoDiscovery), Name: "CiscoDiscovery"}
+	EthernetTypeMetadata[EthernetTypeNortelDiscovery] = EnumMetadata{DecodeWith: gopacket.DecodeFunc(decodeNortelDiscovery), Name: "NortelDiscovery"}
 	EthernetTypeMetadata[EthernetTypeLinkLayerDiscovery] = EnumMetadata{DecodeWith: gopacket.DecodeFunc(decodeLinkLayerDiscovery), Name: "LinkLayerDiscovery"}
 	EthernetTypeMetadata[EthernetTypeMPLSUnicast] = EnumMetadata{DecodeWith: gopacket.DecodeFunc(decodeMPLS), Name: "MPLSUnicast"}
 	EthernetTypeMetadata[EthernetTypeMPLSMulticast] = EnumMetadata{DecodeWith: gopacket.DecodeFunc(decodeMPLS), Name: "MPLSMulticast"}
