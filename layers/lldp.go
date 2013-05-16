@@ -91,10 +91,12 @@ type IEEEOUI uint32
 const (
 	IEEEOUI8021     IEEEOUI = 0x0080c2
 	IEEEOUI8023     IEEEOUI = 0x00120f
+	IEEEOUI80211    IEEEOUI = 0x000fac
 	IEEEOUI8021Qbg  IEEEOUI = 0x0013BF
 	IEEEOUICisco2   IEEEOUI = 0x000142
-	IEEEOUIMedia    IEEEOUI = 0x0012bb
+	IEEEOUIMedia    IEEEOUI = 0x0012bb // TR-41
 	IEEEOUIProfinet IEEEOUI = 0x000ecf
+	IEEEOUIDCBX     IEEEOUI = 0x001b21
 )
 
 // LLDPOrgSpecificTLV is an Organisation-specific TLV
@@ -144,32 +146,32 @@ type IANAAddressFamily byte
 // LLDP Management Address Subtypes
 // http://www.iana.org/assignments/address-family-numbers/address-family-numbers.xml
 const (
-	IANAAddressFamilyReserved  IANAAddressFamily = 0
-	IANAAddressFamilyInet      IANAAddressFamily = 1
-	IANAAddressFamilyInet6     IANAAddressFamily = 2
-	IANAAddressFamilyNsap      IANAAddressFamily = 3
-	IANAAddressFamilyHdlc      IANAAddressFamily = 4
-	IANAAddressFamilyBbn1822   IANAAddressFamily = 5
-	IANAAddressFamily802       IANAAddressFamily = 6
-	IANAAddressFamilyE163      IANAAddressFamily = 7
-	IANAAddressFamilyE164      IANAAddressFamily = 8
-	IANAAddressFamilyF69       IANAAddressFamily = 9
-	IANAAddressFamilyX121      IANAAddressFamily = 10
-	IANAAddressFamilyIpx       IANAAddressFamily = 11
-	IANAAddressFamilyAtalk     IANAAddressFamily = 12
-	IANAAddressFamilyDecnet    IANAAddressFamily = 13
-	IANAAddressFamilyBanyan    IANAAddressFamily = 14
-	IANAAddressFamilyE164nsap  IANAAddressFamily = 15
-	IANAAddressFamilyDns       IANAAddressFamily = 16
-	IANAAddressFamilyDistname  IANAAddressFamily = 17
-	IANAAddressFamilyAs_number IANAAddressFamily = 18
-	IANAAddressFamilyXtp_ip4   IANAAddressFamily = 19
-	IANAAddressFamilyXtp_ip6   IANAAddressFamily = 20
-	IANAAddressFamilyXtp       IANAAddressFamily = 21
-	IANAAddressFamilyFc_wwpn   IANAAddressFamily = 22
-	IANAAddressFamilyFc_wwnn   IANAAddressFamily = 23
-	IANAAddressFamilyGwid      IANAAddressFamily = 24
-	IANAAddressFamilyL2vpn     IANAAddressFamily = 25
+	IANAAddressFamilyReserved IANAAddressFamily = 0
+	IANAAddressFamilyIPV4     IANAAddressFamily = 1
+	IANAAddressFamilyIPV6     IANAAddressFamily = 2
+	IANAAddressFamilyNSAP     IANAAddressFamily = 3
+	IANAAddressFamilyHDLC     IANAAddressFamily = 4
+	IANAAddressFamilyBBN1822  IANAAddressFamily = 5
+	IANAAddressFamily802      IANAAddressFamily = 6
+	IANAAddressFamilyE163     IANAAddressFamily = 7
+	IANAAddressFamilyE164     IANAAddressFamily = 8
+	IANAAddressFamilyF69      IANAAddressFamily = 9
+	IANAAddressFamilyX121     IANAAddressFamily = 10
+	IANAAddressFamilyIPX      IANAAddressFamily = 11
+	IANAAddressFamilyAtalk    IANAAddressFamily = 12
+	IANAAddressFamilyDecnet   IANAAddressFamily = 13
+	IANAAddressFamilyBanyan   IANAAddressFamily = 14
+	IANAAddressFamilyE164NSAP IANAAddressFamily = 15
+	IANAAddressFamilyDNS      IANAAddressFamily = 16
+	IANAAddressFamilyDistname IANAAddressFamily = 17
+	IANAAddressFamilyASNumber IANAAddressFamily = 18
+	IANAAddressFamilyXTPIPV4  IANAAddressFamily = 19
+	IANAAddressFamilyXTPIPV6  IANAAddressFamily = 20
+	IANAAddressFamilyXTP      IANAAddressFamily = 21
+	IANAAddressFamilyFcWWPN   IANAAddressFamily = 22
+	IANAAddressFamilyFcWWNN   IANAAddressFamily = 23
+	IANAAddressFamilyGWID     IANAAddressFamily = 24
+	IANAAddressFamilyL2VPN    IANAAddressFamily = 25
 )
 
 type LLDPInterfaceSubtype byte
@@ -407,9 +409,9 @@ type LLDPPowerPriority byte
 
 const (
 	LLDPPowerPriorityUnknown LLDPPowerPriority = 0
-	LLDPPowerPriorityMedium LLDPPowerPriority = 1
-	LLDPPowerPriorityHigh LLDPPowerPriority = 2
-	LLDPPowerPriorityLow LLDPPowerPriority = 3
+	LLDPPowerPriorityMedium  LLDPPowerPriority = 1
+	LLDPPowerPriorityHigh    LLDPPowerPriority = 2
+	LLDPPowerPriorityLow     LLDPPowerPriority = 3
 )
 
 type LLDPPowerViaMDI8023 struct {
@@ -438,15 +440,16 @@ const (
 	LLDP8021QbgEVB  uint8 = 0
 	LLDP8021QbgCDCP uint8 = 1
 	LLDP8021QbgVDP  uint8 = 2
+	LLDP8021QbgEVB22  uint8 = 13
 )
 
 // LLDPEVBCapabilities Types
 const (
-	LLDPEVBCapsSTD uint16 = 1 << 0
-	LLDPEVBCapsRR  uint16 = 1 << 1
+	LLDPEVBCapsSTD uint16 = 1 << 7
+	LLDPEVBCapsRR  uint16 = 1 << 6
 	LLDPEVBCapsRTE uint16 = 1 << 2
-	LLDPEVBCapsECP uint16 = 1 << 3
-	LLDPEVBCapsVDP uint16 = 1 << 4
+	LLDPEVBCapsECP uint16 = 1 << 1
+	LLDPEVBCapsVDP uint16 = 1 << 0
 )
 
 // LLDPEVBCapabilities represents the EVB capabilities of a device
@@ -642,6 +645,78 @@ type LLDPInfoMedia struct {
 	AssetID           string
 }
 
+type LLDPCisco2Subtype uint8
+
+// Cisco2 TLV Subtypes
+const (
+	LLDPCisco2PowerViaMDI LLDPCisco2Subtype = 1
+)
+
+const (
+	LLDPCiscoPSESupport   uint8 = 1 << 0
+	LLDPCiscoArchShared   uint8 = 1 << 1
+	LLDPCiscoPDSparePair  uint8 = 1 << 2
+	LLDPCiscoPSESparePair uint8 = 1 << 3
+)
+
+type LLDPInfoCisco2 struct {
+	PSEFourWirePoESupported       bool
+	PDSparePairArchitectureShared bool
+	PDRequestSparePairPoEOn       bool
+	PSESparePairPoEOn             bool
+}
+
+// Profinet Subtypes
+type LLDPProfinetSubtype uint8
+
+const (
+	LLDPProfinetPNIODelay LLDPProfinetSubtype = 1
+	LLDPProfinetPNIOPortStatus LLDPProfinetSubtype = 2
+	LLDPProfinetPNIOMRPPortStatus LLDPProfinetSubtype = 4
+	LLDPProfinetPNIOChassisMac LLDPProfinetSubtype = 5
+	LLDPProfinetPNIOPTCPStatus LLDPProfinetSubtype = 6
+)
+
+type LLDPPNIODelay struct {
+	RXLocal uint32
+	RXRemote uint32
+	TXLocal  uint32
+	TXRemote  uint32
+	CableLocal  uint32
+}
+
+type LLDPPNIOPortStatus struct {
+	Class2 uint16
+	Class3 uint16
+}
+
+type LLDPPNIOMRPPortStatus struct {
+	UUID [16]byte
+	Status uint16
+}
+
+type LLDPPNIOPTCPStatus struct {
+	MasterAddress [6]byte
+	SubdomainUUID [16]byte
+	IRDataUUID [16]byte
+	PeriodValid bool
+	PeriodLength uint32
+	RedPeriodValid bool
+	RedPeriodBegin uint32
+	OrangePeriodValid bool
+	OrangePeriodBegin uint32
+	GreenPeriodValid bool
+	GreenPeriodBegin uint32
+}
+
+type LLDPInfoProfinet struct  {
+	PNIODelay LLDPPNIODelay
+	PNIOPortStatus LLDPPNIOPortStatus
+	PNIOMRPPortStatus LLDPPNIOMRPPortStatus
+	ChassisMAC [6]byte
+	PNIOPTCPStatus LLDPPNIOPTCPStatus
+}
+
 // LayerType returns gopacket.LayerTypeLinkLayerDiscovery.
 func (c *LinkLayerDiscovery) LayerType() gopacket.LayerType {
 	return LayerTypeLinkLayerDiscovery
@@ -757,7 +832,7 @@ func (l *LinkLayerDiscoveryInfo) Decode8021() (info LLDPInfo8021, err error) {
 			}
 			info.PVID = binary.BigEndian.Uint16(o.Info[0:2])
 		case LLDP8021SubtypeProtocolVLANID:
-			if err= checkLLDPOrgSpecificLen(o, 3); err != nil {
+			if err = checkLLDPOrgSpecificLen(o, 3); err != nil {
 				return
 			}
 			sup := (o.Info[0]&LLDPProtocolVLANIDCapability > 0)
@@ -765,31 +840,31 @@ func (l *LinkLayerDiscoveryInfo) Decode8021() (info LLDPInfo8021, err error) {
 			id := binary.BigEndian.Uint16(o.Info[1:3])
 			info.PPVIDs = append(info.PPVIDs, PortProtocolVLANID{sup, en, id})
 		case LLDP8021SubtypeVLANName:
-			if err= checkLLDPOrgSpecificLen(o, 2); err != nil {
+			if err = checkLLDPOrgSpecificLen(o, 2); err != nil {
 				return
 			}
 			id := binary.BigEndian.Uint16(o.Info[0:2])
 			info.VLANNames = append(info.VLANNames, VLANName{id, string(o.Info[3:])})
 		case LLDP8021SubtypeProtocolIdentity:
-			if err= checkLLDPOrgSpecificLen(o, 1); err != nil {
+			if err = checkLLDPOrgSpecificLen(o, 1); err != nil {
 				return
 			}
 			l := int(o.Info[0])
 			if l > 0 {
 				info.ProtocolIdentities = append(info.ProtocolIdentities, o.Info[1:1+l])
-		}
+			}
 		case LLDP8021SubtypeVDIUsageDigest:
-			if err= checkLLDPOrgSpecificLen(o, 4); err != nil {
+			if err = checkLLDPOrgSpecificLen(o, 4); err != nil {
 				return
 			}
 			info.VIDUsageDigest = binary.BigEndian.Uint32(o.Info[0:4])
 		case LLDP8021SubtypeManagementVID:
-			if err= checkLLDPOrgSpecificLen(o, 2); err != nil {
+			if err = checkLLDPOrgSpecificLen(o, 2); err != nil {
 				return
 			}
 			info.ManagementVID = binary.BigEndian.Uint16(o.Info[0:2])
 		case LLDP8021SubtypeLinkAggregation:
-			if err= checkLLDPOrgSpecificLen(o, 5); err != nil {
+			if err = checkLLDPOrgSpecificLen(o, 5); err != nil {
 				return
 			}
 			sup := (o.Info[0]&LLDPAggregationCapability > 0)
@@ -807,7 +882,7 @@ func (l *LinkLayerDiscoveryInfo) Decode8023() (info LLDPInfo8023, err error) {
 		}
 		switch o.SubType {
 		case LLDP8023SubtypeMACPHY:
-			if err= checkLLDPOrgSpecificLen(o, 5); err != nil {
+			if err = checkLLDPOrgSpecificLen(o, 5); err != nil {
 				return
 			}
 			sup := (o.Info[0]&LLDPMACPHYCapability > 0)
@@ -816,7 +891,7 @@ func (l *LinkLayerDiscoveryInfo) Decode8023() (info LLDPInfo8023, err error) {
 			mau := binary.BigEndian.Uint16(o.Info[3:5])
 			info.MACPHYConfigStatus = LLDPMACPHYConfigStatus{sup, en, ca, mau}
 		case LLDP8023SubtypeMDIPower:
-			if err= checkLLDPOrgSpecificLen(o, 3); err != nil {
+			if err = checkLLDPOrgSpecificLen(o, 3); err != nil {
 				return
 			}
 			info.PowerViaMDI.PortClassPSE = (o.Info[0]&LLDPMDIPowerPortClass > 0)
@@ -836,14 +911,14 @@ func (l *LinkLayerDiscoveryInfo) Decode8023() (info LLDPInfo8023, err error) {
 				info.PowerViaMDI.Allocated = binary.BigEndian.Uint16(o.Info[6:8])
 			}
 		case LLDP8023SubtypeLinkAggregation:
-			if err= checkLLDPOrgSpecificLen(o, 5); err != nil {
+			if err = checkLLDPOrgSpecificLen(o, 5); err != nil {
 				return
 			}
 			sup := (o.Info[0]&LLDPAggregationCapability > 0)
 			en := (o.Info[0]&LLDPAggregationStatus > 0)
 			info.LinkAggregation = LLDPLinkAggregation{sup, en, binary.BigEndian.Uint32(o.Info[1:5])}
 		case LLDP8023SubtypeMTU:
-			if err= checkLLDPOrgSpecificLen(o, 2); err != nil {
+			if err = checkLLDPOrgSpecificLen(o, 2); err != nil {
 				return
 			}
 			info.MTU = binary.BigEndian.Uint16(o.Info[0:2])
@@ -859,7 +934,7 @@ func (l *LinkLayerDiscoveryInfo) Decode8021Qbg() (info LLDPInfo8021Qbg, err erro
 		}
 		switch o.SubType {
 		case LLDP8021QbgEVB:
-			if err= checkLLDPOrgSpecificLen(o, 9); err != nil {
+			if err = checkLLDPOrgSpecificLen(o, 9); err != nil {
 				return
 			}
 			info.EVBSettings.Supported = getEVBCapabilities(binary.BigEndian.Uint16(o.Info[0:2]))
@@ -879,7 +954,7 @@ func (l *LinkLayerDiscoveryInfo) DecodeMedia() (info LLDPInfoMedia, err error) {
 		}
 		switch LLDPMediaSubtype(o.SubType) {
 		case LLDPMediaTypeCapabilities:
-			if err= checkLLDPOrgSpecificLen(o, 3); err != nil {
+			if err = checkLLDPOrgSpecificLen(o, 3); err != nil {
 				return
 			}
 			b := binary.BigEndian.Uint16(o.Info[0:2])
@@ -891,7 +966,7 @@ func (l *LinkLayerDiscoveryInfo) DecodeMedia() (info LLDPInfoMedia, err error) {
 			info.MediaCapabilities.Inventory = (b & LLDPMediaCapsInventory) > 0
 			info.MediaCapabilities.Class = LLDPMediaClass(o.Info[2])
 		case LLDPMediaTypeNetwork:
-			if err= checkLLDPOrgSpecificLen(o, 4); err != nil {
+			if err = checkLLDPOrgSpecificLen(o, 4); err != nil {
 				return
 			}
 			info.NetworkPolicy.ApplicationType = LLDPApplicationType(o.Info[0])
@@ -903,14 +978,14 @@ func (l *LinkLayerDiscoveryInfo) DecodeMedia() (info LLDPInfoMedia, err error) {
 			info.NetworkPolicy.L2Priority = (b & 0x01c0) >> 6
 			info.NetworkPolicy.DSCPValue = uint8(o.Info[3] & 0x3f)
 		case LLDPMediaTypeLocation:
-			if err= checkLLDPOrgSpecificLen(o, 1); err != nil {
+			if err = checkLLDPOrgSpecificLen(o, 1); err != nil {
 				return
 			}
 			info.Location.Format = LLDPLocationFormat(o.Info[0])
 			o.Info = o.Info[1:]
 			switch info.Location.Format {
 			case LLDPLocationFormatCoordinate:
-				if err= checkLLDPOrgSpecificLen(o, 16); err != nil {
+				if err = checkLLDPOrgSpecificLen(o, 16); err != nil {
 					return
 				}
 				info.Location.Coordinate.LatitudeResolution = uint8(o.Info[0]&0xfc) >> 2
@@ -926,7 +1001,7 @@ func (l *LinkLayerDiscoveryInfo) DecodeMedia() (info LLDPInfoMedia, err error) {
 				info.Location.Coordinate.Altitude = b2 & 0x3fffffff
 				info.Location.Coordinate.Datum = uint8(o.Info[15])
 			case LLDPLocationFormatAddress:
-				if err= checkLLDPOrgSpecificLen(o, 3); err != nil {
+				if err = checkLLDPOrgSpecificLen(o, 3); err != nil {
 					return
 				}
 				//ll := uint8(o.Info[0])
@@ -947,7 +1022,7 @@ func (l *LinkLayerDiscoveryInfo) DecodeMedia() (info LLDPInfoMedia, err error) {
 				info.Location.ECS.ELIN = string(o.Info)
 			}
 		case LLDPMediaTypePower:
-			if err= checkLLDPOrgSpecificLen(o, 3); err != nil {
+			if err = checkLLDPOrgSpecificLen(o, 3); err != nil {
 				return
 			}
 			info.PowerViaMDI.Type = LLDPPowerType((o.Info[0] & 0xc0) >> 6)
@@ -971,6 +1046,78 @@ func (l *LinkLayerDiscoveryInfo) DecodeMedia() (info LLDPInfoMedia, err error) {
 			info.Model = string(o.Info)
 		case LLDPMediaTypeAssetID:
 			info.AssetID = string(o.Info)
+		}
+	}
+	return
+}
+
+func (l *LinkLayerDiscoveryInfo) DecodeCisco2() (info LLDPInfoCisco2, err error) {
+	for _, o := range l.OrgTLVs {
+		if o.OUI != IEEEOUICisco2 {
+			continue
+		}
+		switch LLDPCisco2Subtype(o.SubType) {
+		case LLDPCisco2PowerViaMDI:
+			if err = checkLLDPOrgSpecificLen(o, 1); err != nil {
+				return
+			}
+			info.PSEFourWirePoESupported = (o.Info[0] & LLDPCiscoPSESupport) > 0
+			info.PDSparePairArchitectureShared = (o.Info[0] & LLDPCiscoArchShared) > 0
+			info.PDRequestSparePairPoEOn = (o.Info[0] & LLDPCiscoPDSparePair) > 0
+			info.PSESparePairPoEOn = (o.Info[0] & LLDPCiscoPSESparePair) > 0
+		}
+	}
+	return
+}
+
+func (l *LinkLayerDiscoveryInfo) DecodeProfinet() (info LLDPInfoProfinet, err error) {
+	for _, o := range l.OrgTLVs {
+		if o.OUI != IEEEOUIProfinet {
+			continue
+		}
+		switch LLDPProfinetSubtype(o.SubType) {
+		case LLDPProfinetPNIODelay:
+			if err = checkLLDPOrgSpecificLen(o, 20); err != nil {
+				return
+			}
+			info.PNIODelay.RXLocal = binary.BigEndian.Uint32(o.Info[0:4]) 
+			info.PNIODelay.RXRemote = binary.BigEndian.Uint32(o.Info[4:8]) 
+			info.PNIODelay.TXLocal = binary.BigEndian.Uint32(o.Info[8:12]) 
+			info.PNIODelay.TXRemote = binary.BigEndian.Uint32(o.Info[12:16]) 
+			info.PNIODelay.CableLocal = binary.BigEndian.Uint32(o.Info[16:20]) 
+		case LLDPProfinetPNIOPortStatus:
+			if err = checkLLDPOrgSpecificLen(o, 4); err != nil {
+				return
+			}
+			info.PNIOPortStatus.Class2 = binary.BigEndian.Uint16(o.Info[0:2]) 
+			info.PNIOPortStatus.Class3 = binary.BigEndian.Uint16(o.Info[2:4]) 
+		case LLDPProfinetPNIOMRPPortStatus:
+			if err = checkLLDPOrgSpecificLen(o, 18); err != nil {
+				return
+			}
+			copy(info.PNIOMRPPortStatus.UUID[0:16],o.Info[0:16]) 
+			info.PNIOMRPPortStatus.Status = binary.BigEndian.Uint16(o.Info[16:18]) 
+		case LLDPProfinetPNIOChassisMac:
+			if err = checkLLDPOrgSpecificLen(o, 6); err != nil {
+				return
+			}
+			copy(info.ChassisMAC[0:6],o.Info[0:6])
+		case LLDPProfinetPNIOPTCPStatus:
+			if err = checkLLDPOrgSpecificLen(o, 54); err != nil {
+				return
+			}
+			copy(info.PNIOPTCPStatus.MasterAddress[0:6],o.Info[0:6])
+			copy(info.PNIOPTCPStatus.SubdomainUUID[0:16],o.Info[6:22]) 
+			copy(info.PNIOPTCPStatus.IRDataUUID[0:16],o.Info[22:38]) 
+			b:= binary.BigEndian.Uint32(o.Info[38:42]) 
+			info.PNIOPTCPStatus.PeriodValid = (b & 0x80000000) > 0
+			info.PNIOPTCPStatus.PeriodLength = b & 0x7fffffff
+			info.PNIOPTCPStatus.RedPeriodValid = (b & 0x80000000) > 0
+			info.PNIOPTCPStatus.RedPeriodBegin = b & 0x7fffffff
+			info.PNIOPTCPStatus.OrangePeriodValid = (b & 0x80000000) > 0
+			info.PNIOPTCPStatus.OrangePeriodBegin = b & 0x7fffffff
+			info.PNIOPTCPStatus.GreenPeriodValid = (b & 0x80000000) > 0
+			info.PNIOPTCPStatus.GreenPeriodBegin = b & 0x7fffffff
 		}
 	}
 	return
@@ -1086,15 +1233,15 @@ func (t IANAAddressFamily) String() (s string) {
 	switch t {
 	case IANAAddressFamilyReserved:
 		s = "Reserved"
-	case IANAAddressFamilyInet:
+	case IANAAddressFamilyIPV4:
 		s = "IPv4"
-	case IANAAddressFamilyInet6:
+	case IANAAddressFamilyIPV6:
 		s = "IPv6"
-	case IANAAddressFamilyNsap:
+	case IANAAddressFamilyNSAP:
 		s = "NSAP"
-	case IANAAddressFamilyHdlc:
+	case IANAAddressFamilyHDLC:
 		s = "HDLC"
-	case IANAAddressFamilyBbn1822:
+	case IANAAddressFamilyBBN1822:
 		s = "BBN 1822"
 	case IANAAddressFamily802:
 		s = "802 media plus Ethernet 'canonical format'"
@@ -1106,7 +1253,7 @@ func (t IANAAddressFamily) String() (s string) {
 		s = "F.69 (Telex)"
 	case IANAAddressFamilyX121:
 		s = "X.121, X.25, Frame Relay"
-	case IANAAddressFamilyIpx:
+	case IANAAddressFamilyIPX:
 		s = "IPX"
 	case IANAAddressFamilyAtalk:
 		s = "Appletalk"
@@ -1114,27 +1261,27 @@ func (t IANAAddressFamily) String() (s string) {
 		s = "Decnet IV"
 	case IANAAddressFamilyBanyan:
 		s = "Banyan Vines"
-	case IANAAddressFamilyE164nsap:
+	case IANAAddressFamilyE164NSAP:
 		s = "E.164 with NSAP format subaddress"
-	case IANAAddressFamilyDns:
+	case IANAAddressFamilyDNS:
 		s = "DNS"
 	case IANAAddressFamilyDistname:
 		s = "Distinguished Name"
-	case IANAAddressFamilyAs_number:
+	case IANAAddressFamilyASNumber:
 		s = "AS Number"
-	case IANAAddressFamilyXtp_ip4:
+	case IANAAddressFamilyXTPIPV4:
 		s = "XTP over IP version 4"
-	case IANAAddressFamilyXtp_ip6:
+	case IANAAddressFamilyXTPIPV6:
 		s = "XTP over IP version 6"
-	case IANAAddressFamilyXtp:
+	case IANAAddressFamilyXTP:
 		s = "XTP native mode XTP"
-	case IANAAddressFamilyFc_wwpn:
+	case IANAAddressFamilyFcWWPN:
 		s = "Fibre Channel World-Wide Port Name"
-	case IANAAddressFamilyFc_wwnn:
+	case IANAAddressFamilyFcWWNN:
 		s = "Fibre Channel World-Wide Node Name"
-	case IANAAddressFamilyGwid:
+	case IANAAddressFamilyGWID:
 		s = "GWID"
-	case IANAAddressFamilyL2vpn:
+	case IANAAddressFamilyL2VPN:
 		s = "AFI for Layer 2 VPN"
 	default:
 		s = "Unknown"

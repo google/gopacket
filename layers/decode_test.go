@@ -701,7 +701,7 @@ func TestDecodeLinkLayerDiscovery(t *testing.T) {
 			SystemCap:  LLDPCapabilities{Bridge:true,Router:true},
 			EnabledCap: LLDPCapabilities{Bridge:true},
 		},
-		MgmtAddress: LLDPMgmtAddress{IANAAddressFamilyInet, []byte{0x0f, 0xff, 0x7a, 0x94}, LLDPInterfaceSubtypeifIndex, 0, ""},
+		MgmtAddress: LLDPMgmtAddress{IANAAddressFamilyIPV4, []byte{0x0f, 0xff, 0x7a, 0x94}, LLDPInterfaceSubtypeifIndex, 0, ""},
 		OrgTLVs: []LLDPOrgSpecificTLV{
 			LLDPOrgSpecificTLV{OUI:0x120f, SubType:0x1, Info:[]uint8{0x3, 0x6c, 0x0, 0x0, 0x10}},
 			LLDPOrgSpecificTLV{OUI:0x12bb, SubType:0x1, Info:[]uint8{0x0, 0xf, 0x4}}, 
