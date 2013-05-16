@@ -211,7 +211,7 @@ const (
 type NortelDiscovery struct {
 	baseLayer
 	IPAddress net.IP
-	SegmentID [3]byte
+	SegmentID []byte
 	Chassis   NDPChassisType
 	Backplane NDPBackplaneType
 	State     NDPState
@@ -228,8 +228,8 @@ func decodeNortelDiscovery(data []byte, p gopacket.PacketBuilder) error {
 	if len(data) < 11 {
 		return fmt.Errorf("Invalid NortelDiscovery packet length %d", len(data))
 	}
-	c.IPAddress = net.IPv4(data[0],data[1],data[2],data[3])
-	copy(c.SegmentID[0:3],data[4:7])
+	c.IPAddress = data[0:4]
+	c.SegmentID = data[4:7]
 	c.Chassis = NDPChassisType(data[7])
 	c.Backplane = NDPBackplaneType(data[8])
 	c.State = NDPState(data[9])

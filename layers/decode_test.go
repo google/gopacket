@@ -516,10 +516,10 @@ func TestDecodeCiscoDiscovery(t *testing.T) {
 
 	want := &CiscoDiscoveryInfo{
 		CDPHello: CDPHello{
-			OUI:              [...]byte{0, 0, 12},
+			OUI:              []byte{0, 0, 12},
 			ProtocolID:       274,
-			ClusterMaster:    net.IPv4(0, 0, 0, 0),
-			Unknown1:         net.IPv4(255, 255, 255, 255),
+			ClusterMaster:    []byte{0, 0, 0, 0},
+			Unknown1:         []byte{255, 255, 255, 255},
 			Version:          1,
 			SubVersion:       2,
 			Status:           32,
@@ -770,8 +770,8 @@ func TestDecodeNortelDiscovery(t *testing.T) {
 	checkLayers(p, wantLayers, t)
 
 	want := &NortelDiscovery{
-		IPAddress: net.IPv4(172,19,88,3),
-		SegmentID: [3]byte{0x00,0x04,0x15},
+		IPAddress: []byte{172,19,88,3},
+		SegmentID: []byte{0x00,0x04,0x15},
 		Chassis: NDPChassisBayStack450101001000Switches,
 		Backplane: NDPBackplaneEthernetFastEthernetGigabitEthernet,
 		State: NDPStateHeartbeat,

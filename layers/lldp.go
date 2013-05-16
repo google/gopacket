@@ -437,10 +437,10 @@ type LLDPInfo8023 struct {
 
 // IEEE 802.1Qbg TLV Subtypes
 const (
-	LLDP8021QbgEVB  uint8 = 0
-	LLDP8021QbgCDCP uint8 = 1
-	LLDP8021QbgVDP  uint8 = 2
-	LLDP8021QbgEVB22  uint8 = 13
+	LLDP8021QbgEVB   uint8 = 0
+	LLDP8021QbgCDCP  uint8 = 1
+	LLDP8021QbgVDP   uint8 = 2
+	LLDP8021QbgEVB22 uint8 = 13
 )
 
 // LLDPEVBCapabilities Types
@@ -565,28 +565,28 @@ const (
 type LLDPLocationAddressType uint8
 
 const (
-	LLDPLocationAddressTypeLanguage       LLDPLocationAddressType = 0   //    "Language" },
-	LLDPLocationAddressTypeNational       LLDPLocationAddressType = 1   //    "National subdivisions (province, state, etc)" },
-	LLDPLocationAddressTypeCounty         LLDPLocationAddressType = 2   //    "County, parish, district" },
-	LLDPLocationAddressTypeCity           LLDPLocationAddressType = 3   //    "City, township" },
-	LLDPLocationAddressTypeCityDivision   LLDPLocationAddressType = 4   //    "City division, borough, ward" },
-	LLDPLocationAddressTypeNeighborhood   LLDPLocationAddressType = 5   //    "Neighborhood, block" },
-	LLDPLocationAddressTypeStreet         LLDPLocationAddressType = 6   //    "Street" },
-	LLDPLocationAddressTypeLeadingStreet  LLDPLocationAddressType = 16  //   "Leading street direction" },
-	LLDPLocationAddressTypeTrailingStreet LLDPLocationAddressType = 17  //   "Trailing street suffix" },
-	LLDPLocationAddressTypeStreetSuffix   LLDPLocationAddressType = 18  //   "Street suffix" },
-	LLDPLocationAddressTypeHouseNum       LLDPLocationAddressType = 19  //   "House number" },
-	LLDPLocationAddressTypeHouseSuffix    LLDPLocationAddressType = 20  //   "House number suffix" },
-	LLDPLocationAddressTypeLandmark       LLDPLocationAddressType = 21  //   "Landmark or vanity address" },
-	LLDPLocationAddressTypeAdditional     LLDPLocationAddressType = 22  //   "Additional location information" },
-	LLDPLocationAddressTypeName           LLDPLocationAddressType = 23  //   "Name" },
-	LLDPLocationAddressTypePostal         LLDPLocationAddressType = 24  //   "Postal/ZIP code" },
-	LLDPLocationAddressTypeBuilding       LLDPLocationAddressType = 25  //   "Building" },
-	LLDPLocationAddressTypeUnit           LLDPLocationAddressType = 26  //   "Unit" },
-	LLDPLocationAddressTypeFloor          LLDPLocationAddressType = 27  //   "Floor" },
-	LLDPLocationAddressTypeRoom           LLDPLocationAddressType = 28  //   "Room number" },
-	LLDPLocationAddressTypePlace          LLDPLocationAddressType = 29  //   "Place type" },
-	LLDPLocationAddressTypeScript         LLDPLocationAddressType = 128 //  "Script" },
+	LLDPLocationAddressTypeLanguage       LLDPLocationAddressType = 0
+	LLDPLocationAddressTypeNational       LLDPLocationAddressType = 1
+	LLDPLocationAddressTypeCounty         LLDPLocationAddressType = 2
+	LLDPLocationAddressTypeCity           LLDPLocationAddressType = 3
+	LLDPLocationAddressTypeCityDivision   LLDPLocationAddressType = 4
+	LLDPLocationAddressTypeNeighborhood   LLDPLocationAddressType = 5
+	LLDPLocationAddressTypeStreet         LLDPLocationAddressType = 6
+	LLDPLocationAddressTypeLeadingStreet  LLDPLocationAddressType = 16
+	LLDPLocationAddressTypeTrailingStreet LLDPLocationAddressType = 17
+	LLDPLocationAddressTypeStreetSuffix   LLDPLocationAddressType = 18
+	LLDPLocationAddressTypeHouseNum       LLDPLocationAddressType = 19
+	LLDPLocationAddressTypeHouseSuffix    LLDPLocationAddressType = 20
+	LLDPLocationAddressTypeLandmark       LLDPLocationAddressType = 21
+	LLDPLocationAddressTypeAdditional     LLDPLocationAddressType = 22
+	LLDPLocationAddressTypeName           LLDPLocationAddressType = 23
+	LLDPLocationAddressTypePostal         LLDPLocationAddressType = 24
+	LLDPLocationAddressTypeBuilding       LLDPLocationAddressType = 25
+	LLDPLocationAddressTypeUnit           LLDPLocationAddressType = 26
+	LLDPLocationAddressTypeFloor          LLDPLocationAddressType = 27
+	LLDPLocationAddressTypeRoom           LLDPLocationAddressType = 28
+	LLDPLocationAddressTypePlace          LLDPLocationAddressType = 29
+	LLDPLocationAddressTypeScript         LLDPLocationAddressType = 128
 )
 
 type LLDPLocationCoordinate struct {
@@ -670,19 +670,19 @@ type LLDPInfoCisco2 struct {
 type LLDPProfinetSubtype uint8
 
 const (
-	LLDPProfinetPNIODelay LLDPProfinetSubtype = 1
-	LLDPProfinetPNIOPortStatus LLDPProfinetSubtype = 2
+	LLDPProfinetPNIODelay         LLDPProfinetSubtype = 1
+	LLDPProfinetPNIOPortStatus    LLDPProfinetSubtype = 2
 	LLDPProfinetPNIOMRPPortStatus LLDPProfinetSubtype = 4
-	LLDPProfinetPNIOChassisMac LLDPProfinetSubtype = 5
-	LLDPProfinetPNIOPTCPStatus LLDPProfinetSubtype = 6
+	LLDPProfinetPNIOChassisMAC    LLDPProfinetSubtype = 5
+	LLDPProfinetPNIOPTCPStatus    LLDPProfinetSubtype = 6
 )
 
 type LLDPPNIODelay struct {
-	RXLocal uint32
-	RXRemote uint32
-	TXLocal  uint32
-	TXRemote  uint32
-	CableLocal  uint32
+	RXLocal    uint32
+	RXRemote   uint32
+	TXLocal    uint32
+	TXRemote   uint32
+	CableLocal uint32
 }
 
 type LLDPPNIOPortStatus struct {
@@ -691,30 +691,30 @@ type LLDPPNIOPortStatus struct {
 }
 
 type LLDPPNIOMRPPortStatus struct {
-	UUID [16]byte
+	UUID   []byte
 	Status uint16
 }
 
 type LLDPPNIOPTCPStatus struct {
-	MasterAddress [6]byte
-	SubdomainUUID [16]byte
-	IRDataUUID [16]byte
-	PeriodValid bool
-	PeriodLength uint32
-	RedPeriodValid bool
-	RedPeriodBegin uint32
+	MasterAddress     []byte
+	SubdomainUUID     []byte
+	IRDataUUID        []byte
+	PeriodValid       bool
+	PeriodLength      uint32
+	RedPeriodValid    bool
+	RedPeriodBegin    uint32
 	OrangePeriodValid bool
 	OrangePeriodBegin uint32
-	GreenPeriodValid bool
-	GreenPeriodBegin uint32
+	GreenPeriodValid  bool
+	GreenPeriodBegin  uint32
 }
 
-type LLDPInfoProfinet struct  {
-	PNIODelay LLDPPNIODelay
-	PNIOPortStatus LLDPPNIOPortStatus
+type LLDPInfoProfinet struct {
+	PNIODelay         LLDPPNIODelay
+	PNIOPortStatus    LLDPPNIOPortStatus
 	PNIOMRPPortStatus LLDPPNIOMRPPortStatus
-	ChassisMAC [6]byte
-	PNIOPTCPStatus LLDPPNIOPTCPStatus
+	ChassisMAC        []byte
+	PNIOPTCPStatus    LLDPPNIOPTCPStatus
 }
 
 // LayerType returns gopacket.LayerTypeLinkLayerDiscovery.
@@ -1080,42 +1080,45 @@ func (l *LinkLayerDiscoveryInfo) DecodeProfinet() (info LLDPInfoProfinet, err er
 			if err = checkLLDPOrgSpecificLen(o, 20); err != nil {
 				return
 			}
-			info.PNIODelay.RXLocal = binary.BigEndian.Uint32(o.Info[0:4]) 
-			info.PNIODelay.RXRemote = binary.BigEndian.Uint32(o.Info[4:8]) 
-			info.PNIODelay.TXLocal = binary.BigEndian.Uint32(o.Info[8:12]) 
-			info.PNIODelay.TXRemote = binary.BigEndian.Uint32(o.Info[12:16]) 
-			info.PNIODelay.CableLocal = binary.BigEndian.Uint32(o.Info[16:20]) 
+			info.PNIODelay.RXLocal = binary.BigEndian.Uint32(o.Info[0:4])
+			info.PNIODelay.RXRemote = binary.BigEndian.Uint32(o.Info[4:8])
+			info.PNIODelay.TXLocal = binary.BigEndian.Uint32(o.Info[8:12])
+			info.PNIODelay.TXRemote = binary.BigEndian.Uint32(o.Info[12:16])
+			info.PNIODelay.CableLocal = binary.BigEndian.Uint32(o.Info[16:20])
 		case LLDPProfinetPNIOPortStatus:
 			if err = checkLLDPOrgSpecificLen(o, 4); err != nil {
 				return
 			}
-			info.PNIOPortStatus.Class2 = binary.BigEndian.Uint16(o.Info[0:2]) 
-			info.PNIOPortStatus.Class3 = binary.BigEndian.Uint16(o.Info[2:4]) 
+			info.PNIOPortStatus.Class2 = binary.BigEndian.Uint16(o.Info[0:2])
+			info.PNIOPortStatus.Class3 = binary.BigEndian.Uint16(o.Info[2:4])
 		case LLDPProfinetPNIOMRPPortStatus:
 			if err = checkLLDPOrgSpecificLen(o, 18); err != nil {
 				return
 			}
-			copy(info.PNIOMRPPortStatus.UUID[0:16],o.Info[0:16]) 
-			info.PNIOMRPPortStatus.Status = binary.BigEndian.Uint16(o.Info[16:18]) 
-		case LLDPProfinetPNIOChassisMac:
+			info.PNIOMRPPortStatus.UUID = o.Info[0:16]
+			info.PNIOMRPPortStatus.Status = binary.BigEndian.Uint16(o.Info[16:18])
+		case LLDPProfinetPNIOChassisMAC:
 			if err = checkLLDPOrgSpecificLen(o, 6); err != nil {
 				return
 			}
-			copy(info.ChassisMAC[0:6],o.Info[0:6])
+			info.ChassisMAC = o.Info[0:6]
 		case LLDPProfinetPNIOPTCPStatus:
 			if err = checkLLDPOrgSpecificLen(o, 54); err != nil {
 				return
 			}
-			copy(info.PNIOPTCPStatus.MasterAddress[0:6],o.Info[0:6])
-			copy(info.PNIOPTCPStatus.SubdomainUUID[0:16],o.Info[6:22]) 
-			copy(info.PNIOPTCPStatus.IRDataUUID[0:16],o.Info[22:38]) 
-			b:= binary.BigEndian.Uint32(o.Info[38:42]) 
+			info.PNIOPTCPStatus.MasterAddress = o.Info[0:6]
+			info.PNIOPTCPStatus.SubdomainUUID = o.Info[6:22]
+			info.PNIOPTCPStatus.IRDataUUID = o.Info[22:38]
+			b := binary.BigEndian.Uint32(o.Info[38:42])
 			info.PNIOPTCPStatus.PeriodValid = (b & 0x80000000) > 0
 			info.PNIOPTCPStatus.PeriodLength = b & 0x7fffffff
+			b = binary.BigEndian.Uint32(o.Info[42:46])
 			info.PNIOPTCPStatus.RedPeriodValid = (b & 0x80000000) > 0
 			info.PNIOPTCPStatus.RedPeriodBegin = b & 0x7fffffff
+			b = binary.BigEndian.Uint32(o.Info[46:50])
 			info.PNIOPTCPStatus.OrangePeriodValid = (b & 0x80000000) > 0
 			info.PNIOPTCPStatus.OrangePeriodBegin = b & 0x7fffffff
+			b = binary.BigEndian.Uint32(o.Info[50:54])
 			info.PNIOPTCPStatus.GreenPeriodValid = (b & 0x80000000) > 0
 			info.PNIOPTCPStatus.GreenPeriodBegin = b & 0x7fffffff
 		}

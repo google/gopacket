@@ -129,7 +129,7 @@ type CDPLocation struct {
 
 // CDPHello is a Cisco Hello message (undocumented, hence the "Unknown" fields)
 type CDPHello struct {
-	OUI              [3]byte
+	OUI              []byte
 	ProtocolID       uint16
 	ClusterMaster    net.IP
 	Unknown1         net.IP
@@ -275,10 +275,10 @@ func decodeCiscoDiscoveryInfo(data []byte, p gopacket.PacketBuilder) error {
 				return err
 			}
 			v := val.Value
-			copy(info.CDPHello.OUI[0:3], v[0:3])
+			info.CDPHello.OUI = v[0:3]
 			info.CDPHello.ProtocolID = binary.BigEndian.Uint16(v[3:5])
-			info.CDPHello.ClusterMaster = net.IPv4(v[5], v[6], v[7], v[8])
-			info.CDPHello.Unknown1 = net.IPv4(v[9], v[10], v[11], v[12])
+			info.CDPHello.ClusterMaster = v[5:9]
+			info.CDPHello.Unknown1 = v[9:13]
 			info.CDPHello.Version = v[13]
 			info.CDPHello.SubVersion = v[14]
 			info.CDPHello.Status = v[15]
