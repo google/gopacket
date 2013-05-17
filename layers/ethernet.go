@@ -11,7 +11,7 @@ import (
 	"code.google.com/p/gopacket"
 	"encoding/binary"
 	"errors"
-//	"fmt"
+	//	"fmt"
 	"net"
 )
 
@@ -49,12 +49,12 @@ func decodeEthernet(data []byte, p gopacket.PacketBuilder) error {
 		eth.Length = uint16(eth.EthernetType)
 		eth.EthernetType = EthernetTypeLLC
 		if cmp := len(eth.payload) - int(eth.Length); cmp < 0 {
-	 		p.SetTruncated()
+			p.SetTruncated()
 		} else if cmp > 0 {
 			// Strip off bytes at the end, since we have too many bytes
 			eth.payload = eth.payload[:len(eth.payload)-cmp]
 		}
-	//	fmt.Println(eth)
+		//	fmt.Println(eth)
 	}
 	p.AddLayer(eth)
 	p.SetLinkLayer(eth)

@@ -200,6 +200,7 @@ const (
 
 type NDPState uint8
 
+// Device State
 const (
 	NDPStateTopology  NDPState = 1
 	NDPStateHeartbeat NDPState = 2
@@ -207,7 +208,6 @@ const (
 )
 
 // NortelDiscovery is a packet layer containing the Nortel Discovery Protocol.
-// See http://www.cisco.com/univercd/cc/td/doc/product/lan/trsrb/frames.htm#31885
 type NortelDiscovery struct {
 	baseLayer
 	IPAddress net.IP
@@ -238,7 +238,7 @@ func decodeNortelDiscovery(data []byte, p gopacket.PacketBuilder) error {
 	return nil
 }
 
-func (t NDPChassisType) Srting() (s string) {
+func (t NDPChassisType) String() (s string) {
 	switch t {
 	case NDPChassisother:
 		s = "other"

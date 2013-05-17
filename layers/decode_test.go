@@ -581,10 +581,10 @@ func TestDecodeLinkLayerDiscovery(t *testing.T) {
 	lldpL := p.Layer(LayerTypeLinkLayerDiscovery)
 	lldp := lldpL.(*LinkLayerDiscovery)
 	want := &LinkLayerDiscovery{
-		ChassisID: LLDPChassisID{LLDPChassisIDSubTypeMACAddr,[]byte{0x00,0x01,0x30,0xf9,0xad,0xa0}},
-		PortID:LLDPPortID{LLDPPortIDSubtypeIfaceName,[]byte("1/1")},
-		TTL:120,
-		baseLayer:     baseLayer{contents: data[14:]},
+		ChassisID: LLDPChassisID{LLDPChassisIDSubTypeMACAddr, []byte{0x00, 0x01, 0x30, 0xf9, 0xad, 0xa0}},
+		PortID:    LLDPPortID{LLDPPortIDSubtypeIfaceName, []byte("1/1")},
+		TTL:       120,
+		baseLayer: baseLayer{contents: data[14:]},
 	}
 	lldp.Values = nil // test these in next stage
 	if !reflect.DeepEqual(lldp, want) {
@@ -598,8 +598,8 @@ func TestDecodeLinkLayerDiscovery(t *testing.T) {
 		SysName:         "Summit300-48\x00",
 		SysDescription:  "Summit300-48 - Version 7.4e.1 (Build 5) by Release_Master 05/27/05 04:53:11\x00",
 		SysCapabilities: LLDPSysCapabilities{
-			SystemCap:  LLDPCapabilities{Bridge:true,Router:true},
-			EnabledCap: LLDPCapabilities{Bridge:true,Router:true},
+			SystemCap:  LLDPCapabilities{Bridge: true, Router: true},
+			EnabledCap: LLDPCapabilities{Bridge: true, Router: true},
 		},
 		MgmtAddress: LLDPMgmtAddress{IANAAddressFamily802, []byte{0x00, 0x01, 0x30, 0xf9, 0xad, 0xa0}, LLDPInterfaceSubtypeifIndex, 1001, ""},
 		OrgTLVs: []LLDPOrgSpecificTLV{
@@ -638,7 +638,7 @@ func TestDecodeLinkLayerDiscovery(t *testing.T) {
 		t.Errorf("8023 Values decode error: %v", err)
 	}
 	want8023 := LLDPInfo8023{
-		LinkAggregation:    LLDPLinkAggregation{true,false, 0},
+		LinkAggregation:    LLDPLinkAggregation{true, false, 0},
 		MACPHYConfigStatus: LLDPMACPHYConfigStatus{true, true, 0x6c00, 0x0010},
 		PowerViaMDI:        LLDPPowerViaMDI8023{true, true, true, false, 1, 0, 0, 0, 0, 0, 0},
 		MTU:                1522,
@@ -671,7 +671,7 @@ func TestDecodeLinkLayerDiscovery(t *testing.T) {
 		0x28, 0x02, 0x55, 0x53, 0x01, 0x02, 0x43, 0x41, 0x03, 0x09, 0x52, 0x6f,
 		0x73, 0x65, 0x76, 0x69, 0x6c, 0x6c, 0x65, 0x06, 0x09, 0x46, 0x6f, 0x6f,
 		0x74, 0x68, 0x69, 0x6c, 0x6c, 0x73, 0x13, 0x04, 0x38, 0x30, 0x30, 0x30,
-		0x1a, 0x03, 0x52, 0x33,	0x4c, 0xfe, 0x07, 0x00, 0x12, 0xbb, 0x04, 0x03,
+		0x1a, 0x03, 0x52, 0x33, 0x4c, 0xfe, 0x07, 0x00, 0x12, 0xbb, 0x04, 0x03,
 		0x00, 0x41, 0x00, 0x00,
 	}
 
@@ -681,10 +681,10 @@ func TestDecodeLinkLayerDiscovery(t *testing.T) {
 	lldpL = p.Layer(LayerTypeLinkLayerDiscovery)
 	lldp = lldpL.(*LinkLayerDiscovery)
 	want = &LinkLayerDiscovery{
-		ChassisID: LLDPChassisID{LLDPChassisIDSubTypeMACAddr,[]byte{0x00,0x13,0x21,0x57,0xca,0x40}},
-		PortID:LLDPPortID{LLDPPortIDSubtypeLocal,[]byte("1")},
-		TTL:120,
-		baseLayer:     baseLayer{contents: data[14:]},
+		ChassisID: LLDPChassisID{LLDPChassisIDSubTypeMACAddr, []byte{0x00, 0x13, 0x21, 0x57, 0xca, 0x40}},
+		PortID:    LLDPPortID{LLDPPortIDSubtypeLocal, []byte("1")},
+		TTL:       120,
+		baseLayer: baseLayer{contents: data[14:]},
 	}
 	lldp.Values = nil // test these in next stage
 	if !reflect.DeepEqual(lldp, want) {
@@ -696,18 +696,18 @@ func TestDecodeLinkLayerDiscovery(t *testing.T) {
 	wantinfo = &LinkLayerDiscoveryInfo{
 		PortDescription: "1",
 		SysName:         "ProCurve Switch 2600-8-PWR",
-		SysDescription: "ProCurve J8762A Switch 2600-8-PWR, revision H.08.89, ROM H.08.5X (/sw/code/build/fish(ts_08_5))",
+		SysDescription:  "ProCurve J8762A Switch 2600-8-PWR, revision H.08.89, ROM H.08.5X (/sw/code/build/fish(ts_08_5))",
 		SysCapabilities: LLDPSysCapabilities{
-			SystemCap:  LLDPCapabilities{Bridge:true,Router:true},
-			EnabledCap: LLDPCapabilities{Bridge:true},
+			SystemCap:  LLDPCapabilities{Bridge: true, Router: true},
+			EnabledCap: LLDPCapabilities{Bridge: true},
 		},
 		MgmtAddress: LLDPMgmtAddress{IANAAddressFamilyIPV4, []byte{0x0f, 0xff, 0x7a, 0x94}, LLDPInterfaceSubtypeifIndex, 0, ""},
 		OrgTLVs: []LLDPOrgSpecificTLV{
-			LLDPOrgSpecificTLV{OUI:0x120f, SubType:0x1, Info:[]uint8{0x3, 0x6c, 0x0, 0x0, 0x10}},
-			LLDPOrgSpecificTLV{OUI:0x12bb, SubType:0x1, Info:[]uint8{0x0, 0xf, 0x4}}, 
-			LLDPOrgSpecificTLV{OUI:0x12bb, SubType:0x2, Info:[]uint8{0x1, 0x40, 0x65, 0xae}}, 
-			LLDPOrgSpecificTLV{OUI:0x12bb, SubType:0x3, Info:[]uint8{0x2, 0x28, 0x2, 0x55, 0x53, 0x1, 0x2, 0x43, 0x41, 0x3, 0x9, 0x52, 0x6f, 0x73, 0x65, 0x76, 0x69, 0x6c, 0x6c, 0x65, 0x6, 0x9, 0x46, 0x6f, 0x6f, 0x74, 0x68, 0x69, 0x6c, 0x6c, 0x73, 0x13, 0x4, 0x38, 0x30, 0x30, 0x30, 0x1a, 0x3, 0x52, 0x33, 0x4c}}, 
-			LLDPOrgSpecificTLV{OUI:0x12bb, SubType:0x4, Info:[]uint8{0x3, 0x0, 0x41}},
+			LLDPOrgSpecificTLV{OUI: 0x120f, SubType: 0x1, Info: []uint8{0x3, 0x6c, 0x0, 0x0, 0x10}},
+			LLDPOrgSpecificTLV{OUI: 0x12bb, SubType: 0x1, Info: []uint8{0x0, 0xf, 0x4}},
+			LLDPOrgSpecificTLV{OUI: 0x12bb, SubType: 0x2, Info: []uint8{0x1, 0x40, 0x65, 0xae}},
+			LLDPOrgSpecificTLV{OUI: 0x12bb, SubType: 0x3, Info: []uint8{0x2, 0x28, 0x2, 0x55, 0x53, 0x1, 0x2, 0x43, 0x41, 0x3, 0x9, 0x52, 0x6f, 0x73, 0x65, 0x76, 0x69, 0x6c, 0x6c, 0x65, 0x6, 0x9, 0x46, 0x6f, 0x6f, 0x74, 0x68, 0x69, 0x6c, 0x6c, 0x73, 0x13, 0x4, 0x38, 0x30, 0x30, 0x30, 0x1a, 0x3, 0x52, 0x33, 0x4c}},
+			LLDPOrgSpecificTLV{OUI: 0x12bb, SubType: 0x4, Info: []uint8{0x3, 0x0, 0x41}},
 		},
 		Unknown: nil,
 	}
@@ -726,33 +726,30 @@ func TestDecodeLinkLayerDiscovery(t *testing.T) {
 		t.Errorf("Values mismatch, \ngot  %#v\nwant %#v\n", info8023, want8023)
 	}
 
-
 	infoMedia, err := info.DecodeMedia()
 	if err != nil {
 		t.Errorf("8023 Values decode error: %v", err)
 	}
 	wantMedia := LLDPInfoMedia{
-		MediaCapabilities:LLDPMediaCapabilities{true,true,true,true,false,false,LLDPMediaClassNetwork},
-		NetworkPolicy: LLDPNetworkPolicy{LLDPAppTypeVoice,true,true,50,6,46},
-		Location:LLDPLocation{Format:LLDPLocationFormatAddress,Address:LLDPLocationAddress{
-			What:LLDPLocationAddressWhatClient,
-			CountryCode:"US",
-			AddressLines:[]LLDPLocationAddressLine{
-				LLDPLocationAddressLine{LLDPLocationAddressTypeNational,"CA"},
-				LLDPLocationAddressLine{LLDPLocationAddressTypeCity,"Roseville"},
-				LLDPLocationAddressLine{LLDPLocationAddressTypeStreet,"Foothills"},
-				LLDPLocationAddressLine{LLDPLocationAddressTypeHouseNum,"8000"},
-				LLDPLocationAddressLine{LLDPLocationAddressTypeUnit,"R3L"},
+		MediaCapabilities: LLDPMediaCapabilities{true, true, true, true, false, false, LLDPMediaClassNetwork},
+		NetworkPolicy:     LLDPNetworkPolicy{LLDPAppTypeVoice, true, true, 50, 6, 46},
+		Location: LLDPLocation{Format: LLDPLocationFormatAddress, Address: LLDPLocationAddress{
+			What:        LLDPLocationAddressWhatClient,
+			CountryCode: "US",
+			AddressLines: []LLDPLocationAddressLine{
+				LLDPLocationAddressLine{LLDPLocationAddressTypeNational, "CA"},
+				LLDPLocationAddressLine{LLDPLocationAddressTypeCity, "Roseville"},
+				LLDPLocationAddressLine{LLDPLocationAddressTypeStreet, "Foothills"},
+				LLDPLocationAddressLine{LLDPLocationAddressTypeHouseNum, "8000"},
+				LLDPLocationAddressLine{LLDPLocationAddressTypeUnit, "R3L"},
 			},
 		}},
-		PowerViaMDI: LLDPPowerViaMDI{0,0,LLDPPowerPriorityLow,6500},
+		PowerViaMDI: LLDPPowerViaMDI{0, 0, LLDPPowerPriorityLow, 6500},
 	}
 
 	if !reflect.DeepEqual(infoMedia, wantMedia) {
 		t.Errorf("Values mismatch, \ngot  %#v\nwant %#v\n", infoMedia, wantMedia)
 	}
-
-
 
 }
 
@@ -763,19 +760,19 @@ func TestDecodeNortelDiscovery(t *testing.T) {
 		0x00, 0x13, 0xaa, 0xaa, 0x03, 0x00, 0x00, 0x81, 0x01, 0xa2, 0xac, 0x13,
 		0x58, 0x03, 0x00, 0x04, 0x15, 0x30, 0x0c, 0x02, 0x00, 0x00, 0x00, 0x00,
 		0x00, 0x04, 0x38, 0xe0, 0xcc, 0xde, 0x80, 0x6a, 0x00, 0x01, 0x14, 0x00,
-		0x02, 0x00, 0x0f, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 
+		0x02, 0x00, 0x0f, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
 	}
 	p := gopacket.NewPacket(data, LinkTypeEthernet, gopacket.Default)
 	wantLayers := []gopacket.LayerType{LayerTypeEthernet, LayerTypeLLC, LayerTypeSNAP, LayerTypeNortelDiscovery}
 	checkLayers(p, wantLayers, t)
 
 	want := &NortelDiscovery{
-		IPAddress: []byte{172,19,88,3},
-		SegmentID: []byte{0x00,0x04,0x15},
-		Chassis: NDPChassisBayStack450101001000Switches,
+		IPAddress: []byte{172, 19, 88, 3},
+		SegmentID: []byte{0x00, 0x04, 0x15},
+		Chassis:   NDPChassisBayStack450101001000Switches,
 		Backplane: NDPBackplaneEthernetFastEthernetGigabitEthernet,
-		State: NDPStateHeartbeat,
-		NumLinks: 0,
+		State:     NDPStateHeartbeat,
+		NumLinks:  0,
 	}
 	ndpL := p.Layer(LayerTypeNortelDiscovery)
 	info, _ := ndpL.(*NortelDiscovery)
@@ -783,7 +780,6 @@ func TestDecodeNortelDiscovery(t *testing.T) {
 		t.Errorf("Values mismatch, \ngot  %#v\nwant %#v\n", info, want)
 	}
 }
-
 
 func TestDecodeIPv6Jumbogram(t *testing.T) {
 	// Haven't found any of these in the wild or on example pcaps online, so had

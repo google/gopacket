@@ -82,7 +82,7 @@ const (
 	CDPCapMaskRemote     CDPCapability = 0x0100
 )
 
-// CDPCapabilities represtents the capabilities of a device
+// CDPCapabilities represents the capabilities of a device
 type CDPCapabilities struct {
 	L3Router        bool
 	TBBridge        bool
@@ -188,14 +188,14 @@ func decodeCiscoDiscovery(data []byte, p gopacket.PacketBuilder) error {
 		return fmt.Errorf("Invalid CiscoDiscovery version number %d", c.Version)
 	}
 	var err error
-	c.Values,err = decodeCiscoDiscoveryTLVs(data[4:])
+	c.Values, err = decodeCiscoDiscoveryTLVs(data[4:])
 	if err != nil {
 		return err
 	}
 	c.contents = data[0:4]
 	c.payload = data[4:]
 	p.AddLayer(c)
-	return  p.NextDecoder(gopacket.DecodeFunc(decodeCiscoDiscoveryInfo))
+	return p.NextDecoder(gopacket.DecodeFunc(decodeCiscoDiscoveryInfo))
 }
 
 // LayerType returns gopacket.LayerTypeCiscoDiscoveryInfo.
@@ -220,18 +220,20 @@ func decodeCiscoDiscoveryTLVs(data []byte) (values []CiscoDiscoveryValue, err er
 	return
 }
 
-
 func decodeCiscoDiscoveryInfo(data []byte, p gopacket.PacketBuilder) error {
 	var err error
-	info := &CiscoDiscoveryInfo{baseLayer:baseLayer{contents:data}}
+	info := &CiscoDiscoveryInfo{baseLayer: baseLayer{contents: data}}
 	p.AddLayer(info)
-	values,_ := decodeCiscoDiscoveryTLVs(data)
+	values, err := decodeCiscoDiscoveryTLVs(data)
+	if err != nil { // Unlikely, as parent decode will fail, but better safe...
+		return err
+	}
 	for _, val := range values {
 		switch val.Type {
 		case CDPTLVDevID:
 			info.DeviceID = string(val.Value)
 		case CDPTLVAddress:
-			if err= checkCDPTLVLen(val, 4); err != nil {
+			if err = checkCDPTLVLen(val, 4); err != nil {
 				return err
 			}
 			info.Addresses, err = decodeAddresses(val.Value)
@@ -241,7 +243,7 @@ func decodeCiscoDiscoveryInfo(data []byte, p gopacket.PacketBuilder) error {
 		case CDPTLVPortID:
 			info.PortID = string(val.Value)
 		case CDPTLVCapabilities:
-			if err= checkCDPTLVLen(val, 4); err != nil {
+			if err = checkCDPTLVLen(val, 4); err != nil {
 				return err
 			}
 			val := CDPCapability(binary.BigEndian.Uint32(val.Value[0:4]))
@@ -271,7 +273,7 @@ func decodeCiscoDiscoveryInfo(data []byte, p gopacket.PacketBuilder) error {
 				return fmt.Errorf("Invalid TLV %v length %d", val.Type, len(val.Value))
 			}
 		case CDPTLVHello:
-			if err= checkCDPTLVLen(val, 32); err != nil {
+			if err = checkCDPTLVLen(val, 32); err != nil {
 				return err
 			}
 			v := val.Value
@@ -290,44 +292,44 @@ func decodeCiscoDiscoveryInfo(data []byte, p gopacket.PacketBuilder) error {
 		case CDPTLVVTPDomain:
 			info.VTPDomain = string(val.Value)
 		case CDPTLVNativeVLAN:
-			if err= checkCDPTLVLen(val, 2); err != nil {
+			if err = checkCDPTLVLen(val, 2); err != nil {
 				return err
 			}
 			info.NativeVLAN = binary.BigEndian.Uint16(val.Value[0:2])
 		case CDPTLVFullDuplex:
-			if err= checkCDPTLVLen(val, 1); err != nil {
+			if err = checkCDPTLVLen(val, 1); err != nil {
 				return err
 			}
 			info.FullDuplex = (val.Value[0] == 1)
 		case CDPTLVVLANReply:
-			if err= checkCDPTLVLen(val, 3); err != nil {
+			if err = checkCDPTLVLen(val, 3); err != nil {
 				return err
 			}
 			info.VLANReply.ID = uint8(val.Value[0])
 			info.VLANReply.VLAN = binary.BigEndian.Uint16(val.Value[1:3])
 		case CDPTLVVLANQuery:
-			if err= checkCDPTLVLen(val, 3); err != nil {
+			if err = checkCDPTLVLen(val, 3); err != nil {
 				return err
 			}
 			info.VLANQuery.ID = uint8(val.Value[0])
 			info.VLANQuery.VLAN = binary.BigEndian.Uint16(val.Value[1:3])
 		case CDPTLVPower:
-			if err= checkCDPTLVLen(val, 2); err != nil {
+			if err = checkCDPTLVLen(val, 2); err != nil {
 				return err
 			}
 			info.PowerConsumption = binary.BigEndian.Uint16(val.Value[0:2])
 		case CDPTLVMTU:
-			if err= checkCDPTLVLen(val, 4); err != nil {
+			if err = checkCDPTLVLen(val, 4); err != nil {
 				return err
 			}
 			info.MTU = binary.BigEndian.Uint32(val.Value[0:4])
 		case CDPTLVExtendedTrust:
-			if err= checkCDPTLVLen(val, 1); err != nil {
+			if err = checkCDPTLVLen(val, 1); err != nil {
 				return err
 			}
 			info.ExtendedTrust = uint8(val.Value[0])
 		case CDPTLVUntrustedCOS:
-			if err= checkCDPTLVLen(val, 1); err != nil {
+			if err = checkCDPTLVLen(val, 1); err != nil {
 				return err
 			}
 			info.UntrustedCOS = uint8(val.Value[0])
@@ -336,7 +338,7 @@ func decodeCiscoDiscoveryInfo(data []byte, p gopacket.PacketBuilder) error {
 		case CDPTLVSysOID:
 			info.SysOID = string(val.Value)
 		case CDPTLVMgmtAddresses:
-			if err= checkCDPTLVLen(val, 4); err != nil {
+			if err = checkCDPTLVLen(val, 4); err != nil {
 				return err
 			}
 			info.MgmtAddresses, err = decodeAddresses(val.Value)
@@ -344,7 +346,7 @@ func decodeCiscoDiscoveryInfo(data []byte, p gopacket.PacketBuilder) error {
 				return err
 			}
 		case CDPTLVLocation:
-			if err= checkCDPTLVLen(val, 2); err != nil {
+			if err = checkCDPTLVLen(val, 2); err != nil {
 				return err
 			}
 			info.Location.Type = uint8(val.Value[0])
@@ -353,7 +355,7 @@ func decodeCiscoDiscoveryInfo(data []byte, p gopacket.PacketBuilder) error {
 			//		case CDPTLVLExternalPortID:
 			//			Undocumented
 		case CDPTLVPowerRequested:
-			if err= checkCDPTLVLen(val, 4); err != nil {
+			if err = checkCDPTLVLen(val, 4); err != nil {
 				return err
 			}
 			info.PowerRequest.ID = binary.BigEndian.Uint16(val.Value[0:2])
@@ -362,7 +364,7 @@ func decodeCiscoDiscoveryInfo(data []byte, p gopacket.PacketBuilder) error {
 				info.PowerRequest.Values = append(info.PowerRequest.Values, binary.BigEndian.Uint32(val.Value[n:n+4]))
 			}
 		case CDPTLVPowerAvailable:
-			if err= checkCDPTLVLen(val, 4); err != nil {
+			if err = checkCDPTLVLen(val, 4); err != nil {
 				return err
 			}
 			info.PowerAvailable.ID = binary.BigEndian.Uint16(val.Value[0:2])
@@ -375,7 +377,7 @@ func decodeCiscoDiscoveryInfo(data []byte, p gopacket.PacketBuilder) error {
 			//		case CDPTLVEnergyWise:
 			//			Undocumented
 		case CDPTLVSparePairPOE:
-			if err= checkCDPTLVLen(val, 1); err != nil {
+			if err = checkCDPTLVLen(val, 1); err != nil {
 				return err
 			}
 			v := val.Value[0]

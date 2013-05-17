@@ -38,6 +38,7 @@ type LinkLayerDiscoveryValue struct {
 // LLDPChassisIDSubType specifies the value type for a single LLDPChassisID.ID
 type LLDPChassisIDSubType byte
 
+// LLDP Chassis Types
 const (
 	LLDPChassisIDSubTypeReserved    LLDPChassisIDSubType = 0
 	LLDPChassisIDSubTypeChassisComp LLDPChassisIDSubType = 1
@@ -57,6 +58,7 @@ type LLDPChassisID struct {
 // LLDPPortIDSubType specifies the value type for a single LLDPPortID.ID
 type LLDPPortIDSubType byte
 
+// LLDP PortID types
 const (
 	LLDPPortIDSubtypeReserved       LLDPPortIDSubType = 0
 	LLDPPortIDSubtypeIfaceAlias     LLDPPortIDSubType = 1
@@ -192,6 +194,7 @@ type LLDPMgmtAddress struct {
 }
 
 // LinkLayerDiscoveryInfo represents the decoded details for a set of LinkLayerDiscoveryValues
+// Organisation-specific TLV's can be decoded using the various Decode() methods
 type LinkLayerDiscoveryInfo struct {
 	baseLayer
 	PortDescription string
@@ -246,6 +249,7 @@ type LLDPLinkAggregation struct {
 	PortID    uint32
 }
 
+// LLDPInfo8021 represents the information carried in 802.1 Org-specific TLVs
 type LLDPInfo8021 struct {
 	PVID               uint16
 	PPVIDs             []PortProtocolVLANID
@@ -428,6 +432,7 @@ type LLDPPowerViaMDI8023 struct {
 	Allocated       uint16 // 1-510 Watts
 }
 
+// LLDPInfo8023 represents the information carried in 802.3 Org-specific TLVs
 type LLDPInfo8023 struct {
 	MACPHYConfigStatus LLDPMACPHYConfigStatus
 	PowerViaMDI        LLDPPowerViaMDI8023
@@ -469,6 +474,7 @@ type LLDPEVBSettings struct {
 	RTEExponent    uint8
 }
 
+// LLDPInfo8021Qbg represents the information carried in 802.1Qbg Org-specific TLVs
 type LLDPInfo8021Qbg struct {
 	EVBSettings LLDPEVBSettings
 }
@@ -631,6 +637,7 @@ type LLDPPowerViaMDI struct {
 	Value    uint16
 }
 
+// LLDPInfoMedia represents the information carried in TR-41 Org-specific TLVs
 type LLDPInfoMedia struct {
 	MediaCapabilities LLDPMediaCapabilities
 	NetworkPolicy     LLDPNetworkPolicy
@@ -659,6 +666,7 @@ const (
 	LLDPCiscoPSESparePair uint8 = 1 << 3
 )
 
+// LLDPInfoCisco2 represents the information carried in Cisco Org-specific TLVs
 type LLDPInfoCisco2 struct {
 	PSEFourWirePoESupported       bool
 	PDSparePairArchitectureShared bool
@@ -709,6 +717,7 @@ type LLDPPNIOPTCPStatus struct {
 	GreenPeriodBegin  uint32
 }
 
+// LLDPInfoProfinet represents the information carried in Profinet Org-specific TLVs
 type LLDPInfoProfinet struct {
 	PNIODelay         LLDPPNIODelay
 	PNIOPortStatus    LLDPPNIOPortStatus
