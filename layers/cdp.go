@@ -143,6 +143,34 @@ type CDPHello struct {
 	ManagementVLAN   uint16
 }
 
+type CDPEnergyWiseSubtype uint32
+
+const (
+	CDPEnergyWiseRole    CDPEnergyWiseSubtype = 0x00000007
+	CDPEnergyWiseDomain  CDPEnergyWiseSubtype = 0x00000008
+	CDPEnergyWiseName    CDPEnergyWiseSubtype = 0x00000009
+	CDPEnergyWiseReplyTo CDPEnergyWiseSubtype = 0x00000017
+)
+
+type CDPEnergyWise struct {
+	EncryptedData  []byte
+	Unknown1       uint32
+	SequenceNumber uint32
+	ModelNumber    string
+	Unknown2       uint16
+	HardwareID     string
+	SerialNum      string
+	Unknown3       []byte
+	Role           string
+	Domain         string
+	Name           string
+	ReplyUnknown1  []byte
+	ReplyPort      []byte
+	ReplyAddress   []byte
+	ReplyUnknown2  []byte
+	ReplyUnknown3  []byte
+}
+
 // CiscoDiscoveryInfo represents the decoded details for a set of CiscoDiscoveryValues
 type CiscoDiscoveryInfo struct {
 	baseLayer
@@ -170,6 +198,7 @@ type CiscoDiscoveryInfo struct {
 	PowerRequest     CDPPowerDialogue
 	PowerAvailable   CDPPowerDialogue
 	SparePairPoe     CDPSparePairPoE
+	EnergyWise       CDPEnergyWise
 	Unknown          []CiscoDiscoveryValue
 }
 
@@ -374,8 +403,55 @@ func decodeCiscoDiscoveryInfo(data []byte, p gopacket.PacketBuilder) error {
 			}
 			//		case CDPTLVPortUnidirectional
 			//			Undocumented
-			//		case CDPTLVEnergyWise:
-			//			Undocumented
+		case CDPTLVEnergyWise:
+			if err = checkCDPTLVLen(val, 72); err != nil {
+				return err
+			}
+			info.EnergyWise.EncryptedData = val.Value[0:20]
+			info.EnergyWise.Unknown1 = binary.BigEndian.Uint32(val.Value[20:24])
+			info.EnergyWise.SequenceNumber = binary.BigEndian.Uint32(val.Value[24:28])
+			info.EnergyWise.ModelNumber = string(val.Value[28:44])
+			info.EnergyWise.Unknown2 = binary.BigEndian.Uint16(val.Value[44:46])
+			info.EnergyWise.HardwareID = string(val.Value[46:49])
+			info.EnergyWise.SerialNum = string(val.Value[49:60])
+			info.EnergyWise.Unknown3 = val.Value[60:68]
+			tlvLen := binary.BigEndian.Uint16(val.Value[68:70])
+			tlvNum := binary.BigEndian.Uint16(val.Value[70:72])
+			data := val.Value[72:]
+			if len(data) < int(tlvLen) {
+				return fmt.Errorf("Invalid TLV length %d vs %d", tlvLen, len(data))
+			}
+			numSeen := 0
+			for len(data) > 8 {
+				numSeen++
+				if numSeen > int(tlvNum) { // Too many TLV's ?
+					return fmt.Errorf("Too many TLV's - wanted %d, saw %d", tlvNum, numSeen)
+				}
+				tType := CDPEnergyWiseSubtype(binary.BigEndian.Uint32(data[0:4]))
+				tLen := int(binary.BigEndian.Uint32(data[4:8]))
+				if tLen > len(data)-8 {
+					return fmt.Errorf("Invalid TLV length %d vs %d", tLen, len(data)-8)
+					break
+				}
+				data = data[8:]
+				switch tType {
+				case CDPEnergyWiseRole:
+					info.EnergyWise.Role = string(data[:])
+				case CDPEnergyWiseDomain:
+					info.EnergyWise.Domain = string(data[:])
+				case CDPEnergyWiseName:
+					info.EnergyWise.Name = string(data[:])
+				case CDPEnergyWiseReplyTo:
+					if len(data) >= 18 {
+						info.EnergyWise.ReplyUnknown1 = data[0:2]
+						info.EnergyWise.ReplyPort = data[2:4]
+						info.EnergyWise.ReplyAddress = data[4:8]
+						info.EnergyWise.ReplyUnknown2 = data[8:10]
+						info.EnergyWise.ReplyUnknown3 = data[10:14]
+					}
+				}
+				data = data[tLen:]
+			}
 		case CDPTLVSparePairPOE:
 			if err = checkCDPTLVLen(val, 1); err != nil {
 				return err
@@ -509,6 +585,8 @@ func (t CDPTLVType) String() (s string) {
 		s = "Energy Wise"
 	case CDPTLVSparePairPOE:
 		s = "Spare Pair POE"
+	default:
+		s = "Unknown"
 	}
 	return
 }
@@ -533,6 +611,24 @@ func (a CDPAddressType) String() (s string) {
 		s = "Xerox Network Systems"
 	case CDPAddressTypeAPOLLO:
 		s = "Apollo"
+	default:
+		s = "Unknown"
+	}
+	return
+}
+
+func (t CDPEnergyWiseSubtype) String() (s string) {
+	switch t {
+	case CDPEnergyWiseRole:
+		s = "Role"
+	case CDPEnergyWiseDomain:
+		s = "Domain"
+	case CDPEnergyWiseName:
+		s = "Name"
+	case CDPEnergyWiseReplyTo:
+		s = "ReplyTo"
+	default:
+		s = "Unknown"
 	}
 	return
 }
