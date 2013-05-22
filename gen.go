@@ -50,7 +50,7 @@ func main() {
 	}
 	defer resp.Body.Close()
 	buffered := bufio.NewReader(resp.Body)
-	finder := regexp.MustCompile(`^([0-9A-F]{6})\s+\(base 16\)\s+(.*)`)
+	finder := regexp.MustCompile(`^\s*([0-9A-F]{6})\s+\(base 16\)\s+(.*)`)
 	fmt.Fprintln(os.Stderr, "Starting write to standard output")
 	fmt.Printf(header, time.Now(), *url)
 	for {
