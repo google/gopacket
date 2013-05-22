@@ -237,7 +237,7 @@ to add layer/endpoint types to gopacket.
 
 A Final Note
 
-If you use gopacket, you'll almost definitely want to make sure gopacket/layers 
+If you use gopacket, you'll almost definitely want to make sure gopacket/layers
 is imported, since when imported it sets all the LayerType variables and fills
 in a lot of interesting variables/maps (DecodersByLayerName, etc).  Therefore,
 it's recommended that even if you don't use any layers functions directly, you still import with:
