@@ -105,7 +105,8 @@ func FlowFromEndpoints(src, dst Endpoint) (_ Flow, err error) {
 // String returns a human-readable representation of this flow, in the form
 // "Src->Dst"
 func (f Flow) String() string {
-	return fmt.Sprintf("%v->%v", f.src, f.dst)
+	s, d := f.Endpoints()
+	return fmt.Sprintf("%v->%v", s, d)
 }
 
 // EndpointType returns the EndpointType for this Flow.
