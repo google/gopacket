@@ -26,6 +26,9 @@ type IPv6 struct {
 	HopLimit     uint8
 	SrcIP        net.IP
 	DstIP        net.IP
+	HopByHop     *IPv6HopByHop
+	// hbh will be pointed to by HopByHop if that layer exists.
+	hbh IPv6HopByHop
 }
 
 // LayerType returns LayerTypeIPv6
@@ -38,79 +41,92 @@ const (
 	IPv6HopByHopOptionJumbogram = 0xC2 // RFC 2675
 )
 
-func decodeIPv6(data []byte, p gopacket.PacketBuilder) error {
-	ip6 := &IPv6{
-		Version:      uint8(data[0]) >> 4,
-		TrafficClass: uint8((binary.BigEndian.Uint16(data[0:2]) >> 4) & 0x00FF),
-		FlowLabel:    binary.BigEndian.Uint32(data[0:4]) & 0x000FFFFF,
-		Length:       binary.BigEndian.Uint16(data[4:6]),
-		NextHeader:   IPProtocol(data[6]),
-		HopLimit:     data[7],
-		SrcIP:        data[8:24],
-		DstIP:        data[24:40],
-		// We initially set the payload to all bytes after 40.  ip6.Length or the
-		// HopByHop jumbogram option can both change this eventually, though.
-		baseLayer: baseLayer{data[:40], data[40:]},
-	}
-	p.AddLayer(ip6)
-	p.SetNetworkLayer(ip6)
+func (ip6 *IPv6) DecodeFromBytes(data []byte, df gopacket.DecodeFeedback) ([]byte, error) {
+	ip6.Version = uint8(data[0]) >> 4
+	ip6.TrafficClass = uint8((binary.BigEndian.Uint16(data[0:2]) >> 4) & 0x00FF)
+	ip6.FlowLabel = binary.BigEndian.Uint32(data[0:4]) & 0x000FFFFF
+	ip6.Length = binary.BigEndian.Uint16(data[4:6])
+	ip6.NextHeader = IPProtocol(data[6])
+	ip6.HopLimit = data[7]
+	ip6.SrcIP = data[8:24]
+	ip6.DstIP = data[24:40]
+	ip6.HopByHop = nil
+	// We initially set the payload to all bytes after 40.  ip6.Length or the
+	// HopByHop jumbogram option can both change this eventually, though.
+	ip6.baseLayer = baseLayer{data[:40], data[40:]}
+
 	// The following is a good candidate for code clean-up... it treats hop-by-hop
 	// as a special part of the IPv6 packet, since we require its information to
 	// correctly compute jumbogram size.
 	if ip6.Length == 0 {
 		if ip6.NextHeader != IPProtocolIPv6HopByHop {
-			return fmt.Errorf("IPv6 length 0, but next header is %v, not HopByHop", ip6.NextHeader)
+			return nil, fmt.Errorf("IPv6 length 0, but next header is %v, not HopByHop", ip6.NextHeader)
 		}
-		// We need to decode hop-by-hop here to see if we have a jumbogram and
-		// handle it accordingly (correctly set payload of the packet).
-		hopByHop := getIPv6HopByHop(ip6.payload)
-		p.AddLayer(hopByHop)
-		for _, o := range hopByHop.Options {
+		ip6.hbh.DecodeFromBytes(ip6.payload, df)
+		ip6.HopByHop = &ip6.hbh
+		for _, o := range ip6.hbh.Options {
 			if o.OptionType == IPv6HopByHopOptionJumbogram {
 				if len(o.OptionData) != 4 {
-					return fmt.Errorf("Invalid jumbo packet option length")
+					return nil, fmt.Errorf("Invalid jumbo packet option length")
 				}
 				payloadLength := binary.BigEndian.Uint32(o.OptionData)
 				pEnd := int(payloadLength)
 				if pEnd > len(ip6.payload) {
-					p.SetTruncated()
+					df.SetTruncated()
 					pEnd = len(ip6.payload)
 				}
 				ip6.payload = ip6.payload[:pEnd]
-				hopByHop.payload = ip6.payload[len(hopByHop.contents):]
-				return p.NextDecoder(hopByHop.NextHeader)
+				ip6.hbh.payload = ip6.payload[len(ip6.hbh.contents):]
+				return ip6.hbh.payload, nil
 			}
 		}
-		return fmt.Errorf("IPv6 length 0, HopByHop header, but no jumbogram option")
+		return nil, fmt.Errorf("IPv6 length 0, HopByHop header, but no jumbogram option")
 	} else {
 		pEnd := int(ip6.Length)
 		if pEnd > len(ip6.payload) {
-			p.SetTruncated()
+			df.SetTruncated()
 			pEnd = len(ip6.payload)
 		}
 		ip6.payload = ip6.payload[:pEnd]
 	}
+	return ip6.payload, nil
+}
+
+func decodeIPv6(data []byte, p gopacket.PacketBuilder) error {
+	ip6 := &IPv6{}
+	_, err := ip6.DecodeFromBytes(data, p)
+	p.AddLayer(ip6)
+	p.SetNetworkLayer(ip6)
+	if ip6.HopByHop != nil {
+		p.AddLayer(ip6.HopByHop)
+	}
+	if err != nil {
+		return err
+	}
+	if ip6.HopByHop != nil {
+		return p.NextDecoder(ip6.HopByHop.NextHeader)
+	}
 	return p.NextDecoder(ip6.NextHeader)
 }
 
-func getIPv6HopByHop(data []byte) *IPv6HopByHop {
-	i := &IPv6HopByHop{
-		ipv6ExtensionBase: decodeIPv6ExtensionBase(data),
-		// We guess we'll 1-2 options, one regular option at least, then maybe one
-		// padding option.
-		Options: make([]IPv6HopByHopOption, 0, 2),
-	}
+func (i *IPv6HopByHop) DecodeFromBytes(data []byte, df gopacket.DecodeFeedback) error {
+	i.ipv6ExtensionBase = decodeIPv6ExtensionBase(data)
+	i.Options = i.opts[:0]
 	var opt *IPv6HopByHopOption
 	for d := i.contents[2:]; len(d) > 0; d = d[opt.ActualLength:] {
 		i.Options = append(i.Options, IPv6HopByHopOption(decodeIPv6HeaderTLVOption(d)))
 		opt = &i.Options[len(i.Options)-1]
 	}
-	return i
+	return nil
 }
 
 func decodeIPv6HopByHop(data []byte, p gopacket.PacketBuilder) error {
-	i := getIPv6HopByHop(data)
+	i := &IPv6HopByHop{}
+	err := i.DecodeFromBytes(data, p)
 	p.AddLayer(i)
+	if err != nil {
+		return err
+	}
 	return p.NextDecoder(i.NextHeader)
 }
 
@@ -155,6 +171,7 @@ func decodeIPv6ExtensionBase(data []byte) (i ipv6ExtensionBase) {
 type IPv6HopByHop struct {
 	ipv6ExtensionBase
 	Options []IPv6HopByHopOption
+	opts    [2]IPv6HopByHopOption
 }
 
 // LayerType returns LayerTypeIPv6HopByHop.

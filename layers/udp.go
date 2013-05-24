@@ -25,31 +25,38 @@ type UDP struct {
 // LayerType returns gopacket.LayerTypeUDP
 func (u *UDP) LayerType() gopacket.LayerType { return LayerTypeUDP }
 
-func decodeUDP(data []byte, p gopacket.PacketBuilder) error {
-	udp := &UDP{
-		SrcPort:   UDPPort(binary.BigEndian.Uint16(data[0:2])),
-		sPort:     data[0:2],
-		DstPort:   UDPPort(binary.BigEndian.Uint16(data[2:4])),
-		dPort:     data[2:4],
-		Length:    binary.BigEndian.Uint16(data[4:6]),
-		Checksum:  binary.BigEndian.Uint16(data[6:8]),
-		baseLayer: baseLayer{contents: data[:8]},
-	}
+func (udp *UDP) DecodeFromBytes(data []byte, df gopacket.DecodeFeedback) ([]byte, error) {
+	udp.SrcPort = UDPPort(binary.BigEndian.Uint16(data[0:2]))
+	udp.sPort = data[0:2]
+	udp.DstPort = UDPPort(binary.BigEndian.Uint16(data[2:4]))
+	udp.dPort = data[2:4]
+	udp.Length = binary.BigEndian.Uint16(data[4:6])
+	udp.Checksum = binary.BigEndian.Uint16(data[6:8])
+	udp.baseLayer = baseLayer{contents: data[:8]}
 	switch {
 	case udp.Length >= 8:
 		hlen := int(udp.Length)
 		if hlen > len(data) {
-			p.SetTruncated()
+			df.SetTruncated()
 			hlen = len(data)
 		}
 		udp.payload = data[8:hlen]
 	case udp.Length == 0: // Jumbogram, use entire rest of data
 		udp.payload = data[8:]
 	default:
-		return fmt.Errorf("UDP packet too small: %d bytes", udp.Length)
+		return nil, fmt.Errorf("UDP packet too small: %d bytes", udp.Length)
 	}
+	return udp.payload, nil
+}
+
+func decodeUDP(data []byte, p gopacket.PacketBuilder) error {
+	udp := &UDP{}
+	_, err := udp.DecodeFromBytes(data, p)
 	p.AddLayer(udp)
 	p.SetTransportLayer(udp)
+	if err != nil {
+		return err
+	}
 	return p.NextDecoder(gopacket.LayerTypePayload)
 }
 

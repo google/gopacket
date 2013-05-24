@@ -120,6 +120,19 @@ func BenchmarkLazyNoCopy(b *testing.B) {
 	}
 }
 
+func BenchmarkKnownStack(b *testing.B) {
+	var eth Ethernet
+	var ip4 IPv4
+	var tcp TCP
+	stack := []gopacket.SelfDecoder{&eth, &ip4, &tcp}
+	for i := 0; i < b.N; i++ {
+		data := testSimpleTCPPacket[:]
+		for _, d := range stack {
+			data, _ = d.DecodeFromBytes(data, gopacket.NilDecodeFeedback)
+		}
+	}
+}
+
 func BenchmarkAlloc(b *testing.B) {
 	for i := 0; i < b.N; i++ {
 		_ = &TCP{}
@@ -309,6 +322,22 @@ func TestDecodeSimpleTCPPacket(t *testing.T) {
 					OptionLength: 0xa,
 					OptionData:   []byte{0x3, 0x77, 0x37, 0x9c, 0x42, 0x77, 0x5e, 0x3a},
 				},
+			},
+			opts: [4]TCPOption{
+				TCPOption{
+					OptionType:   0x1,
+					OptionLength: 0x1,
+				},
+				TCPOption{
+					OptionType:   0x1,
+					OptionLength: 0x1,
+				},
+				TCPOption{
+					OptionType:   0x8,
+					OptionLength: 0xa,
+					OptionData:   []byte{0x3, 0x77, 0x37, 0x9c, 0x42, 0x77, 0x5e, 0x3a},
+				},
+				TCPOption{},
 			},
 		}
 		if !reflect.DeepEqual(tcp, want) {

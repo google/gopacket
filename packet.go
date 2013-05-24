@@ -242,6 +242,9 @@ func layerString(i interface{}, anonymous bool, writeSpace bool) string {
 	v := reflect.ValueOf(i)
 	switch v.Type().Kind() {
 	case reflect.Interface, reflect.Ptr:
+		if v.IsNil() {
+			return "nil"
+		}
 		r := v.Elem()
 		return layerString(r.Interface(), anonymous, writeSpace)
 	case reflect.Struct:

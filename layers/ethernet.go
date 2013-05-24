@@ -35,26 +35,33 @@ func (e *Ethernet) LinkFlow() gopacket.Flow {
 	return gopacket.NewFlow(EndpointMAC, e.SrcMAC, e.DstMAC)
 }
 
-func decodeEthernet(data []byte, p gopacket.PacketBuilder) error {
+func (eth *Ethernet) DecodeFromBytes(data []byte, df gopacket.DecodeFeedback) ([]byte, error) {
 	if len(data) < 14 {
-		return errors.New("Ethernet packet too small")
+		return nil, errors.New("Ethernet packet too small")
 	}
-	eth := &Ethernet{
-		DstMAC:       net.HardwareAddr(data[0:6]),
-		SrcMAC:       net.HardwareAddr(data[6:12]),
-		EthernetType: EthernetType(binary.BigEndian.Uint16(data[12:14])),
-		baseLayer:    baseLayer{data[:14], data[14:]},
-	}
+	eth.DstMAC = net.HardwareAddr(data[0:6])
+	eth.SrcMAC = net.HardwareAddr(data[6:12])
+	eth.EthernetType = EthernetType(binary.BigEndian.Uint16(data[12:14]))
+	eth.baseLayer = baseLayer{data[:14], data[14:]}
 	if eth.EthernetType < 0x0600 {
 		eth.Length = uint16(eth.EthernetType)
 		eth.EthernetType = EthernetTypeLLC
 		if cmp := len(eth.payload) - int(eth.Length); cmp < 0 {
-			p.SetTruncated()
+			df.SetTruncated()
 		} else if cmp > 0 {
 			// Strip off bytes at the end, since we have too many bytes
 			eth.payload = eth.payload[:len(eth.payload)-cmp]
 		}
 		//	fmt.Println(eth)
+	}
+	return eth.payload, nil
+}
+
+func decodeEthernet(data []byte, p gopacket.PacketBuilder) (err error) {
+	eth := &Ethernet{}
+	_, err = eth.DecodeFromBytes(data, p)
+	if err != nil {
+		return
 	}
 	p.AddLayer(eth)
 	p.SetLinkLayer(eth)

@@ -10,6 +10,13 @@ import (
 	"errors"
 )
 
+type DecodeFeedback interface {
+	// SetTruncated should be called if during decoding you notice that a packet
+	// is shorter than internal layer variables (HeaderLength, or the like) say it
+	// should be.  It sets packet.Metadata().Truncated.
+	SetTruncated()
+}
+
 // PacketBuilder is used by layer decoders to store the layers they've decoded,
 // and to defer future decoding via NextDecoder.
 // Typically, the pattern for use is:
@@ -24,6 +31,7 @@ import (
 //    return p.NextDecoder(nextDecoder)
 //  }
 type PacketBuilder interface {
+	DecodeFeedback
 	// AddLayer should be called by a decoder immediately upon successful
 	// decoding of a layer.
 	AddLayer(l Layer)
@@ -47,10 +55,6 @@ type PacketBuilder interface {
 	// data will be dumped to stderr so you can create a test.  This should never
 	// be called from a production decoder.
 	DumpPacketData()
-	// SetTruncated should be called if during decoding you notice that a packet
-	// is shorter than internal layer variables (HeaderLength, or the like) say it
-	// should be.  It sets packet.Metadata().Truncated.
-	SetTruncated()
 }
 
 // Decoder is an interface for logic to decode a packet layer.  Users may
@@ -63,6 +67,17 @@ type Decoder interface {
 	// the PacketBuilder documentation for more details.
 	Decode([]byte, PacketBuilder) error
 }
+
+// SelfDecoder is an interface for packet layers that can decode themselves.
+type SelfDecoder interface {
+	DecodeFromBytes(data []byte, df DecodeFeedback) (remaining []byte, err error)
+}
+
+type nilDecodeFeedback struct{}
+
+func (n *nilDecodeFeedback) SetTruncated() {}
+
+var NilDecodeFeedback DecodeFeedback = &nilDecodeFeedback{}
 
 // DecodeFunc wraps a function to make it a Decoder.
 type DecodeFunc func([]byte, PacketBuilder) error
