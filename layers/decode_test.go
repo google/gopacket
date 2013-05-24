@@ -121,15 +121,31 @@ func BenchmarkLazyNoCopy(b *testing.B) {
 }
 
 func BenchmarkKnownStack(b *testing.B) {
-	var eth Ethernet
-	var ip4 IPv4
-	var tcp TCP
-	stack := []gopacket.SelfDecoder{&eth, &ip4, &tcp}
+	stack := []gopacket.DecodingLayer{&Ethernet{}, &IPv4{}, &TCP{}, &gopacket.Payload{}}
 	for i := 0; i < b.N; i++ {
 		data := testSimpleTCPPacket[:]
 		for _, d := range stack {
-			data, _ = d.DecodeFromBytes(data, gopacket.NilDecodeFeedback)
+			_ = d.DecodeFromBytes(data, gopacket.NilDecodeFeedback)
+			data = d.LayerPayload()
 		}
+	}
+}
+
+func BenchmarkStackParserNoPanic(b *testing.B) {
+	stack := gopacket.StackParser{&Ethernet{}, &IPv4{}, &TCP{}, &gopacket.Payload{}}
+	for i := 0; i < b.N; i++ {
+		// This is a little slower than KnownStack, because it actually checks if
+		// each parser is the correct one to use before continuing on.
+		stack.DecodeBytes(testSimpleTCPPacket, gopacket.NilDecodeFeedback, gopacket.DontHandlePanic)
+	}
+}
+
+func BenchmarkStackParserPanic(b *testing.B) {
+	stack := gopacket.StackParser{&Ethernet{}, &IPv4{}, &TCP{}, &gopacket.Payload{}}
+	for i := 0; i < b.N; i++ {
+		// This is a little slower than KnownStack, because it actually checks if
+		// each parser is the correct one to use before continuing on.
+		stack.DecodeBytes(testSimpleTCPPacket, gopacket.NilDecodeFeedback, gopacket.HandlePanic)
 	}
 }
 
@@ -849,5 +865,19 @@ func TestDecodeUDPPacketTooSmall(t *testing.T) {
 	checkLayers(p, []gopacket.LayerType{LayerTypeEthernet, LayerTypeDot1Q, LayerTypeIPv4, LayerTypeUDP, gopacket.LayerTypePayload}, t)
 	if !p.Metadata().Truncated {
 		t.Error("UDP short packet should be truncated")
+	}
+}
+
+func TestStackParserFullTCPPacket(t *testing.T) {
+	stack := gopacket.StackParser{&Ethernet{}, &IPv4{}, &TCP{}, &gopacket.Payload{}}
+	n, remaining, err := stack.DecodeBytes(testSimpleTCPPacket, gopacket.NilDecodeFeedback, gopacket.HandlePanic)
+	if err != nil {
+		t.Error("Error from stack parser: ", err)
+	}
+	if n != 4 {
+		t.Error("Expected 4 layers parsed, instead got ", n)
+	}
+	if len(remaining) > 0 {
+		t.Error("Some bytes not parsed:", remaining)
 	}
 }

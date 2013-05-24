@@ -36,8 +36,10 @@ func decodeSCTP(data []byte, p gopacket.PacketBuilder) error {
 	}
 	p.AddLayer(sctp)
 	p.SetTransportLayer(sctp)
-	return p.NextDecoder(gopacket.DecodeFunc(decodeWithSCTPChunkTypePrefix))
+	return p.NextDecoder(sctpChunkTypePrefixDecoder)
 }
+
+var sctpChunkTypePrefixDecoder = gopacket.DecodeFunc(decodeWithSCTPChunkTypePrefix)
 
 // TransportFlow returns a flow based on the source and destination SCTP port.
 func (s *SCTP) TransportFlow() gopacket.Flow {

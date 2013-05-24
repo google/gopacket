@@ -41,7 +41,7 @@ const (
 	IPv6HopByHopOptionJumbogram = 0xC2 // RFC 2675
 )
 
-func (ip6 *IPv6) DecodeFromBytes(data []byte, df gopacket.DecodeFeedback) ([]byte, error) {
+func (ip6 *IPv6) DecodeFromBytes(data []byte, df gopacket.DecodeFeedback) error {
 	ip6.Version = uint8(data[0]) >> 4
 	ip6.TrafficClass = uint8((binary.BigEndian.Uint16(data[0:2]) >> 4) & 0x00FF)
 	ip6.FlowLabel = binary.BigEndian.Uint32(data[0:4]) & 0x000FFFFF
@@ -55,32 +55,36 @@ func (ip6 *IPv6) DecodeFromBytes(data []byte, df gopacket.DecodeFeedback) ([]byt
 	// HopByHop jumbogram option can both change this eventually, though.
 	ip6.baseLayer = baseLayer{data[:40], data[40:]}
 
-	// The following is a good candidate for code clean-up... it treats hop-by-hop
-	// as a special part of the IPv6 packet, since we require its information to
-	// correctly compute jumbogram size.
-	if ip6.Length == 0 {
-		if ip6.NextHeader != IPProtocolIPv6HopByHop {
-			return nil, fmt.Errorf("IPv6 length 0, but next header is %v, not HopByHop", ip6.NextHeader)
-		}
+	// We treat a HopByHop IPv6 option as part of the IPv6 packet, since its
+	// options are crucial for understanding what's actually happening per packet.
+	if ip6.NextHeader == IPProtocolIPv6HopByHop {
 		ip6.hbh.DecodeFromBytes(ip6.payload, df)
+		hbhLen := len(ip6.hbh.contents)
+		// Reset IPv6 contents to include the HopByHop header.
+		ip6.baseLayer = baseLayer{data[:40+hbhLen], data[40+hbhLen:]}
 		ip6.HopByHop = &ip6.hbh
-		for _, o := range ip6.hbh.Options {
-			if o.OptionType == IPv6HopByHopOptionJumbogram {
-				if len(o.OptionData) != 4 {
-					return nil, fmt.Errorf("Invalid jumbo packet option length")
+		if ip6.Length == 0 {
+			for _, o := range ip6.hbh.Options {
+				if o.OptionType == IPv6HopByHopOptionJumbogram {
+					if len(o.OptionData) != 4 {
+						return fmt.Errorf("Invalid jumbo packet option length")
+					}
+					payloadLength := binary.BigEndian.Uint32(o.OptionData)
+					pEnd := int(payloadLength)
+					if pEnd > len(ip6.payload) {
+						df.SetTruncated()
+					} else {
+						ip6.payload = ip6.payload[:pEnd]
+						ip6.hbh.payload = ip6.payload
+					}
+					return nil
 				}
-				payloadLength := binary.BigEndian.Uint32(o.OptionData)
-				pEnd := int(payloadLength)
-				if pEnd > len(ip6.payload) {
-					df.SetTruncated()
-					pEnd = len(ip6.payload)
-				}
-				ip6.payload = ip6.payload[:pEnd]
-				ip6.hbh.payload = ip6.payload[len(ip6.hbh.contents):]
-				return ip6.hbh.payload, nil
 			}
+			return fmt.Errorf("IPv6 length 0, but HopByHop header does not have jumbogram option")
 		}
-		return nil, fmt.Errorf("IPv6 length 0, HopByHop header, but no jumbogram option")
+	}
+	if ip6.Length == 0 {
+		return fmt.Errorf("IPv6 length 0, but next header is %v, not HopByHop", ip6.NextHeader)
 	} else {
 		pEnd := int(ip6.Length)
 		if pEnd > len(ip6.payload) {
@@ -89,15 +93,18 @@ func (ip6 *IPv6) DecodeFromBytes(data []byte, df gopacket.DecodeFeedback) ([]byt
 		}
 		ip6.payload = ip6.payload[:pEnd]
 	}
-	return ip6.payload, nil
+	return nil
 }
 
 func decodeIPv6(data []byte, p gopacket.PacketBuilder) error {
 	ip6 := &IPv6{}
-	_, err := ip6.DecodeFromBytes(data, p)
+	err := ip6.DecodeFromBytes(data, p)
 	p.AddLayer(ip6)
 	p.SetNetworkLayer(ip6)
 	if ip6.HopByHop != nil {
+		// TODO(gconnell):  Since HopByHop is now an integral part of the IPv6
+		// layer, should it actually be added as its own layer?  I'm leaning towards
+		// no.
 		p.AddLayer(ip6.HopByHop)
 	}
 	if err != nil {
@@ -165,6 +172,58 @@ func decodeIPv6ExtensionBase(data []byte) (i ipv6ExtensionBase) {
 	i.contents = data[:i.ActualLength]
 	i.payload = data[i.ActualLength:]
 	return
+}
+
+// IPDecodingLayer is a DecodingLayer (see StackParser for more details)
+// which decodes IP, whether v4 or v6.  It also ignores v6 extensions (besides
+// HopByHop, which is stored within the IPv6 portion of the packet).
+// Before reading either v4 or v6 fields, check the Version field (will be 4 or
+// 6) to determine which to use.
+type IPDecodingLayer struct {
+	IPv4       IPv4
+	IPv6       IPv6
+	Version    int
+	NextHeader IPProtocol
+	baseLayer
+}
+
+func (i *IPDecodingLayer) DecodeFromBytes(data []byte, df gopacket.DecodeFeedback) error {
+	i.Version = int(data[0] >> 4)
+	i.NextHeader = 0
+	contentSize := 0
+	switch i.Version {
+	case 4:
+		err := i.IPv4.DecodeFromBytes(data, df)
+		i.NextHeader = i.IPv4.Protocol
+		i.baseLayer = i.IPv4.baseLayer
+		return err
+	case 6:
+		// First, grab our IPv6 packet.
+		err := i.IPv6.DecodeFromBytes(data, df)
+		i.NextHeader = i.IPv6.NextHeader
+		if err != nil {
+			return err
+		}
+		// Next, skip over extensions.
+		for LayerClassIPv6Extension.Contains(i.NextHeader.LayerType()) {
+			if contentSize >= len(data) {
+				return gopacket.ParserNoMoreBytes
+			}
+			extension := decodeIPv6ExtensionBase(data[contentSize:])
+			contentSize += extension.ActualLength
+			i.NextHeader = extension.NextHeader
+		}
+		i.baseLayer = baseLayer{data[:contentSize], data[contentSize:]}
+		return nil
+	default:
+		return fmt.Errorf("Invalid first byte of IPv4/6 layer: 0x%02x", data[0])
+	}
+}
+func (i *IPDecodingLayer) CanDecode() gopacket.LayerClass {
+	return LayerClassIPNetwork
+}
+func (i *IPDecodingLayer) NextLayerType() gopacket.LayerType {
+	return i.NextHeader.LayerType()
 }
 
 // IPv6HopByHop is the IPv6 hop-by-hop extension.

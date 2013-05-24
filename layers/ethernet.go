@@ -35,9 +35,9 @@ func (e *Ethernet) LinkFlow() gopacket.Flow {
 	return gopacket.NewFlow(EndpointMAC, e.SrcMAC, e.DstMAC)
 }
 
-func (eth *Ethernet) DecodeFromBytes(data []byte, df gopacket.DecodeFeedback) ([]byte, error) {
+func (eth *Ethernet) DecodeFromBytes(data []byte, df gopacket.DecodeFeedback) error {
 	if len(data) < 14 {
-		return nil, errors.New("Ethernet packet too small")
+		return errors.New("Ethernet packet too small")
 	}
 	eth.DstMAC = net.HardwareAddr(data[0:6])
 	eth.SrcMAC = net.HardwareAddr(data[6:12])
@@ -54,14 +54,22 @@ func (eth *Ethernet) DecodeFromBytes(data []byte, df gopacket.DecodeFeedback) ([
 		}
 		//	fmt.Println(eth)
 	}
-	return eth.payload, nil
+	return nil
 }
 
-func decodeEthernet(data []byte, p gopacket.PacketBuilder) (err error) {
+func (eth *Ethernet) CanDecode() gopacket.LayerClass {
+	return LayerTypeEthernet
+}
+
+func (eth *Ethernet) NextLayerType() gopacket.LayerType {
+	return eth.EthernetType.LayerType()
+}
+
+func decodeEthernet(data []byte, p gopacket.PacketBuilder) error {
 	eth := &Ethernet{}
-	_, err = eth.DecodeFromBytes(data, p)
+	err := eth.DecodeFromBytes(data, p)
 	if err != nil {
-		return
+		return err
 	}
 	p.AddLayer(eth)
 	p.SetLinkLayer(eth)

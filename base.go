@@ -35,11 +35,25 @@ type Payload struct {
 }
 
 // LayerType returns LayerTypePayload
-func (p *Payload) LayerType() LayerType  { return LayerTypePayload }
-func (p *Payload) LayerContents() []byte { return p.data }
-func (p *Payload) LayerPayload() []byte  { return nil }
-func (p *Payload) Payload() []byte       { return p.data }
-func (p *Payload) String() string        { return fmt.Sprintf("%d byte(s)", len(p.data)) }
+func (p *Payload) LayerType() LayerType     { return LayerTypePayload }
+func (p *Payload) LayerContents() []byte    { return p.data }
+func (p *Payload) LayerPayload() []byte     { return nil }
+func (p *Payload) Payload() []byte          { return p.data }
+func (p *Payload) String() string           { return fmt.Sprintf("%d byte(s)", len(p.data)) }
+func (p *Payload) CanDecode() LayerClass    { return LayerTypePayload }
+func (p *Payload) NextLayerType() LayerType { return LayerTypeZero }
+func (p *Payload) DecodeFromBytes(data []byte, df DecodeFeedback) error {
+	p.data = data
+	return nil
+}
+
+// decodePayload decodes data by returning it all in a Payload layer.
+func decodePayload(data []byte, p PacketBuilder) error {
+	payload := &Payload{data: data}
+	p.AddLayer(payload)
+	p.SetApplicationLayer(payload)
+	return nil
+}
 
 // These layers correspond to Internet Protocol Suite (TCP/IP) layers, and their
 // corresponding OSI layers, as best as possible.

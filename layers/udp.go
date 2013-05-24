@@ -25,7 +25,7 @@ type UDP struct {
 // LayerType returns gopacket.LayerTypeUDP
 func (u *UDP) LayerType() gopacket.LayerType { return LayerTypeUDP }
 
-func (udp *UDP) DecodeFromBytes(data []byte, df gopacket.DecodeFeedback) ([]byte, error) {
+func (udp *UDP) DecodeFromBytes(data []byte, df gopacket.DecodeFeedback) error {
 	udp.SrcPort = UDPPort(binary.BigEndian.Uint16(data[0:2]))
 	udp.sPort = data[0:2]
 	udp.DstPort = UDPPort(binary.BigEndian.Uint16(data[2:4]))
@@ -44,14 +44,22 @@ func (udp *UDP) DecodeFromBytes(data []byte, df gopacket.DecodeFeedback) ([]byte
 	case udp.Length == 0: // Jumbogram, use entire rest of data
 		udp.payload = data[8:]
 	default:
-		return nil, fmt.Errorf("UDP packet too small: %d bytes", udp.Length)
+		return fmt.Errorf("UDP packet too small: %d bytes", udp.Length)
 	}
-	return udp.payload, nil
+	return nil
+}
+
+func (u *UDP) CanDecode() gopacket.LayerClass {
+	return LayerTypeUDP
+}
+
+func (u *UDP) NextLayerType() gopacket.LayerType {
+	return gopacket.LayerTypePayload
 }
 
 func decodeUDP(data []byte, p gopacket.PacketBuilder) error {
 	udp := &UDP{}
-	_, err := udp.DecodeFromBytes(data, p)
+	err := udp.DecodeFromBytes(data, p)
 	p.AddLayer(udp)
 	p.SetTransportLayer(udp)
 	if err != nil {

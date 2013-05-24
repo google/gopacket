@@ -49,7 +49,7 @@ func (i IPv4Option) String() string {
 	return fmt.Sprintf("IPv4Option(%v:%v)", i.OptionType, i.OptionData)
 }
 
-func (ip *IPv4) DecodeFromBytes(data []byte, df gopacket.DecodeFeedback) ([]byte, error) {
+func (ip *IPv4) DecodeFromBytes(data []byte, df gopacket.DecodeFeedback) error {
 	flagsfrags := binary.BigEndian.Uint16(data[6:8])
 
 	ip.Version = uint8(data[0]) >> 4
@@ -68,18 +68,18 @@ func (ip *IPv4) DecodeFromBytes(data []byte, df gopacket.DecodeFeedback) ([]byte
 	ip.baseLayer = baseLayer{contents: data}
 
 	if ip.Length < 20 {
-		return nil, fmt.Errorf("Invalid (too small) IP length (%d < 20)", ip.Length)
+		return fmt.Errorf("Invalid (too small) IP length (%d < 20)", ip.Length)
 	} else if ip.IHL < 5 {
-		return nil, fmt.Errorf("Invalid (too small) IP header length (%d < 5)", ip.IHL)
+		return fmt.Errorf("Invalid (too small) IP header length (%d < 5)", ip.IHL)
 	} else if int(ip.IHL*4) > int(ip.Length) {
-		return nil, fmt.Errorf("Invalid IP header length > IP length (%d > %d)", ip.IHL, ip.Length)
+		return fmt.Errorf("Invalid IP header length > IP length (%d > %d)", ip.IHL, ip.Length)
 	}
 	if cmp := len(data) - int(ip.Length); cmp > 0 {
 		data = data[:ip.Length]
 	} else if cmp < 0 {
 		df.SetTruncated()
 		if int(ip.IHL)*4 > len(data) {
-			return nil, fmt.Errorf("Not all IP header bytes available")
+			return fmt.Errorf("Not all IP header bytes available")
 		}
 	}
 	ip.contents = data[:ip.IHL*4]
@@ -108,20 +108,28 @@ func (ip *IPv4) DecodeFromBytes(data []byte, df gopacket.DecodeFeedback) ([]byte
 		if len(data) >= int(opt.OptionLength) {
 			data = data[opt.OptionLength:]
 		} else {
-			return nil, fmt.Errorf("IP option length exceeds remaining IP header size, option type %v length %v", opt.OptionType, opt.OptionLength)
+			return fmt.Errorf("IP option length exceeds remaining IP header size, option type %v length %v", opt.OptionType, opt.OptionLength)
 		}
 		ip.Options = append(ip.Options, opt)
 	}
-	return ip.payload, nil
+	return nil
 }
 
-func decodeIPv4(data []byte, p gopacket.PacketBuilder) (err error) {
+func (i *IPv4) CanDecode() gopacket.LayerClass {
+	return LayerTypeIPv4
+}
+
+func (i *IPv4) NextLayerType() gopacket.LayerType {
+	return i.Protocol.LayerType()
+}
+
+func decodeIPv4(data []byte, p gopacket.PacketBuilder) error {
 	ip := &IPv4{}
-	_, err = ip.DecodeFromBytes(data, p)
+	err := ip.DecodeFromBytes(data, p)
 	p.AddLayer(ip)
 	p.SetNetworkLayer(ip)
-	if err == nil {
-		err = p.NextDecoder(ip.Protocol)
+	if err != nil {
+		return err
 	}
-	return
+	return p.NextDecoder(ip.Protocol)
 }

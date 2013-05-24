@@ -68,17 +68,6 @@ type Decoder interface {
 	Decode([]byte, PacketBuilder) error
 }
 
-// SelfDecoder is an interface for packet layers that can decode themselves.
-type SelfDecoder interface {
-	DecodeFromBytes(data []byte, df DecodeFeedback) (remaining []byte, err error)
-}
-
-type nilDecodeFeedback struct{}
-
-func (n *nilDecodeFeedback) SetTruncated() {}
-
-var NilDecodeFeedback DecodeFeedback = &nilDecodeFeedback{}
-
 // DecodeFunc wraps a function to make it a Decoder.
 type DecodeFunc func([]byte, PacketBuilder) error
 
@@ -91,17 +80,21 @@ func (d DecodeFunc) Decode(data []byte, p PacketBuilder) error {
 // remaining bytes.
 var DecodePayload Decoder = DecodeFunc(decodePayload)
 
-// DecodeUnknown is a Decoder that returns a DecodeFailure layer containing all
+// DecodeUnknown is a Decoder that returns an Unknown layer containing all
 // remaining bytes, useful if you run up against a layer that you're unable to
-// decode yet.
+// decode yet.  This layer is considered an ErrorLayer.
 var DecodeUnknown Decoder = DecodeFunc(decodeUnknown)
 
+// LayerTypeZero is an invalid layer type, but can be used to determine whether
+// layer type has actually been set correctly.
+var LayerTypeZero LayerType = 0
+
 // LayerTypeDecodeFailure is the layer type for the default error layer.
-var LayerTypeDecodeFailure LayerType = RegisterLayerType(0, LayerTypeMetadata{"DecodeFailure", DecodeUnknown})
+var LayerTypeDecodeFailure LayerType = RegisterLayerType(1, LayerTypeMetadata{"DecodeFailure", DecodeUnknown})
 
 // LayerTypePayload is the layer type for a payload that we don't try to decode
 // but treat as a success, IE: an application-level payload.
-var LayerTypePayload LayerType = RegisterLayerType(1, LayerTypeMetadata{"Payload", DecodePayload})
+var LayerTypePayload LayerType = RegisterLayerType(2, LayerTypeMetadata{"Payload", DecodePayload})
 
 // DecodeFailure is a packet layer created if decoding of the packet data failed
 // for some reason.  It implements ErrorLayer.  LayerContents will be the entire
@@ -134,12 +127,4 @@ func (d *DecodeFailure) LayerType() LayerType { return LayerTypeDecodeFailure }
 // This decoder will thus always return a DecodeFailure layer.
 func decodeUnknown(data []byte, p PacketBuilder) error {
 	return errors.New("Layer type not currently supported")
-}
-
-// decodePayload decodes data by returning it all in a Payload layer.
-func decodePayload(data []byte, p PacketBuilder) error {
-	payload := &Payload{data: data}
-	p.AddLayer(payload)
-	p.SetApplicationLayer(payload)
-	return nil
 }

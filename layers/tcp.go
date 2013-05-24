@@ -54,7 +54,7 @@ func (t TCPOption) String() string {
 // LayerType returns gopacket.LayerTypeTCP
 func (t *TCP) LayerType() gopacket.LayerType { return LayerTypeTCP }
 
-func (tcp *TCP) DecodeFromBytes(data []byte, df gopacket.DecodeFeedback) ([]byte, error) {
+func (tcp *TCP) DecodeFromBytes(data []byte, df gopacket.DecodeFeedback) error {
 	tcp.SrcPort = TCPPort(binary.BigEndian.Uint16(data[0:2]))
 	tcp.sPort = data[0:2]
 	tcp.DstPort = TCPPort(binary.BigEndian.Uint16(data[2:4]))
@@ -76,14 +76,14 @@ func (tcp *TCP) DecodeFromBytes(data []byte, df gopacket.DecodeFeedback) ([]byte
 	tcp.Urgent = binary.BigEndian.Uint16(data[18:20])
 	tcp.Options = nil
 	if tcp.DataOffset < 5 {
-		return nil, fmt.Errorf("Invalid TCP data offset %d < 5", tcp.DataOffset)
+		return fmt.Errorf("Invalid TCP data offset %d < 5", tcp.DataOffset)
 	}
 	dataStart := int(tcp.DataOffset) * 4
 	if dataStart > len(data) {
 		df.SetTruncated()
 		tcp.payload = nil
 		tcp.contents = data
-		return nil, errors.New("TCP data offset greater than packet length")
+		return errors.New("TCP data offset greater than packet length")
 	}
 	tcp.contents = data[:dataStart]
 	tcp.payload = data[dataStart:]
@@ -106,26 +106,34 @@ func (tcp *TCP) DecodeFromBytes(data []byte, df gopacket.DecodeFeedback) ([]byte
 		default:
 			opt.OptionLength = data[1]
 			if opt.OptionLength < 2 {
-				return nil, fmt.Errorf("Invalid TCP option length %d < 2", opt.OptionLength)
+				return fmt.Errorf("Invalid TCP option length %d < 2", opt.OptionLength)
 			} else if int(opt.OptionLength) > len(data) {
-				return nil, fmt.Errorf("Invalid TCP option length %d exceeds remaining %d bytes", opt.OptionLength, len(data))
+				return fmt.Errorf("Invalid TCP option length %d exceeds remaining %d bytes", opt.OptionLength, len(data))
 			}
 			opt.OptionData = data[2:opt.OptionLength]
 		}
 		data = data[opt.OptionLength:]
 	}
-	return tcp.payload, nil
+	return nil
 }
 
-func decodeTCP(data []byte, p gopacket.PacketBuilder) (err error) {
+func (t *TCP) CanDecode() gopacket.LayerClass {
+	return LayerTypeTCP
+}
+
+func (t *TCP) NextLayerType() gopacket.LayerType {
+	return gopacket.LayerTypePayload
+}
+
+func decodeTCP(data []byte, p gopacket.PacketBuilder) error {
 	tcp := &TCP{}
-	_, err = tcp.DecodeFromBytes(data, p)
+	err := tcp.DecodeFromBytes(data, p)
 	p.AddLayer(tcp)
 	p.SetTransportLayer(tcp)
-	if err == nil {
-		err = p.NextDecoder(gopacket.LayerTypePayload)
+	if err != nil {
+		return err
 	}
-	return err
+	return p.NextDecoder(gopacket.LayerTypePayload)
 }
 
 func (t *TCP) TransportFlow() gopacket.Flow {
