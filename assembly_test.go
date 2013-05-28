@@ -21,11 +21,11 @@ func test(t *testing.T, s []testSequence) {
 }
 
 var key1 = Key{
-		1, 2, 3, 4, 5, 6, 7, 8, 9, 0,
-		1, 2, 3, 4, 5, 6, 7, 8, 9, 0,
-		1, 2, 3, 4, 5, 6, 7, 8, 9, 0,
-		1, 2, 3, 4, 5, 6, 7,
-	}
+	1, 2, 3, 4, 5, 6, 7, 8, 9, 0,
+	1, 2, 3, 4, 5, 6, 7, 8, 9, 0,
+	1, 2, 3, 4, 5, 6, 7, 8, 9, 0,
+	1, 2, 3, 4, 5, 6, 7,
+}
 
 func TestReorder(t *testing.T) {
 	test(t, []testSequence{
@@ -91,16 +91,16 @@ func TestReorderFast(t *testing.T) {
 		{
 			in: TCP{
 				Key:   key1,
-				SYN:true,
+				SYN:   true,
 				Seq:   1000,
 				Bytes: []byte{1, 2, 3},
 			},
 			want: []Reassembly{
 				Reassembly{
 					Start: true,
-					Skip: false,
+					Skip:  false,
 					Bytes: []byte{1, 2, 3},
-					Seq: 1000,
+					Seq:   1000,
 				},
 			},
 		},
@@ -120,14 +120,14 @@ func TestReorderFast(t *testing.T) {
 			},
 			want: []Reassembly{
 				Reassembly{
-					Skip: false,
+					Skip:  false,
 					Bytes: []byte{2, 2, 3},
-					Seq: 1004,
+					Seq:   1004,
 				},
 				Reassembly{
-					Skip: false,
+					Skip:  false,
 					Bytes: []byte{3, 2, 3},
-					Seq: 1007,
+					Seq:   1007,
 				},
 			},
 		},
@@ -139,16 +139,16 @@ func TestOverlap(t *testing.T) {
 		{
 			in: TCP{
 				Key:   key1,
-				SYN:true,
+				SYN:   true,
 				Seq:   1000,
 				Bytes: []byte{1, 2, 3, 4, 5, 6, 7, 8, 9, 0},
 			},
 			want: []Reassembly{
 				Reassembly{
-					Skip: false,
+					Skip:  false,
 					Start: true,
 					Bytes: []byte{1, 2, 3, 4, 5, 6, 7, 8, 9, 0},
-					Seq: 1000,
+					Seq:   1000,
 				},
 			},
 		},
@@ -160,9 +160,9 @@ func TestOverlap(t *testing.T) {
 			},
 			want: []Reassembly{
 				Reassembly{
-					Skip: false,
+					Skip:  false,
 					Bytes: []byte{1, 2, 3, 4},
-					Seq: 1011,
+					Seq:   1011,
 				},
 			},
 		},
@@ -174,16 +174,16 @@ func TestOverrun1(t *testing.T) {
 		{
 			in: TCP{
 				Key:   key1,
-				SYN:true,
+				SYN:   true,
 				Seq:   0xFFFFFFFF,
 				Bytes: []byte{1, 2, 3, 4, 5, 6, 7, 8, 9, 0},
 			},
 			want: []Reassembly{
 				Reassembly{
-					Skip: false,
+					Skip:  false,
 					Start: true,
 					Bytes: []byte{1, 2, 3, 4, 5, 6, 7, 8, 9, 0},
-					Seq: 0xFFFFFFFF,
+					Seq:   0xFFFFFFFF,
 				},
 			},
 		},
@@ -195,9 +195,9 @@ func TestOverrun1(t *testing.T) {
 			},
 			want: []Reassembly{
 				Reassembly{
-					Skip: false,
+					Skip:  false,
 					Bytes: []byte{1, 2, 3, 4},
-					Seq: 10,
+					Seq:   10,
 				},
 			},
 		},
@@ -217,21 +217,21 @@ func TestOverrun2(t *testing.T) {
 		{
 			in: TCP{
 				Key:   key1,
-				SYN:true,
+				SYN:   true,
 				Seq:   0xFFFFFFFF,
 				Bytes: []byte{1, 2, 3, 4, 5, 6, 7, 8, 9, 0},
 			},
 			want: []Reassembly{
 				Reassembly{
-					Skip: false,
+					Skip:  false,
 					Start: true,
 					Bytes: []byte{1, 2, 3, 4, 5, 6, 7, 8, 9, 0},
-					Seq: 0xFFFFFFFF,
+					Seq:   0xFFFFFFFF,
 				},
 				Reassembly{
-					Skip: false,
+					Skip:  false,
 					Bytes: []byte{1, 2, 3, 4},
-					Seq: 10,
+					Seq:   10,
 				},
 			},
 		},
@@ -240,9 +240,9 @@ func TestOverrun2(t *testing.T) {
 
 func BenchmarkSingleStream(b *testing.B) {
 	t := TCP{
-		Key: key1,
-		SYN: true,
-		Seq: 1000,
+		Key:   key1,
+		SYN:   true,
+		Seq:   1000,
 		Bytes: []byte{1, 2, 3, 4, 5, 6, 7, 8, 9, 0},
 	}
 	a := NewAssembler(100, 4, 1000)
@@ -258,15 +258,15 @@ func BenchmarkSingleStream(b *testing.B) {
 
 func BenchmarkSingleStreamSkips(b *testing.B) {
 	t := TCP{
-		Key: key1,
-		SYN: true,
-		Seq: 1000,
+		Key:   key1,
+		SYN:   true,
+		Seq:   1000,
 		Bytes: []byte{1, 2, 3, 4, 5, 6, 7, 8, 9, 0},
 	}
 	a := NewAssembler(100, 10, 1000)
 	skipped := false
 	for i := 0; i < b.N; i++ {
-		if i % 10 == 9 {
+		if i%10 == 9 {
 			t.Seq += 10
 			skipped = true
 		} else if skipped {
@@ -287,9 +287,9 @@ func BenchmarkSingleStreamSkips(b *testing.B) {
 
 func BenchmarkSingleStreamLoss(b *testing.B) {
 	t := TCP{
-		Key: key1,
-		SYN: true,
-		Seq: 1000,
+		Key:   key1,
+		SYN:   true,
+		Seq:   1000,
 		Bytes: []byte{1, 2, 3, 4, 5, 6, 7, 8, 9, 0},
 	}
 	a := NewAssembler(100, 10, 1000)
@@ -297,5 +297,42 @@ func BenchmarkSingleStreamLoss(b *testing.B) {
 		a.Assemble(&t)
 		t.SYN = false
 		t.Seq += 11
+	}
+}
+
+func BenchmarkSingleStreamGrow(b *testing.B) {
+	t := TCP{
+		Key:   key1,
+		Seq:   0,
+		Bytes: []byte{1, 2, 3, 4, 5, 6, 7, 8, 9, 0},
+	}
+	a := NewAssembler(1000000, 10, 1000)
+	for i := 0; i < b.N; i++ {
+		t.Key[0] = byte(i)
+		t.Key[1] = byte(i >> 8)
+		a.Assemble(&t)
+		t.Seq += 10
+	}
+}
+
+func BenchmarkSingleStreamMultiConn(b *testing.B) {
+	t := TCP{
+		Key:   key1,
+		Seq:   0,
+		SYN:   true,
+		Bytes: []byte{1, 2, 3, 4, 5, 6, 7, 8, 9, 0},
+	}
+	a := NewAssembler(1000000, 10, 1000)
+	for i := 0; i < b.N; i++ {
+		t.Key[0] = byte(i)
+		t.Key[1] = byte(i >> 8)
+		a.Assemble(&t)
+		if i%65536 == 65535 {
+			if t.SYN {
+				t.SYN = false
+				t.Seq += 1
+			}
+			t.Seq += 10
+		}
 	}
 }
