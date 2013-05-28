@@ -2,6 +2,7 @@ package assembly
 
 import (
 	"fmt"
+	"net"
 	"time"
 )
 
@@ -48,6 +49,7 @@ type page struct {
 	Reassembly
 	index      int
 	prev, next *page
+	created    time.Time
 	buf        [pageBytes]byte
 }
 
@@ -83,6 +85,7 @@ func (c *pageCache) next() (p *page) {
 	p, c.free = c.free[i], c.free[:i]
 	p.prev = nil
 	p.next = nil
+	p.created = time.Now()
 	p.Bytes = p.buf[:0]
 	c.used++
 	return p
@@ -93,7 +96,35 @@ func (c *pageCache) replace(p *page) {
 	c.free = append(c.free, p)
 }
 
-type Key [1 + 16 + 16 + 2 + 2]byte
+var zeros []byte = make([]byte, 12)
+
+type Key struct {
+	Version          byte // IP version, 4 or 6
+	SrcIP, DstIP     [16]byte
+	SrcPort, DstPort uint16
+}
+
+func (k *Key) Reset(sip, dip net.IP, sp, dp uint16) {
+	if len(sip) != len(dip) {
+		panic("IP lengths don't match")
+	}
+	switch len(sip) {
+	case 4:
+		k.Version = 4
+		copy(k.SrcIP[:4], sip)
+		copy(k.SrcIP[4:], zeros)
+		copy(k.DstIP[:4], dip)
+		copy(k.DstIP[4:], zeros)
+	case 16:
+		k.Version = 6
+		copy(k.SrcIP[:], sip)
+		copy(k.DstIP[:], dip)
+	default:
+		panic("Invalid IP length")
+	}
+	k.SrcPort = sp
+	k.DstPort = dp
+}
 
 type TCP struct {
 	Key           Key
@@ -103,30 +134,64 @@ type TCP struct {
 }
 
 type Assembler interface {
-	Assemble(t *TCP) []Reassembly
+	Assemble(t *TCP)
 	Buffered() int
+  FlushOlderThan(time.Time)
+}
+
+type Stream interface {
+	Reassembled([]Reassembly)
+  Close()
+}
+
+type StreamFactory interface {
+	New(k Key) Stream
 }
 
 func (a *assembler) Buffered() int {
 	return a.pc.used
 }
 
-func NewAssembler(max, maxPer, pcSize int) Assembler {
+func (a *assembler) FlushOlderThan(t time.Time) {
+  start := time.Now()
+  fmt.Println("Flushing connections older than", t)
+  conns := make([]*connection, 0, len(a.conns) / 10)
+  for _, conn := range a.conns {
+    if conn.first != nil && conn.first.created.Before(t) {
+      conns = append(conns, conn)
+    }
+  }
+  fmt.Println("Flushing", len(conns), "of", len(a.conns), "connections")
+  closes := 0
+  for _, conn := range conns {
+    a.skipFlush(conn)
+    if conn.closed {
+      closes++
+    }
+  }
+  fmt.Println("Flush completed in", time.Since(start), "closed", closes)
+}
+
+func NewAssembler(max, maxPer, pcSize int, factory StreamFactory) Assembler {
 	return &assembler{
 		ret:            make([]Reassembly, maxPer+1),
 		pc:             newPageCache(pcSize),
 		conns:          make(map[Key]*connection),
 		maxBuffered:    max,
 		maxBufferedPer: maxPer,
+		factory:        factory,
 	}
 }
 
 type connection struct {
-	pages               int
-	first, last         *page
-	nextSeq             Sequence
-	started             bool
-	firstTime, lastTime time.Time
+  key Key
+	pages       int
+	first, last *page
+	nextSeq     Sequence
+	started     bool
+	created     time.Time
+	stream      Stream
+  closed bool
 }
 
 type assembler struct {
@@ -135,25 +200,27 @@ type assembler struct {
 	maxBuffered    int
 	maxBufferedPer int
 	conns          map[Key]*connection
+	factory        StreamFactory
 }
 
-func newConnection() *connection {
+func (a *assembler) newConnection(k *Key) *connection {
 	return &connection{
-		nextSeq:   invalidSequence,
-		firstTime: time.Now(),
+    key: *k,
+		nextSeq: invalidSequence,
+		created: time.Now(),
+		stream:  a.factory.New(*k),
 	}
 }
 
-func (a *assembler) Assemble(t *TCP) []Reassembly {
+func (a *assembler) Assemble(t *TCP) {
 	log("got")
 	a.ret = a.ret[:0]
 	conn := a.conns[t.Key]
 	if conn == nil {
 		log("  newconn")
-		conn = newConnection()
+		conn = a.newConnection(&t.Key)
 		a.conns[t.Key] = conn
 	}
-	conn.lastTime = time.Now()
 	if t.SYN {
 		log(" syn")
 		a.ret = append(a.ret, Reassembly{
@@ -173,21 +240,48 @@ func (a *assembler) Assemble(t *TCP) []Reassembly {
 				Bytes: t.Bytes[span:],
 				Seq:   t.Seq + Sequence(span),
 				Skip:  false,
+        End:   t.RST || t.FIN,
 			})
 			conn.nextSeq = t.Seq.Add(len(t.Bytes))
 		}
 	}
-	if len(a.ret) > 0 {
-		for conn.first != nil && conn.first.Seq == conn.nextSeq {
-			log("  next")
-			a.addNextFromConn(conn, false)
-		}
-		if !conn.started {
-			conn.started = true
-			a.ret[0].Start = true
-		}
-	}
-	return a.ret
+  if len(a.ret) > 0 {
+    a.sendToConnection(conn)
+  }
+}
+
+func (a *assembler) sendToConnection(conn *connection) {
+  a.addContiguous(conn)
+  conn.stream.Reassembled(a.ret)
+  if a.ret[len(a.ret)-1].End {
+    a.close(conn)
+  }
+}
+
+func (a *assembler) addContiguous(conn *connection) {
+  for conn.first != nil && conn.first.Seq == conn.nextSeq {
+    log("  next")
+    a.addNextFromConn(conn, false)
+  }
+  if !conn.started {
+    conn.started = true
+    a.ret[0].Start = true
+  }
+}
+
+func (a *assembler) skipFlush(conn *connection) {
+  a.ret = a.ret[:0]
+  a.addNextFromConn(conn, true)
+  a.sendToConnection(conn)
+}
+
+func (a *assembler) close(conn *connection) {
+  conn.stream.Close()
+  delete(a.conns, conn.key)
+  for p := conn.first; p != nil; p = p.next {
+    a.pc.replace(p)
+  }
+  conn.closed = true
 }
 
 func (conn *connection) traverseConn(t *TCP) (prev, current *page) {

@@ -10,21 +10,36 @@ type testSequence struct {
 	want []Reassembly
 }
 
+type testFactory struct {
+	reassembly []Reassembly
+}
+func (t *testFactory) New(k Key) Stream {
+	return t
+}
+func (t *testFactory) Reassembled(r []Reassembly) {
+	t.reassembly = r
+}
+func (t *testFactory) Close() {
+}
+
 func test(t *testing.T, s []testSequence) {
-	a := NewAssembler(100, 4, 1000)
+	fact := &testFactory{}
+	a := NewAssembler(100, 4, 1000, fact)
 	for i, test := range s {
-		got := a.Assemble(&test.in)
-		if !reflect.DeepEqual(got, test.want) {
-			t.Fatalf("test %v:\nwant: %v\n got: %v\n", i, test.want, got)
+    fact.reassembly = []Reassembly{}
+		a.Assemble(&test.in)
+		if !reflect.DeepEqual(fact.reassembly, test.want) {
+			t.Fatalf("test %v:\nwant: %v\n got: %v\n", i, test.want, fact.reassembly)
 		}
 	}
 }
 
 var key1 = Key{
-	1, 2, 3, 4, 5, 6, 7, 8, 9, 0,
-	1, 2, 3, 4, 5, 6, 7, 8, 9, 0,
-	1, 2, 3, 4, 5, 6, 7, 8, 9, 0,
-	1, 2, 3, 4, 5, 6, 7,
+	Version: 4,
+	SrcIP:   [...]byte{1, 2, 3, 4, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
+	DstIP:   [...]byte{5, 6, 7, 8, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
+	SrcPort: 0,
+	DstPort: 0,
 }
 
 func TestReorder(t *testing.T) {
@@ -245,7 +260,7 @@ func BenchmarkSingleStream(b *testing.B) {
 		Seq:   1000,
 		Bytes: []byte{1, 2, 3, 4, 5, 6, 7, 8, 9, 0},
 	}
-	a := NewAssembler(100, 4, 1000)
+	a := NewAssembler(100, 4, 1000, &testFactory{})
 	for i := 0; i < b.N; i++ {
 		a.Assemble(&t)
 		if t.SYN {
@@ -263,7 +278,7 @@ func BenchmarkSingleStreamSkips(b *testing.B) {
 		Seq:   1000,
 		Bytes: []byte{1, 2, 3, 4, 5, 6, 7, 8, 9, 0},
 	}
-	a := NewAssembler(100, 10, 1000)
+	a := NewAssembler(100, 10, 1000, &testFactory{})
 	skipped := false
 	for i := 0; i < b.N; i++ {
 		if i%10 == 9 {
@@ -292,7 +307,7 @@ func BenchmarkSingleStreamLoss(b *testing.B) {
 		Seq:   1000,
 		Bytes: []byte{1, 2, 3, 4, 5, 6, 7, 8, 9, 0},
 	}
-	a := NewAssembler(100, 10, 1000)
+	a := NewAssembler(100, 10, 1000, &testFactory{})
 	for i := 0; i < b.N; i++ {
 		a.Assemble(&t)
 		t.SYN = false
@@ -300,32 +315,30 @@ func BenchmarkSingleStreamLoss(b *testing.B) {
 	}
 }
 
-func BenchmarkSingleStreamGrow(b *testing.B) {
+func BenchmarkMultiStreamGrow(b *testing.B) {
 	t := TCP{
 		Key:   key1,
 		Seq:   0,
 		Bytes: []byte{1, 2, 3, 4, 5, 6, 7, 8, 9, 0},
 	}
-	a := NewAssembler(1000000, 10, 1000)
+	a := NewAssembler(1000000, 10, 1000, &testFactory{})
 	for i := 0; i < b.N; i++ {
-		t.Key[0] = byte(i)
-		t.Key[1] = byte(i >> 8)
+		t.Key.SrcPort = uint16(i)
 		a.Assemble(&t)
 		t.Seq += 10
 	}
 }
 
-func BenchmarkSingleStreamMultiConn(b *testing.B) {
+func BenchmarkMultiStreamConn(b *testing.B) {
 	t := TCP{
 		Key:   key1,
 		Seq:   0,
 		SYN:   true,
 		Bytes: []byte{1, 2, 3, 4, 5, 6, 7, 8, 9, 0},
 	}
-	a := NewAssembler(1000000, 10, 1000)
+	a := NewAssembler(1000000, 10, 1000, &testFactory{})
 	for i := 0; i < b.N; i++ {
-		t.Key[0] = byte(i)
-		t.Key[1] = byte(i >> 8)
+		t.Key.SrcPort = uint16(i)
 		a.Assemble(&t)
 		if i%65536 == 65535 {
 			if t.SYN {
