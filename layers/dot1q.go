@@ -24,13 +24,27 @@ type Dot1Q struct {
 // LayerType returns gopacket.LayerTypeDot1Q
 func (d *Dot1Q) LayerType() gopacket.LayerType { return LayerTypeDot1Q }
 
+func (d *Dot1Q) DecodeFromBytes(data []byte, df gopacket.DecodeFeedback) error {
+	d.Priority = (data[2] & 0xE0) >> 13
+	d.DropEligible = data[2]&0x10 != 0
+	d.VLANIdentifier = binary.BigEndian.Uint16(data[:2]) & 0x0FFF
+	d.Type = EthernetType(binary.BigEndian.Uint16(data[2:4]))
+	d.baseLayer = baseLayer{contents: data[:4], payload: data[4:]}
+  return nil
+}
+
+func (d *Dot1Q) CanDecode() gopacket.LayerClass {
+  return LayerTypeDot1Q
+}
+
+func (d *Dot1Q) NextLayerType() gopacket.LayerType {
+  return d.Type.LayerType()
+}
+
 func decodeDot1Q(data []byte, p gopacket.PacketBuilder) error {
-	d := &Dot1Q{
-		Priority:       (data[2] & 0xE0) >> 13,
-		DropEligible:   data[2]&0x10 != 0,
-		VLANIdentifier: binary.BigEndian.Uint16(data[:2]) & 0x0FFF,
-		Type:           EthernetType(binary.BigEndian.Uint16(data[2:4])),
-		baseLayer:      baseLayer{contents: data[:4], payload: data[4:]},
+	d := &Dot1Q{}
+	if err := d.DecodeFromBytes(data, p); err != nil {
+		return err
 	}
 	p.AddLayer(d)
 	return p.NextDecoder(d.Type)
