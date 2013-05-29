@@ -3,48 +3,64 @@ package assembly
 import (
 	"fmt"
 	"net"
+	"sync"
 	"time"
 )
 
-const seqRollover = 0xFFFFFFFF
-const invalidSequence = -1
+// We consider sequence #0 to be invalid... this isn't actually the case, but it
+// should show up very infrequently (1/4billion), so this should be okay.
+const invalidSequence = 0
 
-type Sequence int64
+// Sequence is a TCP sequence number.
+type Sequence uint32
 
-const shouldLog = false
-
-func log(s string) {
-	if shouldLog {
-		fmt.Println(s)
-	}
-}
-
-// difference defines an ordering for comparing TCP sequences that's safe for roll-overs.
-// it returns:
+// Difference defines an ordering for comparing TCP sequences that's safe for
+// roll-overs.  It returns:
 //    > 0 : if t comes after s
 //    < 0 : if t comes before s
 //      0 : if t == s
-func (s Sequence) Difference(t Sequence) int64 {
+// The number returned is the sequence difference, so 4.Difference(8) will
+// return 4.
+//
+// It handles rollovers by considering any sequence in the first quarter of the
+// uint32 space to be after any sequence in the last quarter of that space, thus
+// wrapping the uint32 space.
+func (s Sequence) Difference(t Sequence) int {
 	if s > 0xFFFFFFFF-0xFFFFFFFF/4 && t < 0xFFFFFFFF/4 {
 		t += 0xFFFFFFFF
 	} else if t > 0xFFFFFFFF-0xFFFFFFFF/4 && s < 0xFFFFFFFF/4 {
 		s += 0xFFFFFFFF
 	}
-	return int64(t - s)
+	return int(t - s)
 }
 
+// Add adds an integer to a sequence and returns the resulting sequence.
 func (s Sequence) Add(t int) Sequence {
-	return (s + Sequence(t)) & 0xFFFFFFFF
+	return s + Sequence(t)
 }
 
+// Reassembly objects are returned by the assembler in order.
 type Reassembly struct {
-	Bytes            []byte
-	Seq              Sequence
-	Skip, Start, End bool
+	// Bytes is the next set of bytes in the stream.  May be empty.
+	Bytes []byte
+	// Seq is the current TCP sequence for this reassembly.
+	Seq Sequence
+	// Skip is set to true if this reassembly has skipped some number of bytes.
+	// This normally occurs if packets were dropped, or if we picked up the stream
+	// after it had already started sending data (IE: we start our packet capture
+	// mid-stream).
+	Skip bool
+	// Start is set if this set of bytes has a TCP SYN accompanying it.
+	Start bool
+	// End is set if this set of bytes has a TCP FIN or RST accompanying it.
+	End bool
 }
 
-const pageBytes = 2000
+const pageBytes = 1900
 
+// page is used to store TCP data we're not ready for yet (out-of-order
+// packets).  Unused pages are stored in and returned from a pageCache, which
+// avoids memory allocation.
 type page struct {
 	Reassembly
 	index      int
@@ -53,6 +69,8 @@ type page struct {
 	buf        [pageBytes]byte
 }
 
+// pageCache is a concurrency-unsafe store of page objects we use to avoid
+// memory allocation as much as we can.  It grows but never shrinks.
 type pageCache struct {
 	free       []*page
 	pcSize     int
@@ -68,6 +86,7 @@ func newPageCache(pcSize int) *pageCache {
 	return pc
 }
 
+// grow exponentially increases the size of our page cache as much as necessary.
 func (c *pageCache) grow() {
 	pages := make([]page, c.pcSize)
 	c.size += c.pcSize
@@ -77,6 +96,7 @@ func (c *pageCache) grow() {
 	c.pcSize *= 2
 }
 
+// next returns a clean, ready-to-use page object.
 func (c *pageCache) next() (p *page) {
 	if len(c.free) == 0 {
 		c.grow()
@@ -91,6 +111,7 @@ func (c *pageCache) next() (p *page) {
 	return p
 }
 
+// replace replaces a page into the pageCache.
 func (c *pageCache) replace(p *page) {
 	c.used--
 	c.free = append(c.free, p)
@@ -98,23 +119,28 @@ func (c *pageCache) replace(p *page) {
 
 var zeros []byte = make([]byte, 12)
 
+// Key is a unique identifier for a TCP stream.
 type Key struct {
 	Version          byte // IP version, 4 or 6
 	SrcIP, DstIP     [16]byte
 	SrcPort, DstPort uint16
 }
 
+// Reset resets the given key with new source/destination IPs/ports.
 func (k *Key) Reset(sip, dip net.IP, sp, dp uint16) {
 	if len(sip) != len(dip) {
 		panic("IP lengths don't match")
 	}
+	oldVersion := k.Version
 	switch len(sip) {
 	case 4:
 		k.Version = 4
 		copy(k.SrcIP[:4], sip)
-		copy(k.SrcIP[4:], zeros)
 		copy(k.DstIP[:4], dip)
-		copy(k.DstIP[4:], zeros)
+		if oldVersion != 4 {
+			copy(k.SrcIP[4:], zeros)
+			copy(k.DstIP[4:], zeros)
+		}
 	case 16:
 		k.Version = 6
 		copy(k.SrcIP[:], sip)
@@ -136,12 +162,12 @@ type TCP struct {
 type Assembler interface {
 	Assemble(t *TCP)
 	Buffered() int
-  FlushOlderThan(time.Time)
+	FlushOlderThan(time.Time)
 }
 
 type Stream interface {
 	Reassembled([]Reassembly)
-  Close()
+	ReassemblyComplete()
 }
 
 type StreamFactory interface {
@@ -153,45 +179,66 @@ func (a *assembler) Buffered() int {
 }
 
 func (a *assembler) FlushOlderThan(t time.Time) {
-  start := time.Now()
-  fmt.Println("Flushing connections older than", t)
-  conns := make([]*connection, 0, len(a.conns) / 10)
-  for _, conn := range a.conns {
-    if conn.first != nil && conn.first.created.Before(t) {
-      conns = append(conns, conn)
-    }
-  }
-  fmt.Println("Flushing", len(conns), "of", len(a.conns), "connections")
-  closes := 0
-  for _, conn := range conns {
-    a.skipFlush(conn)
-    if conn.closed {
-      closes++
-    }
-  }
-  fmt.Println("Flush completed in", time.Since(start), "closed", closes)
+	start := time.Now()
+	fmt.Println("Flushing connections older than", t)
+	a.connPool.mu.RLock()
+	conns := make([]*connection, 0, len(a.connPool.conns))
+	for _, conn := range a.connPool.conns {
+		conns = append(conns, conn)
+	}
+	a.connPool.mu.RUnlock()
+	closes := 0
+	flushes := 0
+	for _, conn := range conns {
+		conn.mu.Lock()
+		if (conn.first != nil && conn.first.created.Before(t)) || (conn.first == nil && conn.lastSeen.Before(t)) {
+			flushes++
+			a.skipFlush(conn)
+			if conn.closed {
+				closes++
+			}
+		}
+		conn.mu.Unlock()
+	}
+	fmt.Println("Flush completed in", time.Since(start), "closed", closes, "flushed", flushes)
 }
 
-func NewAssembler(max, maxPer, pcSize int, factory StreamFactory) Assembler {
+type ConnectionPool struct {
+	conns   map[Key]*connection
+	users   int
+	mu      sync.RWMutex
+	factory StreamFactory
+}
+
+func NewConnectionPool(factory StreamFactory) *ConnectionPool {
+	return &ConnectionPool{
+		conns:   make(map[Key]*connection),
+		factory: factory,
+	}
+}
+
+func NewAssembler(max, maxPer, pcSize int, pool *ConnectionPool) Assembler {
+	pool.mu.Lock()
+	pool.users++
+	pool.mu.Unlock()
 	return &assembler{
 		ret:            make([]Reassembly, maxPer+1),
 		pc:             newPageCache(pcSize),
-		conns:          make(map[Key]*connection),
+		connPool:       pool,
 		maxBuffered:    max,
 		maxBufferedPer: maxPer,
-		factory:        factory,
 	}
 }
 
 type connection struct {
-  key Key
-	pages       int
-	first, last *page
-	nextSeq     Sequence
-	started     bool
-	created     time.Time
-	stream      Stream
-  closed bool
+	key               Key
+	pages             int
+	first, last       *page
+	nextSeq           Sequence
+	created, lastSeen time.Time
+	stream            Stream
+	closed            bool
+	mu                sync.Mutex
 }
 
 type assembler struct {
@@ -199,89 +246,102 @@ type assembler struct {
 	pc             *pageCache
 	maxBuffered    int
 	maxBufferedPer int
-	conns          map[Key]*connection
-	factory        StreamFactory
+	connPool       *ConnectionPool
 }
 
-func (a *assembler) newConnection(k *Key) *connection {
+func (p *ConnectionPool) newConnection(k *Key) *connection {
 	return &connection{
-    key: *k,
+		key:     *k,
 		nextSeq: invalidSequence,
 		created: time.Now(),
-		stream:  a.factory.New(*k),
+		stream:  p.factory.New(*k),
 	}
+}
+
+func (p *ConnectionPool) getConnection(k *Key) *connection {
+	p.mu.RLock()
+	conn := p.conns[*k]
+	p.mu.RUnlock()
+	if conn != nil {
+		return conn
+	}
+	conn = p.newConnection(k)
+	p.mu.Lock()
+	if conn2 := p.conns[*k]; conn2 != nil {
+		p.mu.Unlock()
+		return conn2
+	}
+	p.conns[*k] = conn
+	p.mu.Unlock()
+	return conn
 }
 
 func (a *assembler) Assemble(t *TCP) {
-	log("got")
 	a.ret = a.ret[:0]
-	conn := a.conns[t.Key]
-	if conn == nil {
-		log("  newconn")
-		conn = a.newConnection(&t.Key)
-		a.conns[t.Key] = conn
-	}
+	conn := a.connPool.getConnection(&t.Key)
+	conn.mu.Lock()
+	conn.lastSeen = time.Now()
 	if t.SYN {
-		log(" syn")
 		a.ret = append(a.ret, Reassembly{
 			Bytes: t.Bytes,
 			Seq:   t.Seq,
 			Skip:  false,
+			Start: true,
 		})
 		conn.nextSeq = t.Seq.Add(len(t.Bytes) + 1)
 	} else if conn.nextSeq == invalidSequence || conn.nextSeq.Difference(t.Seq) > 0 {
-		log(" outoforder")
 		a.insertIntoConn(t, conn)
 	} else {
-		log(" inorder")
 		span := int(t.Seq.Difference(conn.nextSeq))
 		if len(t.Bytes) > span {
 			a.ret = append(a.ret, Reassembly{
 				Bytes: t.Bytes[span:],
 				Seq:   t.Seq + Sequence(span),
 				Skip:  false,
-        End:   t.RST || t.FIN,
+				End:   t.RST || t.FIN,
 			})
 			conn.nextSeq = t.Seq.Add(len(t.Bytes))
 		}
 	}
-  if len(a.ret) > 0 {
-    a.sendToConnection(conn)
-  }
+	if len(a.ret) > 0 {
+		a.sendToConnection(conn)
+	}
+	conn.mu.Unlock()
 }
 
 func (a *assembler) sendToConnection(conn *connection) {
-  a.addContiguous(conn)
-  conn.stream.Reassembled(a.ret)
-  if a.ret[len(a.ret)-1].End {
-    a.close(conn)
-  }
+	a.addContiguous(conn)
+	conn.stream.Reassembled(a.ret)
+	if a.ret[len(a.ret)-1].End {
+		a.close(conn)
+	}
 }
 
 func (a *assembler) addContiguous(conn *connection) {
-  for conn.first != nil && conn.first.Seq == conn.nextSeq {
-    log("  next")
-    a.addNextFromConn(conn, false)
-  }
-  if !conn.started {
-    conn.started = true
-    a.ret[0].Start = true
-  }
+	for conn.first != nil && conn.first.Seq == conn.nextSeq {
+		a.addNextFromConn(conn, false)
+	}
 }
 
 func (a *assembler) skipFlush(conn *connection) {
-  a.ret = a.ret[:0]
-  a.addNextFromConn(conn, true)
-  a.sendToConnection(conn)
+	if conn.first == nil {
+		a.close(conn)
+	} else {
+		a.ret = a.ret[:0]
+		a.addNextFromConn(conn, true)
+		a.sendToConnection(conn)
+	}
 }
 
 func (a *assembler) close(conn *connection) {
-  conn.stream.Close()
-  delete(a.conns, conn.key)
-  for p := conn.first; p != nil; p = p.next {
-    a.pc.replace(p)
-  }
-  conn.closed = true
+	conn.stream.ReassemblyComplete()
+	a.connPool.mu.Lock()
+	delete(a.connPool.conns, conn.key)
+	a.connPool.mu.Unlock()
+	for p := conn.first; p != nil; p = p.next {
+		a.pc.replace(p)
+	}
+	conn.closed = true
 }
 
 func (conn *connection) traverseConn(t *TCP) (prev, current *page) {
@@ -311,7 +371,6 @@ func (a *assembler) insertIntoConn(t *TCP, conn *connection) {
 	}
 	conn.pages++
 	if conn.pages >= a.maxBufferedPer || a.pc.used >= a.maxBuffered {
-		log("  maxbuf")
 		a.addNextFromConn(conn, true)
 	}
 }
