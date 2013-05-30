@@ -16,7 +16,7 @@ import (
 // used by both BSD and OpenBSD style loopback decoding (pcap's DLT_NULL
 // and DLT_LOOP, respectively).
 type Loopback struct {
-	baseLayer
+	BaseLayer
 	Family ProtocolFamily
 }
 
@@ -37,7 +37,7 @@ func decodeLoopback(data []byte, p gopacket.PacketBuilder) error {
 		return fmt.Errorf("Invalid loopback protocol %q", data[:4])
 	}
 	l := &Loopback{
-		baseLayer: baseLayer{data[:4], data[4:]},
+		BaseLayer: BaseLayer{data[:4], data[4:]},
 		Family:    ProtocolFamily(prot),
 	}
 	p.AddLayer(l)

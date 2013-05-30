@@ -209,7 +209,7 @@ const (
 
 // NortelDiscovery is a packet layer containing the Nortel Discovery Protocol.
 type NortelDiscovery struct {
-	baseLayer
+	BaseLayer
 	IPAddress net.IP
 	SegmentID []byte
 	Chassis   NDPChassisType

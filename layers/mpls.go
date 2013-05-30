@@ -14,7 +14,7 @@ import (
 
 // MPLS is the MPLS packet header.
 type MPLS struct {
-	baseLayer
+	BaseLayer
 	Label        uint32
 	TrafficClass uint8
 	StackBottom  bool
@@ -60,7 +60,7 @@ func decodeMPLS(data []byte, p gopacket.PacketBuilder) error {
 		TrafficClass: uint8(decoded>>9) & 0x7,
 		StackBottom:  decoded&0x10 != 0,
 		TTL:          uint8(decoded),
-		baseLayer:    baseLayer{data[:4], data[4:]},
+		BaseLayer:    BaseLayer{data[:4], data[4:]},
 	})
 	return p.NextDecoder(MPLSPayloadDecoder)
 }

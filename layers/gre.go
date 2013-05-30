@@ -13,7 +13,7 @@ import (
 
 // GRE is a Generic Routing Encapsulation header.
 type GRE struct {
-	baseLayer
+	BaseLayer
 	ChecksumPresent, RoutingPresent, KeyPresent, SeqPresent, StrictSourceRoute bool
 	RecursionControl, Flags, Version                                           uint8
 	Protocol                                                                   EthernetType
@@ -48,7 +48,7 @@ func decodeGRE(data []byte, p gopacket.PacketBuilder) error {
 		Offset:            binary.BigEndian.Uint16(data[6:8]),
 		Key:               binary.BigEndian.Uint32(data[8:12]),
 		Seq:               binary.BigEndian.Uint32(data[12:16]),
-		baseLayer:         baseLayer{data[:16], data[16:]},
+		BaseLayer:         BaseLayer{data[:16], data[16:]},
 	}
 	// reset data to point to after the main gre header
 	rData := data[16:]
@@ -60,8 +60,8 @@ func decodeGRE(data []byte, p gopacket.PacketBuilder) error {
 		}
 		end := g.SRELength + 4
 		g.RoutingInformation = rData[4:end]
-		g.contents = data[:16+end]
-		g.payload = data[16+end:]
+		g.Contents = data[:16+end]
+		g.Payload = data[16+end:]
 	}
 	p.AddLayer(g)
 	return p.NextDecoder(g.Protocol)

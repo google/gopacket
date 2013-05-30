@@ -16,7 +16,7 @@ import (
 
 // IPv4 is the header of an IP packet.
 type IPv4 struct {
-	baseLayer
+	BaseLayer
 	Version    uint8
 	IHL        uint8
 	TOS        uint8
@@ -65,7 +65,7 @@ func (ip *IPv4) DecodeFromBytes(data []byte, df gopacket.DecodeFeedback) error {
 	ip.SrcIP = data[12:16]
 	ip.DstIP = data[16:20]
 	// Set up an initial guess for contents/payload... we'll reset these soon.
-	ip.baseLayer = baseLayer{contents: data}
+	ip.BaseLayer = BaseLayer{Contents: data}
 
 	if ip.Length < 20 {
 		return fmt.Errorf("Invalid (too small) IP length (%d < 20)", ip.Length)
@@ -82,8 +82,8 @@ func (ip *IPv4) DecodeFromBytes(data []byte, df gopacket.DecodeFeedback) error {
 			return fmt.Errorf("Not all IP header bytes available")
 		}
 	}
-	ip.contents = data[:ip.IHL*4]
-	ip.payload = data[ip.IHL*4:]
+	ip.Contents = data[:ip.IHL*4]
+	ip.Payload = data[ip.IHL*4:]
 	// From here on, data contains the header options.
 	data = data[20 : ip.IHL*4]
 	// Pull out IP options

@@ -131,47 +131,47 @@ func BenchmarkLockDeferUnlockOSThread(b *testing.B) {
 }
 
 func BenchmarkUnbufferedChannel(b *testing.B) {
-  ca := make(chan bool)
+	ca := make(chan bool)
 	cb := make(chan bool)
 	defer close(ca)
 	go func() {
 		defer close(cb)
-	  for _ = range ca {
-		  cb <- true
+		for _ = range ca {
+			cb <- true
 		}
 	}()
 	for i := 0; i < b.N; i++ {
-	  ca <- true
+		ca <- true
 		<-cb
 	}
 }
 func BenchmarkSmallBufferedChannel(b *testing.B) {
-  ca := make(chan bool, 1)
+	ca := make(chan bool, 1)
 	cb := make(chan bool, 1)
 	defer close(ca)
 	go func() {
 		defer close(cb)
-	  for _ = range ca {
-		  cb <- true
+		for _ = range ca {
+			cb <- true
 		}
 	}()
 	for i := 0; i < b.N; i++ {
-	  ca <- true
+		ca <- true
 		<-cb
 	}
 }
 func BenchmarkLargeBufferedChannel(b *testing.B) {
-  ca := make(chan bool, 1000)
+	ca := make(chan bool, 1000)
 	cb := make(chan bool, 1000)
 	defer close(ca)
 	go func() {
 		defer close(cb)
-	  for _ = range ca {
-		  cb <- true
+		for _ = range ca {
+			cb <- true
 		}
 	}()
 	for i := 0; i < b.N; i++ {
-	  ca <- true
+		ca <- true
 		<-cb
 	}
 }

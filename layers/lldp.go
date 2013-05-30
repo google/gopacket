@@ -80,7 +80,7 @@ type LLDPPortID struct {
 // ChassisID, PortID and TTL are mandatory TLV's. Other values can be decoded
 // with DecodeValues()
 type LinkLayerDiscovery struct {
-	baseLayer
+	BaseLayer
 	ChassisID LLDPChassisID
 	PortID    LLDPPortID
 	TTL       uint16
@@ -196,7 +196,7 @@ type LLDPMgmtAddress struct {
 // LinkLayerDiscoveryInfo represents the decoded details for a set of LinkLayerDiscoveryValues
 // Organisation-specific TLV's can be decoded using the various Decode() methods
 type LinkLayerDiscoveryInfo struct {
-	baseLayer
+	BaseLayer
 	PortDescription string
 	SysName         string
 	SysDescription  string
@@ -783,7 +783,7 @@ func decodeLinkLayerDiscovery(data []byte, p gopacket.PacketBuilder) error {
 	if c.ChassisID.Subtype == 0 || c.PortID.Subtype == 0 || !gotEnd {
 		return fmt.Errorf("Missing mandatory LinkLayerDiscovery TLV")
 	}
-	c.contents = data
+	c.Contents = data
 	p.AddLayer(c)
 
 	info := &LinkLayerDiscoveryInfo{}

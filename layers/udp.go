@@ -15,7 +15,7 @@ import (
 
 // UDP is the layer for UDP headers.
 type UDP struct {
-	baseLayer
+	BaseLayer
 	SrcPort, DstPort UDPPort
 	Length           uint16
 	Checksum         uint16
@@ -32,7 +32,7 @@ func (udp *UDP) DecodeFromBytes(data []byte, df gopacket.DecodeFeedback) error {
 	udp.dPort = data[2:4]
 	udp.Length = binary.BigEndian.Uint16(data[4:6])
 	udp.Checksum = binary.BigEndian.Uint16(data[6:8])
-	udp.baseLayer = baseLayer{contents: data[:8]}
+	udp.BaseLayer = BaseLayer{Contents: data[:8]}
 	switch {
 	case udp.Length >= 8:
 		hlen := int(udp.Length)
@@ -40,9 +40,9 @@ func (udp *UDP) DecodeFromBytes(data []byte, df gopacket.DecodeFeedback) error {
 			df.SetTruncated()
 			hlen = len(data)
 		}
-		udp.payload = data[8:hlen]
+		udp.Payload = data[8:hlen]
 	case udp.Length == 0: // Jumbogram, use entire rest of data
-		udp.payload = data[8:]
+		udp.Payload = data[8:]
 	default:
 		return fmt.Errorf("UDP packet too small: %d bytes", udp.Length)
 	}

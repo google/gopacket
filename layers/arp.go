@@ -14,7 +14,7 @@ import (
 
 // ARP is a ARP packet header.
 type ARP struct {
-	baseLayer
+	BaseLayer
 	AddrType          LinkType
 	Protocol          EthernetType
 	HwAddressSize     uint8
@@ -43,8 +43,8 @@ func decodeARP(data []byte, p gopacket.PacketBuilder) error {
 	arp.DstProtAddress = data[8+2*arp.HwAddressSize+arp.ProtAddressSize : 8+2*arp.HwAddressSize+2*arp.ProtAddressSize]
 
 	arpLength := 8 + 2*arp.HwAddressSize + 2*arp.ProtAddressSize
-	arp.contents = data[:arpLength]
-	arp.payload = data[arpLength:]
+	arp.Contents = data[:arpLength]
+	arp.Payload = data[arpLength:]
 	p.AddLayer(arp)
 	return p.NextDecoder(gopacket.LayerTypePayload)
 }
