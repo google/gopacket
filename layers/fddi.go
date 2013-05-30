@@ -13,7 +13,7 @@ import (
 
 // FDDI contains the header for FDDI frames.
 type FDDI struct {
-	baseLayer
+	BaseLayer
 	FrameControl   FDDIFrameControl
 	Priority       uint8
 	SrcMAC, DstMAC net.HardwareAddr
@@ -33,7 +33,7 @@ func decodeFDDI(data []byte, p gopacket.PacketBuilder) error {
 		Priority:     data[0] & 0x07,
 		SrcMAC:       net.HardwareAddr(data[1:7]),
 		DstMAC:       net.HardwareAddr(data[7:13]),
-		baseLayer:    baseLayer{data[:13], data[13:]},
+		BaseLayer:    BaseLayer{data[:13], data[13:]},
 	}
 	p.SetLinkLayer(f)
 	p.AddLayer(f)

@@ -61,7 +61,7 @@ type CiscoDiscoveryValue struct {
 // CiscoDiscovery is a packet layer containing the Cisco Discovery Protocol.
 // See http://www.cisco.com/univercd/cc/td/doc/product/lan/trsrb/frames.htm#31885
 type CiscoDiscovery struct {
-	baseLayer
+	BaseLayer
 	Version  byte
 	TTL      byte
 	Checksum uint16
@@ -173,7 +173,7 @@ type CDPEnergyWise struct {
 
 // CiscoDiscoveryInfo represents the decoded details for a set of CiscoDiscoveryValues
 type CiscoDiscoveryInfo struct {
-	baseLayer
+	BaseLayer
 	CDPHello
 	DeviceID         string
 	Addresses        []net.IP
@@ -221,8 +221,8 @@ func decodeCiscoDiscovery(data []byte, p gopacket.PacketBuilder) error {
 	if err != nil {
 		return err
 	}
-	c.contents = data[0:4]
-	c.payload = data[4:]
+	c.Contents = data[0:4]
+	c.Payload = data[4:]
 	p.AddLayer(c)
 	return p.NextDecoder(gopacket.DecodeFunc(decodeCiscoDiscoveryInfo))
 }
@@ -251,7 +251,7 @@ func decodeCiscoDiscoveryTLVs(data []byte) (values []CiscoDiscoveryValue, err er
 
 func decodeCiscoDiscoveryInfo(data []byte, p gopacket.PacketBuilder) error {
 	var err error
-	info := &CiscoDiscoveryInfo{baseLayer: baseLayer{contents: data}}
+	info := &CiscoDiscoveryInfo{BaseLayer: BaseLayer{Contents: data}}
 	p.AddLayer(info)
 	values, err := decodeCiscoDiscoveryTLVs(data)
 	if err != nil { // Unlikely, as parent decode will fail, but better safe...

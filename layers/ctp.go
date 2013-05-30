@@ -25,7 +25,7 @@ const (
 // We split EthernetCTP up into the top-level EthernetCTP layer, followed by zero or more
 // EthernetCTPForwardData layers, followed by a final EthernetCTPReply layer.
 type EthernetCTP struct {
-	baseLayer
+	BaseLayer
 	SkipCount uint16
 }
 
@@ -37,7 +37,7 @@ func (c *EthernetCTP) LayerType() gopacket.LayerType {
 // EthernetCTPForwardData is the ForwardData layer inside EthernetCTP.  See EthernetCTP's docs for more
 // details.
 type EthernetCTPForwardData struct {
-	baseLayer
+	BaseLayer
 	Function       EthernetCTPFunction
 	ForwardAddress []byte
 }
@@ -54,7 +54,7 @@ func (c *EthernetCTPForwardData) ForwardEndpoint() gopacket.Endpoint {
 
 // EthernetCTPReply is the Reply layer inside EthernetCTP.  See EthernetCTP's docs for more details.
 type EthernetCTPReply struct {
-	baseLayer
+	BaseLayer
 	Function      EthernetCTPFunction
 	ReceiptNumber uint16
 	Data          []byte
@@ -71,7 +71,7 @@ func (c *EthernetCTPReply) Payload() []byte { return c.Data }
 func decodeEthernetCTP(data []byte, p gopacket.PacketBuilder) error {
 	c := &EthernetCTP{
 		SkipCount: binary.LittleEndian.Uint16(data[:2]),
-		baseLayer: baseLayer{data[:2], data[2:]},
+		BaseLayer: BaseLayer{data[:2], data[2:]},
 	}
 	if c.SkipCount%2 != 0 {
 		return fmt.Errorf("EthernetCTP skip count is odd: %d", c.SkipCount)
@@ -90,7 +90,7 @@ func decodeEthernetCTPFromFunctionType(data []byte, p gopacket.PacketBuilder) er
 			Function:      function,
 			ReceiptNumber: binary.LittleEndian.Uint16(data[2:4]),
 			Data:          data[4:],
-			baseLayer:     baseLayer{data, nil},
+			BaseLayer:     BaseLayer{data, nil},
 		}
 		p.AddLayer(reply)
 		p.SetApplicationLayer(reply)
@@ -99,7 +99,7 @@ func decodeEthernetCTPFromFunctionType(data []byte, p gopacket.PacketBuilder) er
 		forward := &EthernetCTPForwardData{
 			Function:       function,
 			ForwardAddress: data[2:8],
-			baseLayer:      baseLayer{data[:8], data[8:]},
+			BaseLayer:      BaseLayer{data[:8], data[8:]},
 		}
 		p.AddLayer(forward)
 		return p.NextDecoder(gopacket.DecodeFunc(decodeEthernetCTPFromFunctionType))

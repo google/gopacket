@@ -14,7 +14,7 @@ import (
 
 // Dot1Q is the packet layer for 802.1Q VLAN headers.
 type Dot1Q struct {
-	baseLayer
+	BaseLayer
 	Priority       uint8
 	DropEligible   bool
 	VLANIdentifier uint16
@@ -30,7 +30,7 @@ func decodeDot1Q(data []byte, p gopacket.PacketBuilder) error {
 		DropEligible:   data[2]&0x10 != 0,
 		VLANIdentifier: binary.BigEndian.Uint16(data[:2]) & 0x0FFF,
 		Type:           EthernetType(binary.BigEndian.Uint16(data[2:4])),
-		baseLayer:      baseLayer{contents: data[:4], payload: data[4:]},
+		BaseLayer:      BaseLayer{Contents: data[:4], Payload: data[4:]},
 	}
 	p.AddLayer(d)
 	return p.NextDecoder(d.Type)

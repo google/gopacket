@@ -17,7 +17,7 @@ import (
 
 // Ethernet is the layer for Ethernet frame headers.
 type Ethernet struct {
-	baseLayer
+	BaseLayer
 	SrcMAC, DstMAC net.HardwareAddr
 	EthernetType   EthernetType
 	// Length is only set if a length field exists within this header.  Ethernet
@@ -43,16 +43,16 @@ func decodeEthernet(data []byte, p gopacket.PacketBuilder) error {
 		DstMAC:       net.HardwareAddr(data[0:6]),
 		SrcMAC:       net.HardwareAddr(data[6:12]),
 		EthernetType: EthernetType(binary.BigEndian.Uint16(data[12:14])),
-		baseLayer:    baseLayer{data[:14], data[14:]},
+		BaseLayer:    BaseLayer{data[:14], data[14:]},
 	}
 	if eth.EthernetType < 0x0600 {
 		eth.Length = uint16(eth.EthernetType)
 		eth.EthernetType = EthernetTypeLLC
-		if cmp := len(eth.payload) - int(eth.Length); cmp < 0 {
+		if cmp := len(eth.Payload) - int(eth.Length); cmp < 0 {
 			p.SetTruncated()
 		} else if cmp > 0 {
 			// Strip off bytes at the end, since we have too many bytes
-			eth.payload = eth.payload[:len(eth.payload)-cmp]
+			eth.Payload = eth.Payload[:len(eth.Payload)-cmp]
 		}
 		//	fmt.Println(eth)
 	}

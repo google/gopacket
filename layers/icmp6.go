@@ -93,7 +93,7 @@ func (a ICMPv6TypeCode) String() string {
 
 // ICMPv6 is the layer for IPv6 ICMP packet data
 type ICMPv6 struct {
-	baseLayer
+	BaseLayer
 	TypeCode  ICMPv6TypeCode
 	Checksum  uint16
 	TypeBytes []byte
@@ -107,7 +107,7 @@ func decodeICMPv6(data []byte, p gopacket.PacketBuilder) error {
 		TypeCode:  ICMPv6TypeCode(binary.BigEndian.Uint16(data[:2])),
 		Checksum:  binary.BigEndian.Uint16(data[2:4]),
 		TypeBytes: data[4:8],
-		baseLayer: baseLayer{data[:8], data[8:]},
+		BaseLayer: BaseLayer{data[:8], data[8:]},
 	})
 	return p.NextDecoder(gopacket.LayerTypePayload)
 }

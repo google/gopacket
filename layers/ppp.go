@@ -14,7 +14,7 @@ import (
 
 // PPP is the layer for PPP encapsulation headers.
 type PPP struct {
-	baseLayer
+	BaseLayer
 	PPPType PPPType
 }
 
@@ -41,12 +41,12 @@ func decodePPP(data []byte, p gopacket.PacketBuilder) error {
 			return errors.New("PPP has invalid type")
 		}
 		ppp.PPPType = PPPType(binary.BigEndian.Uint16(data[:2]))
-		ppp.contents = data[:2]
-		ppp.payload = data[2:]
+		ppp.Contents = data[:2]
+		ppp.Payload = data[2:]
 	} else {
 		ppp.PPPType = PPPType(data[0])
-		ppp.contents = data[:1]
-		ppp.payload = data[1:]
+		ppp.Contents = data[:1]
+		ppp.Payload = data[1:]
 	}
 	p.AddLayer(ppp)
 	p.SetLinkLayer(ppp)
