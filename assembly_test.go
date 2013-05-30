@@ -26,7 +26,7 @@ func (t *testFactory) ReassemblyComplete() {
 func test(t *testing.T, s []testSequence) {
 	fact := &testFactory{}
 	p := NewConnectionPool(fact)
-	a := NewAssembler(100, 4, 1000, p)
+	a := NewAssembler(100, 4, p)
 	for i, test := range s {
 		fact.reassembly = []Reassembly{}
 		a.Assemble(&test.in)
@@ -254,6 +254,51 @@ func TestOverrun2(t *testing.T) {
 	})
 }
 
+func TestCacheLargePacket(t *testing.T) {
+	data := make([]byte, pageBytes*3)
+	test(t, []testSequence{
+		{
+			in: TCP{
+				Key:   key1,
+				Seq:   1001,
+				Bytes: data,
+			},
+			want: []Reassembly{},
+		},
+		{
+			in: TCP{
+				Key:   key1,
+				Seq:   1000,
+				SYN:   true,
+				Bytes: []byte{},
+			},
+			want: []Reassembly{
+				Reassembly{
+					Skip:  false,
+					Start: true,
+					Bytes: []byte{},
+					Seq:   1000,
+				},
+				Reassembly{
+					Skip:  false,
+					Seq:   1001,
+					Bytes: data[:pageBytes],
+				},
+				Reassembly{
+					Skip:  false,
+					Seq:   1001 + pageBytes,
+					Bytes: data[pageBytes : pageBytes*2],
+				},
+				Reassembly{
+					Skip:  false,
+					Seq:   1001 + pageBytes*2,
+					Bytes: data[pageBytes*2 : pageBytes*3],
+				},
+			},
+		},
+	})
+}
+
 func BenchmarkSingleStream(b *testing.B) {
 	t := TCP{
 		Key:   key1,
@@ -261,7 +306,7 @@ func BenchmarkSingleStream(b *testing.B) {
 		Seq:   1000,
 		Bytes: []byte{1, 2, 3, 4, 5, 6, 7, 8, 9, 0},
 	}
-	a := NewAssembler(100, 4, 1000, NewConnectionPool(&testFactory{}))
+	a := NewAssembler(100, 4, NewConnectionPool(&testFactory{}))
 	for i := 0; i < b.N; i++ {
 		a.Assemble(&t)
 		if t.SYN {
@@ -279,7 +324,7 @@ func BenchmarkSingleStreamSkips(b *testing.B) {
 		Seq:   1000,
 		Bytes: []byte{1, 2, 3, 4, 5, 6, 7, 8, 9, 0},
 	}
-	a := NewAssembler(100, 10, 1000, NewConnectionPool(&testFactory{}))
+	a := NewAssembler(100, 10, NewConnectionPool(&testFactory{}))
 	skipped := false
 	for i := 0; i < b.N; i++ {
 		if i%10 == 9 {
@@ -308,7 +353,7 @@ func BenchmarkSingleStreamLoss(b *testing.B) {
 		Seq:   1000,
 		Bytes: []byte{1, 2, 3, 4, 5, 6, 7, 8, 9, 0},
 	}
-	a := NewAssembler(100, 10, 1000, NewConnectionPool(&testFactory{}))
+	a := NewAssembler(100, 10, NewConnectionPool(&testFactory{}))
 	for i := 0; i < b.N; i++ {
 		a.Assemble(&t)
 		t.SYN = false
@@ -322,7 +367,7 @@ func BenchmarkMultiStreamGrow(b *testing.B) {
 		Seq:   0,
 		Bytes: []byte{1, 2, 3, 4, 5, 6, 7, 8, 9, 0},
 	}
-	a := NewAssembler(1000000, 10, 1000, NewConnectionPool(&testFactory{}))
+	a := NewAssembler(1000000, 10, NewConnectionPool(&testFactory{}))
 	for i := 0; i < b.N; i++ {
 		t.Key.SrcPort = uint16(i)
 		a.Assemble(&t)
@@ -337,7 +382,7 @@ func BenchmarkMultiStreamConn(b *testing.B) {
 		SYN:   true,
 		Bytes: []byte{1, 2, 3, 4, 5, 6, 7, 8, 9, 0},
 	}
-	a := NewAssembler(1000000, 10, 1000, NewConnectionPool(&testFactory{}))
+	a := NewAssembler(1000000, 10, NewConnectionPool(&testFactory{}))
 	for i := 0; i < b.N; i++ {
 		t.Key.SrcPort = uint16(i)
 		a.Assemble(&t)

@@ -76,10 +76,12 @@ type pageCache struct {
 	size, used int
 }
 
-func newPageCache(pcSize int) *pageCache {
+const initialPageCacheSize = 1024
+
+func newPageCache() *pageCache {
 	pc := &pageCache{
-		free:   make([]*page, 0, pcSize),
-		pcSize: pcSize,
+		free:   make([]*page, 0, initialPageCacheSize),
+		pcSize: initialPageCacheSize,
 	}
 	pc.grow()
 	return pc
@@ -151,6 +153,7 @@ func (k *Key) Reset(sip, dip net.IP, sp, dp uint16) {
 	k.DstPort = dp
 }
 
+// TCP is the set of fields required from a TCP packet for reassembly.
 type TCP struct {
 	Key           Key
 	Seq           Sequence
@@ -158,34 +161,56 @@ type TCP struct {
 	Bytes         []byte
 }
 
-type Assembler interface {
-	Assemble(t *TCP)
-	Buffered() int
-	FlushOlderThan(time.Time)
-}
-
+// Stream is implemented by the caller to handle incoming reassembled
+// TCP data.  Callers create a StreamFactory, then ConnectionPool uses
+// it to create a new Stream for every TCP stream.
+//
+// assembly will, in order:
+//    1) Create the stream via StreamFactory.New
+//    2) Call Reassembled 0 or more times, passing in reassembled TCP data in order
+//    3) Call ReassemblyComplete one time, after which the stream is dereferenced by assembly.
 type Stream interface {
+	// Reassembled is called zero or more times.  assembly guarantees
+	// that the set of all Reassembly objects passed in during all
+	// calls are presented in the order they appear in the TCP stream.
+	// Reassembly objects are reused after each Reassembled call,
+	// so it's important to copy anything you need out of them
+	// (specifically out of Reassembly.Bytes) that you need to stay
+	// around after you return from the Reassembled call.
 	Reassembled([]Reassembly)
+	// ReassemblyComplete is called when assembly decides there is
+	// no more data for this Stream, either because a FIN or RST packet
+	// was seen, or because the stream has timed out without any new
+	// packet data (due to a call to FlushOlderThan).
 	ReassemblyComplete()
 }
 
+// StreamFactory is used by assembly to create a new stream for each
+// new TCP session.
 type StreamFactory interface {
+	// New should return a new stream for the given TCP key.
 	New(k Key) Stream
 }
 
-func (a *assembler) Buffered() int {
-	return a.pc.used
-}
-
-func (a *assembler) FlushOlderThan(t time.Time) {
-	start := time.Now()
-	fmt.Println("Flushing connections older than", t)
-	a.connPool.mu.RLock()
-	conns := make([]*connection, 0, len(a.connPool.conns))
-	for _, conn := range a.connPool.conns {
+func (p *ConnectionPool) connections() []*connection {
+	p.mu.RLock()
+	conns := make([]*connection, 0, len(p.conns))
+	for _, conn := range p.conns {
 		conns = append(conns, conn)
 	}
-	a.connPool.mu.RUnlock()
+	p.mu.RUnlock()
+	return conns
+}
+
+// FlushOlderThan finds any streams waiting for packets older than
+// the given time, and pushes through the data they have (IE: tells
+// them to stop waiting and skip the data they're waiting for).
+// It also closes any empty streams that haven't seen data since
+// the given time.
+func (a *Assembler) FlushOlderThan(t time.Time) {
+	start := time.Now()
+	fmt.Println("Flushing connections older than", t)
+	conns := a.connPool.connections()
 	closes := 0
 	flushes := 0
 	for _, conn := range conns {
@@ -202,6 +227,9 @@ func (a *assembler) FlushOlderThan(t time.Time) {
 	fmt.Println("Flush completed in", time.Since(start), "closed", closes, "flushed", flushes)
 }
 
+// ConnectionPool is a concurrency-safe collection of assembly Streams,
+// usable by multiple Assemblers to handle packet data over multiple
+// goroutines.
 type ConnectionPool struct {
 	conns   map[Key]*connection
 	users   int
@@ -209,6 +237,8 @@ type ConnectionPool struct {
 	factory StreamFactory
 }
 
+// NewConnectionPool creates a new connection pool.  Streams will
+// be created as necessary using the passed-in StreamFactory.
 func NewConnectionPool(factory StreamFactory) *ConnectionPool {
 	return &ConnectionPool{
 		conns:   make(map[Key]*connection),
@@ -216,13 +246,17 @@ func NewConnectionPool(factory StreamFactory) *ConnectionPool {
 	}
 }
 
-func NewAssembler(max, maxPer, pcSize int, pool *ConnectionPool) Assembler {
+// NewAssembler creates a new assembler.  Its arguments are:
+//    max:  The maximum number of packets to buffer total.
+//    maxPer:  The maximum number of packets to buffer for a single connection.
+//    pool:  The ConnectionPool to use, may be shared across assemblers.
+func NewAssembler(max, maxPer int, pool *ConnectionPool) *Assembler {
 	pool.mu.Lock()
 	pool.users++
 	pool.mu.Unlock()
-	return &assembler{
+	return &Assembler{
 		ret:            make([]Reassembly, maxPer+1),
-		pc:             newPageCache(pcSize),
+		pc:             newPageCache(),
 		connPool:       pool,
 		maxBuffered:    max,
 		maxBufferedPer: maxPer,
@@ -240,7 +274,9 @@ type connection struct {
 	mu                sync.Mutex
 }
 
-type assembler struct {
+// Assembler handles reassembling TCP streams.  It is not safe for
+// concurrency.
+type Assembler struct {
 	ret            []Reassembly
 	pc             *pageCache
 	maxBuffered    int
@@ -275,7 +311,13 @@ func (p *ConnectionPool) getConnection(k *Key) *connection {
 	return conn
 }
 
-func (a *assembler) Assemble(t *TCP) {
+// Assemble reassembles the given TCP packet into its appropriate stream.
+// Each Assemble call results in, in order:
+//
+//    zero or one calls to StreamFactory.New, creating a stream
+//    zero or one calls to Reassembled on a single stream
+//    zero or one calls to ReassemblyComplete on the same stream
+func (a *Assembler) Assemble(t *TCP) {
 	a.ret = a.ret[:0]
 	conn := a.connPool.getConnection(&t.Key)
 	conn.mu.Lock()
@@ -308,23 +350,23 @@ func (a *assembler) Assemble(t *TCP) {
 	conn.mu.Unlock()
 }
 
-func (a *assembler) sendToConnection(conn *connection) {
+func (a *Assembler) sendToConnection(conn *connection) {
 	a.addContiguous(conn)
 	conn.stream.Reassembled(a.ret)
 	if a.ret[len(a.ret)-1].End {
-		a.close(conn)
+		a.closeConnection(conn)
 	}
 }
 
-func (a *assembler) addContiguous(conn *connection) {
+func (a *Assembler) addContiguous(conn *connection) {
 	for conn.first != nil && conn.first.Seq == conn.nextSeq {
 		a.addNextFromConn(conn, false)
 	}
 }
 
-func (a *assembler) skipFlush(conn *connection) {
+func (a *Assembler) skipFlush(conn *connection) {
 	if conn.first == nil {
-		a.close(conn)
+		a.closeConnection(conn)
 	} else {
 		a.ret = a.ret[:0]
 		a.addNextFromConn(conn, true)
@@ -332,11 +374,15 @@ func (a *assembler) skipFlush(conn *connection) {
 	}
 }
 
-func (a *assembler) close(conn *connection) {
+func (p *ConnectionPool) remove(conn *connection) {
+	p.mu.Lock()
+	delete(p.conns, conn.key)
+	p.mu.Unlock()
+}
+
+func (a *Assembler) closeConnection(conn *connection) {
 	conn.stream.ReassemblyComplete()
-	a.connPool.mu.Lock()
-	delete(a.connPool.conns, conn.key)
-	a.connPool.mu.Unlock()
+	a.connPool.remove(conn)
 	for p := conn.first; p != nil; p = p.next {
 		a.pc.replace(p)
 	}
@@ -352,15 +398,15 @@ func (conn *connection) traverseConn(t *TCP) (prev, current *page) {
 	return
 }
 
-func (a *assembler) insertIntoConn(t *TCP, conn *connection) {
-	p := a.pageFromTcp(t)
+func (a *Assembler) insertIntoConn(t *TCP, conn *connection) {
+	p, p2 := a.pagesFromTcp(t)
 	prev, current := conn.traverseConn(t)
 	// Maintain our doubly linked list
 	if current == nil || conn.last == nil {
-		conn.last = p
+		conn.last = p2
 	} else {
-		p.next = current
-		current.prev = p
+		p2.next = current
+		current.prev = p2
 	}
 	if prev == nil || conn.first == nil {
 		conn.first = p
@@ -374,9 +420,10 @@ func (a *assembler) insertIntoConn(t *TCP, conn *connection) {
 	}
 }
 
-// pageFromTcp creates a page (or set of pages) from a TCP packet.  Note that it
+// pagesFromTcp creates a page (or set of pages) from a TCP packet.  Note that it
 // should NEVER receive a SYN packet, as it doesn't handle sequences correctly.
-func (a *assembler) pageFromTcp(t *TCP) *page {
+// It returns the first and last page in its doubly-linked list of new pages.
+func (a *Assembler) pagesFromTcp(t *TCP) (p, p2 *page) {
 	first := a.pc.next()
 	current := first
 	for {
@@ -390,13 +437,14 @@ func (a *assembler) pageFromTcp(t *TCP) *page {
 		}
 		t.Seq = t.Seq.Add(length)
 		current.next = a.pc.next()
+		current.next.prev = current
 		current = current.next
 	}
 	current.End = t.RST || t.FIN
-	return first
+	return first, current
 }
 
-func (a *assembler) addNextFromConn(conn *connection, skip bool) {
+func (a *Assembler) addNextFromConn(conn *connection, skip bool) {
 	conn.first.Skip = skip
 	a.ret = append(a.ret, conn.first.Reassembly)
 	conn.nextSeq = conn.first.Seq.Add(len(conn.first.Bytes))
