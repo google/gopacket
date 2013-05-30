@@ -7,12 +7,11 @@ import (
 	"time"
 )
 
-// We consider sequence #0 to be invalid... this isn't actually the case, but it
-// should show up very infrequently (1/4billion), so this should be okay.
-const invalidSequence = 0
+const invalidSequence = -1
+const uint32Max = 0xFFFFFFFF
 
 // Sequence is a TCP sequence number.
-type Sequence uint32
+type Sequence int64
 
 // Difference defines an ordering for comparing TCP sequences that's safe for
 // roll-overs.  It returns:
@@ -26,17 +25,17 @@ type Sequence uint32
 // uint32 space to be after any sequence in the last quarter of that space, thus
 // wrapping the uint32 space.
 func (s Sequence) Difference(t Sequence) int {
-	if s > 0xFFFFFFFF-0xFFFFFFFF/4 && t < 0xFFFFFFFF/4 {
-		t += 0xFFFFFFFF
-	} else if t > 0xFFFFFFFF-0xFFFFFFFF/4 && s < 0xFFFFFFFF/4 {
-		s += 0xFFFFFFFF
+	if s > uint32Max-uint32Max/4 && t < uint32Max/4 {
+		t += uint32Max
+	} else if t > uint32Max-uint32Max/4 && s < uint32Max/4 {
+		s += uint32Max
 	}
 	return int(t - s)
 }
 
 // Add adds an integer to a sequence and returns the resulting sequence.
 func (s Sequence) Add(t int) Sequence {
-	return s + Sequence(t)
+	return (s + Sequence(t)) & uint32Max
 }
 
 // Reassembly objects are returned by the assembler in order.
