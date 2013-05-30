@@ -29,6 +29,7 @@ var flushEvery = flag.Int("flush_every", 60, "")
 var flushOlderThan = flag.Int("flush_older_than", 120, "")
 var parseHttp = flag.Bool("http", true, "")
 var threads = flag.Int("threads", 1, "")
+var vlan = flag.Bool("vlan", true, "")
 
 var zeros []byte = make([]byte, 12)
 
@@ -43,22 +44,6 @@ func discardBytes(r io.Reader) {
 	}
 }
 
-func convertTcp(ip *layers.IPDecodingLayer, t1 *layers.TCP, t2 *assembly.TCP) {
-	switch ip.Version {
-	case 4:
-		t2.Key.Reset(ip.IPv4.SrcIP, ip.IPv4.DstIP, uint16(t1.SrcPort), uint16(t1.DstPort))
-	case 6:
-		t2.Key.Reset(ip.IPv6.SrcIP, ip.IPv6.DstIP, uint16(t1.SrcPort), uint16(t1.DstPort))
-	default:
-		panic("Invalid version")
-	}
-	t2.Seq = assembly.Sequence(t1.Seq)
-	t2.SYN = t1.SYN
-	t2.FIN = t1.FIN
-	t2.RST = t1.RST
-	t2.Bytes = t1.LayerPayload()
-}
-
 type benchStreamHandler struct {
 	opened      int
 	reassembled int
@@ -67,32 +52,21 @@ type benchStreamHandler struct {
 	closes      int
 }
 
-func (b *benchStreamHandler) New(k assembly.Key) assembly.Stream {
+func (b *benchStreamHandler) New(_, _ gopacket.Flow) assembly.Stream {
 	br := &benchReader{
-		handler:     b,
-		key:         k,
-		reassembled: make(chan []assembly.Reassembly),
-		done:        make(chan bool),
+		handler:      b,
+		ReaderStream: assembly.NewReaderStream(false),
 	}
 	go br.run()
 	b.opened++
-	<-br.done // Grab first done thing.
 	return br
 }
 
 type benchReader struct {
-	handler     *benchStreamHandler
-	key         assembly.Key
-	reassembled chan []assembly.Reassembly
-	done        chan bool
-	current     []assembly.Reassembly
-	closed      bool
+	assembly.ReaderStream
+	handler *benchStreamHandler
 }
 
-func (b *benchReader) Reassembled(r []assembly.Reassembly) {
-	b.reassembled <- r
-	<-b.done
-}
 func (b *benchReader) run() {
 	if *parseHttp {
 		buffer := bufio.NewReader(b)
@@ -109,52 +83,18 @@ func (b *benchReader) run() {
 		discardBytes(b)
 	}
 }
-func (b *benchReader) Close() {
-	close(b.reassembled)
-	close(b.done)
-	b.handler.closes++
-}
-func (b *benchReader) stripEmpty() {
-	for len(b.current) > 0 && len(b.current[0].Bytes) == 0 {
-		if b.current[0].Skip {
-			b.handler.skips++
-		}
-		b.current = b.current[:len(b.current)-1]
-	}
-}
-func (b *benchReader) Read(p []byte) (int, error) {
-	var ok bool
-	b.stripEmpty()
-	for !b.closed && len(b.current) == 0 {
-		b.done <- true
-		if b.current, ok = <-b.reassembled; ok {
-			b.handler.reassembled += len(b.current)
-			b.stripEmpty()
-		} else {
-			b.closed = true
-		}
-	}
-	if len(b.current) > 0 {
-		length := copy(p, b.current[0].Bytes)
-		b.current[0].Bytes = b.current[0].Bytes[length:]
-		return length, nil
-	}
-	return 0, io.EOF
-}
 
 func thread(handle *pcap.Handle, pool *assembly.ConnectionPool, wg *sync.WaitGroup) {
 	var eth layers.Ethernet
 	var dot1q layers.Dot1Q
 	var ip layers.IPDecodingLayer
 	var tcp layers.TCP
-	var atcp assembly.TCP
-	parser := gopacket.StackParser{
-		&eth,
-		&dot1q,
-		&ip,
-		&tcp,
+	parser := gopacket.StackParser{&eth}
+	if *vlan {
+		parser = append(parser, &dot1q)
 	}
-	assembler := assembly.NewAssembler(*pages, *maxper, 10000, pool)
+	parser = append(parser, &ip, &tcp)
+	assembler := assembly.NewAssembler(*pages, *maxper, pool)
 	success := 0
 	flushAt := time.Now().Add(time.Second * time.Duration(*flushEvery))
 	for *count > 0 {
@@ -172,8 +112,7 @@ func thread(handle *pcap.Handle, pool *assembly.ConnectionPool, wg *sync.WaitGro
 		switch n {
 		case 4:
 			success++
-			convertTcp(&ip, &tcp, &atcp)
-			assembler.Assemble(&atcp)
+			assembler.Assemble(ip.NetworkFlow(), &tcp)
 		default:
 		}
 	}
