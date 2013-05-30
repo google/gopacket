@@ -59,7 +59,7 @@ func NewLayerClassSlice(types []LayerType) LayerClassSlice {
 		}
 	}
 	t := make([]bool, int(max+1))
-	for typ := range types {
+	for _, typ := range types {
 		t[typ] = true
 	}
 	return t

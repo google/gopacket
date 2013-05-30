@@ -21,10 +21,6 @@ type DecodingLayer interface {
 	LayerPayload() []byte
 }
 
-// ParserDecodeMismatch is returned when a parser sees that the next layer type
-// to be parsed does not match any of the parsers available to parse.
-var ParserDecodeMismatch = errors.New("decode of next layer type cannot be performed by next decoder")
-
 // ParserNoMoreBytes is returned when a parser wants to parse more layers but
 // has run out of bytes to parse.
 var ParserNoMoreBytes = errors.New("decode has no more bytes to process, so cannot proceed")
@@ -129,9 +125,10 @@ func (s StackParser) DecodeBytes(data []byte, df DecodeFeedback, opts StackParse
 				// We have more layers to parse, but no more data.
 				return i + 1, nil, ParserNoMoreBytes
 			}
-			if !s[i+1].CanDecode().Contains(d.NextLayerType()) {
+			next := d.NextLayerType()
+			if !s[i+1].CanDecode().Contains(next) {
 				// The next layer can't handle parsing the bytes we have.
-				return i + 1, data, ParserDecodeMismatch
+				return i + 1, data, fmt.Errorf("Decode of next layer type %v cannot be handled", next)
 			}
 		}
 	}
