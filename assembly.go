@@ -1,8 +1,9 @@
 package assembly
 
 import (
+	"code.google.com/p/gopacket"
+	"code.google.com/p/gopacket/layers"
 	"fmt"
-	"net"
 	"sync"
 	"time"
 )
@@ -118,49 +119,6 @@ func (c *pageCache) replace(p *page) {
 	c.free = append(c.free, p)
 }
 
-var zeros []byte = make([]byte, 12)
-
-// Key is a unique identifier for a TCP stream.
-type Key struct {
-	Version          byte // IP version, 4 or 6
-	SrcIP, DstIP     [16]byte
-	SrcPort, DstPort uint16
-}
-
-// Reset resets the given key with new source/destination IPs/ports.
-func (k *Key) Reset(sip, dip net.IP, sp, dp uint16) {
-	if len(sip) != len(dip) {
-		panic("IP lengths don't match")
-	}
-	oldVersion := k.Version
-	switch len(sip) {
-	case 4:
-		k.Version = 4
-		copy(k.SrcIP[:4], sip)
-		copy(k.DstIP[:4], dip)
-		if oldVersion != 4 {
-			copy(k.SrcIP[4:], zeros)
-			copy(k.DstIP[4:], zeros)
-		}
-	case 16:
-		k.Version = 6
-		copy(k.SrcIP[:], sip)
-		copy(k.DstIP[:], dip)
-	default:
-		panic("Invalid IP length")
-	}
-	k.SrcPort = sp
-	k.DstPort = dp
-}
-
-// TCP is the set of fields required from a TCP packet for reassembly.
-type TCP struct {
-	Key           Key
-	Seq           Sequence
-	SYN, FIN, RST bool
-	Bytes         []byte
-}
-
 // Stream is implemented by the caller to handle incoming reassembled
 // TCP data.  Callers create a StreamFactory, then ConnectionPool uses
 // it to create a new Stream for every TCP stream.
@@ -189,7 +147,7 @@ type Stream interface {
 // new TCP session.
 type StreamFactory interface {
 	// New should return a new stream for the given TCP key.
-	New(k Key) Stream
+	New(netFlow, tcpFlow gopacket.Flow) Stream
 }
 
 func (p *ConnectionPool) connections() []*connection {
@@ -227,11 +185,13 @@ func (a *Assembler) FlushOlderThan(t time.Time) {
 	fmt.Println("Flush completed in", time.Since(start), "closed", closes, "flushed", flushes)
 }
 
+type key [2]gopacket.Flow
+
 // ConnectionPool is a concurrency-safe collection of assembly Streams,
 // usable by multiple Assemblers to handle packet data over multiple
 // goroutines.
 type ConnectionPool struct {
-	conns   map[Key]*connection
+	conns   map[key]*connection
 	users   int
 	mu      sync.RWMutex
 	factory StreamFactory
@@ -241,7 +201,7 @@ type ConnectionPool struct {
 // be created as necessary using the passed-in StreamFactory.
 func NewConnectionPool(factory StreamFactory) *ConnectionPool {
 	return &ConnectionPool{
-		conns:   make(map[Key]*connection),
+		conns:   make(map[key]*connection),
 		factory: factory,
 	}
 }
@@ -264,7 +224,7 @@ func NewAssembler(max, maxPer int, pool *ConnectionPool) *Assembler {
 }
 
 type connection struct {
-	key               Key
+	key               key
 	pages             int
 	first, last       *page
 	nextSeq           Sequence
@@ -284,29 +244,29 @@ type Assembler struct {
 	connPool       *ConnectionPool
 }
 
-func (p *ConnectionPool) newConnection(k *Key) *connection {
+func (p *ConnectionPool) newConnection(k key) *connection {
 	return &connection{
-		key:     *k,
+		key:     k,
 		nextSeq: invalidSequence,
 		created: time.Now(),
-		stream:  p.factory.New(*k),
+		stream:  p.factory.New(k[0], k[1]),
 	}
 }
 
-func (p *ConnectionPool) getConnection(k *Key) *connection {
+func (p *ConnectionPool) getConnection(k key) *connection {
 	p.mu.RLock()
-	conn := p.conns[*k]
+	conn := p.conns[k]
 	p.mu.RUnlock()
 	if conn != nil {
 		return conn
 	}
 	conn = p.newConnection(k)
 	p.mu.Lock()
-	if conn2 := p.conns[*k]; conn2 != nil {
+	if conn2 := p.conns[k]; conn2 != nil {
 		p.mu.Unlock()
 		return conn2
 	}
-	p.conns[*k] = conn
+	p.conns[k] = conn
 	p.mu.Unlock()
 	return conn
 }
@@ -317,31 +277,33 @@ func (p *ConnectionPool) getConnection(k *Key) *connection {
 //    zero or one calls to StreamFactory.New, creating a stream
 //    zero or one calls to Reassembled on a single stream
 //    zero or one calls to ReassemblyComplete on the same stream
-func (a *Assembler) Assemble(t *TCP) {
+func (a *Assembler) Assemble(netFlow gopacket.Flow, t *layers.TCP) {
 	a.ret = a.ret[:0]
-	conn := a.connPool.getConnection(&t.Key)
+	key := [...]gopacket.Flow{netFlow, t.TransportFlow()}
+	conn := a.connPool.getConnection(key)
 	conn.mu.Lock()
 	conn.lastSeen = time.Now()
+	seq, bytes := Sequence(t.Seq), t.Payload
 	if t.SYN {
 		a.ret = append(a.ret, Reassembly{
-			Bytes: t.Bytes,
-			Seq:   t.Seq,
+			Bytes: bytes,
+			Seq:   seq,
 			Skip:  false,
 			Start: true,
 		})
-		conn.nextSeq = t.Seq.Add(len(t.Bytes) + 1)
-	} else if conn.nextSeq == invalidSequence || conn.nextSeq.Difference(t.Seq) > 0 {
+		conn.nextSeq = seq.Add(len(bytes) + 1)
+	} else if conn.nextSeq == invalidSequence || conn.nextSeq.Difference(seq) > 0 {
 		a.insertIntoConn(t, conn)
 	} else {
-		span := int(t.Seq.Difference(conn.nextSeq))
-		if len(t.Bytes) > span {
+		span := int(seq.Difference(conn.nextSeq))
+		if len(bytes) > span {
 			a.ret = append(a.ret, Reassembly{
-				Bytes: t.Bytes[span:],
-				Seq:   t.Seq + Sequence(span),
+				Bytes: bytes[span:],
+				Seq:   seq.Add(span),
 				Skip:  false,
 				End:   t.RST || t.FIN,
 			})
-			conn.nextSeq = t.Seq.Add(len(t.Bytes))
+			conn.nextSeq = seq.Add(len(bytes))
 		}
 	}
 	if len(a.ret) > 0 {
@@ -389,18 +351,18 @@ func (a *Assembler) closeConnection(conn *connection) {
 	conn.closed = true
 }
 
-func (conn *connection) traverseConn(t *TCP) (prev, current *page) {
+func (conn *connection) traverseConn(seq Sequence) (prev, current *page) {
 	prev = conn.last
-	for prev != nil && prev.Seq.Difference(t.Seq) < 0 {
+	for prev != nil && prev.Seq.Difference(seq) < 0 {
 		current = prev
 		prev = current.prev
 	}
 	return
 }
 
-func (a *Assembler) insertIntoConn(t *TCP, conn *connection) {
+func (a *Assembler) insertIntoConn(t *layers.TCP, conn *connection) {
 	p, p2 := a.pagesFromTcp(t)
-	prev, current := conn.traverseConn(t)
+	prev, current := conn.traverseConn(Sequence(t.Seq))
 	// Maintain our doubly linked list
 	if current == nil || conn.last == nil {
 		conn.last = p2
@@ -423,19 +385,20 @@ func (a *Assembler) insertIntoConn(t *TCP, conn *connection) {
 // pagesFromTcp creates a page (or set of pages) from a TCP packet.  Note that it
 // should NEVER receive a SYN packet, as it doesn't handle sequences correctly.
 // It returns the first and last page in its doubly-linked list of new pages.
-func (a *Assembler) pagesFromTcp(t *TCP) (p, p2 *page) {
+func (a *Assembler) pagesFromTcp(t *layers.TCP) (p, p2 *page) {
 	first := a.pc.next()
 	current := first
+	seq, bytes := Sequence(t.Seq), t.Payload
 	for {
-		length := min(len(t.Bytes), pageBytes)
+		length := min(len(bytes), pageBytes)
 		current.Bytes = current.buf[:length]
-		copy(current.Bytes, t.Bytes)
-		current.Seq = t.Seq
-		t.Bytes = t.Bytes[length:]
-		if len(t.Bytes) == 0 {
+		copy(current.Bytes, bytes)
+		current.Seq = seq
+		bytes = bytes[length:]
+		if len(bytes) == 0 {
 			break
 		}
-		t.Seq = t.Seq.Add(length)
+		seq = seq.Add(length)
 		current.next = a.pc.next()
 		current.next.prev = current
 		current = current.next
