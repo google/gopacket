@@ -9,7 +9,14 @@ package layers
 // BaseLayer is a convenience struct which implements the LayerData and
 // LayerPayload functions of the Layer interface.
 type BaseLayer struct {
-	Contents, Payload []byte
+	// Contents is the set of bytes that make up this layer.  IE: for an
+	// Ethernet packet, this would be the set of bytes making up the
+	// Ethernet frame.
+	Contents []byte
+	// Payload is the set of bytes contained by (but not part of) this
+	// Layer.  Again, to take Ethernet as an example, this would be the
+	// set of bytes encapsulated by the Ethernet protocol.
+	Payload []byte
 }
 
 // LayerContents returns the bytes of the packet layer.

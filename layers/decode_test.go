@@ -539,7 +539,7 @@ func TestDecodeCiscoDiscovery(t *testing.T) {
 		NativeVLAN:    1,
 		FullDuplex:    true,
 		MgmtAddresses: []net.IP{net.IPv4(192, 168, 0, 253)},
-		BaseLayer:     BaseLayer{contents: data[26:]},
+		BaseLayer:     BaseLayer{Contents: data[26:]},
 	}
 	cdpL := p.Layer(LayerTypeCiscoDiscoveryInfo)
 	info, _ := cdpL.(*CiscoDiscoveryInfo)
@@ -584,7 +584,7 @@ func TestDecodeLinkLayerDiscovery(t *testing.T) {
 		ChassisID: LLDPChassisID{LLDPChassisIDSubTypeMACAddr, []byte{0x00, 0x01, 0x30, 0xf9, 0xad, 0xa0}},
 		PortID:    LLDPPortID{LLDPPortIDSubtypeIfaceName, []byte("1/1")},
 		TTL:       120,
-		BaseLayer: BaseLayer{contents: data[14:]},
+		BaseLayer: BaseLayer{Contents: data[14:]},
 	}
 	lldp.Values = nil // test these in next stage
 	if !reflect.DeepEqual(lldp, want) {
@@ -684,7 +684,7 @@ func TestDecodeLinkLayerDiscovery(t *testing.T) {
 		ChassisID: LLDPChassisID{LLDPChassisIDSubTypeMACAddr, []byte{0x00, 0x13, 0x21, 0x57, 0xca, 0x40}},
 		PortID:    LLDPPortID{LLDPPortIDSubtypeLocal, []byte("1")},
 		TTL:       120,
-		BaseLayer: BaseLayer{contents: data[14:]},
+		BaseLayer: BaseLayer{Contents: data[14:]},
 	}
 	lldp.Values = nil // test these in next stage
 	if !reflect.DeepEqual(lldp, want) {
