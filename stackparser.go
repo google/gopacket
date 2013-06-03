@@ -70,7 +70,8 @@ func NewDecodingLayerParser(first LayerType, decoders ...DecodingLayer) *Decodin
 // how to parse.
 //
 // For each layer successfully decoded, DecodeLayers appends the layer type to
-// the decoded slice.
+// the decoded slice.  DecodeLayers truncates the 'decoded' slice initially, so
+// there's no need to empty it yourself.
 //
 // This decoding method is about an order of magnitude faster than packet
 // decoding, because it only decodes known layers that have already been
@@ -94,7 +95,6 @@ func NewDecodingLayerParser(first LayerType, decoders ...DecodingLayer) *Decodin
 //          fmt.Println("Error reading packet data: ", err)
 //          continue
 //        }
-//        decodedLayers = decodedLayers[:0]
 //        fmt.Println("Decoding packet")
 //        err = parser.DecodeLayers(data, gopacket.NilDecodeFeedback, layers.LayerTypeEthernet, &DecodeLayers)
 //        for _, typ := range decodedLayers {
@@ -125,6 +125,7 @@ func (l *DecodingLayerParser) DecodeLayers(data []byte, decoded *[]LayerType) (e
 		defer panicToError(&err)
 	}
 	typ := l.first
+	*decoded = (*decoded)[:0] // Truncated decoded layers.
 	for len(data) > 0 {
 		decoder, ok := l.decoders[typ]
 		if !ok {

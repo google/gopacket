@@ -136,7 +136,6 @@ func BenchmarkDecodingLayerParserNoPanic(b *testing.B) {
 	dlp := gopacket.NewDecodingLayerParser(LayerTypeEthernet, &Ethernet{}, &IPv4{}, &TCP{}, &gopacket.Payload{})
 	dlp.HandlePanic = false
 	for i := 0; i < b.N; i++ {
-		decoded = decoded[:0]
 		dlp.DecodeLayers(testSimpleTCPPacket, &decoded)
 	}
 }
@@ -145,7 +144,6 @@ func BenchmarkDecodingLayerParserPanic(b *testing.B) {
 	decoded := make([]gopacket.LayerType, 0, 20)
 	dlp := gopacket.NewDecodingLayerParser(LayerTypeEthernet, &Ethernet{}, &IPv4{}, &TCP{}, &gopacket.Payload{})
 	for i := 0; i < b.N; i++ {
-		decoded = decoded[:0]
 		dlp.DecodeLayers(testSimpleTCPPacket, &decoded)
 	}
 }
@@ -871,7 +869,7 @@ func TestDecodeUDPPacketTooSmall(t *testing.T) {
 
 func TestDecodingLayerParserFullTCPPacket(t *testing.T) {
 	dlp := gopacket.NewDecodingLayerParser(LayerTypeEthernet, &Ethernet{}, &IPv4{}, &TCP{}, &gopacket.Payload{})
-	decoded := make([]gopacket.LayerType, 0, 1)
+	decoded := make([]gopacket.LayerType, 1)
 	err := dlp.DecodeLayers(testSimpleTCPPacket, &decoded)
 	if err != nil {
 		t.Error("Error from dlp parser: ", err)
