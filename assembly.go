@@ -43,8 +43,6 @@ func (s Sequence) Add(t int) Sequence {
 type Reassembly struct {
 	// Bytes is the next set of bytes in the stream.  May be empty.
 	Bytes []byte
-	// Seq is the current TCP sequence for this reassembly.
-	Seq Sequence
 	// Skip is set to true if this reassembly has skipped some number of bytes.
 	// This normally occurs if packets were dropped, or if we picked up the stream
 	// after it had already started sending data (IE: we start our packet capture
@@ -63,6 +61,7 @@ const pageBytes = 1900
 // avoids memory allocation.
 type page struct {
 	Reassembly
+	seq        Sequence
 	index      int
 	prev, next *page
 	created    time.Time
@@ -287,7 +286,6 @@ func (a *Assembler) Assemble(netFlow gopacket.Flow, t *layers.TCP) {
 	if t.SYN {
 		a.ret = append(a.ret, Reassembly{
 			Bytes: bytes,
-			Seq:   seq,
 			Skip:  false,
 			Start: true,
 		})
@@ -299,7 +297,6 @@ func (a *Assembler) Assemble(netFlow gopacket.Flow, t *layers.TCP) {
 		if len(bytes) > span {
 			a.ret = append(a.ret, Reassembly{
 				Bytes: bytes[span:],
-				Seq:   seq.Add(span),
 				Skip:  false,
 				End:   t.RST || t.FIN,
 			})
@@ -321,7 +318,7 @@ func (a *Assembler) sendToConnection(conn *connection) {
 }
 
 func (a *Assembler) addContiguous(conn *connection) {
-	for conn.first != nil && conn.first.Seq == conn.nextSeq {
+	for conn.first != nil && conn.first.seq == conn.nextSeq {
 		a.addNextFromConn(conn, false)
 	}
 }
@@ -353,7 +350,7 @@ func (a *Assembler) closeConnection(conn *connection) {
 
 func (conn *connection) traverseConn(seq Sequence) (prev, current *page) {
 	prev = conn.last
-	for prev != nil && prev.Seq.Difference(seq) < 0 {
+	for prev != nil && prev.seq.Difference(seq) < 0 {
 		current = prev
 		prev = current.prev
 	}
@@ -393,7 +390,7 @@ func (a *Assembler) pagesFromTcp(t *layers.TCP) (p, p2 *page) {
 		length := min(len(bytes), pageBytes)
 		current.Bytes = current.buf[:length]
 		copy(current.Bytes, bytes)
-		current.Seq = seq
+		current.seq = seq
 		bytes = bytes[length:]
 		if len(bytes) == 0 {
 			break
@@ -410,7 +407,7 @@ func (a *Assembler) pagesFromTcp(t *layers.TCP) (p, p2 *page) {
 func (a *Assembler) addNextFromConn(conn *connection, skip bool) {
 	conn.first.Skip = skip
 	a.ret = append(a.ret, conn.first.Reassembly)
-	conn.nextSeq = conn.first.Seq.Add(len(conn.first.Bytes))
+	conn.nextSeq = conn.first.seq.Add(len(conn.first.Bytes))
 	a.pc.replace(conn.first)
 	if conn.first == conn.last {
 		conn.first = nil

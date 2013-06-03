@@ -85,22 +85,18 @@ func TestReorder(t *testing.T) {
 			},
 			want: []Reassembly{
 				Reassembly{
-					Seq:   1001,
 					Skip:  true,
 					Bytes: []byte{1, 2, 3},
 				},
 				Reassembly{
-					Seq:   1004,
 					Skip:  false,
 					Bytes: []byte{2, 2, 3},
 				},
 				Reassembly{
-					Seq:   1007,
 					Skip:  false,
 					Bytes: []byte{3, 2, 3},
 				},
 				Reassembly{
-					Seq:   1010,
 					Skip:  false,
 					Bytes: []byte{4, 2, 3},
 				},
@@ -124,7 +120,6 @@ func TestReorderFast(t *testing.T) {
 					Start: true,
 					Skip:  false,
 					Bytes: []byte{1, 2, 3},
-					Seq:   1000,
 				},
 			},
 		},
@@ -148,12 +143,10 @@ func TestReorderFast(t *testing.T) {
 				Reassembly{
 					Skip:  false,
 					Bytes: []byte{2, 2, 3},
-					Seq:   1004,
 				},
 				Reassembly{
 					Skip:  false,
 					Bytes: []byte{3, 2, 3},
-					Seq:   1007,
 				},
 			},
 		},
@@ -175,7 +168,6 @@ func TestOverlap(t *testing.T) {
 					Skip:  false,
 					Start: true,
 					Bytes: []byte{1, 2, 3, 4, 5, 6, 7, 8, 9, 0},
-					Seq:   1000,
 				},
 			},
 		},
@@ -190,7 +182,6 @@ func TestOverlap(t *testing.T) {
 				Reassembly{
 					Skip:  false,
 					Bytes: []byte{1, 2, 3, 4},
-					Seq:   1011,
 				},
 			},
 		},
@@ -212,7 +203,6 @@ func TestOverrun1(t *testing.T) {
 					Skip:  false,
 					Start: true,
 					Bytes: []byte{1, 2, 3, 4, 5, 6, 7, 8, 9, 0},
-					Seq:   0xFFFFFFFF,
 				},
 			},
 		},
@@ -227,7 +217,6 @@ func TestOverrun1(t *testing.T) {
 				Reassembly{
 					Skip:  false,
 					Bytes: []byte{1, 2, 3, 4},
-					Seq:   10,
 				},
 			},
 		},
@@ -258,12 +247,10 @@ func TestOverrun2(t *testing.T) {
 					Skip:  false,
 					Start: true,
 					Bytes: []byte{1, 2, 3, 4, 5, 6, 7, 8, 9, 0},
-					Seq:   0xFFFFFFFF,
 				},
 				Reassembly{
 					Skip:  false,
 					Bytes: []byte{1, 2, 3, 4},
-					Seq:   10,
 				},
 			},
 		},
@@ -295,21 +282,17 @@ func TestCacheLargePacket(t *testing.T) {
 					Skip:  false,
 					Start: true,
 					Bytes: []byte{},
-					Seq:   1000,
 				},
 				Reassembly{
 					Skip:  false,
-					Seq:   1001,
 					Bytes: data[:pageBytes],
 				},
 				Reassembly{
 					Skip:  false,
-					Seq:   1001 + pageBytes,
 					Bytes: data[pageBytes : pageBytes*2],
 				},
 				Reassembly{
 					Skip:  false,
-					Seq:   1001 + pageBytes*2,
 					Bytes: data[pageBytes*2 : pageBytes*3],
 				},
 			},
