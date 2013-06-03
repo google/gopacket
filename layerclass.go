@@ -12,10 +12,10 @@ type LayerClass interface {
 	// Contains returns true if the given layer type should be considered part
 	// of this layer class.
 	Contains(LayerType) bool
-	// AllLayerTypes returns the set of all layer types in this layer class.
+	// LayerTypes returns the set of all layer types in this layer class.
 	// Note that this may not be a fast operation on all LayerClass
 	// implementations.
-	AllLayerTypes() []LayerType
+	LayerTypes() []LayerType
 }
 
 // Make LayerType itself be a LayerClass.
@@ -23,7 +23,7 @@ func (l LayerType) Contains(a LayerType) bool {
 	return l == a
 }
 
-func (l LayerType) AllLayerTypes() []LayerType {
+func (l LayerType) LayerTypes() []LayerType {
 	return []LayerType{l}
 }
 
@@ -36,9 +36,9 @@ func (s LayerClassSlice) Contains(t LayerType) bool {
 	return int(t) < len(s) && s[t]
 }
 
-// AllLayerTypes returns all layer types in this LayerClassSlice.
+// LayerTypes returns all layer types in this LayerClassSlice.
 // Because of LayerClassSlice's implementation, this could be quite slow.
-func (s LayerClassSlice) AllLayerTypes() (all []LayerType) {
+func (s LayerClassSlice) LayerTypes() (all []LayerType) {
 	for i := 0; i < len(s); i++ {
 		if s[i] {
 			all = append(all, LayerType(i))
@@ -74,8 +74,8 @@ func (m LayerClassMap) Contains(t LayerType) bool {
 	return m[t]
 }
 
-// AllLayerTypes returns all layer types in this LayerClassMap.
-func (m LayerClassMap) AllLayerTypes() (all []LayerType) {
+// LayerTypes returns all layer types in this LayerClassMap.
+func (m LayerClassMap) LayerTypes() (all []LayerType) {
 	for t := range m {
 		all = append(all, t)
 	}

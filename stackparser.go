@@ -25,64 +25,118 @@ type DecodingLayer interface {
 // has run out of bytes to parse.
 var ParserNoMoreBytes = errors.New("decode has no more bytes to process, so cannot proceed")
 
-// StackParser is an extremely fast parser for known packet stacks.  If you know
-// in advance what the packets you care about are going to look like, use
-// StackParser instead of Packet and you'll get extremely improved performance
-// (~10-20x).  This speed-up comes from the fact that since we know what the
-// stack should look like, we can preallocate all layers for that stack,
-// bypassing any need to do memory allocation, our primary slow-down in packet
-// processing.
-//
-// Note that StackParser acts like a NoCopy decoder: the layers will reference
-// into the initial byte slice, so it should either be copied before calling
-// DecodeBytes or not modified while the decoded layers are being used.
-//
-// Not all layers are DecodingLayers, and not all DecodingLayers are Layers, though
-// we're working on porting as much as possible to work everywhere.  Note that
-// StackParser is itself a DecodingLayer, which can be helpful if you're expecting
-// multiple packet types that share some portion of their stack.
-//
-// You can implement branching based on how far along decoding went, since the
-// first element returned by DecodeBytes is the number of layers successfully
-// decoded.
-//
-// Example:
-//
-//   func main() {
-//     myPacketData := []byte{...}
-//     var l1 Ethernet
-//     var l2 IPv4
-//     var l3_1 TCP
-//     var l3_2 UDP
-//     var l4 Payload
-//     var feedback gopacket.SimpleDecodeFeedback
-//     parser1 := StackParser{&l1, &l2, &l3_1, &l4}
-//     parser2 := StackParser{&l3_2, &l4}
-//     n, remaining, err := parser1.DecodeBytes(myPacketData, &feedback)
-//     switch n {
-//       case 0, 1:
-//         fmt.Println("Unable to decode up to IPv4 header:", err)
-//       case 2:  // We got through IPv4, let's see if we have a UDP packet instead...
-//         if l2.NextLayerType() == LayerTypeUDP {
-//           _, _, err = parser2.DecodeBytes(remaining, &feedback)
-//           ...
-//         } else {
-//           fmt.Println("Not TCP or UDP packet")
-//         }
-//       case 3:
-//         fmt.Println("TCP packet has no payload")
-//       case 4:
-//         fmt.Println("Fully parsed TCP packet, including payload")
-//     }
-//   }
-type StackParser []DecodingLayer
-
-type SimpleDecodeFeedback struct {
+// DecodingLayerParser parses a given set of layer types.
+type DecodingLayerParser struct {
+	DecodingLayerParserOptions
+	first    LayerType
+	decoders map[LayerType]DecodingLayer
+	df       DecodeFeedback
+	// Truncated is set when a decode layer detects that the packet has been
+	// truncated.
 	Truncated bool
 }
 
-func (s *SimpleDecodeFeedback) SetTruncated() {
-	s.Truncated = true
+// AddDecodingLayer adds a decoding layer to the parser.  This adds support for
+// the decoding layer's CanDecode layers to the parser... should they be
+// encountered, they'll be parsed.
+func (l *DecodingLayerParser) AddDecodingLayer(d DecodingLayer) {
+	for _, typ := range d.CanDecode().LayerTypes() {
+		l.decoders[typ] = d
+	}
+}
+
+func (l *DecodingLayerParser) SetTruncated() {
+	l.Truncated = true
+}
+
+// NewDecodingLayerParser creates a new DecodingLayerParser and adds in all
+// of the given DecodingLayers with AddDecodingLayer.
+func NewDecodingLayerParser(first LayerType, decoders ...DecodingLayer) *DecodingLayerParser {
+	dlp := &DecodingLayerParser{
+		DecodingLayerParserOptions: HandlePanic,
+		decoders:                   make(map[LayerType]DecodingLayer),
+		first:                      first,
+	}
+	dlp.df = dlp // Cast this once to the interface
+	for _, d := range decoders {
+		dlp.AddDecodingLayer(d)
+	}
+	return dlp
+}
+
+// DecodeLayers decodes as many layers as possible from the given data.  It
+// initially treats the data as layer type 'typ', then uses NextLayerType on
+// each subsequent decoded layer until it gets to a layer type it doesn't know
+// how to parse.
+//
+// For each layer successfully decoded, DecodeLayers appends the layer type to
+// the decoded slice.
+//
+// This decoding method is about an order of magnitude faster than packet
+// decoding, because it only decodes known layers that have already been
+// allocated.  This means it doesn't need to allocate each layer it returns...
+// instead it overwrites the layers that already exist.
+//
+// Example usage:
+//    func main() {
+//      var eth layers.Ethernet
+//      var ip4 layers.IPv4
+//      var ip6 layers.IPv6
+//      var tcp layers.TCP
+//      var udp layers.UDP
+//      var payload gopacket.Payload
+//      parser := gopacket.NewDecodingLayerParser(layers.LayerTypeEthernet, &eth, &ip4, &ip6, &tcp, &udp, &payload)
+//      var source gopacket.PacketDataSource = getMyDataSource()
+//      decodedLayers := make([]gopacket.LayerType, 0, 10)
+//      for {
+//        data, _, err := source.ReadPacketData()
+//        if err == nil {
+//          fmt.Println("Error reading packet data: ", err)
+//          continue
+//        }
+//        decodedLayers = decodedLayers[:0]
+//        fmt.Println("Decoding packet")
+//        err = parser.DecodeLayers(data, gopacket.NilDecodeFeedback, layers.LayerTypeEthernet, &DecodeLayers)
+//        for _, typ := range decodedLayers {
+//          fmt.Println("  Successfully decoded layer type", typ)
+//          switch typ {
+//            case layers.LayerTypeEthernet:
+//              fmt.Println("    Eth ", eth.SrcMAC, eth.DstMAC)
+//            case layers.LayerTypeIPv4:
+//              fmt.Println("    IP4 ", ip4.SrcIP, ip4.DstIP)
+//            case layers.LayerTypeIPv6:
+//              fmt.Println("    IP6 ", ip6.SrcIP, ip6.DstIP)
+//            case layers.LayerTypeTCP:
+//              fmt.Println("    TCP ", tcp.SrcPort, tcp.DstPort)
+//            case layers.LayerTypeUDP:
+//              fmt.Println("    UDP ", udp.SrcPort, udp.DstPort)
+//          }
+//        }
+//        if decodedLayers.Truncated {
+//          fmt.Println("  Packet has been truncated")
+//        }
+//        if err != nil {
+//          fmt.Println("  Error encountered:", err)
+//        }
+//      }
+//    }
+func (l *DecodingLayerParser) DecodeLayers(data []byte, decoded *[]LayerType) (err error) {
+	if l.HandlePanic {
+		defer panicToError(&err)
+	}
+	typ := l.first
+	for len(data) > 0 {
+		decoder, ok := l.decoders[typ]
+		if !ok {
+			return fmt.Errorf("DecodingLayerParser has no decoder for layer type %v", typ)
+		} else if err = decoder.DecodeFromBytes(data, l.df); err != nil {
+			return err
+		}
+		*decoded = append(*decoded, typ)
+		typ = decoder.NextLayerType()
+		data = decoder.LayerPayload()
+	}
+	return nil
 }
 
 func panicToError(e *error) {
@@ -91,71 +145,15 @@ func panicToError(e *error) {
 	}
 }
 
-type StackParserDecodeOptions struct {
+type DecodingLayerParserOptions struct {
 	HandlePanic bool
 }
 
-var HandlePanic = StackParserDecodeOptions{HandlePanic: true}
-var DontHandlePanic = StackParserDecodeOptions{HandlePanic: false}
-
-// DecodeBytes attempts to decode a set of bytes into the set of DecodingLayers
-// that make up this stack.  It returns the number of layers successfully
-// decoded (in range [0, len(s)]), the set of bytes remaining after all
-// successful decoding was completed, and any error encountered along the way.
-//
-//   e == nil iff n == len(s)
-//
-// Will return the error ParserDecodeMismatch if a subsequent layer
-// type (as returned by DecodingLayers.NextLayerType) cannot be handled by a
-// subsequent DecodingLayer (as returned by DecodingLayers.CanDecode).
-//
-// Will return the error ParserNoMoreBytes if all bytes are decoded before all
-// DecodingLayers are called.
-func (s StackParser) DecodeBytes(data []byte, df DecodeFeedback, opts StackParserDecodeOptions) (n int, remaining []byte, e error) {
-	if opts.HandlePanic {
-		defer panicToError(&e)
-	}
-	for i, d := range s {
-		if err := d.DecodeFromBytes(data, df); err != nil {
-			return i, data, err
-		}
-		data = d.LayerPayload()
-		if i < len(s)-1 {
-			if len(data) == 0 {
-				// We have more layers to parse, but no more data.
-				return i + 1, nil, ParserNoMoreBytes
-			}
-			next := d.NextLayerType()
-			if !s[i+1].CanDecode().Contains(next) {
-				// The next layer can't handle parsing the bytes we have.
-				return i + 1, data, fmt.Errorf("Decode of next layer type %v cannot be handled", next)
-			}
-		}
-	}
-	return len(s), data, nil
-}
-
-// DecodeFromBytes calls DecodeBytes and discards n.  It's given to enable users
-// to use StackParser as a DecodingLayer.
-func (s StackParser) DecodeFromBytes(data []byte, df DecodeFeedback) (remaining []byte, err error) {
-	_, remaining, err = s.DecodeBytes(data, df, DontHandlePanic)
-	return
-}
-
-// CanDecode returns the layer class the first layer in the stack can decode.
-func (s StackParser) CanDecode() LayerClass {
-	return s[0].CanDecode()
-}
-
-// NextLayerType returns the next layer type of the last layer in the stack.
-func (s StackParser) NextLayerType() LayerType {
-	return s[len(s)-1].NextLayerType()
-}
+var HandlePanic = DecodingLayerParserOptions{HandlePanic: true}
+var DontHandlePanic = DecodingLayerParserOptions{HandlePanic: false}
 
 type nilDecodeFeedback struct{}
 
 func (n *nilDecodeFeedback) SetTruncated() {}
 
-// If you don't care about the feedback returned from decode functions, you can
-// pass this DecodeFeedback in, and they'll be ignored.
-var NilDecodeFeedback DecodeFeedback = &nilDecodeFeedback{}
+var NilDecodeFeedback = DecodeFeedback(&nilDecodeFeedback{})

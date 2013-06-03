@@ -187,6 +187,16 @@ type IPDecodingLayer struct {
 	BaseLayer
 }
 
+func (i *IPDecodingLayer) NetworkFlow() gopacket.Flow {
+	switch i.Version {
+	case 4:
+		return i.IPv4.NetworkFlow()
+	case 6:
+		return i.IPv6.NetworkFlow()
+	}
+	panic("invalid IP version in decoding layer")
+}
+
 func (i *IPDecodingLayer) DecodeFromBytes(data []byte, df gopacket.DecodeFeedback) error {
 	i.Version = int(data[0] >> 4)
 	i.NextHeader = 0

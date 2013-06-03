@@ -131,21 +131,22 @@ func BenchmarkKnownStack(b *testing.B) {
 	}
 }
 
-func BenchmarkStackParserNoPanic(b *testing.B) {
-	stack := gopacket.StackParser{&Ethernet{}, &IPv4{}, &TCP{}, &gopacket.Payload{}}
+func BenchmarkDecodingLayerParserNoPanic(b *testing.B) {
+	decoded := make([]gopacket.LayerType, 0, 20)
+	dlp := gopacket.NewDecodingLayerParser(LayerTypeEthernet, &Ethernet{}, &IPv4{}, &TCP{}, &gopacket.Payload{})
+	dlp.HandlePanic = false
 	for i := 0; i < b.N; i++ {
-		// This is a little slower than KnownStack, because it actually checks if
-		// each parser is the correct one to use before continuing on.
-		stack.DecodeBytes(testSimpleTCPPacket, gopacket.NilDecodeFeedback, gopacket.DontHandlePanic)
+		decoded = decoded[:0]
+		dlp.DecodeLayers(testSimpleTCPPacket, &decoded)
 	}
 }
 
-func BenchmarkStackParserPanic(b *testing.B) {
-	stack := gopacket.StackParser{&Ethernet{}, &IPv4{}, &TCP{}, &gopacket.Payload{}}
+func BenchmarkDecodingLayerParserPanic(b *testing.B) {
+	decoded := make([]gopacket.LayerType, 0, 20)
+	dlp := gopacket.NewDecodingLayerParser(LayerTypeEthernet, &Ethernet{}, &IPv4{}, &TCP{}, &gopacket.Payload{})
 	for i := 0; i < b.N; i++ {
-		// This is a little slower than KnownStack, because it actually checks if
-		// each parser is the correct one to use before continuing on.
-		stack.DecodeBytes(testSimpleTCPPacket, gopacket.NilDecodeFeedback, gopacket.HandlePanic)
+		decoded = decoded[:0]
+		dlp.DecodeLayers(testSimpleTCPPacket, &decoded)
 	}
 }
 
@@ -868,16 +869,14 @@ func TestDecodeUDPPacketTooSmall(t *testing.T) {
 	}
 }
 
-func TestStackParserFullTCPPacket(t *testing.T) {
-	stack := gopacket.StackParser{&Ethernet{}, &IPv4{}, &TCP{}, &gopacket.Payload{}}
-	n, remaining, err := stack.DecodeBytes(testSimpleTCPPacket, gopacket.NilDecodeFeedback, gopacket.HandlePanic)
+func TestDecodingLayerParserFullTCPPacket(t *testing.T) {
+	dlp := gopacket.NewDecodingLayerParser(LayerTypeEthernet, &Ethernet{}, &IPv4{}, &TCP{}, &gopacket.Payload{})
+	decoded := make([]gopacket.LayerType, 0, 1)
+	err := dlp.DecodeLayers(testSimpleTCPPacket, &decoded)
 	if err != nil {
-		t.Error("Error from stack parser: ", err)
+		t.Error("Error from dlp parser: ", err)
 	}
-	if n != 4 {
-		t.Error("Expected 4 layers parsed, instead got ", n)
-	}
-	if len(remaining) > 0 {
-		t.Error("Some bytes not parsed:", remaining)
+	if len(decoded) != 4 {
+		t.Error("Expected 4 layers parsed, instead got ", len(decoded))
 	}
 }
