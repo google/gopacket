@@ -96,6 +96,16 @@ func (ip6 *IPv6) DecodeFromBytes(data []byte, df gopacket.DecodeFeedback) error 
 	return nil
 }
 
+func (i *IPv6) CanDecode() gopacket.LayerClass {
+	return LayerTypeIPv6
+}
+func (i *IPv6) NextLayerType() gopacket.LayerType {
+	if i.HopByHop != nil {
+		return i.HopByHop.NextHeader.LayerType()
+	}
+	return i.NextHeader.LayerType()
+}
+
 func decodeIPv6(data []byte, p gopacket.PacketBuilder) error {
 	ip6 := &IPv6{}
 	err := ip6.DecodeFromBytes(data, p)
@@ -174,65 +184,24 @@ func decodeIPv6ExtensionBase(data []byte) (i ipv6ExtensionBase) {
 	return
 }
 
-// IPDecodingLayer is a DecodingLayer (see StackParser for more details)
-// which decodes IP, whether v4 or v6.  It also ignores v6 extensions (besides
+// IPv6ExtensionSkipper is a DecodingLayer (see StackParser for more
+// details) which decodes and ignores v6 extensions (besides
 // HopByHop, which is stored within the IPv6 portion of the packet).
-// Before reading either v4 or v6 fields, check the Version field (will be 4 or
-// 6) to determine which to use.
-type IPDecodingLayer struct {
-	IPv4       IPv4
-	IPv6       IPv6
-	Version    int
+type IPv6ExtensionSkipper struct {
 	NextHeader IPProtocol
 	BaseLayer
 }
 
-func (i *IPDecodingLayer) NetworkFlow() gopacket.Flow {
-	switch i.Version {
-	case 4:
-		return i.IPv4.NetworkFlow()
-	case 6:
-		return i.IPv6.NetworkFlow()
-	}
-	panic("invalid IP version in decoding layer")
+func (i *IPv6ExtensionSkipper) DecodeFromBytes(data []byte, df gopacket.DecodeFeedback) error {
+	extension := decodeIPv6ExtensionBase(data)
+	i.BaseLayer = BaseLayer{data[:extension.ActualLength], data[extension.ActualLength:]}
+	i.NextHeader = extension.NextHeader
+	return nil
 }
-
-func (i *IPDecodingLayer) DecodeFromBytes(data []byte, df gopacket.DecodeFeedback) error {
-	i.Version = int(data[0] >> 4)
-	i.NextHeader = 0
-	contentSize := 0
-	switch i.Version {
-	case 4:
-		err := i.IPv4.DecodeFromBytes(data, df)
-		i.NextHeader = i.IPv4.Protocol
-		i.BaseLayer = i.IPv4.BaseLayer
-		return err
-	case 6:
-		// First, grab our IPv6 packet.
-		err := i.IPv6.DecodeFromBytes(data, df)
-		i.NextHeader = i.IPv6.NextHeader
-		if err != nil {
-			return err
-		}
-		// Next, skip over extensions.
-		for LayerClassIPv6Extension.Contains(i.NextHeader.LayerType()) {
-			if contentSize >= len(data) {
-				return gopacket.ParserNoMoreBytes
-			}
-			extension := decodeIPv6ExtensionBase(data[contentSize:])
-			contentSize += extension.ActualLength
-			i.NextHeader = extension.NextHeader
-		}
-		i.BaseLayer = BaseLayer{data[:contentSize], data[contentSize:]}
-		return nil
-	default:
-		return fmt.Errorf("Invalid first byte of IPv4/6 layer: 0x%02x", data[0])
-	}
+func (i *IPv6ExtensionSkipper) CanDecode() gopacket.LayerClass {
+	return LayerClassIPv6Extension
 }
-func (i *IPDecodingLayer) CanDecode() gopacket.LayerClass {
-	return LayerClassIPNetwork
-}
-func (i *IPDecodingLayer) NextLayerType() gopacket.LayerType {
+func (i *IPv6ExtensionSkipper) NextLayerType() gopacket.LayerType {
 	return i.NextHeader.LayerType()
 }
 
