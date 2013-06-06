@@ -36,20 +36,6 @@ func DiscardBytesToEOF(r io.Reader) (discarded int) {
 	}
 }
 
-// NewReaderStream returns a new ReaderStream object.
-// If lossErrors is true, this stream will return ReaderStreamDataLoss
-// errors from its Read function whenever it determines data has been lost.
-// Otherwise, it will only ever return an io.EOF error.
-func NewReaderStream(lossErrors bool) ReaderStream {
-	r := ReaderStream{
-		reassembled: make(chan []Reassembly),
-		done:        make(chan bool),
-		lossErrors:  lossErrors,
-	}
-	<-r.done // Grab first done thing.
-	return r
-}
-
 // ReaderStream implements both assembly.Stream and io.Reader.  You can use it
 // as a building block to make simple, easy stream handlers.
 //
@@ -62,6 +48,21 @@ type ReaderStream struct {
 	closed       bool
 	lossErrors   bool
 	lossReported bool
+	first        bool
+}
+
+// NewReaderStream returns a new ReaderStream object.
+// If lossErrors is true, this stream will return ReaderStreamDataLoss
+// errors from its Read function whenever it determines data has been lost.
+// Otherwise, it will only ever return an io.EOF error.
+func NewReaderStream(lossErrors bool) ReaderStream {
+	r := ReaderStream{
+		reassembled: make(chan []Reassembly),
+		done:        make(chan bool),
+		lossErrors:  lossErrors,
+		first:       true,
+	}
+	return r
 }
 
 // Reassembled implements assembly.Stream's Reassembled function.
@@ -95,7 +96,11 @@ func (r *ReaderStream) Read(p []byte) (int, error) {
 	var ok bool
 	r.stripEmpty()
 	for !r.closed && len(r.current) == 0 {
-		r.done <- true
+		if r.first {
+			r.first = false
+		} else {
+			r.done <- true
+		}
 		if r.current, ok = <-r.reassembled; ok {
 			r.stripEmpty()
 		} else {
@@ -122,9 +127,9 @@ func (r *ReaderStream) Close() error {
 	r.current = nil
 	r.closed = true
 	for {
-		r.done <- true
 		if _, ok := <-r.reassembled; !ok {
 			return nil
 		}
+		r.done <- true
 	}
 }

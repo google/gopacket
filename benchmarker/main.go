@@ -35,15 +35,6 @@ var zeros []byte = make([]byte, 12)
 
 var discardBuf [4096]byte
 
-func discardBytes(r io.Reader) {
-	for {
-		_, err := r.Read(discardBuf[:])
-		if err == io.EOF {
-			return
-		}
-	}
-}
-
 type benchStreamHandler struct {
 	opened      int
 	reassembled int
@@ -80,20 +71,22 @@ func (b *benchReader) run() {
 			}
 		}
 	} else {
-		discardBytes(b)
+		assembly.DiscardBytesToEOF(b)
 	}
 }
 
 func thread(handle *pcap.Handle, pool *assembly.ConnectionPool, wg *sync.WaitGroup) {
-	var eth layers.Ethernet
-	var dot1q layers.Dot1Q
-	var ip layers.IPDecodingLayer
+	var ip4 layers.IPv4
+	var ip6 layers.IPv6
 	var tcp layers.TCP
-	parser := gopacket.StackParser{&eth}
-	if *vlan {
-		parser = append(parser, &dot1q)
-	}
-	parser = append(parser, &ip, &tcp)
+	parser := gopacket.NewDecodingLayerParser(layers.LayerTypeEthernet,
+		&layers.Ethernet{},
+		&ip4,
+		&ip6,
+		&tcp,
+		&layers.IPv6ExtensionSkipper{},
+		&layers.Dot1Q{})
+  decoded := []gopacket.LayerType{}
 	assembler := assembly.NewAssembler(*pages, *maxper, pool)
 	success := 0
 	flushAt := time.Now().Add(time.Second * time.Duration(*flushEvery))
@@ -108,13 +101,24 @@ func thread(handle *pcap.Handle, pool *assembly.ConnectionPool, wg *sync.WaitGro
 			fmt.Println("Error: ", err)
 			continue
 		}
-		n, _, err := parser.DecodeBytes(data, gopacket.NilDecodeFeedback, gopacket.HandlePanic)
-		switch n {
-		case 4:
-			success++
-			assembler.Assemble(ip.NetworkFlow(), &tcp)
-		default:
-		}
+		parser.DecodeLayers(data, &decoded)
+    var netFlow gopacket.Flow
+    haveNetFlow := false
+    for _, lt := range decoded {
+      switch lt {
+      case layers.LayerTypeIPv4:
+        netFlow = ip4.NetworkFlow()
+        haveNetFlow = true
+      case layers.LayerTypeIPv6:
+        netFlow = ip6.NetworkFlow()
+        haveNetFlow = true
+      case layers.LayerTypeTCP:
+        if haveNetFlow {
+          success++
+          assembler.Assemble(netFlow, &tcp)
+        }
+      }
+    }
 	}
 	wg.Done()
 }
