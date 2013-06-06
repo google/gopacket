@@ -5,8 +5,7 @@ import (
 	"io"
 )
 
-var discardBytes [4096]byte
-var discardBuffer = discardBytes[:]
+var discardBuffer = make([]byte, 4096)
 
 // DiscardBytesToFirstError will read in all bytes up to the first error
 // reported by the given reader, then return the number of bytes discarded
@@ -77,6 +76,8 @@ func (r *ReaderStream) ReassemblyComplete() {
 	close(r.done)
 }
 
+// stripEmpty strips empty reassembly slices off the front of its current set of
+// slices.
 func (r *ReaderStream) stripEmpty() {
 	for len(r.current) > 0 && len(r.current[0].Bytes) == 0 {
 		r.current = r.current[:len(r.current)-1]

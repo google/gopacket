@@ -249,8 +249,6 @@ type ConnectionPool struct {
 	users   int
 	mu      sync.RWMutex
 	factory StreamFactory
-	free    []*connection
-	all     [][]connection
 }
 
 // NewConnectionPool creates a new connection pool.  Streams will
@@ -315,24 +313,13 @@ type Assembler struct {
 	connPool       *ConnectionPool
 }
 
-func (p *ConnectionPool) grow() {
-	conns := make([]connection, 1024)
-	p.all = append(p.all, conns)
-	for i, _ := range conns {
-		p.free = append(p.free, &conns[i])
-	}
-}
-
-func (p *ConnectionPool) newConnection(k key) (c *connection) {
-	if len(p.free) == 0 {
-		p.grow()
-	}
-	index := len(p.free) - 1
-	c, p.free = p.free[index], p.free[:index]
-	c.reset(k, p.factory.New(k[0], k[1]))
+func (p *ConnectionPool) newConnection(k key, s Stream) *connection {
+  c := &connection{}
+	c.reset(k, s)
 	return c
 }
 
+// getConnection returns a new (locked) connection.
 func (p *ConnectionPool) getConnection(k key) *connection {
 	p.mu.RLock()
 	conn := p.conns[k]
@@ -340,8 +327,9 @@ func (p *ConnectionPool) getConnection(k key) *connection {
 	if conn != nil {
 		return conn
 	}
+  s := p.factory.New(k[0], k[1])
 	p.mu.Lock()
-	conn = p.newConnection(k)
+	conn = p.newConnection(k, s)
 	if conn2 := p.conns[k]; conn2 != nil {
 		p.mu.Unlock()
 		return conn2
@@ -360,8 +348,19 @@ func (p *ConnectionPool) getConnection(k key) *connection {
 func (a *Assembler) Assemble(netFlow gopacket.Flow, t *layers.TCP) {
 	a.ret = a.ret[:0]
 	key := [...]gopacket.Flow{netFlow, t.TransportFlow()}
-	conn := a.connPool.getConnection(key)
-	conn.mu.Lock()
+  var conn *connection
+  // This for loop handles a race condition where a connection will close, lock
+  // the connection pool, and remove itself, but before it locked the connection
+  // pool it's returned to another Assemble statement.  This should loop 0-1
+  // times for the VAST majority of cases.
+  for {
+    conn = a.connPool.getConnection(key)
+    conn.mu.Lock()
+    if !conn.closed {
+      break
+    }
+    conn.mu.Unlock()
+  }
 	conn.lastSeen = time.Now()
 	seq, bytes := Sequence(t.Seq), t.Payload
 	if t.SYN {
@@ -392,6 +391,9 @@ func (a *Assembler) Assemble(netFlow gopacket.Flow, t *layers.TCP) {
 
 func (a *Assembler) sendToConnection(conn *connection) {
 	a.addContiguous(conn)
+  if conn.stream == nil {
+    panic("why?")
+  }
 	conn.stream.Reassembled(a.ret)
 	if a.ret[len(a.ret)-1].End {
 		a.closeConnection(conn)
@@ -417,8 +419,6 @@ func (a *Assembler) skipFlush(conn *connection) {
 func (p *ConnectionPool) remove(conn *connection) {
 	p.mu.Lock()
 	delete(p.conns, conn.key)
-	conn.stream = nil
-	p.free = append(p.free, conn)
 	p.mu.Unlock()
 }
 
