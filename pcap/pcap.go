@@ -27,6 +27,7 @@ import (
 	"net"
 	"runtime"
 	"strconv"
+	"sync"
 	"syscall"
 	"time"
 	"unsafe"
@@ -40,6 +41,7 @@ const errorBufferSize = 256
 type Handle struct {
 	// cptr is the handle for the actual pcap C object.
 	cptr *C.pcap_t
+	mu   sync.Mutex
 }
 
 // Stats contains statistics on how many packets were handled by a pcap handle,
@@ -148,6 +150,7 @@ func (p *Handle) ReadPacketData() (data []byte, ci gopacket.CaptureInfo, err err
 	var buf_ptr *C.u_char
 	var buf unsafe.Pointer
 
+	p.mu.Lock()
 	runtime.LockOSThread()
 	result := NextError(C.pcap_next_ex(p.cptr, &pkthdr, &buf_ptr))
 
@@ -160,6 +163,7 @@ func (p *Handle) ReadPacketData() (data []byte, ci gopacket.CaptureInfo, err err
 			err = result
 		}
 		runtime.UnlockOSThread()
+		p.mu.Unlock()
 		return
 	}
 	data = C.GoBytes(buf, C.int(pkthdr.caplen))
@@ -167,6 +171,7 @@ func (p *Handle) ReadPacketData() (data []byte, ci gopacket.CaptureInfo, err err
 	ci.CaptureLength = int(pkthdr.caplen)
 	ci.Length = int(pkthdr.len)
 	runtime.UnlockOSThread()
+	p.mu.Unlock()
 	return
 }
 
