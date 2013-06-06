@@ -14,7 +14,7 @@ import (
 
 // SCTP contains information on the top level of an SCTP packet.
 type SCTP struct {
-	baseLayer
+	BaseLayer
 	SrcPort, DstPort SCTPPort
 	VerificationTag  uint32
 	Checksum         uint32
@@ -32,7 +32,7 @@ func decodeSCTP(data []byte, p gopacket.PacketBuilder) error {
 		dPort:           data[2:4],
 		VerificationTag: binary.BigEndian.Uint32(data[4:8]),
 		Checksum:        binary.BigEndian.Uint32(data[8:12]),
-		baseLayer:       baseLayer{data[:12], data[12:]},
+		BaseLayer:       BaseLayer{data[:12], data[12:]},
 	}
 	p.AddLayer(sctp)
 	p.SetTransportLayer(sctp)
@@ -51,7 +51,7 @@ func decodeWithSCTPChunkTypePrefix(data []byte, p gopacket.PacketBuilder) error 
 
 // SCTPChunk contains the common fields in all SCTP chunks.
 type SCTPChunk struct {
-	baseLayer
+	BaseLayer
 	Type   SCTPChunkType
 	Flags  uint8
 	Length uint16
@@ -78,7 +78,7 @@ func decodeSCTPChunk(data []byte) SCTPChunk {
 		Flags:        data[1],
 		Length:       length,
 		ActualLength: actual,
-		baseLayer:    baseLayer{data[:actual], data[actual:]},
+		BaseLayer:    BaseLayer{data[:actual], data[actual:]},
 	}
 }
 

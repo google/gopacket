@@ -13,7 +13,7 @@ import (
 
 // EtherIP is the struct for storing RFC 3378 EtherIP packet headers.
 type EtherIP struct {
-	baseLayer
+	BaseLayer
 	Version  uint8
 	Reserved uint16
 }
@@ -25,7 +25,7 @@ func decodeEtherIP(data []byte, p gopacket.PacketBuilder) error {
 	p.AddLayer(&EtherIP{
 		Version:   data[0] >> 4,
 		Reserved:  binary.BigEndian.Uint16(data[:2]) & 0x0fff,
-		baseLayer: baseLayer{data[:2], data[2:]},
+		BaseLayer: BaseLayer{data[:2], data[2:]},
 	})
 	return p.NextDecoder(LayerTypeEthernet)
 }

@@ -16,7 +16,7 @@ import (
 
 // TCP is the layer for TCP headers.
 type TCP struct {
-	baseLayer
+	BaseLayer
 	SrcPort, DstPort                           TCPPort
 	Seq                                        uint32
 	Ack                                        uint32
@@ -83,12 +83,12 @@ func decodeTCP(data []byte, p gopacket.PacketBuilder) error {
 	dataStart := int(tcp.DataOffset) * 4
 	if dataStart > len(data) {
 		p.SetTruncated()
-		tcp.payload = nil
-		tcp.contents = data
+		tcp.Payload = nil
+		tcp.Contents = data
 		return errors.New("TCP data offset greater than packet length")
 	}
-	tcp.contents = data[:dataStart]
-	tcp.payload = data[dataStart:]
+	tcp.Contents = data[:dataStart]
+	tcp.Payload = data[dataStart:]
 	// From here on, data points just to the header options.
 	data = data[20:dataStart]
 	for len(data) > 0 {

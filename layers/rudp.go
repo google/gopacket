@@ -13,7 +13,7 @@ import (
 )
 
 type RUDP struct {
-	baseLayer
+	BaseLayer
 	SYN, ACK, EACK, RST, NUL bool
 	Version                  uint8
 	HeaderLength             uint8
@@ -60,8 +60,8 @@ func decodeRUDP(data []byte, p gopacket.PacketBuilder) error {
 		return fmt.Errorf("RUDP packet with too-short header length %d", r.HeaderLength)
 	}
 	hlen := int(r.HeaderLength) * 2
-	r.contents = data[:hlen]
-	r.payload = data[hlen : hlen+int(r.DataLength)]
+	r.Contents = data[:hlen]
+	r.Payload = data[hlen : hlen+int(r.DataLength)]
 	r.VariableHeaderArea = data[18:hlen]
 	headerData := r.VariableHeaderArea
 	switch {

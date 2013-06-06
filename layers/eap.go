@@ -33,7 +33,7 @@ const (
 
 // EAP defines an Extensible Authentication Protocol (rfc 3748) layer.
 type EAP struct {
-	baseLayer
+	BaseLayer
 	Code     EAPCode
 	Id       uint8
 	Length   uint16
@@ -54,8 +54,8 @@ func decodeEAP(data []byte, p gopacket.PacketBuilder) error {
 		e.Type = EAPType(data[4])
 		e.TypeData = data[5:]
 	}
-	e.baseLayer.contents = data[:e.Length]
-	e.baseLayer.payload = data[e.Length:] // Should be 0 bytes
+	e.BaseLayer.Contents = data[:e.Length]
+	e.BaseLayer.Payload = data[e.Length:] // Should be 0 bytes
 	p.AddLayer(e)
 	// If we have any bytes left in the packet, we have no idea what they are,
 	// so treat them as unknown data.

@@ -256,7 +256,7 @@ func TestDecodeSimpleTCPPacket(t *testing.T) {
 		equal("IP Src", "172.17.81.73", net.NetworkFlow().Src())
 		equal("IP Dst", "173.222.254.225", net.NetworkFlow().Dst())
 		want := &IPv4{
-			baseLayer:  baseLayer{testSimpleTCPPacket[14:34], testSimpleTCPPacket[34:]},
+			BaseLayer:  BaseLayer{testSimpleTCPPacket[14:34], testSimpleTCPPacket[34:]},
 			Version:    4,
 			IHL:        5,
 			TOS:        0,
@@ -282,7 +282,7 @@ func TestDecodeSimpleTCPPacket(t *testing.T) {
 		equal("TCP Src", "50679", trans.TransportFlow().Src())
 		equal("TCP Dst", "80", trans.TransportFlow().Dst())
 		want := &TCP{
-			baseLayer:  baseLayer{testSimpleTCPPacket[34:66], testSimpleTCPPacket[66:]},
+			BaseLayer:  BaseLayer{testSimpleTCPPacket[34:66], testSimpleTCPPacket[66:]},
 			SrcPort:    50679,
 			DstPort:    80,
 			Seq:        0xc57e0e48,
@@ -539,7 +539,7 @@ func TestDecodeCiscoDiscovery(t *testing.T) {
 		NativeVLAN:    1,
 		FullDuplex:    true,
 		MgmtAddresses: []net.IP{net.IPv4(192, 168, 0, 253)},
-		baseLayer:     baseLayer{contents: data[26:]},
+		BaseLayer:     BaseLayer{Contents: data[26:]},
 	}
 	cdpL := p.Layer(LayerTypeCiscoDiscoveryInfo)
 	info, _ := cdpL.(*CiscoDiscoveryInfo)
@@ -584,7 +584,7 @@ func TestDecodeLinkLayerDiscovery(t *testing.T) {
 		ChassisID: LLDPChassisID{LLDPChassisIDSubTypeMACAddr, []byte{0x00, 0x01, 0x30, 0xf9, 0xad, 0xa0}},
 		PortID:    LLDPPortID{LLDPPortIDSubtypeIfaceName, []byte("1/1")},
 		TTL:       120,
-		baseLayer: baseLayer{contents: data[14:]},
+		BaseLayer: BaseLayer{Contents: data[14:]},
 	}
 	lldp.Values = nil // test these in next stage
 	if !reflect.DeepEqual(lldp, want) {
@@ -684,7 +684,7 @@ func TestDecodeLinkLayerDiscovery(t *testing.T) {
 		ChassisID: LLDPChassisID{LLDPChassisIDSubTypeMACAddr, []byte{0x00, 0x13, 0x21, 0x57, 0xca, 0x40}},
 		PortID:    LLDPPortID{LLDPPortIDSubtypeLocal, []byte("1")},
 		TTL:       120,
-		baseLayer: baseLayer{contents: data[14:]},
+		BaseLayer: BaseLayer{Contents: data[14:]},
 	}
 	lldp.Values = nil // test these in next stage
 	if !reflect.DeepEqual(lldp, want) {

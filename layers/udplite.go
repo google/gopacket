@@ -14,7 +14,7 @@ import (
 
 // UDPLite is the layer for UDP-Lite headers (rfc 3828).
 type UDPLite struct {
-	baseLayer
+	BaseLayer
 	SrcPort, DstPort UDPLitePort
 	ChecksumCoverage uint16
 	Checksum         uint16
@@ -32,7 +32,7 @@ func decodeUDPLite(data []byte, p gopacket.PacketBuilder) error {
 		dPort:            data[2:4],
 		ChecksumCoverage: binary.BigEndian.Uint16(data[4:6]),
 		Checksum:         binary.BigEndian.Uint16(data[6:8]),
-		baseLayer:        baseLayer{data[:8], data[8:]},
+		BaseLayer:        BaseLayer{data[:8], data[8:]},
 	}
 	p.AddLayer(udp)
 	p.SetTransportLayer(udp)

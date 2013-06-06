@@ -33,7 +33,7 @@ func decodeIPSecAH(data []byte, p gopacket.PacketBuilder) error {
 		SPI:               binary.BigEndian.Uint32(data[4:8]),
 		Seq:               binary.BigEndian.Uint32(data[8:12]),
 	}
-	i.AuthenticationData = i.contents[12:]
+	i.AuthenticationData = i.Contents[12:]
 	p.AddLayer(i)
 	return p.NextDecoder(i.NextHeader)
 }
@@ -41,7 +41,7 @@ func decodeIPSecAH(data []byte, p gopacket.PacketBuilder) error {
 // IPSecESP is the encapsulating security payload defined in
 // http://tools.ietf.org/html/rfc2406
 type IPSecESP struct {
-	baseLayer
+	BaseLayer
 	SPI, Seq uint32
 	// Encrypted contains the encrypted set of bytes sent in an ESP
 	Encrypted []byte
@@ -52,7 +52,7 @@ func (i *IPSecESP) LayerType() gopacket.LayerType { return LayerTypeIPSecESP }
 
 func decodeIPSecESP(data []byte, p gopacket.PacketBuilder) error {
 	i := &IPSecESP{
-		baseLayer: baseLayer{data, nil},
+		BaseLayer: BaseLayer{data, nil},
 		SPI:       binary.BigEndian.Uint32(data[:4]),
 		Seq:       binary.BigEndian.Uint32(data[4:8]),
 		Encrypted: data[8:],

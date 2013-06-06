@@ -12,7 +12,7 @@ import (
 
 // EAPOL defines an EAP over LAN (802.1x) layer.
 type EAPOL struct {
-	baseLayer
+	BaseLayer
 	Version uint8
 	Type    EAPOLType
 }
@@ -24,7 +24,7 @@ func decodeEAPOL(data []byte, p gopacket.PacketBuilder) error {
 	e := &EAPOL{
 		Version:   data[0],
 		Type:      EAPOLType(data[1]),
-		baseLayer: baseLayer{data[:2], data[2:]},
+		BaseLayer: BaseLayer{data[:2], data[2:]},
 	}
 	p.AddLayer(e)
 	return p.NextDecoder(e.Type)
