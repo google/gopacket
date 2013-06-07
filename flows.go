@@ -12,13 +12,26 @@ import (
 	"strconv"
 )
 
+// MaxEndpointSize determines the maximum size in bytes of an endpoint address.
+// Endpoints/Flows have a problem:  They need to be hashable.  Therefore, they
+// can't use a byte slice.  The two obvious choices are to use a string or a
+// byte array.  Strings work great, but string creation requires memory
+// allocation, which can be slow.  Arrays work great, but have a fixed size.  We
+// originally used the former, now we've switched to the latter.  Use of a fixed
+// byte-array doubles the speed of constructing a flow (due to not needing to
+// allocate).  This is a huge increase... too much for us to pass up.
+//
+// The end result of this, though, is that an endpoint/flow can't be created
+// using more than MaxEndpointSize bytes per address.
+const MaxEndpointSize = 16
+
 // Endpoint is the set of bytes used to address packets at various layers.
 // See LinkLayer, NetworkLayer, and TransportLayer specifications.
 // Endpoints are usable as map keys.
 type Endpoint struct {
 	typ EndpointType
 	len int
-	raw [maxFlowSize]byte
+	raw [MaxEndpointSize]byte
 }
 
 // EndpointType returns the endpoint type associated with this endpoint.
@@ -29,7 +42,9 @@ func (e Endpoint) EndpointType() EndpointType { return e.typ }
 func (e Endpoint) Raw() []byte { return e.raw[:] }
 
 // LessThan provides a stable ordering for all endpoints.  It sorts first based
-// on the EndpointType of an endpoint, then based on the raw bytes of that endpoint.
+// on the EndpointType of an endpoint, then based on the raw bytes of that
+// endpoint.
+//
 // For some endpoints, the actual comparison may not make sense, however this
 // ordering does provide useful information for most Endpoint types.
 // Ordering is based first on endpoint type, then on raw endpoint bytes.
@@ -64,10 +79,13 @@ func (a Endpoint) FastHash() (h uint64) {
 }
 
 // NewEndpoint creates a new Endpoint object.
+//
+// The size of raw must be less than MaxEndpointSize, otherwise this function
+// will panic.
 func NewEndpoint(typ EndpointType, raw []byte) (e Endpoint) {
 	e.len = len(raw)
-	if e.len > maxFlowSize {
-		panic("endpoint too large, max endpoint size is 16")
+	if e.len > MaxEndpointSize {
+		panic("raw byte length greater than MaxEndpointSize")
 	}
 	e.typ = typ
 	copy(e.raw[:], raw)
@@ -115,14 +133,12 @@ func (e Endpoint) String() string {
 	return fmt.Sprintf("%v:%v", e.typ, e.raw)
 }
 
-const maxFlowSize = 16
-
 // Flow represents the direction of traffic for a packet layer, as a source and destination Endpoint.
 // Flows are usable as map keys.
 type Flow struct {
 	typ        EndpointType
 	slen, dlen int
-	src, dst   [maxFlowSize]byte
+	src, dst   [MaxEndpointSize]byte
 }
 
 // FlowFromEndpoints creates a new flow by pasting together two endpoints.
@@ -188,11 +204,14 @@ func (f Flow) Reverse() Flow {
 }
 
 // NewFlow creates a new flow.
+//
+// src and dst must have length <= MaxEndpointSize, otherwise NewFlow will
+// panic.
 func NewFlow(t EndpointType, src, dst []byte) (f Flow) {
 	f.slen = len(src)
 	f.dlen = len(dst)
-	if f.slen > maxFlowSize || f.dlen > maxFlowSize {
-		panic("flow endpoint too large")
+	if f.slen > MaxEndpointSize || f.dlen > MaxEndpointSize {
+		panic("flow raw byte length greater than MaxEndpointSize")
 	}
 	f.typ = t
 	copy(f.src[:], src)
