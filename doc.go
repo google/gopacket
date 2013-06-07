@@ -17,6 +17,7 @@ useful:
  * pcap: C bindings to use libpcap to pull packets off the wire.
  * pfring: C bindings to use PF_RING to pull packets off the wire.
 
+
 Basic Usage
 
 gopacket takes in packet data as a []byte and decodes it into a packet with
@@ -49,6 +50,7 @@ we don't have full data.
  // Decode a TCP header and its payload
  tcpP := gopacket.NewPacket(p3, layers.LayerTypeTCP, gopacket.Default)
 
+
 Reading Packets From A Source
 
 Most of the time, you won't just have a []byte of packet data lying around.
@@ -76,6 +78,7 @@ end-of-file.
 You can change the decoding options of the packetSource by setting fields in
 packetSource.DecodeOptions... see the following sections for more details.
 
+
 Lazy Decoding
 
 gopacket optionally decodes packet data lazily, meaning it
@@ -98,6 +101,7 @@ in multiple goroutines concurrently, don't use gopacket.Lazy.  Then gopacket
 will decode the packet fully, and all future function calls won't mutate the
 object.
 
+
 NoCopy Decoding
 
 By default, gopacket will copy the slice passed to NewPacket and store the
@@ -117,6 +121,7 @@ gopacket.NewPacket, and it'll use the passed-in slice itself.
 The fastest method of decoding is to use both Lazy and NoCopy, but note from
 the many caveats above that for some implementations they may be dangerous
 either or both may be dangerous.
+
 
 Pointers To Known Layers
 
@@ -155,6 +160,7 @@ Note that we don't return an error from NewPacket because we may have decoded
 a number of layers successfully before running into our erroneous layer.  You
 may still be able to get your Ethernet and IPv4 layers correctly, even if
 your TCP layer is malformed.
+
 
 Flow And Endpoint
 
@@ -200,6 +206,26 @@ based on endpoint criteria:
    fmt.Println("Found that UDP flow I was looking for!")
  }
 
+For load-balancing purposes, both Flow and Endpoint have FastHash() functions,
+which provide quick, non-cryptographic hashes of their contents.  Of particular
+importance is the fact that Flow FastHash() is symetric: A->B will have the same
+hash as B->A.  An example usage could be:
+
+ channels := [8]chan gopacket.Packet
+ for i := 0; i < 8; i++ {
+   channels[i] = make(chan gopacket.Packet)
+   go packetHandler(channels[i])
+ }
+ for packet := range getPackets() {
+   if net := packet.NetworkLayer(); net != nil {
+     channels[int(net.NetworkFlow().FastHash()) & 0x7] <- packet
+   }
+ }
+
+This allows us to split up a packet stream while still making sure that each
+stream sees all packets for a flow (and its bidirectional opposite).
+
+
 Implementing Your Own Decoder
 
 If your network has some strange encapsulation, you can implement your own
@@ -234,6 +260,7 @@ in a 4-byte header.
 See the docs for Decoder and PacketBuilder for more details on how coding
 decoders works, or look at RegisterLayerType and RegisterEndpointType to see how
 to add layer/endpoint types to gopacket.
+
 
 Fast Decoding With DecodingLayerParser
 
@@ -282,6 +309,7 @@ Unfortunately, not all layers can be used by DecodingLayerParser... only those
 implementing the DecodingLayer interface are usable.  Also, it's possible to
 create DecodingLayers that are not themselves Layers... see
 layers.IPv6ExtensionSkipper for an example of this.
+
 
 A Final Note
 

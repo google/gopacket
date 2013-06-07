@@ -13,6 +13,7 @@ import (
 )
 
 // MaxEndpointSize determines the maximum size in bytes of an endpoint address.
+//
 // Endpoints/Flows have a problem:  They need to be hashable.  Therefore, they
 // can't use a byte slice.  The two obvious choices are to use a string or a
 // byte array.  Strings work great, but string creation requires memory
@@ -53,6 +54,9 @@ func (a Endpoint) LessThan(b Endpoint) bool {
 	return a.typ < b.typ || (a.typ == b.typ && bytes.Compare(a.raw[:a.len], b.raw[:b.len]) < 0)
 }
 
+// fnvHash is used by our FastHash functions, and implements the FNV hash
+// created by Glenn Fowler, Landon Curt Noll, and Phong Vo.
+// See http://isthe.com/chongo/tech/comp/fnv/.
 func fnvHash(s []byte) (h uint64) {
 	h = fnvBasis
 	for i := 0; i < len(s); i++ {
