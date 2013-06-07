@@ -7,9 +7,7 @@
 package gopacket
 
 import (
-	//"encoding/binary"
 	"fmt"
-	//"net"
 	"strconv"
 )
 
@@ -36,6 +34,31 @@ func (e Endpoint) Raw() []byte { return []byte(e.raw) }
 // Endpoint bytes are sorted lexigraphically.
 func (a Endpoint) LessThan(b Endpoint) bool {
 	return a.typ < b.typ || (a.typ == b.typ && a.raw < b.raw)
+}
+
+func fnvHash(s string) (h uint64) {
+	h = fnvBasis
+	for i := 0; i < len(s); i++ {
+		h ^= uint64(s[i])
+		h *= fnvPrime
+	}
+	return
+}
+
+const fnvBasis = 14695981039346656037
+const fnvPrime = 1099511628211
+
+// FastHash provides a quick hashing function for an endpoint, useful if you'd
+// like to split up endpoints by modulos or other load-balancing techniques.
+// It uses a variant of Fowler-Noll-Vo hashing.
+//
+// The output of FastHash is not guaranteed to remain the same through future
+// code revisions, so should not be used to key values in persistent storage.
+func (a Endpoint) FastHash() (h uint64) {
+	h = fnvHash(a.raw)
+	h ^= uint64(a.typ)
+	h *= fnvPrime
+	return
 }
 
 // NewEndpoint creates a new Endpoint object.
@@ -100,6 +123,23 @@ func FlowFromEndpoints(src, dst Endpoint) (_ Flow, err error) {
 		return
 	}
 	return Flow{src.typ, src.raw, dst.raw}, nil
+}
+
+// FastHash provides a quick hashing function for a flow, useful if you'd
+// like to split up flows by modulos or other load-balancing techniques.
+// It uses a variant of Fowler-Noll-Vo hashing, and is guaranteed to collide
+// with its reverse flow.  IE: the flow A->B will have the same hash as the flow
+// B->A.
+//
+// The output of FastHash is not guaranteed to remain the same through future
+// code revisions, so should not be used to key values in persistent storage.
+func (a Flow) FastHash() (h uint64) {
+	// This combination must be commutative.  We don't use ^, since that would
+	// give the same hash for all A->A flows.
+	h = fnvHash(a.src) + fnvHash(a.dst)
+	h ^= uint64(a.typ)
+	h *= fnvPrime
+	return
 }
 
 // String returns a human-readable representation of this flow, in the form

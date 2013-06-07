@@ -175,3 +175,31 @@ func BenchmarkLargeBufferedChannel(b *testing.B) {
 		<-cb
 	}
 }
+func BenchmarkEndpointFastHashShort(b *testing.B) {
+	e := Endpoint{typ: 1, raw: "\x01\x02"}
+	for i := 0; i < b.N; i++ {
+		e.FastHash()
+	}
+}
+func BenchmarkEndpointFastHashLong(b *testing.B) {
+	e := Endpoint{typ: 1, raw: "\x01\x02\x03\x04\x01\x02\x03\x04\x01\x02\x03\x04\x01\x02\x03\x04"}
+	for i := 0; i < b.N; i++ {
+		e.FastHash()
+	}
+}
+func BenchmarkFlowFastHashShort(b *testing.B) {
+	e := Flow{typ: 1, src: "\x01\x02", dst: "\x02\x02"}
+	for i := 0; i < b.N; i++ {
+		e.FastHash()
+	}
+}
+func BenchmarkFlowFastHashLong(b *testing.B) {
+	e := Flow{
+		typ: 1,
+		src: "\x01\x02\x03\x04\x01\x02\x03\x04\x01\x02\x03\x04\x01\x02\x03\x04",
+		dst: "\x02\x02\x03\x04\x01\x02\x03\x04\x01\x02\x03\x04\x01\x02\x03\x04",
+	}
+	for i := 0; i < b.N; i++ {
+		e.FastHash()
+	}
+}

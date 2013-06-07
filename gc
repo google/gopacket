@@ -63,9 +63,9 @@ cd $(dirname $0)
 
 if [ ! -z "$GEN" ]; then
   go run gen.go | gofmt > valid_mac_prefixes.go
-	pushd layers
-	go run gen.go | gofmt > iana_ports.go
-	popd
+  pushd layers
+  go run gen.go | gofmt > iana_ports.go
+  popd
 fi
 
 # First, make sure everything is formatted, compiles, and tests pass.
@@ -81,16 +81,16 @@ go build gen.go
 go test
 popd
 if [ -f /usr/include/pcap.h ]; then
-	pushd pcap
-	go test ./...
+  pushd pcap
+  go test ./...
   go build ./...
-	popd
+  popd
 fi
 if [ -f /usr/include/pfring.h ]; then
-	pushd pfring
-	go test ./...
+  pushd pfring
+  go test ./...
   go build ./...
-	popd
+  popd
 fi
 
 # Run our initial commit
@@ -134,7 +134,11 @@ Go version $(go version)
 
 TEST BENCHMARKS
 EOF
-go test ./... --test.bench=.* 2>&1 | tee -a $COMMIT_FILE
+# go seems to have trouble with 'go test --bench=. ./...'
+go test --test.bench=.* 2>&1 | tee -a $COMMIT_FILE
+pushd layers
+go test --test.bench=.* 2>&1 | tee -a $COMMIT_FILE
+popd
 cat >> $COMMIT_FILE <<EOF
 
 
@@ -156,7 +160,11 @@ BENCHMARKING AGAINST COMMIT $PREV
 
 OLD TEST BENCHMARKS
 EOF
-go test ./... --test.bench=.* 2>&1 | tee -a $COMMIT_FILE
+# go seems to have trouble with 'go test --bench=. ./...'
+go test --test.bench=.* 2>&1 | tee -a $COMMIT_FILE
+pushd layers
+go test --test.bench=.* 2>&1 | tee -a $COMMIT_FILE
+popd
 cat >> $COMMIT_FILE <<EOF
 
 
