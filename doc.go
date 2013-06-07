@@ -235,6 +235,54 @@ See the docs for Decoder and PacketBuilder for more details on how coding
 decoders works, or look at RegisterLayerType and RegisterEndpointType to see how
 to add layer/endpoint types to gopacket.
 
+Fast Decoding With DecodingLayerParser
+
+TLDR:  DecodingLayerParser takes about 10% of the time as NewPacket to decode
+packet data, but only for known packet stacks.
+
+Basic decoding using gopacket.NewPacket or PacketSource.Packets is somewhat slow
+due to its need to allocate a new packet and every respective layer.  It's very
+versatile and can handle all known layer types, but sometimes you really only
+care about a specific set of layers regardless, so that versatility is wasted.
+
+DecodingLayerParser avoids memory allocation altogether by decoding packet
+layers directly into preallocated objects, which you can then reference to get
+the packet's information.  A quick example:
+
+ func main() {
+   var eth layers.Ethernet
+   var ip4 layers.IPv4
+   var ip6 layers.IPv6
+   var tcp layers.TCP
+   parser := gopacket.NewDecodingLayerParser(layers.LayerTypeEthernet, &eth, &ip4, &ip6, &tcp)
+   decoded := []gopacket.LayerType{}
+   for packetData := range somehowGetPacketData() {
+     err := parser.DecodeLayers(packetDat, &decoded)
+     for _, layerType := range decoded {
+       switch layerType {
+         case layers.LayerTypeIPv6:
+           fmt.Println("    IP4 ", ip4.SrcIP, ip4.DstIP)
+         case layers.LayerTypeIPv4:
+           fmt.Println("    IP6 ", ip6.SrcIP, ip6.DstIP)
+       }
+     }
+   }
+ }
+
+The important thing to note here is that the parser is modifying the passed in
+layers (eth, ip4, ip6, tcp) instead of allocating new ones, thus greatly
+speeding up the decoding process.  It's even branching based on layer type...
+it'll handle an (eth, ip4, tcp) or (eth, ip6, tcp) stack.  However, it won't
+handle any other type... since no other decoders were passed in, an (eth, ip4,
+udp) stack will stop decoding after ip4, and only pass back [LayerTypeEthernet,
+LayerTypeIPv4] through the 'decoded' slice (along with an error saying it can't
+decode a UDP packet).
+
+Unfortunately, not all layers can be used by DecodingLayerParser... only those
+implementing the DecodingLayer interface are usable.  Also, it's possible to
+create DecodingLayers that are not themselves Layers... see
+layers.IPv6ExtensionSkipper for an example of this.
+
 A Final Note
 
 If you use gopacket, you'll almost definitely want to make sure gopacket/layers

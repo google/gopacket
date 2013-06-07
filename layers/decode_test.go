@@ -56,6 +56,10 @@ var testSimpleTCPPacket []byte = []byte{
 	0x0d, 0x0a,
 }
 
+type nilDecodeFeedback struct{}
+
+func (n *nilDecodeFeedback) SetTruncated() {}
+
 // Benchmarks for actual gopacket code
 
 func BenchmarkLayerClassSliceContains(b *testing.B) {
@@ -122,27 +126,29 @@ func BenchmarkLazyNoCopy(b *testing.B) {
 
 func BenchmarkKnownStack(b *testing.B) {
 	stack := []gopacket.DecodingLayer{&Ethernet{}, &IPv4{}, &TCP{}, &gopacket.Payload{}}
+	var nf gopacket.DecodeFeedback = &nilDecodeFeedback{}
 	for i := 0; i < b.N; i++ {
 		data := testSimpleTCPPacket[:]
 		for _, d := range stack {
-			_ = d.DecodeFromBytes(data, gopacket.NilDecodeFeedback)
+			_ = d.DecodeFromBytes(data, nf)
 			data = d.LayerPayload()
 		}
 	}
 }
 
-func BenchmarkDecodingLayerParserNoPanic(b *testing.B) {
+func BenchmarkDecodingLayerParserIgnorePanic(b *testing.B) {
 	decoded := make([]gopacket.LayerType, 0, 20)
 	dlp := gopacket.NewDecodingLayerParser(LayerTypeEthernet, &Ethernet{}, &IPv4{}, &TCP{}, &gopacket.Payload{})
-	dlp.HandlePanic = false
+	dlp.IgnorePanic = true
 	for i := 0; i < b.N; i++ {
 		dlp.DecodeLayers(testSimpleTCPPacket, &decoded)
 	}
 }
 
-func BenchmarkDecodingLayerParserPanic(b *testing.B) {
+func BenchmarkDecodingLayerParserHandlePanic(b *testing.B) {
 	decoded := make([]gopacket.LayerType, 0, 20)
 	dlp := gopacket.NewDecodingLayerParser(LayerTypeEthernet, &Ethernet{}, &IPv4{}, &TCP{}, &gopacket.Payload{})
+	dlp.IgnorePanic = false
 	for i := 0; i < b.N; i++ {
 		dlp.DecodeLayers(testSimpleTCPPacket, &decoded)
 	}

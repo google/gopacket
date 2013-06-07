@@ -184,9 +184,9 @@ func decodeIPv6ExtensionBase(data []byte) (i ipv6ExtensionBase) {
 	return
 }
 
-// IPv6ExtensionSkipper is a DecodingLayer (see StackParser for more
-// details) which decodes and ignores v6 extensions (besides
-// HopByHop, which is stored within the IPv6 portion of the packet).
+// IPv6ExtensionSkipper is a DecodingLayer which decodes and ignores v6
+// extensions.  You can use it with a DecodingLayerParser to handle IPv6 stacks
+// which may or may not have extensions.
 type IPv6ExtensionSkipper struct {
 	NextHeader IPProtocol
 	BaseLayer

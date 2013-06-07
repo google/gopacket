@@ -7,26 +7,40 @@
 package gopacket
 
 import (
-	"errors"
 	"fmt"
 )
 
 // DecodingLayer is an interface for packet layers that can decode themselves.
+//
+// The important part of DecodingLayer is that they decode themselves in-place.
+// Calling DecodeFromBytes on a DecodingLayer totally resets the entire layer to
+// the new state defined by the data passed in.  A returned error leaves the
+// DecodingLayer in an unknown intermediate state, thus its fields should not be
+// trusted.
 type DecodingLayer interface {
+	// DecodeFromBytes resets the internal state of this layer to the state
+	// defined by the passed-in bytes.  Slices in the DecodingLayer may
+	// reference the passed-in data, so care should be taken to copy it
+	// first should later modification of data be required before the
+	// DecodingLayer is discarded.
 	DecodeFromBytes(data []byte, df DecodeFeedback) error
+	// CanDecode returns the set of LayerTypes this DecodingLayer can
+	// decode.  For Layers that are also DecodingLayers, this will most
+	// often be that Layer's LayerType().
 	CanDecode() LayerClass
+	// NextLayerType returns the LayerType which should be used to decode
+	// the LayerPayload.
 	NextLayerType() LayerType
 	// LayerPayload is the set of bytes remaining to decode after a call to
 	// DecodeFromBytes.
 	LayerPayload() []byte
 }
 
-// ParserNoMoreBytes is returned when a parser wants to parse more layers but
-// has run out of bytes to parse.
-var ParserNoMoreBytes = errors.New("decode has no more bytes to process, so cannot proceed")
-
-// DecodingLayerParser parses a given set of layer types.
+// DecodingLayerParser parses a given set of layer types.  See DecodeLayers for
+// more information on how DecodingLayerParser should be used.
 type DecodingLayerParser struct {
+	// DecodingLayerParserOptions is the set of options available to the
+	// user to define the parser's behavior.
 	DecodingLayerParserOptions
 	first    LayerType
 	decoders map[LayerType]DecodingLayer
@@ -45,17 +59,25 @@ func (l *DecodingLayerParser) AddDecodingLayer(d DecodingLayer) {
 	}
 }
 
+// SetTruncated is used by DecodingLayers to set the Truncated boolean in the
+// DecodingLayerParser.  Users should simply read Truncated after calling
+// DecodeLayers.
 func (l *DecodingLayerParser) SetTruncated() {
 	l.Truncated = true
 }
 
 // NewDecodingLayerParser creates a new DecodingLayerParser and adds in all
 // of the given DecodingLayers with AddDecodingLayer.
+//
+// Each call to DecodeLayers will attempt to decode the given bytes first by
+// teating them as a 'first'-type layer, then by using NextLayerType on
+// subsequently decoded layers to find the next relevant decoder.  Should a
+// deoder not be available for the layer type returned by NextLayerType,
+// decoding will stop.
 func NewDecodingLayerParser(first LayerType, decoders ...DecodingLayer) *DecodingLayerParser {
 	dlp := &DecodingLayerParser{
-		DecodingLayerParserOptions: HandlePanic,
-		decoders:                   make(map[LayerType]DecodingLayer),
-		first:                      first,
+		decoders: make(map[LayerType]DecodingLayer),
+		first:    first,
 	}
 	dlp.df = dlp // Cast this once to the interface
 	for _, d := range decoders {
@@ -96,7 +118,7 @@ func NewDecodingLayerParser(first LayerType, decoders ...DecodingLayer) *Decodin
 //          continue
 //        }
 //        fmt.Println("Decoding packet")
-//        err = parser.DecodeLayers(data, gopacket.NilDecodeFeedback, layers.LayerTypeEthernet, &DecodeLayers)
+//        err = parser.DecodeLayers(data, &decodedLayers)
 //        for _, typ := range decodedLayers {
 //          fmt.Println("  Successfully decoded layer type", typ)
 //          switch typ {
@@ -121,7 +143,8 @@ func NewDecodingLayerParser(first LayerType, decoders ...DecodingLayer) *Decodin
 //      }
 //    }
 func (l *DecodingLayerParser) DecodeLayers(data []byte, decoded *[]LayerType) (err error) {
-	if l.HandlePanic {
+	l.Truncated = false
+	if !l.IgnorePanic {
 		defer panicToError(&err)
 	}
 	typ := l.first
@@ -146,15 +169,14 @@ func panicToError(e *error) {
 	}
 }
 
+// DecodingLayerParserOptions provides options to affect the behavior of a given
+// DecodingLayerParser.
 type DecodingLayerParserOptions struct {
-	HandlePanic bool
+	// IgnorePanic determines whether a DecodingLayerParser should stop
+	// panics on its own (by returning them as an error from DecodeLayers)
+	// or should allow them to raise up the stack.  Handling errors does add
+	// latency to the process of decoding layers, but is much safer for
+	// callers.  IgnorePanic defaults to false, thus if the caller does
+	// nothing decode panics will be returned as errors.
+	IgnorePanic bool
 }
-
-var HandlePanic = DecodingLayerParserOptions{HandlePanic: true}
-var DontHandlePanic = DecodingLayerParserOptions{HandlePanic: false}
-
-type nilDecodeFeedback struct{}
-
-func (n *nilDecodeFeedback) SetTruncated() {}
-
-var NilDecodeFeedback = DecodeFeedback(&nilDecodeFeedback{})
