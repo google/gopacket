@@ -7,6 +7,7 @@
 package gopacket
 
 import (
+	"bytes"
 	"fmt"
 	"strconv"
 )
@@ -16,7 +17,8 @@ import (
 // Endpoints are usable as map keys.
 type Endpoint struct {
 	typ EndpointType
-	raw string
+	len int
+	raw [maxFlowSize]byte
 }
 
 // EndpointType returns the endpoint type associated with this endpoint.
@@ -24,7 +26,7 @@ func (e Endpoint) EndpointType() EndpointType { return e.typ }
 
 // Raw returns the raw bytes of this endpoint.  These aren't human-readable
 // most of the time, but they are faster than calling String.
-func (e Endpoint) Raw() []byte { return []byte(e.raw) }
+func (e Endpoint) Raw() []byte { return e.raw[:] }
 
 // LessThan provides a stable ordering for all endpoints.  It sorts first based
 // on the EndpointType of an endpoint, then based on the raw bytes of that endpoint.
@@ -33,10 +35,10 @@ func (e Endpoint) Raw() []byte { return []byte(e.raw) }
 // Ordering is based first on endpoint type, then on raw endpoint bytes.
 // Endpoint bytes are sorted lexigraphically.
 func (a Endpoint) LessThan(b Endpoint) bool {
-	return a.typ < b.typ || (a.typ == b.typ && a.raw < b.raw)
+	return a.typ < b.typ || (a.typ == b.typ && bytes.Compare(a.raw[:a.len], b.raw[:b.len]) < 0)
 }
 
-func fnvHash(s string) (h uint64) {
+func fnvHash(s []byte) (h uint64) {
 	h = fnvBasis
 	for i := 0; i < len(s); i++ {
 		h ^= uint64(s[i])
@@ -55,15 +57,21 @@ const fnvPrime = 1099511628211
 // The output of FastHash is not guaranteed to remain the same through future
 // code revisions, so should not be used to key values in persistent storage.
 func (a Endpoint) FastHash() (h uint64) {
-	h = fnvHash(a.raw)
+	h = fnvHash(a.raw[:a.len])
 	h ^= uint64(a.typ)
 	h *= fnvPrime
 	return
 }
 
 // NewEndpoint creates a new Endpoint object.
-func NewEndpoint(typ EndpointType, raw []byte) Endpoint {
-	return Endpoint{typ, string(raw)}
+func NewEndpoint(typ EndpointType, raw []byte) (e Endpoint) {
+	e.len = len(raw)
+	if e.len > maxFlowSize {
+		panic("endpoint too large, max endpoint size is 16")
+	}
+	e.typ = typ
+	copy(e.raw[:], raw)
+	return
 }
 
 // EndpointTypeMetadata is used to register a new endpoint type.
@@ -102,16 +110,19 @@ func (e EndpointType) String() string {
 
 func (e Endpoint) String() string {
 	if t, ok := endpointTypes[e.typ]; ok && t.Formatter != nil {
-		return t.Formatter([]byte(e.raw))
+		return t.Formatter(e.raw[:e.len])
 	}
 	return fmt.Sprintf("%v:%v", e.typ, e.raw)
 }
 
+const maxFlowSize = 16
+
 // Flow represents the direction of traffic for a packet layer, as a source and destination Endpoint.
 // Flows are usable as map keys.
 type Flow struct {
-	typ      EndpointType
-	src, dst string
+	typ        EndpointType
+	slen, dlen int
+	src, dst   [maxFlowSize]byte
 }
 
 // FlowFromEndpoints creates a new flow by pasting together two endpoints.
@@ -122,7 +133,7 @@ func FlowFromEndpoints(src, dst Endpoint) (_ Flow, err error) {
 		err = fmt.Errorf("Mismatched endpoint types: %v->%v", src.typ, dst.typ)
 		return
 	}
-	return Flow{src.typ, src.raw, dst.raw}, nil
+	return Flow{src.typ, src.len, dst.len, src.raw, dst.raw}, nil
 }
 
 // FastHash provides a quick hashing function for a flow, useful if you'd
@@ -136,7 +147,7 @@ func FlowFromEndpoints(src, dst Endpoint) (_ Flow, err error) {
 func (a Flow) FastHash() (h uint64) {
 	// This combination must be commutative.  We don't use ^, since that would
 	// give the same hash for all A->A flows.
-	h = fnvHash(a.src) + fnvHash(a.dst)
+	h = fnvHash(a.src[:a.slen]) + fnvHash(a.dst[:a.dlen])
 	h ^= uint64(a.typ)
 	h *= fnvPrime
 	return
@@ -156,7 +167,7 @@ func (f Flow) EndpointType() EndpointType {
 
 // Endpoints returns the two Endpoints for this flow.
 func (f Flow) Endpoints() (src, dst Endpoint) {
-	return Endpoint{f.typ, f.src}, Endpoint{f.typ, f.dst}
+	return Endpoint{f.typ, f.slen, f.src}, Endpoint{f.typ, f.dlen, f.dst}
 }
 
 // Src returns the source Endpoint for this flow.
@@ -173,12 +184,20 @@ func (f Flow) Dst() (dst Endpoint) {
 
 // Reverse returns a new flow with endpoints reversed.
 func (f Flow) Reverse() Flow {
-	return Flow{f.typ, f.dst, f.src}
+	return Flow{f.typ, f.dlen, f.slen, f.dst, f.src}
 }
 
 // NewFlow creates a new flow.
-func NewFlow(t EndpointType, src, dst []byte) Flow {
-	return Flow{t, string(src), string(dst)}
+func NewFlow(t EndpointType, src, dst []byte) (f Flow) {
+	f.slen = len(src)
+	f.dlen = len(dst)
+	if f.slen > maxFlowSize || f.dlen > maxFlowSize {
+		panic("flow endpoint too large")
+	}
+	f.typ = t
+	copy(f.src[:], src)
+	copy(f.dst[:], dst)
+	return
 }
 
 // EndpointInvalid is an endpoint type used for invalid endpoints, IE endpoints
