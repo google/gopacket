@@ -56,7 +56,6 @@ package assembly
 import (
 	"code.google.com/p/gopacket"
 	"code.google.com/p/gopacket/layers"
-	"fmt"
 	"sync"
 	"time"
 )
@@ -219,9 +218,10 @@ func (p *ConnectionPool) connections() []*connection {
 // them to stop waiting and skip the data they're waiting for).
 // It also closes any empty streams that haven't seen data since
 // the given time.
-func (a *Assembler) FlushOlderThan(t time.Time) {
-	start := time.Now()
-	fmt.Println("Flushing connections older than", t)
+//
+// Returns the number of connections flushed, and of those, the number closed
+// because of the flush.
+func (a *Assembler) FlushOlderThan(t time.Time) (flushed, closed int) {
 	conns := a.connPool.connections()
 	closes := 0
 	flushes := 0
@@ -236,7 +236,19 @@ func (a *Assembler) FlushOlderThan(t time.Time) {
 		}
 		conn.mu.Unlock()
 	}
-	fmt.Println("Flush completed in", time.Since(start), "closed", closes, "flushed", flushes)
+	return flushes, closes
+}
+
+// FlushAll flushes all remaining data into all remaining connections, closing
+// those connections.
+func (a *Assembler) FlushAll() {
+	for _, conn := range a.connPool.connections() {
+		conn.mu.Lock()
+		for !conn.closed {
+			a.skipFlush(conn)
+		}
+		conn.mu.Unlock()
+	}
 }
 
 type key [2]gopacket.Flow
@@ -249,6 +261,16 @@ type ConnectionPool struct {
 	users   int
 	mu      sync.RWMutex
 	factory StreamFactory
+	free    []*connection
+	all     [][]connection
+}
+
+func (p *ConnectionPool) grow() {
+	conns := make([]connection, 2048)
+	p.all = append(p.all, conns)
+	for i, _ := range conns {
+		p.free = append(p.free, &conns[i])
+	}
 }
 
 // NewConnectionPool creates a new connection pool.  Streams will
@@ -313,8 +335,12 @@ type Assembler struct {
 	connPool       *ConnectionPool
 }
 
-func (p *ConnectionPool) newConnection(k key, s Stream) *connection {
-  c := &connection{}
+func (p *ConnectionPool) newConnection(k key, s Stream) (c *connection) {
+	if len(p.free) == 0 {
+		p.grow()
+	}
+	index := len(p.free) - 1
+	c, p.free = p.free[index], p.free[:index]
 	c.reset(k, s)
 	return c
 }
@@ -327,7 +353,7 @@ func (p *ConnectionPool) getConnection(k key) *connection {
 	if conn != nil {
 		return conn
 	}
-  s := p.factory.New(k[0], k[1])
+	s := p.factory.New(k[0], k[1])
 	p.mu.Lock()
 	conn = p.newConnection(k, s)
 	if conn2 := p.conns[k]; conn2 != nil {
@@ -346,21 +372,26 @@ func (p *ConnectionPool) getConnection(k key) *connection {
 //    zero or one calls to Reassembled on a single stream
 //    zero or one calls to ReassemblyComplete on the same stream
 func (a *Assembler) Assemble(netFlow gopacket.Flow, t *layers.TCP) {
+	// Ignore empty TCP packets
+	if !t.SYN && !t.FIN && !t.RST && len(t.LayerPayload()) == 0 {
+		return
+	}
+
 	a.ret = a.ret[:0]
-	key := [...]gopacket.Flow{netFlow, t.TransportFlow()}
-  var conn *connection
-  // This for loop handles a race condition where a connection will close, lock
-  // the connection pool, and remove itself, but before it locked the connection
-  // pool it's returned to another Assemble statement.  This should loop 0-1
-  // times for the VAST majority of cases.
-  for {
-    conn = a.connPool.getConnection(key)
-    conn.mu.Lock()
-    if !conn.closed {
-      break
-    }
-    conn.mu.Unlock()
-  }
+	key := key{netFlow, t.TransportFlow()}
+	var conn *connection
+	// This for loop handles a race condition where a connection will close, lock
+	// the connection pool, and remove itself, but before it locked the connection
+	// pool it's returned to another Assemble statement.  This should loop 0-1
+	// times for the VAST majority of cases.
+	for {
+		conn = a.connPool.getConnection(key)
+		conn.mu.Lock()
+		if !conn.closed {
+			break
+		}
+		conn.mu.Unlock()
+	}
 	conn.lastSeen = time.Now()
 	seq, bytes := Sequence(t.Seq), t.Payload
 	if t.SYN {
@@ -391,9 +422,9 @@ func (a *Assembler) Assemble(netFlow gopacket.Flow, t *layers.TCP) {
 
 func (a *Assembler) sendToConnection(conn *connection) {
 	a.addContiguous(conn)
-  if conn.stream == nil {
-    panic("why?")
-  }
+	if conn.stream == nil {
+		panic("why?")
+	}
 	conn.stream.Reassembled(a.ret)
 	if a.ret[len(a.ret)-1].End {
 		a.closeConnection(conn)
@@ -419,16 +450,17 @@ func (a *Assembler) skipFlush(conn *connection) {
 func (p *ConnectionPool) remove(conn *connection) {
 	p.mu.Lock()
 	delete(p.conns, conn.key)
+	p.free = append(p.free, conn)
 	p.mu.Unlock()
 }
 
 func (a *Assembler) closeConnection(conn *connection) {
 	conn.stream.ReassemblyComplete()
+	conn.closed = true
 	a.connPool.remove(conn)
 	for p := conn.first; p != nil; p = p.next {
 		a.pc.replace(p)
 	}
-	conn.closed = true
 }
 
 // traverseConn traverses our doubly-linked list of pages for the correct

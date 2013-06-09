@@ -86,7 +86,7 @@ func thread(handle *pcap.Handle, pool *assembly.ConnectionPool, wg *sync.WaitGro
 		&tcp,
 		&layers.IPv6ExtensionSkipper{},
 		&layers.Dot1Q{})
-  decoded := []gopacket.LayerType{}
+	decoded := []gopacket.LayerType{}
 	assembler := assembly.NewAssembler(*pages, *maxper, pool)
 	success := 0
 	flushAt := time.Now().Add(time.Second * time.Duration(*flushEvery))
@@ -102,23 +102,23 @@ func thread(handle *pcap.Handle, pool *assembly.ConnectionPool, wg *sync.WaitGro
 			continue
 		}
 		parser.DecodeLayers(data, &decoded)
-    var netFlow gopacket.Flow
-    haveNetFlow := false
-    for _, lt := range decoded {
-      switch lt {
-      case layers.LayerTypeIPv4:
-        netFlow = ip4.NetworkFlow()
-        haveNetFlow = true
-      case layers.LayerTypeIPv6:
-        netFlow = ip6.NetworkFlow()
-        haveNetFlow = true
-      case layers.LayerTypeTCP:
-        if haveNetFlow {
-          success++
-          assembler.Assemble(netFlow, &tcp)
-        }
-      }
-    }
+		var netFlow gopacket.Flow
+		haveNetFlow := false
+		for _, lt := range decoded {
+			switch lt {
+			case layers.LayerTypeIPv4:
+				netFlow = ip4.NetworkFlow()
+				haveNetFlow = true
+			case layers.LayerTypeIPv6:
+				netFlow = ip6.NetworkFlow()
+				haveNetFlow = true
+			case layers.LayerTypeTCP:
+				if haveNetFlow {
+					success++
+					assembler.Assemble(netFlow, &tcp)
+				}
+			}
+		}
 	}
 	wg.Done()
 }
