@@ -1,7 +1,46 @@
-package assembly
+// Package reader provides an implementation for assembly.Stream which presents
+// the caller with an io.Reader for easy processing.
+//
+// The assembly package handles packet data reordering, but its output is
+// library-specific, thus not usable by the majority of external Go libraries.
+// The io.Reader interface, on the other hand, is used throughout much of Go
+// code as an easy mechanism for reading in data streams and decoding them.  For
+// example, the net/http package provides the ReadRequest function, which can
+// parase an HTTP request from a live data stream, just what we'd want when
+// sniffing HTTP traffic.  Using ReaderStream, this is relatively easy to set
+// up:
+//
+//  // Create our StreamFactory
+//  type httpStreamFactory struct {}
+//  func (f *httpStreamFactory) New(a, b gopacket.Flow) {
+//  	r := reader.NewReaderStream(false)
+//  	go printRequests(r)
+//  	return &r
+//  }
+//  func printRequests(r io.Reader) {
+//    // Convert to bufio, since that's what ReadRequest wants.
+//  	buf := bufio.NewReader(r)
+//  	for {
+//  		if req, err := http.ReadRequest(buf); err == io.EOF {
+//  			return
+//  		} else if err != nil {
+//  			log.Println("Error parsing HTTP requests:", err)
+//  		} else {
+//  			fmt.Println("HTTP REQUEST:", req)
+//  			fmt.Println("Body contains", reader.DiscardBytesToEOF(req.Body), "bytes")
+//  		}
+//  	}
+//  }
+//
+// Using just this code, we're able to reference a powerful, built-in library
+// for HTTP request parsing to do all the dirty-work of parsing requests from
+// the wire in real-time.  Pass this stream factory to an assembly.StreamPool,
+// start up an assembly.Assembler, and you're good to go!
+package reader
 
 import (
 	"errors"
+	"github.com/gconnell/assembly"
 	"io"
 )
 
@@ -58,31 +97,34 @@ func DiscardBytesToEOF(r io.Reader) (discarded int) {
 //  	return &s.r
 //  }
 type ReaderStream struct {
-	reassembled  chan []Reassembly
+	ReaderStreamOptions
+	reassembled  chan []assembly.Reassembly
 	done         chan bool
-	current      []Reassembly
+	current      []assembly.Reassembly
 	closed       bool
-	lossErrors   bool
 	lossReported bool
 	first        bool
 }
 
+type ReaderStreamOptions struct {
+	// LossErrors determines whether this stream will return
+	// ReaderStreamDataLoss errors from its Read function whenever it
+	// determines data has been lost.
+	LossErrors bool
+}
+
 // NewReaderStream returns a new ReaderStream object.
-// If lossErrors is true, this stream will return ReaderStreamDataLoss
-// errors from its Read function whenever it determines data has been lost.
-// Otherwise, it will only ever return an io.EOF error.
-func NewReaderStream(lossErrors bool) ReaderStream {
+func NewReaderStream() ReaderStream {
 	r := ReaderStream{
-		reassembled: make(chan []Reassembly),
+		reassembled: make(chan []assembly.Reassembly),
 		done:        make(chan bool),
-		lossErrors:  lossErrors,
 		first:       true,
 	}
 	return r
 }
 
 // Reassembled implements assembly.Stream's Reassembled function.
-func (r *ReaderStream) Reassembled(reassembly []Reassembly) {
+func (r *ReaderStream) Reassembled(reassembly []assembly.Reassembly) {
 	r.reassembled <- reassembly
 	<-r.done
 }
@@ -127,7 +169,7 @@ func (r *ReaderStream) Read(p []byte) (int, error) {
 	}
 	if len(r.current) > 0 {
 		current := &r.current[0]
-		if r.lossErrors && !r.lossReported && current.Skip {
+		if r.LossErrors && !r.lossReported && current.Skip {
 			r.lossReported = true
 			return 0, DataLost
 		}

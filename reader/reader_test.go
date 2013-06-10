@@ -1,12 +1,23 @@
-package assembly
+package reader
 
 import (
 	"bytes"
 	"code.google.com/p/gopacket"
 	"code.google.com/p/gopacket/layers"
+	"fmt"
+	"github.com/gconnell/assembly"
 	"io"
+	"net"
 	"testing"
 )
+
+var netFlow gopacket.Flow
+
+func init() {
+	netFlow, _ = gopacket.FlowFromEndpoints(
+		layers.NewIPEndpoint(net.IP{1, 2, 3, 4}),
+		layers.NewIPEndpoint(net.IP{5, 6, 7, 8}))
+}
 
 type readReturn struct {
 	data []byte
@@ -23,14 +34,15 @@ type testReaderFactory struct {
 	output chan []byte
 }
 
-func (t *testReaderFactory) New(a, b gopacket.Flow) Stream {
+func (t *testReaderFactory) New(a, b gopacket.Flow) assembly.Stream {
 	return &t.ReaderStream
 }
 
 func testReadSequence(t *testing.T, lossErrors bool, readSize int, seq readSequence) {
-	f := &testReaderFactory{lossErrors: lossErrors, ReaderStream: NewReaderStream(lossErrors)}
-	p := NewStreamPool(f)
-	a := NewAssembler(p)
+	f := &testReaderFactory{ReaderStream: NewReaderStream()}
+	f.ReaderStream.LossErrors = lossErrors
+	p := assembly.NewStreamPool(f)
+	a := assembly.NewAssembler(p)
 	buf := make([]byte, readSize)
 	go func() {
 		for i, test := range seq.in {
@@ -101,4 +113,11 @@ func TestReadSmallChunks(t *testing.T) {
 			{err: io.EOF},
 		},
 	})
+}
+
+func ExampleDiscardBytesToEOF() {
+	b := bytes.NewBuffer([]byte{1, 2, 3, 4, 5})
+	fmt.Println(DiscardBytesToEOF(b))
+	// Output:
+	// 5
 }

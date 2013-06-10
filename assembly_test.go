@@ -1,10 +1,8 @@
 package assembly
 
 import (
-	"bytes"
 	"code.google.com/p/gopacket"
 	"code.google.com/p/gopacket/layers"
-	"fmt"
 	"net"
 	"reflect"
 	"testing"
@@ -403,11 +401,4 @@ func BenchmarkMultiStreamConn(b *testing.B) {
 			t.Seq += 10
 		}
 	}
-}
-
-func ExampleDiscardBytesToEOF() {
-	b := bytes.NewBuffer([]byte{1, 2, 3, 4, 5})
-	fmt.Println(DiscardBytesToEOF(b))
-	// Output:
-	// 5
 }
