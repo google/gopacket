@@ -1,8 +1,10 @@
 package assembly
 
 import (
+	"bytes"
 	"code.google.com/p/gopacket"
 	"code.google.com/p/gopacket/layers"
+	"fmt"
 	"net"
 	"reflect"
 	"testing"
@@ -36,8 +38,9 @@ func (t *testFactory) ReassemblyComplete() {
 
 func test(t *testing.T, s []testSequence) {
 	fact := &testFactory{}
-	p := NewConnectionPool(fact)
-	a := NewAssembler(100, 4, p)
+	p := NewStreamPool(fact)
+	a := NewAssembler(p)
+	a.MaxBufferedPagesPerConnection = 4
 	for i, test := range s {
 		fact.reassembly = []Reassembly{}
 		a.Assemble(netFlow, &test.in)
@@ -308,7 +311,7 @@ func BenchmarkSingleStream(b *testing.B) {
 		Seq:       1000,
 		BaseLayer: layers.BaseLayer{Payload: []byte{1, 2, 3, 4, 5, 6, 7, 8, 9, 0}},
 	}
-	a := NewAssembler(100, 4, NewConnectionPool(&testFactory{}))
+	a := NewAssembler(NewStreamPool(&testFactory{}))
 	for i := 0; i < b.N; i++ {
 		a.Assemble(netFlow, &t)
 		if t.SYN {
@@ -327,7 +330,7 @@ func BenchmarkSingleStreamSkips(b *testing.B) {
 		Seq:       1000,
 		BaseLayer: layers.BaseLayer{Payload: []byte{1, 2, 3, 4, 5, 6, 7, 8, 9, 0}},
 	}
-	a := NewAssembler(100, 10, NewConnectionPool(&testFactory{}))
+	a := NewAssembler(NewStreamPool(&testFactory{}))
 	skipped := false
 	for i := 0; i < b.N; i++ {
 		if i%10 == 9 {
@@ -357,7 +360,7 @@ func BenchmarkSingleStreamLoss(b *testing.B) {
 		Seq:       1000,
 		BaseLayer: layers.BaseLayer{Payload: []byte{1, 2, 3, 4, 5, 6, 7, 8, 9, 0}},
 	}
-	a := NewAssembler(100, 10, NewConnectionPool(&testFactory{}))
+	a := NewAssembler(NewStreamPool(&testFactory{}))
 	for i := 0; i < b.N; i++ {
 		a.Assemble(netFlow, &t)
 		t.SYN = false
@@ -372,7 +375,7 @@ func BenchmarkMultiStreamGrow(b *testing.B) {
 		Seq:       0,
 		BaseLayer: layers.BaseLayer{Payload: []byte{1, 2, 3, 4, 5, 6, 7, 8, 9, 0}},
 	}
-	a := NewAssembler(1000000, 10, NewConnectionPool(&testFactory{}))
+	a := NewAssembler(NewStreamPool(&testFactory{}))
 	for i := 0; i < b.N; i++ {
 		t.SrcPort = layers.TCPPort(i)
 		a.Assemble(netFlow, &t)
@@ -388,7 +391,7 @@ func BenchmarkMultiStreamConn(b *testing.B) {
 		SYN:       true,
 		BaseLayer: layers.BaseLayer{Payload: []byte{1, 2, 3, 4, 5, 6, 7, 8, 9, 0}},
 	}
-	a := NewAssembler(1000000, 10, NewConnectionPool(&testFactory{}))
+	a := NewAssembler(NewStreamPool(&testFactory{}))
 	for i := 0; i < b.N; i++ {
 		t.SrcPort = layers.TCPPort(i)
 		a.Assemble(netFlow, &t)
@@ -400,4 +403,11 @@ func BenchmarkMultiStreamConn(b *testing.B) {
 			t.Seq += 10
 		}
 	}
+}
+
+func ExampleDiscardBytesToEOF() {
+	b := bytes.NewBuffer([]byte{1, 2, 3, 4, 5})
+	fmt.Println(DiscardBytesToEOF(b))
+	// Output:
+	// 5
 }

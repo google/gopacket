@@ -1,56 +1,13 @@
 // Package assembly provides TCP stream re-assembly.
 //
-// assembly provides (hopefully) fast TCP stream re-assembly for sniffing
-// applications written in Go.  assembly uses the following methods to be as
-// fast as possible, to keep packet processing speedy:
-//
-// Avoids Lock Contention
-//
-// Assemblers locks connections, but each connection has an individual lock, and
-// rarely will two Assemblers be looking at the same connection.  Assemblers
-// lock the ConnectionPool when looking up connections, but they use Reader
-// locks initially, and only force a write lock if they need to create a new
-// connection or close one down.  These happen much less frequently than
-// individual packet handling.
-//
-// Each assembler runs in its own goroutine, and the only state shared between
-// goroutines is through the ConnectionPool.  Thus all internal Assembler state
-// can be handled without any locking.
-//
-// NOTE:  If you can guarantee that packets going to a set of Assemblers will
-// contain information on different connections per Assembler (for example,
-// they're already hashed by PF_RING hashing or some other hashing mechanism),
-// then we recommend you use a seperate ConnectionPool per Assembler, thus
-// avoiding all lock contention.  Only when different Assemblers could receive
-// packets for the same Stream should a ConnectionPool be shared between them.
-//
-// Avoids Memory Copying
-//
-// In the common case, handling of a single TCP packet should result in zero
-// memory allocations.  The Assembler will look up the connection, figure out
-// that the packet has arrived in order, and immediately pass that packet on to
-// the appropriate connection's handling code.  Only if a packet arrives out of
-// order is its contents copied and stored in memory for later.
-//
-// Avoids Memory Allocation
-//
-// Assemblers try very hard to not use memory allocation unless absolutely
-// necessary.  Packet data for sequential packets is passed directly to streams
-// with no copying or allocation.  Packet data for out-of-order packets is
-// copied into reusable pages, and new pages are only allocated rarely when the
-// page cache runs out.  Page caches are Assembler-specific, thus not used
-// concurrently and requiring no locking.
-//
-// Internal representations for connection objects are also reused over time.
-// Because of this, the most common memory allocation done by the Assembler is
-// generally what's done by the caller in StreamFactory.New.  If no allocation
-// is done there, then very little allocation is done ever, mostly to handle
-// large increases in bandwidth or numbers of connections.
-//
-// TODO:  The page caches used by an Assembler will grow to the size necessary
-// to handle a workload, and currently will never shrink.  This can mean that
-// currently traffic spikes can result in large memory usage which isn't garbage
-// collected when typical traffic levels return.
+// The assembly package implements uni-directional TCP reassembly, for use in
+// packet-sniffing applications.  The caller reads packets off the wire, then
+// presents them to an Assembler in the form of gopacket.TCP packets
+// (code.google.com/p/gopacket).  The Assembler uses a user-supplied
+// StreamFactory to create a user-defined Stream interface, then passes packet
+// data in stream order to that object.  A concurrency-safe StreamPool keeps
+// track of all current Streams being reassembled, so multiple Assemblers may
+// run at once to assemble packets while taking advantage of multiple cores.
 package assembly
 
 import (
@@ -173,7 +130,7 @@ func (c *pageCache) replace(p *page) {
 }
 
 // Stream is implemented by the caller to handle incoming reassembled
-// TCP data.  Callers create a StreamFactory, then ConnectionPool uses
+// TCP data.  Callers create a StreamFactory, then StreamPool uses
 // it to create a new Stream for every TCP stream.
 //
 // assembly will, in order:
@@ -203,7 +160,7 @@ type StreamFactory interface {
 	New(netFlow, tcpFlow gopacket.Flow) Stream
 }
 
-func (p *ConnectionPool) connections() []*connection {
+func (p *StreamPool) connections() []*connection {
 	p.mu.RLock()
 	conns := make([]*connection, 0, len(p.conns))
 	for _, conn := range p.conns {
@@ -253,10 +210,10 @@ func (a *Assembler) FlushAll() {
 
 type key [2]gopacket.Flow
 
-// ConnectionPool is a concurrency-safe collection of assembly Streams,
+// StreamPool is a concurrency-safe collection of assembly Streams,
 // usable by multiple Assemblers to handle packet data over multiple
 // goroutines.
-type ConnectionPool struct {
+type StreamPool struct {
 	conns   map[key]*connection
 	users   int
 	mu      sync.RWMutex
@@ -265,7 +222,7 @@ type ConnectionPool struct {
 	all     [][]connection
 }
 
-func (p *ConnectionPool) grow() {
+func (p *StreamPool) grow() {
 	conns := make([]connection, 2048)
 	p.all = append(p.all, conns)
 	for i, _ := range conns {
@@ -273,10 +230,10 @@ func (p *ConnectionPool) grow() {
 	}
 }
 
-// NewConnectionPool creates a new connection pool.  Streams will
+// NewStreamPool creates a new connection pool.  Streams will
 // be created as necessary using the passed-in StreamFactory.
-func NewConnectionPool(factory StreamFactory) *ConnectionPool {
-	return &ConnectionPool{
+func NewStreamPool(factory StreamFactory) *StreamPool {
+	return &StreamPool{
 		conns:   make(map[key]*connection),
 		factory: factory,
 	}
@@ -284,23 +241,22 @@ func NewConnectionPool(factory StreamFactory) *ConnectionPool {
 
 const assemblerReturnValueInitialSize = 16
 
-// NewAssembler creates a new assembler.  Its arguments are:
-//    max:  The maximum number of packets to buffer total.  If non-zero, this
-//          provides an upper limit to the total memory usage of this assembler.
-//          If <= 0, no limit.
-//    maxPer:  The maximum number of packets to buffer for a single connection.
-//          If <= 0, no limit.
-//    pool:  The ConnectionPool to use, may be shared across assemblers.
-func NewAssembler(max, maxPer int, pool *ConnectionPool) *Assembler {
+// NewAssembler creates a new assembler.  Pass in the StreamPool
+// to use, may be shared across assemblers.
+//
+// This sets some sane defaults for the assembler options, specifically:
+//  MaxBufferedPagesPerConnection: 10
+func NewAssembler(pool *StreamPool) *Assembler {
 	pool.mu.Lock()
 	pool.users++
 	pool.mu.Unlock()
 	return &Assembler{
-		ret:            make([]Reassembly, assemblerReturnValueInitialSize),
-		pc:             newPageCache(),
-		connPool:       pool,
-		maxBuffered:    max,
-		maxBufferedPer: maxPer,
+		ret:      make([]Reassembly, assemblerReturnValueInitialSize),
+		pc:       newPageCache(),
+		connPool: pool,
+		AssemblerOptions: AssemblerOptions{
+			MaxBufferedPagesPerConnection: 10,
+		},
 	}
 }
 
@@ -325,17 +281,83 @@ func (c *connection) reset(k key, s Stream) {
 	c.closed = false
 }
 
-// Assembler handles reassembling TCP streams.  It is not safe for
-// concurrency.
-type Assembler struct {
-	ret            []Reassembly
-	pc             *pageCache
-	maxBuffered    int
-	maxBufferedPer int
-	connPool       *ConnectionPool
+// AssemblerOptions controls the behavior of each assembler.  Modify the
+// options of each assembler you create to change their behavior.
+type AssemblerOptions struct {
+	// MaxBufferedPagesTotal is an upper limit on the total number of pages to
+	// buffer while waiting for out-of-order packets.  Once this limit is
+	// reached, the assembler will degrade to flushing every connection it
+	// gets a packet for.  If <= 0, this is ignored.
+	MaxBufferedPagesTotal int
+	// MaxBufferedPagesPerConnection is an upper limit on the number of pages
+	// buffered for a single connection.  Should this limit be reached for a
+	// particular connection, the smallest sequence number will be flushed, along
+	// with any contiguous data.  If <= 0, this is ignored.
+	MaxBufferedPagesPerConnection int
 }
 
-func (p *ConnectionPool) newConnection(k key, s Stream) (c *connection) {
+// Assembler handles reassembling TCP streams.  It is not safe for
+// concurrency.
+//
+// The Assembler provides (hopefully) fast TCP stream re-assembly for sniffing
+// applications written in Go.  The Assembler uses the following methods to be as
+// fast as possible, to keep packet processing speedy:
+//
+// Avoids Lock Contention
+//
+// Assemblers locks connections, but each connection has an individual lock, and
+// rarely will two Assemblers be looking at the same connection.  Assemblers
+// lock the StreamPool when looking up connections, but they use Reader
+// locks initially, and only force a write lock if they need to create a new
+// connection or close one down.  These happen much less frequently than
+// individual packet handling.
+//
+// Each assembler runs in its own goroutine, and the only state shared between
+// goroutines is through the StreamPool.  Thus all internal Assembler state
+// can be handled without any locking.
+//
+// NOTE:  If you can guarantee that packets going to a set of Assemblers will
+// contain information on different connections per Assembler (for example,
+// they're already hashed by PF_RING hashing or some other hashing mechanism),
+// then we recommend you use a seperate StreamPool per Assembler, thus
+// avoiding all lock contention.  Only when different Assemblers could receive
+// packets for the same Stream should a StreamPool be shared between them.
+//
+// Avoids Memory Copying
+//
+// In the common case, handling of a single TCP packet should result in zero
+// memory allocations.  The Assembler will look up the connection, figure out
+// that the packet has arrived in order, and immediately pass that packet on to
+// the appropriate connection's handling code.  Only if a packet arrives out of
+// order is its contents copied and stored in memory for later.
+//
+// Avoids Memory Allocation
+//
+// Assemblers try very hard to not use memory allocation unless absolutely
+// necessary.  Packet data for sequential packets is passed directly to streams
+// with no copying or allocation.  Packet data for out-of-order packets is
+// copied into reusable pages, and new pages are only allocated rarely when the
+// page cache runs out.  Page caches are Assembler-specific, thus not used
+// concurrently and requiring no locking.
+//
+// Internal representations for connection objects are also reused over time.
+// Because of this, the most common memory allocation done by the Assembler is
+// generally what's done by the caller in StreamFactory.New.  If no allocation
+// is done there, then very little allocation is done ever, mostly to handle
+// large increases in bandwidth or numbers of connections.
+//
+// TODO:  The page caches used by an Assembler will grow to the size necessary
+// to handle a workload, and currently will never shrink.  This means that
+// traffic spikes can result in large memory usage which isn't garbage
+// collected when typical traffic levels return.
+type Assembler struct {
+	AssemblerOptions
+	ret      []Reassembly
+	pc       *pageCache
+	connPool *StreamPool
+}
+
+func (p *StreamPool) newConnection(k key, s Stream) (c *connection) {
 	if len(p.free) == 0 {
 		p.grow()
 	}
@@ -346,7 +368,7 @@ func (p *ConnectionPool) newConnection(k key, s Stream) (c *connection) {
 }
 
 // getConnection returns a new (locked) connection.
-func (p *ConnectionPool) getConnection(k key) *connection {
+func (p *StreamPool) getConnection(k key) *connection {
 	p.mu.RLock()
 	conn := p.conns[k]
 	p.mu.RUnlock()
@@ -405,7 +427,7 @@ func (a *Assembler) Assemble(netFlow gopacket.Flow, t *layers.TCP) {
 		a.insertIntoConn(t, conn)
 	} else {
 		span := int(seq.Difference(conn.nextSeq))
-		if len(bytes) > span {
+		if len(bytes) >= span {
 			a.ret = append(a.ret, Reassembly{
 				Bytes: bytes[span:],
 				Skip:  false,
@@ -447,7 +469,7 @@ func (a *Assembler) skipFlush(conn *connection) {
 	}
 }
 
-func (p *ConnectionPool) remove(conn *connection) {
+func (p *StreamPool) remove(conn *connection) {
 	p.mu.Lock()
 	delete(p.conns, conn.key)
 	p.free = append(p.free, conn)
@@ -502,7 +524,8 @@ func (a *Assembler) insertIntoConn(t *layers.TCP, conn *connection) {
 	prev, current := conn.traverseConn(Sequence(t.Seq))
 	conn.pushBetween(prev, current, p, p2)
 	conn.pages++
-	if (a.maxBufferedPer > 0 && conn.pages >= a.maxBufferedPer) || (a.maxBuffered > 0 && a.pc.used >= a.maxBuffered) {
+	if (a.MaxBufferedPagesPerConnection > 0 && conn.pages >= a.MaxBufferedPagesPerConnection) ||
+		(a.MaxBufferedPagesTotal > 0 && a.pc.used >= a.MaxBufferedPagesTotal) {
 		a.addNextFromConn(conn, true)
 	}
 }
@@ -534,6 +557,8 @@ func (a *Assembler) pagesFromTcp(t *layers.TCP) (p, p2 *page) {
 	return first, current
 }
 
+// addNextFromConn pops the first page from a connection off and adds it to the
+// return array.
 func (a *Assembler) addNextFromConn(conn *connection, skip bool) {
 	conn.first.Skip = skip
 	a.ret = append(a.ret, conn.first.Reassembly)

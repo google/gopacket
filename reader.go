@@ -39,7 +39,24 @@ func DiscardBytesToEOF(r io.Reader) (discarded int) {
 // as a building block to make simple, easy stream handlers.
 //
 // IMPORTANT:  If you use a ReaderStream, you MUST read ALL BYTES from it,
-// quickly.  Not reading available bytes will block TCP stream reassembly.
+// quickly.  Not reading available bytes will block TCP stream reassembly.  It's
+// a common pattern to do this by starting a goroutine in the factory's New
+// method:
+//
+//  type myStreamHandler struct {
+//  	r ReaderStream
+//  }
+//  func (m *myStreamHandler) run() {
+//  	// Do something here that reads all of the ReaderStream, or your assembly
+//  	// will block.
+//  	fmt.Println(assembly.DiscardBytesToEOF(&m.r))
+//  }
+//  func (f *myStreamFactory) New(a, b gopacket.Flow) assembly.Stream {
+//  	s := &myStreamHandler{}
+//  	go s.run()
+//  	// Return the ReaderStream as the stream that assembly should populate.
+//  	return &s.r
+//  }
 type ReaderStream struct {
 	reassembled  chan []Reassembly
 	done         chan bool
