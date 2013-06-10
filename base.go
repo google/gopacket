@@ -13,8 +13,8 @@ import (
 // Layer represents a single decoded packet layer (using either the
 // OSI or TCP/IP definition of a layer).  When decoding, a packet's data is
 // broken up into a number of layers.  The caller may call LayerType() to
-// figure out which type of layer he's received from the packet.  Optionally,
-// he may then use a type assertion to get the actual layer type for deep
+// figure out which type of layer they've received from the packet.  Optionally,
+// they may then use a type assertion to get the actual layer type for deep
 // inspection of the data.
 type Layer interface {
 	// LayerType is the gopacket type for this layer.
