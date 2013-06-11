@@ -13,7 +13,6 @@ import (
 )
 
 func TestPcapFileRead(t *testing.T) {
-
 	for _, file := range []struct {
 		filename       string
 		num            int

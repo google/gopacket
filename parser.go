@@ -152,7 +152,7 @@ func (l *DecodingLayerParser) DecodeLayers(data []byte, decoded *[]LayerType) (e
 	for len(data) > 0 {
 		decoder, ok := l.decoders[typ]
 		if !ok {
-			return fmt.Errorf("DecodingLayerParser has no decoder for layer type %v", typ)
+			return errorDecodingLayer(typ)
 		} else if err = decoder.DecodeFromBytes(data, l.df); err != nil {
 			return err
 		}
@@ -161,6 +161,12 @@ func (l *DecodingLayerParser) DecodeLayers(data []byte, decoded *[]LayerType) (e
 		data = decoder.LayerPayload()
 	}
 	return nil
+}
+
+type errorDecodingLayer LayerType
+
+func (e errorDecodingLayer) Error() string {
+	return fmt.Sprintf("DecodingLayerParser has no decoder for layer type %v", e)
 }
 
 func panicToError(e *error) {

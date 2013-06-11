@@ -20,8 +20,8 @@ import (
 	"errors"
 	"fmt"
 	"os"
-	"runtime"
 	"strconv"
+	"sync"
 	"time"
 	"unsafe"
 )
@@ -33,6 +33,14 @@ type Ring struct {
 	// cptr is the handle for the actual pcap C object.
 	cptr    *C.pfring
 	snaplen int
+
+	mu sync.Mutex
+	// Since pointers to these objects are passed into a C function, if
+	// they're declared locally then the Go compiler thinks they may have
+	// escaped into C-land, so it allocates them on the heap.  This causes a
+	// huge memory hit, so to handle that we store them here instead.
+	pkthdr  C.struct_pfring_pkthdr
+	buf_ptr *C.u_char
 }
 
 type Flag uint32
@@ -93,33 +101,38 @@ func (n NextResult) Error() string {
 	return strconv.Itoa(int(n))
 }
 
+// ReadPacketDataTo reads packet data into a user-supplied buffer.
+// This function ignores snaplen and instead reads up to the length of the
+// passed-in slice.
+// The number of bytes read into data will be returned in ci.Length.
+func (r *Ring) ReadPacketDataTo(data []byte) (ci gopacket.CaptureInfo, err error) {
+	// This tricky buf_ptr points to the start of our slice data, so pfring_recv
+	// will actually write directly into our Go slice.  Nice!
+	r.mu.Lock()
+	r.buf_ptr = (*C.u_char)(unsafe.Pointer(&data[0]))
+	result := NextResult(C.pfring_recv(r.cptr, &r.buf_ptr, C.u_int(len(data)), &r.pkthdr, 1))
+	if result != NextOk {
+		err = result
+		r.mu.Unlock()
+		return
+	}
+	ci.Timestamp = time.Unix(int64(r.pkthdr.ts.tv_sec), int64(r.pkthdr.ts.tv_usec))
+	ci.CaptureLength = int(r.pkthdr.caplen)
+	ci.Length = int(r.pkthdr.len)
+	r.mu.Unlock()
+	return
+}
+
 // NextResult returns the next packet read from the pcap handle, along with an error
 // code associated with that packet.  If the packet is read successfully, the
 // returned error is nil.
 func (r *Ring) ReadPacketData() (data []byte, ci gopacket.CaptureInfo, err error) {
-	var pkthdr C.struct_pfring_pkthdr
 	data = make([]byte, r.snaplen)
-	runtime.LockOSThread()
-	// Note:  We don't 'defer runtime.UnlockOSThread()', since it appears to take
-	// about 17x longer to lock/defer than to simply lock/unlock.  (7ns vs 120ns).
-	// Thus, we have to be careful to unlock for each return.
-
-	// This tricky buf_ptr points to the start of our slice data, so pfring_recv
-	// will actually write directly into our Go slice.  Nice!
-	var buf_ptr *C.u_char = (*C.u_char)(unsafe.Pointer(&data[0]))
-	result := NextResult(C.pfring_recv(r.cptr, &buf_ptr, C.u_int(r.snaplen), &pkthdr, 1))
-	if result != NextOk {
-		err = result
+	ci, err = r.ReadPacketDataTo(data)
+	if err != nil {
 		data = nil
-		runtime.UnlockOSThread()
 		return
 	}
-	ci.Timestamp = time.Unix(int64(pkthdr.ts.tv_sec), int64(pkthdr.ts.tv_usec))
-	ci.CaptureLength = int(pkthdr.caplen)
-	ci.Length = int(pkthdr.len)
-	runtime.UnlockOSThread()
-	// Do this after unlocking, since a panic caused by an invalid slice, while it
-	// should never happen, would result in not unlocking the thread.
 	data = data[:ci.Length]
 	return
 }

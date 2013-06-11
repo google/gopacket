@@ -25,7 +25,6 @@ import (
 	"errors"
 	"io"
 	"net"
-	"runtime"
 	"strconv"
 	"sync"
 	"syscall"
@@ -41,7 +40,14 @@ const errorBufferSize = 256
 type Handle struct {
 	// cptr is the handle for the actual pcap C object.
 	cptr *C.pcap_t
-	mu   sync.Mutex
+
+	mu sync.Mutex
+	// Since pointers to these objects are passed into a C function, if
+	// they're declared locally then the Go compiler thinks they may have
+	// escaped into C-land, so it allocates them on the heap.  This causes a
+	// huge memory hit, so to handle that we store them here instead.
+	pkthdr  *C.struct_pcap_pkthdr
+	buf_ptr *C.u_char
 }
 
 // Stats contains statistics on how many packets were handled by a pcap handle,
@@ -145,32 +151,24 @@ const (
 // code associated with that packet.  If the packet is read successfully, the
 // returned error is nil.
 func (p *Handle) ReadPacketData() (data []byte, ci gopacket.CaptureInfo, err error) {
-	var pkthdr *C.struct_pcap_pkthdr
-
-	var buf_ptr *C.u_char
-	var buf unsafe.Pointer
-
 	p.mu.Lock()
-	runtime.LockOSThread()
-	result := NextError(C.pcap_next_ex(p.cptr, &pkthdr, &buf_ptr))
+	result := NextError(C.pcap_next_ex(p.cptr, &p.pkthdr, &p.buf_ptr))
 
-	buf = unsafe.Pointer(buf_ptr)
+	buf := unsafe.Pointer(p.buf_ptr)
 
-	if nil == buf {
+	if result != NextErrorOk {
 		if result == NextErrorNoMorePackets {
 			err = io.EOF
 		} else {
 			err = result
 		}
-		runtime.UnlockOSThread()
 		p.mu.Unlock()
 		return
 	}
-	data = C.GoBytes(buf, C.int(pkthdr.caplen))
-	ci.Timestamp = time.Unix(int64(pkthdr.ts.tv_sec), int64(pkthdr.ts.tv_usec))
-	ci.CaptureLength = int(pkthdr.caplen)
-	ci.Length = int(pkthdr.len)
-	runtime.UnlockOSThread()
+	data = C.GoBytes(buf, C.int(p.pkthdr.caplen))
+	ci.Timestamp = time.Unix(int64(p.pkthdr.ts.tv_sec), int64(p.pkthdr.ts.tv_usec))
+	ci.CaptureLength = int(p.pkthdr.caplen)
+	ci.Length = int(p.pkthdr.len)
 	p.mu.Unlock()
 	return
 }
