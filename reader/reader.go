@@ -159,7 +159,7 @@ func (r *ReaderStream) stripEmpty() {
 }
 
 // DataLost is returned by the ReaderStream's Read function when it encounters
-// a Reassembly with the Skip bit set.
+// a Reassembly with Skip != 0.
 var DataLost error = errors.New("lost data")
 
 // Read implements io.Reader's Read function.
@@ -183,7 +183,7 @@ func (r *ReaderStream) Read(p []byte) (int, error) {
 	}
 	if len(r.current) > 0 {
 		current := &r.current[0]
-		if r.LossErrors && !r.lossReported && current.Skip {
+		if r.LossErrors && !r.lossReported && current.Skip != 0 {
 			r.lossReported = true
 			return 0, DataLost
 		}

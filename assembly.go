@@ -527,14 +527,12 @@ func (a *Assembler) Assemble(netFlow gopacket.Flow, t *layers.TCP) {
 		a.insertIntoConn(t, conn)
 	} else {
 		bytes, conn.nextSeq = byteSpan(conn.nextSeq, seq, bytes)
-		if len(bytes) > 0 {
-			a.ret = append(a.ret, Reassembly{
-				Bytes: bytes,
-				Skip:  0,
-				End:   t.RST || t.FIN,
-				Seen:  time.Now(),
-			})
-		}
+		a.ret = append(a.ret, Reassembly{
+			Bytes: bytes,
+			Skip:  0,
+			End:   t.RST || t.FIN,
+			Seen:  time.Now(),
+		})
 	}
 	if len(a.ret) > 0 {
 		a.sendToConnection(conn)
@@ -688,7 +686,6 @@ func (a *Assembler) addNextFromConn(conn *connection) {
 	} else if diff := conn.nextSeq.Difference(conn.first.seq); diff > 0 {
 		conn.first.Skip = int(diff)
 	}
-	seq := conn.nextSeq
 	conn.first.Bytes, conn.nextSeq = byteSpan(conn.nextSeq, conn.first.seq, conn.first.Bytes)
 	a.ret = append(a.ret, conn.first.Reassembly)
 	a.pc.replace(conn.first)

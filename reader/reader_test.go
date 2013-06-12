@@ -60,15 +60,15 @@ func testReadSequence(t *testing.T, lossErrors bool, readSize int, seq readSeque
 	buf := make([]byte, readSize)
 	go func() {
 		for i, test := range seq.in {
-			t.Log("Assembling", i)
+			fmt.Println("Assembling", i)
 			a.Assemble(netFlow, &test)
-			t.Log("Assembly done")
+			fmt.Println("Assembly done")
 		}
 	}()
 	for i, test := range seq.want {
-		t.Log("Waiting for read", i)
+		fmt.Println("Waiting for read", i)
 		n, err := f.Read(buf[:])
-		t.Log("Got read")
+		fmt.Println("Got read")
 		if n != len(test.data) {
 			t.Errorf("test %d want %d bytes, got %d bytes", i, len(test.data), n)
 		} else if err != test.err {
@@ -77,7 +77,7 @@ func testReadSequence(t *testing.T, lossErrors bool, readSize int, seq readSeque
 			t.Errorf("test %d\nwant: %v\n got: %v\n", i, test.data, buf[:n])
 		}
 	}
-	t.Log("All done reads")
+	fmt.Println("All done reads")
 }
 
 func TestRead(t *testing.T) {
