@@ -104,7 +104,7 @@ func (n NextResult) Error() string {
 // ReadPacketDataTo reads packet data into a user-supplied buffer.
 // This function ignores snaplen and instead reads up to the length of the
 // passed-in slice.
-// The number of bytes read into data will be returned in ci.Length.
+// The number of bytes read into data will be returned in ci.CaptureLength.
 func (r *Ring) ReadPacketDataTo(data []byte) (ci gopacket.CaptureInfo, err error) {
 	// This tricky buf_ptr points to the start of our slice data, so pfring_recv
 	// will actually write directly into our Go slice.  Nice!
