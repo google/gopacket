@@ -104,19 +104,16 @@ func TestReorder(t *testing.T) {
 			},
 			want: []Reassembly{
 				Reassembly{
-					Skip:  true,
+					Skip:  -1,
 					Bytes: []byte{1, 2, 3},
 				},
 				Reassembly{
-					Skip:  false,
 					Bytes: []byte{2, 2, 3},
 				},
 				Reassembly{
-					Skip:  false,
 					Bytes: []byte{3, 2, 3},
 				},
 				Reassembly{
-					Skip:  false,
 					Bytes: []byte{4, 2, 3},
 				},
 			},
@@ -148,16 +145,83 @@ func TestReorder(t *testing.T) {
 			},
 			want: []Reassembly{
 				Reassembly{
-					Skip:  false,
 					Bytes: []byte{1, 2, 3},
 				},
 				Reassembly{
-					Skip:  false,
 					Bytes: []byte{2, 2, 3},
 				},
 				Reassembly{
-					Skip:  false,
 					Bytes: []byte{3, 2, 3},
+				},
+			},
+		},
+	})
+}
+
+func TestMaxPerSkip(t *testing.T) {
+	test(t, []testSequence{
+		{
+			in: layers.TCP{
+				SrcPort:   1,
+				DstPort:   2,
+				Seq:       1000,
+				SYN:       true,
+				BaseLayer: layers.BaseLayer{Payload: []byte{1, 2, 3}},
+			},
+			want: []Reassembly{
+				Reassembly{
+					Start: true,
+					Bytes: []byte{1, 2, 3},
+				},
+			},
+		},
+		{
+			in: layers.TCP{
+				SrcPort:   1,
+				DstPort:   2,
+				Seq:       1007,
+				BaseLayer: layers.BaseLayer{Payload: []byte{3, 2, 3}},
+			},
+			want: []Reassembly{},
+		},
+		{
+			in: layers.TCP{
+				SrcPort:   1,
+				DstPort:   2,
+				Seq:       1010,
+				BaseLayer: layers.BaseLayer{Payload: []byte{4, 2, 3}},
+			},
+			want: []Reassembly{},
+		},
+		{
+			in: layers.TCP{
+				SrcPort:   1,
+				DstPort:   2,
+				Seq:       1013,
+				BaseLayer: layers.BaseLayer{Payload: []byte{5, 2, 3}},
+			},
+			want: []Reassembly{},
+		},
+		{
+			in: layers.TCP{
+				SrcPort:   1,
+				DstPort:   2,
+				Seq:       1016,
+				BaseLayer: layers.BaseLayer{Payload: []byte{6, 2, 3}},
+			},
+			want: []Reassembly{
+				Reassembly{
+					Skip:  3,
+					Bytes: []byte{3, 2, 3},
+				},
+				Reassembly{
+					Bytes: []byte{4, 2, 3},
+				},
+				Reassembly{
+					Bytes: []byte{5, 2, 3},
+				},
+				Reassembly{
+					Bytes: []byte{6, 2, 3},
 				},
 			},
 		},
@@ -177,7 +241,6 @@ func TestReorderFast(t *testing.T) {
 			want: []Reassembly{
 				Reassembly{
 					Start: true,
-					Skip:  false,
 					Bytes: []byte{1, 2, 3},
 				},
 			},
@@ -200,11 +263,9 @@ func TestReorderFast(t *testing.T) {
 			},
 			want: []Reassembly{
 				Reassembly{
-					Skip:  false,
 					Bytes: []byte{2, 2, 3},
 				},
 				Reassembly{
-					Skip:  false,
 					Bytes: []byte{3, 2, 3},
 				},
 			},
@@ -224,7 +285,6 @@ func TestOverlap(t *testing.T) {
 			},
 			want: []Reassembly{
 				Reassembly{
-					Skip:  false,
 					Start: true,
 					Bytes: []byte{1, 2, 3, 4, 5, 6, 7, 8, 9, 0},
 				},
@@ -239,7 +299,6 @@ func TestOverlap(t *testing.T) {
 			},
 			want: []Reassembly{
 				Reassembly{
-					Skip:  false,
 					Bytes: []byte{1, 2, 3, 4, 5},
 				},
 			},
@@ -253,7 +312,6 @@ func TestOverlap(t *testing.T) {
 			},
 			want: []Reassembly{
 				Reassembly{
-					Skip:  false,
 					Bytes: []byte{6, 7},
 				},
 			},
@@ -291,16 +349,13 @@ func TestBufferedOverlap(t *testing.T) {
 			},
 			want: []Reassembly{
 				Reassembly{
-					Skip:  false,
 					Start: true,
 					Bytes: []byte{1, 2, 3, 4, 5, 6, 7, 8, 9, 0},
 				},
 				Reassembly{
-					Skip:  false,
 					Bytes: []byte{1, 2, 3, 4, 5},
 				},
 				Reassembly{
-					Skip:  false,
 					Bytes: []byte{6, 7},
 				},
 			},
@@ -320,7 +375,6 @@ func TestOverrun1(t *testing.T) {
 			},
 			want: []Reassembly{
 				Reassembly{
-					Skip:  false,
 					Start: true,
 					Bytes: []byte{1, 2, 3, 4, 5, 6, 7, 8, 9, 0},
 				},
@@ -335,7 +389,6 @@ func TestOverrun1(t *testing.T) {
 			},
 			want: []Reassembly{
 				Reassembly{
-					Skip:  false,
 					Bytes: []byte{1, 2, 3, 4},
 				},
 			},
@@ -364,12 +417,10 @@ func TestOverrun2(t *testing.T) {
 			},
 			want: []Reassembly{
 				Reassembly{
-					Skip:  false,
 					Start: true,
 					Bytes: []byte{1, 2, 3, 4, 5, 6, 7, 8, 9, 0},
 				},
 				Reassembly{
-					Skip:  false,
 					Bytes: []byte{1, 2, 3, 4},
 				},
 			},
@@ -399,20 +450,16 @@ func TestCacheLargePacket(t *testing.T) {
 			},
 			want: []Reassembly{
 				Reassembly{
-					Skip:  false,
 					Start: true,
 					Bytes: []byte{},
 				},
 				Reassembly{
-					Skip:  false,
 					Bytes: data[:pageBytes],
 				},
 				Reassembly{
-					Skip:  false,
 					Bytes: data[pageBytes : pageBytes*2],
 				},
 				Reassembly{
-					Skip:  false,
 					Bytes: data[pageBytes*2 : pageBytes*3],
 				},
 			},

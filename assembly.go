@@ -75,11 +75,11 @@ func (s Sequence) Add(t int) Sequence {
 type Reassembly struct {
 	// Bytes is the next set of bytes in the stream.  May be empty.
 	Bytes []byte
-	// Skip is set to true if this reassembly has skipped some number of bytes.
-	// This normally occurs if packets were dropped, or if we picked up the stream
-	// after it had already started sending data (IE: we start our packet capture
-	// mid-stream).
-	Skip bool
+	// Skip is set to non-zero if bytes were skipped between this and the
+	// last Reassembly.  If this is the first packet in a connection and we
+	// didn't see the start, we have no idea how many bytes we skipped, so
+	// we set it to -1.  Otherwise, it's set to the number of bytes skipped.
+	Skip int
 	// Start is set if this set of bytes has a TCP SYN accompanying it.
 	Start bool
 	// End is set if this set of bytes has a TCP FIN or RST accompanying it.
@@ -518,7 +518,7 @@ func (a *Assembler) Assemble(netFlow gopacket.Flow, t *layers.TCP) {
 	if t.SYN {
 		a.ret = append(a.ret, Reassembly{
 			Bytes: bytes,
-			Skip:  false,
+			Skip:  0,
 			Start: true,
 			Seen:  time.Now(),
 		})
@@ -530,7 +530,7 @@ func (a *Assembler) Assemble(netFlow gopacket.Flow, t *layers.TCP) {
 		if len(bytes) > 0 {
 			a.ret = append(a.ret, Reassembly{
 				Bytes: bytes,
-				Skip:  false,
+				Skip:  0,
 				End:   t.RST || t.FIN,
 				Seen:  time.Now(),
 			})
@@ -571,7 +571,7 @@ func (a *Assembler) sendToConnection(conn *connection) {
 // addContiguous adds contiguous byte-sets to a connection.
 func (a *Assembler) addContiguous(conn *connection) {
 	for conn.first != nil && conn.nextSeq.Difference(conn.first.seq) <= 0 {
-		a.addNextFromConn(conn, false)
+		a.addNextFromConn(conn)
 	}
 }
 
@@ -584,7 +584,7 @@ func (a *Assembler) skipFlush(conn *connection) {
 		return
 	}
 	a.ret = a.ret[:0]
-	a.addNextFromConn(conn, true)
+	a.addNextFromConn(conn)
 	a.addContiguous(conn)
 	a.sendToConnection(conn)
 }
@@ -649,7 +649,7 @@ func (a *Assembler) insertIntoConn(t *layers.TCP, conn *connection) {
 	conn.pages++
 	if (a.MaxBufferedPagesPerConnection > 0 && conn.pages >= a.MaxBufferedPagesPerConnection) ||
 		(a.MaxBufferedPagesTotal > 0 && a.pc.used >= a.MaxBufferedPagesTotal) {
-		a.addNextFromConn(conn, true)
+		a.addNextFromConn(conn)
 	}
 }
 
@@ -682,10 +682,14 @@ func (a *Assembler) pagesFromTcp(t *layers.TCP) (p, p2 *page) {
 
 // addNextFromConn pops the first page from a connection off and adds it to the
 // return array.
-func (a *Assembler) addNextFromConn(conn *connection, skip bool) {
+func (a *Assembler) addNextFromConn(conn *connection) {
+	if conn.nextSeq == invalidSequence {
+		conn.first.Skip = -1
+	} else if diff := conn.nextSeq.Difference(conn.first.seq); diff > 0 {
+		conn.first.Skip = int(diff)
+	}
 	seq := conn.nextSeq
 	conn.first.Bytes, conn.nextSeq = byteSpan(conn.nextSeq, conn.first.seq, conn.first.Bytes)
-	conn.first.Skip = skip
 	a.ret = append(a.ret, conn.first.Reassembly)
 	a.pc.replace(conn.first)
 	if conn.first == conn.last {
