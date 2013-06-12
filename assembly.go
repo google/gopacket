@@ -466,7 +466,7 @@ func (p *StreamPool) newConnection(k key, s Stream) (c *connection) {
 	return c
 }
 
-// getConnection returns a new (locked) connection.
+// getConnection returns a (locked) connection.
 func (p *StreamPool) getConnection(k key) *connection {
 	p.mu.RLock()
 	conn := p.conns[k]
@@ -526,21 +526,33 @@ func (a *Assembler) Assemble(netFlow gopacket.Flow, t *layers.TCP) {
 	} else if conn.nextSeq == invalidSequence || conn.nextSeq.Difference(seq) > 0 {
 		a.insertIntoConn(t, conn)
 	} else {
-		span := int(seq.Difference(conn.nextSeq))
-		if len(bytes) >= span {
+		bytes, conn.nextSeq = byteSpan(conn.nextSeq, seq, bytes)
+		if len(bytes) > 0 {
 			a.ret = append(a.ret, Reassembly{
-				Bytes: bytes[span:],
+				Bytes: bytes,
 				Skip:  false,
 				End:   t.RST || t.FIN,
 				Seen:  time.Now(),
 			})
-			conn.nextSeq = seq.Add(len(bytes))
 		}
 	}
 	if len(a.ret) > 0 {
 		a.sendToConnection(conn)
 	}
 	conn.mu.Unlock()
+}
+
+func byteSpan(expected, received Sequence, bytes []byte) (toSend []byte, next Sequence) {
+	if expected == invalidSequence {
+		return bytes, received.Add(len(bytes))
+	}
+	span := int(received.Difference(expected))
+	if span <= 0 {
+		return bytes, received.Add(len(bytes))
+	} else if len(bytes) < span {
+		return nil, expected
+	}
+	return bytes[span:], expected.Add(len(bytes) - span)
 }
 
 // sendToConnection sends the current values in a.ret to the connection, closing
@@ -558,7 +570,7 @@ func (a *Assembler) sendToConnection(conn *connection) {
 
 // addContiguous adds contiguous byte-sets to a connection.
 func (a *Assembler) addContiguous(conn *connection) {
-	for conn.first != nil && conn.first.seq == conn.nextSeq {
+	for conn.first != nil && conn.nextSeq.Difference(conn.first.seq) <= 0 {
 		a.addNextFromConn(conn, false)
 	}
 }
@@ -628,6 +640,9 @@ func (conn *connection) pushBetween(prev, next, first, last *page) {
 }
 
 func (a *Assembler) insertIntoConn(t *layers.TCP, conn *connection) {
+	if conn.first != nil && conn.first.seq == conn.nextSeq {
+		panic("wtf")
+	}
 	p, p2 := a.pagesFromTcp(t)
 	prev, current := conn.traverseConn(Sequence(t.Seq))
 	conn.pushBetween(prev, current, p, p2)
@@ -668,10 +683,10 @@ func (a *Assembler) pagesFromTcp(t *layers.TCP) (p, p2 *page) {
 // addNextFromConn pops the first page from a connection off and adds it to the
 // return array.
 func (a *Assembler) addNextFromConn(conn *connection, skip bool) {
-	conn.first = conn.first
+	seq := conn.nextSeq
+	conn.first.Bytes, conn.nextSeq = byteSpan(conn.nextSeq, conn.first.seq, conn.first.Bytes)
 	conn.first.Skip = skip
 	a.ret = append(a.ret, conn.first.Reassembly)
-	conn.nextSeq = conn.first.seq.Add(len(conn.first.Bytes))
 	a.pc.replace(conn.first)
 	if conn.first == conn.last {
 		conn.first = nil

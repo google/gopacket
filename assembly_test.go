@@ -20,6 +20,7 @@ import (
 	"net"
 	"reflect"
 	"testing"
+	"time"
 )
 
 var netFlow gopacket.Flow
@@ -44,6 +45,9 @@ func (t *testFactory) New(a, b gopacket.Flow) Stream {
 }
 func (t *testFactory) Reassembled(r []Reassembly) {
 	t.reassembly = r
+	for i := 0; i < len(r); i++ {
+		t.reassembly[i].Seen = time.Time{}
+	}
 }
 func (t *testFactory) ReassemblyComplete() {
 }
@@ -191,12 +195,73 @@ func TestOverlap(t *testing.T) {
 				SrcPort:   1,
 				DstPort:   2,
 				Seq:       1007,
-				BaseLayer: layers.BaseLayer{Payload: []byte{7, 8, 9, 0, 1, 2, 3, 4}},
+				BaseLayer: layers.BaseLayer{Payload: []byte{7, 8, 9, 0, 1, 2, 3, 4, 5}},
 			},
 			want: []Reassembly{
 				Reassembly{
 					Skip:  false,
-					Bytes: []byte{1, 2, 3, 4},
+					Bytes: []byte{1, 2, 3, 4, 5},
+				},
+			},
+		},
+		{
+			in: layers.TCP{
+				SrcPort:   1,
+				DstPort:   2,
+				Seq:       1010,
+				BaseLayer: layers.BaseLayer{Payload: []byte{0, 1, 2, 3, 4, 5, 6, 7}},
+			},
+			want: []Reassembly{
+				Reassembly{
+					Skip:  false,
+					Bytes: []byte{6, 7},
+				},
+			},
+		},
+	})
+}
+
+func TestBufferedOverlap(t *testing.T) {
+	test(t, []testSequence{
+		{
+			in: layers.TCP{
+				SrcPort:   1,
+				DstPort:   2,
+				Seq:       1007,
+				BaseLayer: layers.BaseLayer{Payload: []byte{7, 8, 9, 0, 1, 2, 3, 4, 5}},
+			},
+			want: []Reassembly{},
+		},
+		{
+			in: layers.TCP{
+				SrcPort:   1,
+				DstPort:   2,
+				Seq:       1010,
+				BaseLayer: layers.BaseLayer{Payload: []byte{0, 1, 2, 3, 4, 5, 6, 7}},
+			},
+			want: []Reassembly{},
+		},
+		{
+			in: layers.TCP{
+				SrcPort:   1,
+				DstPort:   2,
+				SYN:       true,
+				Seq:       1000,
+				BaseLayer: layers.BaseLayer{Payload: []byte{1, 2, 3, 4, 5, 6, 7, 8, 9, 0}},
+			},
+			want: []Reassembly{
+				Reassembly{
+					Skip:  false,
+					Start: true,
+					Bytes: []byte{1, 2, 3, 4, 5, 6, 7, 8, 9, 0},
+				},
+				Reassembly{
+					Skip:  false,
+					Bytes: []byte{1, 2, 3, 4, 5},
+				},
+				Reassembly{
+					Skip:  false,
+					Bytes: []byte{6, 7},
 				},
 			},
 		},
