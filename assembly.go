@@ -695,6 +695,7 @@ func (a *Assembler) addNextFromConn(conn *connection, skip bool) {
 		conn.first = conn.first.next
 		conn.first.prev = nil
 	}
+	conn.pages--
 }
 
 func min(a, b int) int {

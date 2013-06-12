@@ -121,6 +121,46 @@ func TestReorder(t *testing.T) {
 				},
 			},
 		},
+		{
+			in: layers.TCP{
+				SrcPort:   1,
+				DstPort:   2,
+				Seq:       1016,
+				BaseLayer: layers.BaseLayer{Payload: []byte{2, 2, 3}},
+			},
+			want: []Reassembly{},
+		},
+		{
+			in: layers.TCP{
+				SrcPort:   1,
+				DstPort:   2,
+				Seq:       1019,
+				BaseLayer: layers.BaseLayer{Payload: []byte{3, 2, 3}},
+			},
+			want: []Reassembly{},
+		},
+		{
+			in: layers.TCP{
+				SrcPort:   1,
+				DstPort:   2,
+				Seq:       1013,
+				BaseLayer: layers.BaseLayer{Payload: []byte{1, 2, 3}},
+			},
+			want: []Reassembly{
+				Reassembly{
+					Skip:  false,
+					Bytes: []byte{1, 2, 3},
+				},
+				Reassembly{
+					Skip:  false,
+					Bytes: []byte{2, 2, 3},
+				},
+				Reassembly{
+					Skip:  false,
+					Bytes: []byte{3, 2, 3},
+				},
+			},
+		},
 	})
 }
 
