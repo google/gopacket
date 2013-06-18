@@ -12,7 +12,30 @@ import (
 	"encoding/binary"
 	"fmt"
 	"net"
+	"strings"
 )
+
+type IPv4Flag uint8
+
+const (
+	IPv4EvilBit       IPv4Flag = 1 << 0 // http://tools.ietf.org/html/rfc3514 ;)
+	IPv4DontFragment  IPv4Flag = 1 << 1
+	IPv4MoreFragments IPv4Flag = 1 << 2
+)
+
+func (f IPv4Flag) String() string {
+	var s []string
+	if f&IPv4EvilBit != 0 {
+		s = append(s, "Evil")
+	}
+	if f&IPv4DontFragment != 0 {
+		s = append(s, "DF")
+	}
+	if f&IPv4MoreFragments != 0 {
+		s = append(s, "MF")
+	}
+	return strings.Join(s, "|")
+}
 
 // IPv4 is the header of an IP packet.
 type IPv4 struct {
@@ -22,7 +45,7 @@ type IPv4 struct {
 	TOS        uint8
 	Length     uint16
 	Id         uint16
-	Flags      uint8
+	Flags      IPv4Flag
 	FragOffset uint16
 	TTL        uint8
 	Protocol   IPProtocol
@@ -57,7 +80,7 @@ func (ip *IPv4) DecodeFromBytes(data []byte, df gopacket.DecodeFeedback) error {
 	ip.TOS = data[1]
 	ip.Length = binary.BigEndian.Uint16(data[2:4])
 	ip.Id = binary.BigEndian.Uint16(data[4:6])
-	ip.Flags = uint8(flagsfrags >> 13)
+	ip.Flags = IPv4Flag(flagsfrags >> 13)
 	ip.FragOffset = flagsfrags & 0x1FFF
 	ip.TTL = data[8]
 	ip.Protocol = IPProtocol(data[9])
