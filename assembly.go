@@ -1,16 +1,8 @@
-// Copyright 2012 Google Inc. All Rights Reserved.
+// Copyright 2012 Google, Inc. All rights reserved.
 //
-// Licensed under the Apache License, Version 2.0 (the "License");
-// you may not use this file except in compliance with the License.
-// You may obtain a copy of the License at
-//
-//     http://www.apache.org/licenses/LICENSE-2.0
-//
-// Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an "AS IS" BASIS,
-// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-// See the License for the specific language governing permissions and
-// limitations under the License.
+// Use of this source code is governed by a BSD-style license
+// that can be found in the LICENSE file in the root of the source
+// tree.
 
 // Package assembly provides TCP stream re-assembly.
 //
@@ -454,7 +446,7 @@ func (p *StreamPool) newConnection(k key, s Stream) (c *connection) {
 	if *memLog {
 		p.newConnectionCount++
 		if p.newConnectionCount&0x7FFF == 0 {
-			log.Println("StreamPool:", p.newConnectionCount, "requests,", len(p.free), "free,", len(p.conns), "in use")
+			log.Println("StreamPool:", p.newConnectionCount, "requests,", len(p.conns), "used,", len(p.free), "free")
 		}
 	}
 	if len(p.free) == 0 {
