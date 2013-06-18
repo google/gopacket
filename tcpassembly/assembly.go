@@ -8,8 +8,10 @@
 //
 // The tcpassembly package implements uni-directional TCP reassembly, for use in
 // packet-sniffing applications.  The caller reads packets off the wire, then
-// presents them to an Assembler in the form of gopacket.TCP packets
-// (code.google.com/p/gopacket).  The Assembler uses a user-supplied
+// presents them to an Assembler in the form of gopacket layers.TCP packets
+// (code.google.com/p/gopacket, code.google.com/p/gopacket/layers).
+//
+// The Assembler uses a user-supplied
 // StreamFactory to create a user-defined Stream interface, then passes packet
 // data in stream order to that object.  A concurrency-safe StreamPool keeps
 // track of all current Streams being reassembled, so multiple Assemblers may
@@ -331,13 +333,18 @@ func NewAssembler(pool *StreamPool) *Assembler {
 	pool.users++
 	pool.mu.Unlock()
 	return &Assembler{
-		ret:      make([]Reassembly, assemblerReturnValueInitialSize),
-		pc:       newPageCache(),
-		connPool: pool,
-		AssemblerOptions: AssemblerOptions{
-			MaxBufferedPagesPerConnection: 10,
-		},
+		ret:              make([]Reassembly, assemblerReturnValueInitialSize),
+		pc:               newPageCache(),
+		connPool:         pool,
+		AssemblerOptions: DefaultAssemblerOptions,
 	}
+}
+
+// DefaultAssemblerOptions provides sane default options for an assembler.
+// These options are used by default when calling NewAssembler, so if
+// modified before a NewAssembler call they'll affect the resulting Assembler.
+var DefaultAssemblerOptions = AssemblerOptions{
+	MaxBufferedPagesPerConnection: 10,
 }
 
 type connection struct {
