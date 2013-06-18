@@ -4,7 +4,7 @@
 // that can be found in the LICENSE file in the root of the source
 // tree.
 
-package assembly
+package tcpassembly
 
 import (
 	"code.google.com/p/gopacket"

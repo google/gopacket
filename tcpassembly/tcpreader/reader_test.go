@@ -4,14 +4,14 @@
 // that can be found in the LICENSE file in the root of the source
 // tree.
 
-package reader
+package tcpreader
 
 import (
 	"bytes"
 	"code.google.com/p/gopacket"
 	"code.google.com/p/gopacket/layers"
 	"fmt"
-	"github.com/gconnell/assembly"
+	"github.com/gconnell/assembly/tcpassembly"
 	"io"
 	"net"
 	"testing"
@@ -40,15 +40,15 @@ type testReaderFactory struct {
 	output chan []byte
 }
 
-func (t *testReaderFactory) New(a, b gopacket.Flow) assembly.Stream {
+func (t *testReaderFactory) New(a, b gopacket.Flow) tcpassembly.Stream {
 	return &t.ReaderStream
 }
 
 func testReadSequence(t *testing.T, lossErrors bool, readSize int, seq readSequence) {
 	f := &testReaderFactory{ReaderStream: NewReaderStream()}
 	f.ReaderStream.LossErrors = lossErrors
-	p := assembly.NewStreamPool(f)
-	a := assembly.NewAssembler(p)
+	p := tcpassembly.NewStreamPool(f)
+	a := tcpassembly.NewAssembler(p)
 	buf := make([]byte, readSize)
 	go func() {
 		for i, test := range seq.in {

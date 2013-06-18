@@ -4,7 +4,7 @@
 // that can be found in the LICENSE file in the root of the source
 // tree.
 
-// Package reader provides an implementation for assembly.Stream which presents
+// Package tcpreader provides an implementation for tcpassembly.Stream which presents
 // the caller with an io.Reader for easy processing.
 //
 // The assembly package handles packet data reordering, but its output is
@@ -19,7 +19,7 @@
 //  // Create our StreamFactory
 //  type httpStreamFactory struct {}
 //  func (f *httpStreamFactory) New(a, b gopacket.Flow) {
-//  	r := reader.NewReaderStream(false)
+//  	r := tcpreader.NewReaderStream(false)
 //  	go printRequests(r)
 //  	return &r
 //  }
@@ -33,20 +33,20 @@
 //  			log.Println("Error parsing HTTP requests:", err)
 //  		} else {
 //  			fmt.Println("HTTP REQUEST:", req)
-//  			fmt.Println("Body contains", reader.DiscardBytesToEOF(req.Body), "bytes")
+//  			fmt.Println("Body contains", tcpreader.DiscardBytesToEOF(req.Body), "bytes")
 //  		}
 //  	}
 //  }
 //
 // Using just this code, we're able to reference a powerful, built-in library
 // for HTTP request parsing to do all the dirty-work of parsing requests from
-// the wire in real-time.  Pass this stream factory to an assembly.StreamPool,
-// start up an assembly.Assembler, and you're good to go!
-package reader
+// the wire in real-time.  Pass this stream factory to an tcpassembly.StreamPool,
+// start up an tcpassembly.Assembler, and you're good to go!
+package tcpreader
 
 import (
 	"errors"
-	"github.com/gconnell/assembly"
+	"github.com/gconnell/assembly/tcpassembly"
 	"io"
 )
 
@@ -80,7 +80,7 @@ func DiscardBytesToEOF(r io.Reader) (discarded int) {
 	}
 }
 
-// ReaderStream implements both assembly.Stream and io.Reader.  You can use it
+// ReaderStream implements both tcpassembly.Stream and io.Reader.  You can use it
 // as a building block to make simple, easy stream handlers.
 //
 // IMPORTANT:  If you use a ReaderStream, you MUST read ALL BYTES from it,
@@ -94,9 +94,9 @@ func DiscardBytesToEOF(r io.Reader) (discarded int) {
 //  func (m *myStreamHandler) run() {
 //  	// Do something here that reads all of the ReaderStream, or your assembly
 //  	// will block.
-//  	fmt.Println(assembly.DiscardBytesToEOF(&m.r))
+//  	fmt.Println(tcpreader.DiscardBytesToEOF(&m.r))
 //  }
-//  func (f *myStreamFactory) New(a, b gopacket.Flow) assembly.Stream {
+//  func (f *myStreamFactory) New(a, b gopacket.Flow) tcpassembly.Stream {
 //  	s := &myStreamHandler{}
 //  	go s.run()
 //  	// Return the ReaderStream as the stream that assembly should populate.
@@ -104,9 +104,9 @@ func DiscardBytesToEOF(r io.Reader) (discarded int) {
 //  }
 type ReaderStream struct {
 	ReaderStreamOptions
-	reassembled  chan []assembly.Reassembly
+	reassembled  chan []tcpassembly.Reassembly
 	done         chan bool
-	current      []assembly.Reassembly
+	current      []tcpassembly.Reassembly
 	closed       bool
 	lossReported bool
 	first        bool
@@ -122,20 +122,20 @@ type ReaderStreamOptions struct {
 // NewReaderStream returns a new ReaderStream object.
 func NewReaderStream() ReaderStream {
 	r := ReaderStream{
-		reassembled: make(chan []assembly.Reassembly),
+		reassembled: make(chan []tcpassembly.Reassembly),
 		done:        make(chan bool),
 		first:       true,
 	}
 	return r
 }
 
-// Reassembled implements assembly.Stream's Reassembled function.
-func (r *ReaderStream) Reassembled(reassembly []assembly.Reassembly) {
+// Reassembled implements tcpassembly.Stream's Reassembled function.
+func (r *ReaderStream) Reassembled(reassembly []tcpassembly.Reassembly) {
 	r.reassembled <- reassembly
 	<-r.done
 }
 
-// ReassemblyComplete implements assembly.Stream's ReassemblyComplete function.
+// ReassemblyComplete implements tcpassembly.Stream's ReassemblyComplete function.
 func (r *ReaderStream) ReassemblyComplete() {
 	close(r.reassembled)
 	close(r.done)

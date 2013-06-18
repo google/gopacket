@@ -4,9 +4,9 @@
 // that can be found in the LICENSE file in the root of the source
 // tree.
 
-// Package assembly provides TCP stream re-assembly.
+// Package tcpassembly provides TCP stream re-assembly.
 //
-// The assembly package implements uni-directional TCP reassembly, for use in
+// The tcpassembly package implements uni-directional TCP reassembly, for use in
 // packet-sniffing applications.  The caller reads packets off the wire, then
 // presents them to an Assembler in the form of gopacket.TCP packets
 // (code.google.com/p/gopacket).  The Assembler uses a user-supplied
@@ -14,7 +14,7 @@
 // data in stream order to that object.  A concurrency-safe StreamPool keeps
 // track of all current Streams being reassembled, so multiple Assemblers may
 // run at once to assemble packets while taking advantage of multiple cores.
-package assembly
+package tcpassembly
 
 import (
 	"code.google.com/p/gopacket"
