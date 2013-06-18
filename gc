@@ -75,6 +75,9 @@ go build gen.go
 go test -i ./... 2>/dev/null >/dev/null || true
 go test
 go build
+pushd tcpassembly
+go test ./...
+popd
 pushd layers
 gofmt -w gen.go
 go build gen.go
