@@ -79,13 +79,6 @@ func BenchmarkTypeToInterface2(b *testing.B) {
 	testError2 = e
 }
 
-func BenchmarkCheckEthernetPrefix(b *testing.B) {
-	key := [3]byte{5, 5, 5}
-	for i := 0; i < b.N; i++ {
-		_ = ValidMACPrefixMap[key]
-	}
-}
-
 var decodeOpts DecodeOptions
 
 func decodeOptsByValue(_ DecodeOptions)    {}

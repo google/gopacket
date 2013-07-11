@@ -62,7 +62,9 @@ set -x
 cd $(dirname $0)
 
 if [ ! -z "$GEN" ]; then
+  pushd macs
   go run gen.go | gofmt > valid_mac_prefixes.go
+  popd
   pushd layers
   go run gen.go | gofmt > iana_ports.go
   popd
@@ -70,11 +72,14 @@ fi
 
 # First, make sure everything is formatted, compiles, and tests pass.
 go fmt ./...
-gofmt -w gen.go
-go build gen.go
 go test -i ./... 2>/dev/null >/dev/null || true
 go test
 go build
+pushd macs
+go test ./...
+gofmt -w gen.go
+go build gen.go
+popd
 pushd tcpassembly
 go test ./...
 popd
