@@ -8,7 +8,6 @@ package layers
 
 import (
 	"code.google.com/p/gopacket"
-	"code.google.com/p/gopacket/macs"
 	"encoding/binary"
 	"errors"
 )
@@ -27,20 +26,19 @@ func (m *MPLS) LayerType() gopacket.LayerType { return LayerTypeMPLS }
 
 // ProtocolGuessingDecoder attempts to guess the protocol of the bytes it's
 // given, then decode the packet accordingly.  Its algorithm for guessing is:
-//  If packet starts with 3 bytes that are a valid ethernet prefix: Ethernet
-//  If the packet starts with nibble 0x4: IPv4
-//  If the packet starts with nibble 0x6: IPv6
+//  If the packet starts with byte 0x45-0x4F: IPv4
+//  If the packet starts with byte 0x60-0x6F: IPv6
+//  Otherwise:  Error
+// See draft-hsmit-isis-aal5mux-00.txt for more detail on this approach.
 type ProtocolGuessingDecoder struct{}
 
 func (ProtocolGuessingDecoder) Decode(data []byte, p gopacket.PacketBuilder) error {
-	ethPrefix := [3]byte{data[0], data[1], data[2]}
-	if _, ok := macs.ValidMACPrefixMap[ethPrefix]; ok {
-		return decodeEthernet(data, p)
-	}
-	switch data[0] >> 4 {
-	case 4:
+	switch data[0] {
+	// 0x40 | header_len, where header_len is at least 5.
+	case 0x45, 0x46, 0x47, 0x48, 0x49, 0x4a, 0x4b, 0x4c, 0x4d, 0x4e, 0x4f:
 		return decodeIPv4(data, p)
-	case 6:
+		// IPv6 can start with any byte whose first 4 bits are 0x6.
+	case 0x60, 0x61, 0x62, 0x63, 0x64, 0x65, 0x66, 0x67, 0x68, 0x69, 0x6a, 0x6b, 0x6c, 0x6d, 0x6e, 0x6f:
 		return decodeIPv6(data, p)
 	}
 	return errors.New("Unable to guess protocol of packet data")
