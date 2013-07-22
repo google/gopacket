@@ -86,7 +86,7 @@ popd
 pushd layers
 gofmt -w gen.go
 go build gen.go
-go test
+go test ./...
 popd
 if [ -f /usr/include/pcap.h ]; then
   pushd pcap

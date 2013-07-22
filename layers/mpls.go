@@ -8,6 +8,7 @@ package layers
 
 import (
 	"code.google.com/p/gopacket"
+	"code.google.com/p/gopacket/macs"
 	"encoding/binary"
 	"errors"
 )
@@ -33,7 +34,7 @@ type ProtocolGuessingDecoder struct{}
 
 func (ProtocolGuessingDecoder) Decode(data []byte, p gopacket.PacketBuilder) error {
 	ethPrefix := [3]byte{data[0], data[1], data[2]}
-	if _, ok := gopacket.ValidMACPrefixMap[ethPrefix]; ok {
+	if _, ok := macs.ValidMACPrefixMap[ethPrefix]; ok {
 		return decodeEthernet(data, p)
 	}
 	switch data[0] >> 4 {
