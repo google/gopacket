@@ -276,11 +276,15 @@ func layerString(i interface{}, anonymous bool, writeSpace bool) string {
 	case reflect.Slice:
 		var b bytes.Buffer
 		b.WriteByte('[')
-		for j := 0; j < v.Len(); j++ {
-			if j != 0 {
-				b.WriteString(", ")
+		if v.Len() > 4 {
+			b.WriteString("...")
+		} else {
+			for j := 0; j < v.Len(); j++ {
+				if j != 0 {
+					b.WriteString(", ")
+				}
+				b.WriteString(layerString(v.Index(j).Interface(), false, false))
 			}
-			b.WriteString(layerString(v.Index(j).Interface(), false, false))
 		}
 		b.WriteByte(']')
 		return b.String()

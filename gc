@@ -88,6 +88,14 @@ gofmt -w gen.go
 go build gen.go
 go test ./...
 popd
+if [ -f /usr/include/linux/if_packet.h ]; then
+  if grep -q TPACKET_V3 /usr/include/linux/if_packet.h; then
+    pushd afpacket
+    go build ./...
+    go test ./...
+    popd
+  fi
+fi
 if [ -f /usr/include/pcap.h ]; then
   pushd pcap
   go test ./...
