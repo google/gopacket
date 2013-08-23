@@ -431,7 +431,6 @@ func decodeCiscoDiscoveryInfo(data []byte, p gopacket.PacketBuilder) error {
 				tLen := int(binary.BigEndian.Uint32(data[4:8]))
 				if tLen > len(data)-8 {
 					return fmt.Errorf("Invalid TLV length %d vs %d", tLen, len(data)-8)
-					break
 				}
 				data = data[8:]
 				switch tType {

@@ -1,7 +1,7 @@
+// +build linux
+
 // Package afpacket provides Go bindings for MMap'd AF_PACKET socket reading.
 package afpacket
-
-// +build linux
 
 // Couldn't have done this without:
 // http://lxr.free-electrons.com/source/Documentation/networking/packet_mmap.txt
