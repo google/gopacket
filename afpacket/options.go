@@ -7,6 +7,10 @@ import (
 	"time"
 )
 
+// #include <linux/if_packet.h>
+// #include <sys/socket.h>
+import "C"
+
 // OptTPacketVersion is the version of TPacket to use.
 // It can be passed into NewTPacket.
 type OptTPacketVersion int
@@ -26,15 +30,34 @@ func (t OptTPacketVersion) String() string {
 	return "InvalidVersion"
 }
 
+// OptSockType is the socket type used to open the TPacket socket.
+type OptSocketType int
+
+func (t OptSocketType) String() string {
+	switch t {
+	case SocketRaw:
+		return "SOCK_RAW"
+	case SocketDgram:
+		return "SOCK_DGRAM"
+	}
+	return "UnknownSocketType"
+}
+
 const (
 	// TPacketVersionHighestAvailable tells NewHandle to use the highest available version of tpacket the kernel has available.
 	// This is the default, should a version number not be given in NewHandle's options.
-	TPacketVersionHighestAvailable OptTPacketVersion = -1
-	TPacketVersion1                OptTPacketVersion = 0
-	TPacketVersion2                OptTPacketVersion = 1
-	TPacketVersion3                OptTPacketVersion = 2
-	tpacketVersionMax                                = 2
-	tpacketVersionMin                                = -1
+	TPacketVersionHighestAvailable = OptTPacketVersion(-1)
+	TPacketVersion1                = OptTPacketVersion(C.TPACKET_V1)
+	TPacketVersion2                = OptTPacketVersion(C.TPACKET_V2)
+	TPacketVersion3                = OptTPacketVersion(C.TPACKET_V3)
+	tpacketVersionMax              = TPacketVersion3
+	tpacketVersionMin              = -1
+	// SocketRaw is the default socket type.  It returns packet data
+	// including the link layer (ethernet headers, etc).
+	SocketRaw = OptSocketType(C.SOCK_RAW)
+	// SocketDgram strips off the link layer when reading packets, and adds
+	// the link layer back automatically on packet writes (coming soon...)
+	SocketDgram = OptSocketType(C.SOCK_DGRAM)
 )
 
 // OptInterface is the specific interface to bind to.
@@ -71,6 +94,7 @@ type options struct {
 	numBlocks      int
 	blockTimeout   time.Duration
 	version        OptTPacketVersion
+	socktype       OptSocketType
 	iface          string
 }
 
@@ -80,6 +104,7 @@ var defaultOpts = options{
 	numBlocks:    DefaultNumBlocks,
 	blockTimeout: DefaultBlockTimeout,
 	version:      TPacketVersionHighestAvailable,
+	socktype:     SocketRaw,
 }
 
 func parseOptions(opts ...interface{}) (ret options, err error) {
@@ -98,6 +123,8 @@ func parseOptions(opts ...interface{}) (ret options, err error) {
 			ret.version = v
 		case OptInterface:
 			ret.iface = string(v)
+		case OptSocketType:
+			ret.socktype = v
 		default:
 			err = fmt.Errorf("unknown type in options")
 			return

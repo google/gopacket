@@ -168,14 +168,15 @@ func (h *TPacket) Close() {
 // If this function succeeds, the user should be sure to Close the returned
 // TPacket when finished with it.
 func NewTPacket(opts ...interface{}) (h *TPacket, err error) {
-	fd, err := C.socket(C.AF_PACKET, C.SOCK_RAW, C.int(C.htons(C.ETH_P_ALL)))
+	h = &TPacket{}
+	if h.opts, err = parseOptions(opts...); err != nil {
+		return nil, err
+	}
+	fd, err := C.socket(C.AF_PACKET, C.int(h.opts.socktype), C.int(C.htons(C.ETH_P_ALL)))
 	if err != nil {
 		return nil, err
 	}
-	h = &TPacket{fd: fd}
-	if h.opts, err = parseOptions(opts); err != nil {
-		goto errlbl
-	}
+	h.fd = fd
 	if h.opts.iface != "" {
 		if err = h.bindToInterface(h.opts.iface); err != nil {
 			goto errlbl
