@@ -43,14 +43,36 @@ type ICMPv4 struct {
 func (i *ICMPv4) LayerType() gopacket.LayerType { return LayerTypeICMPv4 }
 
 func decodeICMPv4(data []byte, p gopacket.PacketBuilder) error {
-	p.AddLayer(&ICMPv4{
-		TypeCode:  ICMPv4TypeCode(binary.BigEndian.Uint16(data[:2])),
-		Checksum:  binary.BigEndian.Uint16(data[2:4]),
-		Id:        binary.BigEndian.Uint16(data[4:6]),
-		Seq:       binary.BigEndian.Uint16(data[6:8]),
-		BaseLayer: BaseLayer{data[:8], data[8:]},
-	})
+	i := &ICMPv4{}
+	err := i.DecodeFromBytes(data, p)
+	if err != nil {
+		return err
+	}
+	p.AddLayer(i)
 	return p.NextDecoder(gopacket.LayerTypePayload)
+}
+
+var tooShort error = fmt.Errorf("icmp layer less than 8 bytes")
+
+func (i *ICMPv4) DecodeFromBytes(data []byte, df gopacket.DecodeFeedback) error {
+	if len(data) < 8 {
+		df.SetTruncated()
+		return tooShort
+	}
+	i.TypeCode = ICMPv4TypeCode(binary.BigEndian.Uint16(data[:2]))
+	i.Checksum = binary.BigEndian.Uint16(data[2:4])
+	i.Id = binary.BigEndian.Uint16(data[4:6])
+	i.Seq = binary.BigEndian.Uint16(data[6:8])
+	i.BaseLayer = BaseLayer{data[:8], data[8:]}
+	return nil
+}
+
+func (i *ICMPv4) CanDecode() gopacket.LayerClass {
+	return LayerTypeICMPv4
+}
+
+func (i *ICMPv4) NextLayerType() gopacket.LayerType {
+	return gopacket.LayerTypePayload
 }
 
 func (a ICMPv4TypeCode) String() string {

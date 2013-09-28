@@ -70,7 +70,7 @@ func (l *DecodingLayerParser) SetTruncated() {
 // of the given DecodingLayers with AddDecodingLayer.
 //
 // Each call to DecodeLayers will attempt to decode the given bytes first by
-// teating them as a 'first'-type layer, then by using NextLayerType on
+// treating them as a 'first'-type layer, then by using NextLayerType on
 // subsequently decoded layers to find the next relevant decoder.  Should a
 // deoder not be available for the layer type returned by NextLayerType,
 // decoding will stop.
@@ -142,6 +142,9 @@ func NewDecodingLayerParser(first LayerType, decoders ...DecodingLayer) *Decodin
 //        }
 //      }
 //    }
+//
+// If DecodeLayers is unable to decode the next layer type, it will return the
+// error UnsupportedLayerType.
 func (l *DecodingLayerParser) DecodeLayers(data []byte, decoded *[]LayerType) (err error) {
 	l.Truncated = false
 	if !l.IgnorePanic {
@@ -152,7 +155,7 @@ func (l *DecodingLayerParser) DecodeLayers(data []byte, decoded *[]LayerType) (e
 	for len(data) > 0 {
 		decoder, ok := l.decoders[typ]
 		if !ok {
-			return errorDecodingLayer(typ)
+			return UnsupportedLayerType(typ)
 		} else if err = decoder.DecodeFromBytes(data, l.df); err != nil {
 			return err
 		}
@@ -163,10 +166,14 @@ func (l *DecodingLayerParser) DecodeLayers(data []byte, decoded *[]LayerType) (e
 	return nil
 }
 
-type errorDecodingLayer LayerType
+// UnsupportedLayerType is returned by DecodingLayerParser if DecodeLayers
+// encounters a layer type that the DecodingLayerParser has no decoder for.
+type UnsupportedLayerType LayerType
 
-func (e errorDecodingLayer) Error() string {
-	return fmt.Sprintf("DecodingLayerParser has no decoder for layer type %v", e)
+// Error implements the error interface, returning a string to say that the
+// given layer type is unsupported.
+func (e UnsupportedLayerType) Error() string {
+	return fmt.Sprintf("No decoder for layer type %v", LayerType(e))
 }
 
 func panicToError(e *error) {

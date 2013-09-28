@@ -87,7 +87,7 @@ var DecodeUnknown Decoder = DecodeFunc(decodeUnknown)
 
 // LayerTypeZero is an invalid layer type, but can be used to determine whether
 // layer type has actually been set correctly.
-var LayerTypeZero LayerType = 0
+var LayerTypeZero LayerType = RegisterLayerType(0, LayerTypeMetadata{"Unknown", DecodeUnknown})
 
 // LayerTypeDecodeFailure is the layer type for the default error layer.
 var LayerTypeDecodeFailure LayerType = RegisterLayerType(1, LayerTypeMetadata{"DecodeFailure", DecodeUnknown})

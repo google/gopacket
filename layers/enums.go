@@ -63,6 +63,7 @@ type IPProtocol uint8
 const (
 	IPProtocolIPv6HopByHop IPProtocol = 0
 	IPProtocolICMPv4       IPProtocol = 1
+	IPProtocolIGMP         IPProtocol = 2
 	IPProtocolTCP          IPProtocol = 6
 	IPProtocolUDP          IPProtocol = 17
 	IPProtocolRUDP         IPProtocol = 27
@@ -349,6 +350,7 @@ func init() {
 	IPProtocolMetadata[IPProtocolUDPLite] = EnumMetadata{DecodeWith: gopacket.DecodeFunc(decodeUDPLite), Name: "UDPLite", LayerType: LayerTypeUDPLite}
 	IPProtocolMetadata[IPProtocolMPLSInIP] = EnumMetadata{DecodeWith: gopacket.DecodeFunc(decodeMPLS), Name: "MPLS", LayerType: LayerTypeMPLS}
 	IPProtocolMetadata[IPProtocolNoNextHeader] = EnumMetadata{DecodeWith: errorFunc("NoNextHeader with non-zero byte payload"), Name: "NoNextHeader"}
+	IPProtocolMetadata[IPProtocolIGMP] = EnumMetadata{DecodeWith: gopacket.DecodeFunc(decodeIGMP), Name: "IGMP", LayerType: LayerTypeIGMP}
 
 	SCTPChunkTypeMetadata[SCTPChunkTypeData] = EnumMetadata{DecodeWith: gopacket.DecodeFunc(decodeSCTPData), Name: "Data"}
 	SCTPChunkTypeMetadata[SCTPChunkTypeInit] = EnumMetadata{DecodeWith: gopacket.DecodeFunc(decodeSCTPInit), Name: "Init"}
