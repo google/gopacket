@@ -21,11 +21,22 @@ type EtherIP struct {
 // LayerType returns gopacket.LayerTypeEtherIP.
 func (e *EtherIP) LayerType() gopacket.LayerType { return LayerTypeEtherIP }
 
+func (e *EtherIP) DecodeFromBytes(data []byte, df gopacket.DecodeFeedback) error {
+	e.Version = data[0] >> 4
+	e.Reserved = binary.BigEndian.Uint16(data[:2]) & 0x0fff
+	e.BaseLayer = BaseLayer{data[:2], data[2:]}
+	return nil
+}
+
+func (e *EtherIP) CanDecode() gopacket.LayerClass {
+	return LayerTypeEtherIP
+}
+
+func (e *EtherIP) NextLayerType() gopacket.LayerType {
+	return LayerTypeEthernet
+}
+
 func decodeEtherIP(data []byte, p gopacket.PacketBuilder) error {
-	p.AddLayer(&EtherIP{
-		Version:   data[0] >> 4,
-		Reserved:  binary.BigEndian.Uint16(data[:2]) & 0x0fff,
-		BaseLayer: BaseLayer{data[:2], data[2:]},
-	})
-	return p.NextDecoder(LayerTypeEthernet)
+	e := &EtherIP{}
+	return decodingLayerDecoder(e, data, p)
 }

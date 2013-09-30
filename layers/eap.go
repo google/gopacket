@@ -44,20 +44,31 @@ type EAP struct {
 // LayerType returns LayerTypeEAP.
 func (e *EAP) LayerType() gopacket.LayerType { return LayerTypeEAP }
 
-func decodeEAP(data []byte, p gopacket.PacketBuilder) error {
-	e := &EAP{
-		Code:   EAPCode(data[0]),
-		Id:     data[1],
-		Length: binary.BigEndian.Uint16(data[2:4]),
-	}
+func (e *EAP) DecodeFromBytes(data []byte, df gopacket.DecodeFeedback) error {
+	e.Code = EAPCode(data[0])
+	e.Id = data[1]
+	e.Length = binary.BigEndian.Uint16(data[2:4])
 	if e.Length > 4 {
 		e.Type = EAPType(data[4])
 		e.TypeData = data[5:]
+	} else {
+		e.Type = 0
+		e.TypeData = nil
 	}
 	e.BaseLayer.Contents = data[:e.Length]
 	e.BaseLayer.Payload = data[e.Length:] // Should be 0 bytes
-	p.AddLayer(e)
-	// If we have any bytes left in the packet, we have no idea what they are,
-	// so treat them as unknown data.
-	return p.NextDecoder(gopacket.DecodeUnknown)
+	return nil
+}
+
+func (e *EAP) CanDecode() gopacket.LayerClass {
+	return LayerTypeEAP
+}
+
+func (e *EAP) NextLayerType() gopacket.LayerType {
+	return gopacket.LayerTypeZero
+}
+
+func decodeEAP(data []byte, p gopacket.PacketBuilder) error {
+	e := &EAP{}
+	return decodingLayerDecoder(e, data, p)
 }

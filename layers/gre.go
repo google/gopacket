@@ -33,23 +33,21 @@ type GRERouting struct {
 // LayerType returns gopacket.LayerTypeGRE.
 func (g *GRE) LayerType() gopacket.LayerType { return LayerTypeGRE }
 
-func decodeGRE(data []byte, p gopacket.PacketBuilder) error {
-	g := &GRE{
-		ChecksumPresent:   data[0]&0x80 != 0,
-		RoutingPresent:    data[0]&0x40 != 0,
-		KeyPresent:        data[0]&0x20 != 0,
-		SeqPresent:        data[0]&0x10 != 0,
-		StrictSourceRoute: data[0]&0x08 != 0,
-		RecursionControl:  data[0] & 0x7,
-		Flags:             data[1] >> 3,
-		Version:           data[1] & 0x7,
-		Protocol:          EthernetType(binary.BigEndian.Uint16(data[2:4])),
-		Checksum:          binary.BigEndian.Uint16(data[4:6]),
-		Offset:            binary.BigEndian.Uint16(data[6:8]),
-		Key:               binary.BigEndian.Uint32(data[8:12]),
-		Seq:               binary.BigEndian.Uint32(data[12:16]),
-		BaseLayer:         BaseLayer{data[:16], data[16:]},
-	}
+func (g *GRE) DecodeFromBytes(data []byte, df gopacket.DecodeFeedback) error {
+	g.ChecksumPresent = data[0]&0x80 != 0
+	g.RoutingPresent = data[0]&0x40 != 0
+	g.KeyPresent = data[0]&0x20 != 0
+	g.SeqPresent = data[0]&0x10 != 0
+	g.StrictSourceRoute = data[0]&0x08 != 0
+	g.RecursionControl = data[0] & 0x7
+	g.Flags = data[1] >> 3
+	g.Version = data[1] & 0x7
+	g.Protocol = EthernetType(binary.BigEndian.Uint16(data[2:4]))
+	g.Checksum = binary.BigEndian.Uint16(data[4:6])
+	g.Offset = binary.BigEndian.Uint16(data[6:8])
+	g.Key = binary.BigEndian.Uint32(data[8:12])
+	g.Seq = binary.BigEndian.Uint32(data[12:16])
+	g.BaseLayer = BaseLayer{data[:16], data[16:]}
 	// reset data to point to after the main gre header
 	rData := data[16:]
 	if g.RoutingPresent {
@@ -62,7 +60,21 @@ func decodeGRE(data []byte, p gopacket.PacketBuilder) error {
 		g.RoutingInformation = rData[4:end]
 		g.Contents = data[:16+end]
 		g.Payload = data[16+end:]
+	} else {
+		g.GRERouting = nil
 	}
-	p.AddLayer(g)
-	return p.NextDecoder(g.Protocol)
+	return nil
+}
+
+func (g *GRE) CanDecode() gopacket.LayerClass {
+	return LayerTypeGRE
+}
+
+func (g *GRE) NextLayerType() gopacket.LayerType {
+	return g.Protocol.LayerType()
+}
+
+func decodeGRE(data []byte, p gopacket.PacketBuilder) error {
+	g := &GRE{}
+	return decodingLayerDecoder(g, data, p)
 }

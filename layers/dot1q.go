@@ -43,9 +43,5 @@ func (d *Dot1Q) NextLayerType() gopacket.LayerType {
 
 func decodeDot1Q(data []byte, p gopacket.PacketBuilder) error {
 	d := &Dot1Q{}
-	if err := d.DecodeFromBytes(data, p); err != nil {
-		return err
-	}
-	p.AddLayer(d)
-	return p.NextDecoder(d.Type)
+	return decodingLayerDecoder(d, data, p)
 }

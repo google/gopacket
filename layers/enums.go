@@ -255,6 +255,9 @@ func (a EAPOLType) Decode(data []byte, p gopacket.PacketBuilder) error {
 func (a EAPOLType) String() string {
 	return EAPOLTypeMetadata[a].Name
 }
+func (a EAPOLType) LayerType() gopacket.LayerType {
+	return EAPOLTypeMetadata[a].LayerType
+}
 func (a ProtocolFamily) Decode(data []byte, p gopacket.PacketBuilder) error {
 	return ProtocolFamilyMetadata[a].DecodeWith.Decode(data, p)
 }
@@ -382,7 +385,7 @@ func init() {
 
 	FDDIFrameControlMetadata[FDDIFrameControlLLC] = EnumMetadata{DecodeWith: gopacket.DecodeFunc(decodeLLC), Name: "LLC"}
 
-	EAPOLTypeMetadata[EAPOLTypeEAP] = EnumMetadata{DecodeWith: gopacket.DecodeFunc(decodeEAP), Name: "EAP"}
+	EAPOLTypeMetadata[EAPOLTypeEAP] = EnumMetadata{DecodeWith: gopacket.DecodeFunc(decodeEAP), Name: "EAP", LayerType: LayerTypeEAP}
 
 	ProtocolFamilyMetadata[ProtocolFamilyIPv4] = EnumMetadata{DecodeWith: gopacket.DecodeFunc(decodeIPv4), Name: "IPv4"}
 	ProtocolFamilyMetadata[ProtocolFamilyIPv6BSD] = EnumMetadata{DecodeWith: gopacket.DecodeFunc(decodeIPv6), Name: "IPv6"}

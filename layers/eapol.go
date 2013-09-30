@@ -20,12 +20,22 @@ type EAPOL struct {
 // LayerType returns LayerTypeEAPOL.
 func (e *EAPOL) LayerType() gopacket.LayerType { return LayerTypeEAPOL }
 
+func (e *EAPOL) DecodeFromBytes(data []byte, df gopacket.DecodeFeedback) error {
+	e.Version = data[0]
+	e.Type = EAPOLType(data[1])
+	e.BaseLayer = BaseLayer{data[:2], data[2:]}
+	return nil
+}
+
+func (e *EAPOL) CanDecode() gopacket.LayerClass {
+	return LayerTypeEAPOL
+}
+
+func (e *EAPOL) NextLayerType() gopacket.LayerType {
+	return e.Type.LayerType()
+}
+
 func decodeEAPOL(data []byte, p gopacket.PacketBuilder) error {
-	e := &EAPOL{
-		Version:   data[0],
-		Type:      EAPOLType(data[1]),
-		BaseLayer: BaseLayer{data[:2], data[2:]},
-	}
-	p.AddLayer(e)
-	return p.NextDecoder(e.Type)
+	e := &EAPOL{}
+	return decodingLayerDecoder(e, data, p)
 }

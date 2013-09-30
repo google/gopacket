@@ -76,10 +76,5 @@ func (i *IGMP) NextLayerType() gopacket.LayerType {
 
 func decodeIGMP(data []byte, p gopacket.PacketBuilder) error {
 	i := &IGMP{}
-	err := i.DecodeFromBytes(data, p)
-	if err != nil {
-		return err
-	}
-	p.AddLayer(i)
-	return nil
+	return decodingLayerDecoder(i, data, p)
 }

@@ -6,6 +6,10 @@
 
 package layers
 
+import (
+	"code.google.com/p/gopacket"
+)
+
 // BaseLayer is a convenience struct which implements the LayerData and
 // LayerPayload functions of the Layer interface.
 type BaseLayer struct {
@@ -24,3 +28,22 @@ func (b *BaseLayer) LayerContents() []byte { return b.Contents }
 
 // LayerPayload returns the bytes contained within the packet layer.
 func (b *BaseLayer) LayerPayload() []byte { return b.Payload }
+
+type layerDecodingLayer interface {
+	gopacket.Layer
+	DecodeFromBytes([]byte, gopacket.DecodeFeedback) error
+	NextLayerType() gopacket.LayerType
+}
+
+func decodingLayerDecoder(d layerDecodingLayer, data []byte, p gopacket.PacketBuilder) error {
+	err := d.DecodeFromBytes(data, p)
+	if err != nil {
+		return err
+	}
+	p.AddLayer(d)
+	next := d.NextLayerType()
+	if next == gopacket.LayerTypeZero {
+		return nil
+	}
+	return p.NextDecoder(next)
+}
