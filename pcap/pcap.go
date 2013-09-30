@@ -25,6 +25,7 @@ import (
 	"errors"
 	"io"
 	"net"
+	"reflect"
 	"strconv"
 	"sync"
 	"syscall"
@@ -152,23 +153,51 @@ const (
 // returned error is nil.
 func (p *Handle) ReadPacketData() (data []byte, ci gopacket.CaptureInfo, err error) {
 	p.mu.Lock()
-	result := NextError(C.pcap_next_ex(p.cptr, &p.pkthdr, &p.buf_ptr))
+	err = p.getNextBufPtrLocked(&ci)
+	if err == nil {
+		data = C.GoBytes(unsafe.Pointer(p.buf_ptr), C.int(ci.CaptureLength))
+	}
+	p.mu.Unlock()
+	return
+}
 
-	buf := unsafe.Pointer(p.buf_ptr)
+// getNextBufPtrLocked is shared code for ReadPacketData and
+// ZeroCopyReadPacketData.
+func (p *Handle) getNextBufPtrLocked(ci *gopacket.CaptureInfo) error {
+	result := NextError(C.pcap_next_ex(p.cptr, &p.pkthdr, &p.buf_ptr))
 
 	if result != NextErrorOk {
 		if result == NextErrorNoMorePackets {
-			err = io.EOF
+			return io.EOF
 		} else {
-			err = result
+			return result
 		}
-		p.mu.Unlock()
-		return
 	}
-	data = C.GoBytes(buf, C.int(p.pkthdr.caplen))
 	ci.Timestamp = time.Unix(int64(p.pkthdr.ts.tv_sec), int64(p.pkthdr.ts.tv_usec))
 	ci.CaptureLength = int(p.pkthdr.caplen)
 	ci.Length = int(p.pkthdr.len)
+	return nil
+}
+
+// ZeroCopyReadPacketData reads the next packet off the wire, and returns its data.
+// The slice returned by ZeroCopyReadPacketData points to bytes owned by the
+// the Handle.  Each call to ZeroCopyReadPacketData invalidates any data previously
+// returned by ZeroCopyReadPacketData.  Care must be taken not to keep pointers
+// to old bytes when using ZeroCopyReadPacketData... if you need to keep data past
+// the next time you call ZeroCopyReadPacketData, use ReadPacketDataData, which copies
+// the bytes into a new buffer for you.
+//  data1, _, _ := handle.ZeroCopyReadPacketData()
+//  // do everything you want with data1 here, copying bytes out of it if you'd like to keep them around.
+//  data2, _, _ := handle.ZeroCopyReadPacketData()  // invalidates bytes in data1
+func (p *Handle) ZeroCopyReadPacketData() (data []byte, ci gopacket.CaptureInfo, err error) {
+	p.mu.Lock()
+	err = p.getNextBufPtrLocked(&ci)
+	if err == nil {
+		slice := (*reflect.SliceHeader)(unsafe.Pointer(&data))
+		slice.Data = uintptr(unsafe.Pointer(p.buf_ptr))
+		slice.Len = ci.CaptureLength
+		slice.Cap = ci.CaptureLength
+	}
 	p.mu.Unlock()
 	return
 }

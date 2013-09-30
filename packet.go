@@ -579,6 +579,25 @@ type PacketDataSource interface {
 	ReadPacketData() (data []byte, ci CaptureInfo, err error)
 }
 
+// ZeroCopyPacketDataSource is an interface to pull packet data from sources
+// that allow data to be returned without copying to a user-controlled buffer.
+// It's very similar to PacketDataSource, except that the caller must be more
+// careful in how the returned buffer is handled.
+type ZeroCopyPacketDataSource interface {
+	// ZeroCopyReadPacketData returns the next packet available from this data source.
+	// It returns:
+	//  data:  The bytes of an individual packet.  Unlike with
+	//    PacketDataSource's ReadPacketData, the slice returned here points
+	//    to a buffer owned by the data source.  In particular, the bytes in
+	//    this buffer may be changed by future calls to
+	//    ZeroCopyReadPacketData.  Do not use the returned buffer after
+	//    subsequent ZeroCopyReadPacketData calls.
+	//  ci:  Metadata about the capture
+	//  err:  An error encountered while reading packet data.  If err != nil,
+	//    then data/ci will be ignored.
+	ZeroCopyReadPacketData() (data []byte, ci CaptureInfo, err error)
+}
+
 // PacketSource reads in packets from a PacketDataSource, decodes them, and
 // returns them.
 //
