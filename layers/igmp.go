@@ -44,6 +44,7 @@ func igmpTimeDecode(t uint8) time.Duration {
 	return time.Millisecond * 100 * time.Duration((mant|0x10)<<(exp+3))
 }
 
+// DecodeFromBytes decodes the given bytes into this layer.
 func (i *IGMP) DecodeFromBytes(data []byte, df gopacket.DecodeFeedback) error {
 	i.Type = IGMPType(data[0])
 	i.MaxResponseTime = igmpTimeDecode(data[1])
@@ -66,10 +67,12 @@ func (i *IGMP) DecodeFromBytes(data []byte, df gopacket.DecodeFeedback) error {
 	return nil
 }
 
+// CanDecode returns the set of layer types that this DecodingLayer can decode.
 func (i *IGMP) CanDecode() gopacket.LayerClass {
 	return LayerTypeIGMP
 }
 
+// NextLayerType returns the layer type contained by this DecodingLayer.
 func (i *IGMP) NextLayerType() gopacket.LayerType {
 	return gopacket.LayerTypeZero
 }

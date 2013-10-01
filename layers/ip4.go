@@ -72,6 +72,7 @@ func (i IPv4Option) String() string {
 	return fmt.Sprintf("IPv4Option(%v:%v)", i.OptionType, i.OptionData)
 }
 
+// DecodeFromBytes decodes the given bytes into this layer.
 func (ip *IPv4) DecodeFromBytes(data []byte, df gopacket.DecodeFeedback) error {
 	flagsfrags := binary.BigEndian.Uint16(data[6:8])
 

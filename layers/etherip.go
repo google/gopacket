@@ -21,6 +21,7 @@ type EtherIP struct {
 // LayerType returns gopacket.LayerTypeEtherIP.
 func (e *EtherIP) LayerType() gopacket.LayerType { return LayerTypeEtherIP }
 
+// DecodeFromBytes decodes the given bytes into this layer.
 func (e *EtherIP) DecodeFromBytes(data []byte, df gopacket.DecodeFeedback) error {
 	e.Version = data[0] >> 4
 	e.Reserved = binary.BigEndian.Uint16(data[:2]) & 0x0fff
@@ -28,10 +29,12 @@ func (e *EtherIP) DecodeFromBytes(data []byte, df gopacket.DecodeFeedback) error
 	return nil
 }
 
+// CanDecode returns the set of layer types that this DecodingLayer can decode.
 func (e *EtherIP) CanDecode() gopacket.LayerClass {
 	return LayerTypeEtherIP
 }
 
+// NextLayerType returns the layer type contained by this DecodingLayer.
 func (e *EtherIP) NextLayerType() gopacket.LayerType {
 	return LayerTypeEthernet
 }

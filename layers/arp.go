@@ -29,6 +29,7 @@ type ARP struct {
 // LayerType returns LayerTypeARP
 func (arp *ARP) LayerType() gopacket.LayerType { return LayerTypeARP }
 
+// DecodeFromBytes decodes the given bytes into this layer.
 func (arp *ARP) DecodeFromBytes(data []byte, df gopacket.DecodeFeedback) error {
 	arp.AddrType = LinkType(binary.BigEndian.Uint16(data[0:2]))
 	arp.Protocol = EthernetType(binary.BigEndian.Uint16(data[2:4]))
@@ -46,10 +47,12 @@ func (arp *ARP) DecodeFromBytes(data []byte, df gopacket.DecodeFeedback) error {
 	return nil
 }
 
+// CanDecode returns the set of layer types that this DecodingLayer can decode.
 func (arp *ARP) CanDecode() gopacket.LayerClass {
 	return LayerTypeARP
 }
 
+// NextLayerType returns the layer type contained by this DecodingLayer.
 func (arp *ARP) NextLayerType() gopacket.LayerType {
 	return gopacket.LayerTypePayload
 }

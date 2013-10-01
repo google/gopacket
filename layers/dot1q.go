@@ -24,6 +24,7 @@ type Dot1Q struct {
 // LayerType returns gopacket.LayerTypeDot1Q
 func (d *Dot1Q) LayerType() gopacket.LayerType { return LayerTypeDot1Q }
 
+// DecodeFromBytes decodes the given bytes into this layer.
 func (d *Dot1Q) DecodeFromBytes(data []byte, df gopacket.DecodeFeedback) error {
 	d.Priority = (data[2] & 0xE0) >> 13
 	d.DropEligible = data[2]&0x10 != 0
@@ -33,10 +34,12 @@ func (d *Dot1Q) DecodeFromBytes(data []byte, df gopacket.DecodeFeedback) error {
 	return nil
 }
 
+// CanDecode returns the set of layer types that this DecodingLayer can decode.
 func (d *Dot1Q) CanDecode() gopacket.LayerClass {
 	return LayerTypeDot1Q
 }
 
+// NextLayerType returns the layer type contained by this DecodingLayer.
 func (d *Dot1Q) NextLayerType() gopacket.LayerType {
 	return d.Type.LayerType()
 }

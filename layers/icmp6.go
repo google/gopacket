@@ -102,6 +102,7 @@ type ICMPv6 struct {
 // LayerType returns LayerTypeICMPv6.
 func (i *ICMPv6) LayerType() gopacket.LayerType { return LayerTypeICMPv6 }
 
+// DecodeFromBytes decodes the given bytes into this layer.
 func (i *ICMPv6) DecodeFromBytes(data []byte, df gopacket.DecodeFeedback) error {
 	i.TypeCode = ICMPv6TypeCode(binary.BigEndian.Uint16(data[:2]))
 	i.Checksum = binary.BigEndian.Uint16(data[2:4])
@@ -110,10 +111,12 @@ func (i *ICMPv6) DecodeFromBytes(data []byte, df gopacket.DecodeFeedback) error 
 	return nil
 }
 
+// CanDecode returns the set of layer types that this DecodingLayer can decode.
 func (i *ICMPv6) CanDecode() gopacket.LayerClass {
 	return LayerTypeICMPv6
 }
 
+// NextLayerType returns the layer type contained by this DecodingLayer.
 func (i *ICMPv6) NextLayerType() gopacket.LayerType {
 	return gopacket.LayerTypePayload
 }

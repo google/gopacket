@@ -20,6 +20,7 @@ type EAPOL struct {
 // LayerType returns LayerTypeEAPOL.
 func (e *EAPOL) LayerType() gopacket.LayerType { return LayerTypeEAPOL }
 
+// DecodeFromBytes decodes the given bytes into this layer.
 func (e *EAPOL) DecodeFromBytes(data []byte, df gopacket.DecodeFeedback) error {
 	e.Version = data[0]
 	e.Type = EAPOLType(data[1])
@@ -27,10 +28,12 @@ func (e *EAPOL) DecodeFromBytes(data []byte, df gopacket.DecodeFeedback) error {
 	return nil
 }
 
+// CanDecode returns the set of layer types that this DecodingLayer can decode.
 func (e *EAPOL) CanDecode() gopacket.LayerClass {
 	return LayerTypeEAPOL
 }
 
+// NextLayerType returns the layer type contained by this DecodingLayer.
 func (e *EAPOL) NextLayerType() gopacket.LayerType {
 	return e.Type.LayerType()
 }

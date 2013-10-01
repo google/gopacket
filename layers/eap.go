@@ -44,6 +44,7 @@ type EAP struct {
 // LayerType returns LayerTypeEAP.
 func (e *EAP) LayerType() gopacket.LayerType { return LayerTypeEAP }
 
+// DecodeFromBytes decodes the given bytes into this layer.
 func (e *EAP) DecodeFromBytes(data []byte, df gopacket.DecodeFeedback) error {
 	e.Code = EAPCode(data[0])
 	e.Id = data[1]
@@ -60,10 +61,12 @@ func (e *EAP) DecodeFromBytes(data []byte, df gopacket.DecodeFeedback) error {
 	return nil
 }
 
+// CanDecode returns the set of layer types that this DecodingLayer can decode.
 func (e *EAP) CanDecode() gopacket.LayerClass {
 	return LayerTypeEAP
 }
 
+// NextLayerType returns the layer type contained by this DecodingLayer.
 func (e *EAP) NextLayerType() gopacket.LayerType {
 	return gopacket.LayerTypeZero
 }
