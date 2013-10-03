@@ -121,37 +121,37 @@ func getSerializeLayers() []gopacket.SerializableLayer {
 
 func BenchmarkSerializeTcpNoOptions(b *testing.B) {
 	slayers := getSerializeLayers()
-	var buf gopacket.SerializeBuffer
+	buf := gopacket.NewSerializeBuffer()
 	opts := gopacket.SerializeOptions{}
 	for i := 0; i < b.N; i++ {
-		buf.SerializeLayers(opts, slayers...)
+		gopacket.SerializeLayers(buf, opts, slayers...)
 	}
 }
 
 func BenchmarkSerializeTcpFixLengths(b *testing.B) {
 	slayers := getSerializeLayers()
-	var buf gopacket.SerializeBuffer
+	buf := gopacket.NewSerializeBuffer()
 	opts := gopacket.SerializeOptions{FixLengths: true}
 	for i := 0; i < b.N; i++ {
-		buf.SerializeLayers(opts, slayers...)
+		gopacket.SerializeLayers(buf, opts, slayers...)
 	}
 }
 
 func BenchmarkSerializeTcpComputeChecksums(b *testing.B) {
 	slayers := getSerializeLayers()
-	var buf gopacket.SerializeBuffer
+	buf := gopacket.NewSerializeBuffer()
 	opts := gopacket.SerializeOptions{ComputeChecksums: true}
 	for i := 0; i < b.N; i++ {
-		buf.SerializeLayers(opts, slayers...)
+		gopacket.SerializeLayers(buf, opts, slayers...)
 	}
 }
 
 func BenchmarkSerializeTcpFixLengthsComputeChecksums(b *testing.B) {
 	slayers := getSerializeLayers()
-	var buf gopacket.SerializeBuffer
+	buf := gopacket.NewSerializeBuffer()
 	opts := gopacket.SerializeOptions{FixLengths: true, ComputeChecksums: true}
 	for i := 0; i < b.N; i++ {
-		buf.SerializeLayers(opts, slayers...)
+		gopacket.SerializeLayers(buf, opts, slayers...)
 	}
 }
 
@@ -435,8 +435,8 @@ func TestDecodeSimpleTCPPacket(t *testing.T) {
 		gopacket.SerializeOptions{ComputeChecksums: true},
 		gopacket.SerializeOptions{FixLengths: true, ComputeChecksums: true},
 	} {
-		var buf gopacket.SerializeBuffer
-		err := buf.SerializeLayers(opts, slayers...)
+		buf := gopacket.NewSerializeBuffer()
+		err := gopacket.SerializeLayers(buf, opts, slayers...)
 		if err != nil {
 			t.Errorf("unable to reserialize layers with opts %#v: %v", opts, err)
 		} else if !bytes.Equal(buf.Bytes(), testSimpleTCPPacket) {
@@ -474,8 +474,8 @@ func TestDecodeSmallTCPPacketHasEmptyPayload(t *testing.T) {
 		gopacket.SerializeOptions{ComputeChecksums: true},
 		gopacket.SerializeOptions{FixLengths: true, ComputeChecksums: true},
 	} {
-		var buf gopacket.SerializeBuffer
-		err := buf.SerializeLayers(opts, slayers...)
+		buf := gopacket.NewSerializeBuffer()
+		err := gopacket.SerializeLayers(buf, opts, slayers...)
 		if err != nil {
 			t.Errorf("unable to reserialize layers with opts %#v: %v", opts, err)
 		} else if !bytes.Equal(buf.Bytes(), smallPacket) {

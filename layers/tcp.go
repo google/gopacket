@@ -58,7 +58,7 @@ func (t *TCP) LayerType() gopacket.LayerType { return LayerTypeTCP }
 // SerializeTo writes the serialized form of this layer into the
 // SerializationBuffer, implementing gopacket.SerializableLayer.
 // See the docs for gopacket.SerializableLayer for more info.
-func (t *TCP) SerializeTo(b *gopacket.SerializeBuffer, opts gopacket.SerializeOptions) error {
+func (t *TCP) SerializeTo(b gopacket.SerializeBuffer, opts gopacket.SerializeOptions) error {
 	var optionLength int
 	for _, o := range t.Options {
 		switch o.OptionType {
@@ -71,7 +71,10 @@ func (t *TCP) SerializeTo(b *gopacket.SerializeBuffer, opts gopacket.SerializeOp
 	if opts.FixLengths {
 		t.Padding = lotsOfZeros[:optionLength%4]
 	}
-	bytes := b.PrependBytes(20 + optionLength + len(t.Padding))
+	bytes, err := b.PrependBytes(20 + optionLength + len(t.Padding))
+	if err != nil {
+		return err
+	}
 	binary.BigEndian.PutUint16(bytes, uint16(t.SrcPort))
 	binary.BigEndian.PutUint16(bytes[2:], uint16(t.DstPort))
 	binary.BigEndian.PutUint32(bytes[4:], t.Seq)

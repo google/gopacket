@@ -44,12 +44,15 @@ const (
 // SerializeTo writes the serialized form of this layer into the
 // SerializationBuffer, implementing gopacket.SerializableLayer.
 // See the docs for gopacket.SerializableLayer for more info.
-func (ip6 *IPv6) SerializeTo(b *gopacket.SerializeBuffer, opts gopacket.SerializeOptions) error {
+func (ip6 *IPv6) SerializeTo(b gopacket.SerializeBuffer, opts gopacket.SerializeOptions) error {
 	payload := b.Bytes()
 	if ip6.HopByHop != nil {
 		return fmt.Errorf("unable to serialize hopbyhop for now")
 	}
-	bytes := b.PrependBytes(40)
+	bytes, err := b.PrependBytes(40)
+	if err != nil {
+		return err
+	}
 	bytes[0] = (ip6.Version << 4) | (ip6.TrafficClass >> 4)
 	bytes[1] = (ip6.TrafficClass << 4) | uint8(ip6.FlowLabel>>16)
 	binary.BigEndian.PutUint16(bytes[2:], uint16(ip6.FlowLabel))

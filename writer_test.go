@@ -6,7 +6,7 @@ import (
 )
 
 func TestExponentialSizeIncreasePrepend(t *testing.T) {
-	var b SerializeBuffer
+	var b serializeBuffer
 	for i, test := range []struct {
 		prepend, size int
 	}{
@@ -32,7 +32,7 @@ func TestExponentialSizeIncreasePrepend(t *testing.T) {
 }
 
 func TestExponentialSizeIncreaseAppend(t *testing.T) {
-	var b SerializeBuffer
+	var b serializeBuffer
 	for i, test := range []struct {
 		appnd, size int
 	}{
@@ -58,19 +58,24 @@ func TestExponentialSizeIncreaseAppend(t *testing.T) {
 }
 
 func ExampleSerializeBuffer() {
-	var b SerializeBuffer
+	b := NewSerializeBuffer()
 	fmt.Println("1:", b.Bytes())
-	copy(b.PrependBytes(3), []byte{1, 2, 3})
+	bytes, _ := b.PrependBytes(3)
+	copy(bytes, []byte{1, 2, 3})
 	fmt.Println("2:", b.Bytes())
-	copy(b.AppendBytes(2), []byte{4, 5})
+	bytes, _ = b.AppendBytes(2)
+	copy(bytes, []byte{4, 5})
 	fmt.Println("3:", b.Bytes())
-	copy(b.PrependBytes(1), []byte{0})
+	bytes, _ = b.PrependBytes(1)
+	copy(bytes, []byte{0})
 	fmt.Println("4:", b.Bytes())
-	copy(b.AppendBytes(3), []byte{6, 7, 8})
+	bytes, _ = b.AppendBytes(3)
+	copy(bytes, []byte{6, 7, 8})
 	fmt.Println("5:", b.Bytes())
 	b.Clear()
 	fmt.Println("6:", b.Bytes())
-	copy(b.PrependBytes(2), []byte{9, 9})
+	bytes, _ = b.PrependBytes(2)
+	copy(bytes, []byte{9, 9})
 	fmt.Println("7:", b.Bytes())
 	// Output:
 	// 1: []

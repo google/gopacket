@@ -60,14 +60,17 @@ func (eth *Ethernet) DecodeFromBytes(data []byte, df gopacket.DecodeFeedback) er
 // SerializeTo writes the serialized form of this layer into the
 // SerializationBuffer, implementing gopacket.SerializableLayer.
 // See the docs for gopacket.SerializableLayer for more info.
-func (eth *Ethernet) SerializeTo(b *gopacket.SerializeBuffer, opts gopacket.SerializeOptions) error {
-	payload := b.Bytes()
-	bytes := b.PrependBytes(14)
+func (eth *Ethernet) SerializeTo(b gopacket.SerializeBuffer, opts gopacket.SerializeOptions) error {
 	if len(eth.DstMAC) != 6 {
 		return fmt.Errorf("invalid dst MAC: %v", eth.DstMAC)
 	}
 	if len(eth.SrcMAC) != 6 {
 		return fmt.Errorf("invalid src MAC: %v", eth.SrcMAC)
+	}
+	payload := b.Bytes()
+	bytes, err := b.PrependBytes(14)
+	if err != nil {
+		return err
 	}
 	copy(bytes, eth.DstMAC)
 	copy(bytes[6:], eth.SrcMAC)
@@ -87,7 +90,11 @@ func (eth *Ethernet) SerializeTo(b *gopacket.SerializeBuffer, opts gopacket.Seri
 	length := len(b.Bytes())
 	if length < 60 {
 		// Pad out to 60 bytes.
-		copy(b.AppendBytes(60-length), lotsOfZeros[:])
+		padding, err := b.AppendBytes(60 - length)
+		if err != nil {
+			return err
+		}
+		copy(padding, lotsOfZeros[:])
 	}
 	return nil
 }

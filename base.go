@@ -48,8 +48,12 @@ func (p *Payload) DecodeFromBytes(data []byte, df DecodeFeedback) error {
 // SerializeTo writes the serialized form of this layer into the
 // SerializationBuffer, implementing gopacket.SerializableLayer.
 // See the docs for gopacket.SerializableLayer for more info.
-func (p *Payload) SerializeTo(b *SerializeBuffer, opts SerializeOptions) error {
-	copy(b.PrependBytes(len(*p)), *p)
+func (p *Payload) SerializeTo(b SerializeBuffer, opts SerializeOptions) error {
+	bytes, err := b.PrependBytes(len(*p))
+	if err != nil {
+		return err
+	}
+	copy(bytes, *p)
 	return nil
 }
 

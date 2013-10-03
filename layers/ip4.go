@@ -74,8 +74,11 @@ func (i IPv4Option) String() string {
 
 // SerializeTo writes the serialized form of this layer into the
 // SerializationBuffer, implementing gopacket.SerializableLayer.
-func (ip *IPv4) SerializeTo(b *gopacket.SerializeBuffer, opts gopacket.SerializeOptions) error {
-	bytes := b.PrependBytes(20)
+func (ip *IPv4) SerializeTo(b gopacket.SerializeBuffer, opts gopacket.SerializeOptions) error {
+	bytes, err := b.PrependBytes(20)
+	if err != nil {
+		return err
+	}
 	bytes[0] = (ip.Version << 4) | ip.IHL
 	bytes[1] = ip.TOS
 	if opts.FixLengths {

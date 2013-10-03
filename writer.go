@@ -33,7 +33,7 @@ type SerializableLayer interface {
 	// SerializeTo calls SHOULD entirely ignore LayerContents and
 	// LayerPayload.  It just serializes based on struct fields, neither
 	// modifying nor using contents/payload.
-	SerializeTo(b *SerializeBuffer, opts SerializeOptions) error
+	SerializeTo(b SerializeBuffer, opts SerializeOptions) error
 }
 
 // SerializeOptions provides options for behaviors that SerializableLayers may want to
@@ -61,12 +61,12 @@ type SerializeOptions struct {
 // typical writes to byte slices using append(), where we only write at the end
 // of the buffer.
 //
-// As seen with the Clear method in the example above, a write buffer can be
-// reused by clearing it.  Note, however, that a Clear call will invalidate the
+// It can be reused via Clear.  Note, however, that a Clear call will invalidate the
 // byte slices returned by any previous Bytes() call (the same buffer is
-// reused).  This means that:
+// reused).
 //
-//  1) Reusing a write buffer is extremely fast and should be efficient.
+//  1) Reusing a write buffer is generally much faster than creating a new one,
+//     and with the default implementation it avoids additional memory allocations.
 //  2) If a byte slice from a previous Bytes() call will continue to be used,
 //     it's better to create a new SerializeBuffer.
 //
@@ -75,17 +75,45 @@ type SerializeOptions struct {
 // Prepend/Append calls, then clear, then make the same calls with the same
 // sizes, the second round (and all future similar rounds) shouldn't allocate
 // any new memory.
-//
-// A SerializeBuffer may be used simply by declaring it (its zero value is fully
-// functional).  Use of NewSerializeBuffer is just an optimization.
-type SerializeBuffer struct {
+type SerializeBuffer interface {
+	// Bytes returns the contiguous set of bytes collected so far by Prepend/Append
+	// calls.  The slice returned by Bytes will be modified by future Clear calls,
+	// so if you're planning on clearing this SerializeBuffer, you may want to copy
+	// Bytes somewhere safe first.
+	Bytes() []byte
+	// PrependBytes returns a set of bytes which prepends the current bytes in this
+	// buffer.  These bytes start in an indeterminate state, so they should be
+	// overwritten by the caller.  The caller must only call PrependBytes if they
+	// know they're going to immediately overwrite all bytes returned.
+	PrependBytes(num int) ([]byte, error)
+	// AppendBytes returns a set of bytes which prepends the current bytes in this
+	// buffer.  These bytes start in an indeterminate state, so they should be
+	// overwritten by the caller.  The caller must only call AppendBytes if they
+	// know they're going to immediately overwrite all bytes returned.
+	AppendBytes(num int) ([]byte, error)
+	// Clear resets the SerializeBuffer to a new, empty buffer.  After a call to clear,
+	// the byte slice returned by any previous call to Bytes() for this buffer
+	// should be considered invalidated.
+	Clear() error
+}
+
+type serializeBuffer struct {
 	data                []byte
 	start               int
 	prepended, appended int
 }
 
-func NewSerializeBuffer(expectedPrependLength, expectedAppendLength int) *SerializeBuffer {
-	return &SerializeBuffer{
+// NewSerializeBuffer creates a new instance of the default implementation of
+// the SerializeBuffer interface.
+func NewSerializeBuffer() SerializeBuffer {
+	return &serializeBuffer{}
+}
+
+// NewSerializeBufferExpectedSize creates a new buffer for serialization, optimized for an
+// expected number of bytes prepended/appended.  This tends to decrease the
+// number of memory allocations made by the buffer during writes.
+func NewSerializeBufferExpectedSize(expectedPrependLength, expectedAppendLength int) SerializeBuffer {
+	return &serializeBuffer{
 		data:      make([]byte, expectedPrependLength, expectedPrependLength+expectedAppendLength),
 		start:     expectedPrependLength,
 		prepended: expectedPrependLength,
@@ -93,17 +121,11 @@ func NewSerializeBuffer(expectedPrependLength, expectedAppendLength int) *Serial
 	}
 }
 
-// Bytes returns the contiguous set of bytes collected so far by Prepend/Append
-// calls.
-func (w *SerializeBuffer) Bytes() []byte {
+func (w *serializeBuffer) Bytes() []byte {
 	return w.data[w.start:]
 }
 
-// PrependBytes returns a set of bytes which prepends the current bytes in this
-// buffer.  These bytes start in an indeterminate state, so they should be
-// overwritten by the caller.  The caller must only call PrependBytes if they
-// know they're going to immediately overwrite all bytes returned.
-func (w *SerializeBuffer) PrependBytes(num int) []byte {
+func (w *serializeBuffer) PrependBytes(num int) ([]byte, error) {
 	if num < 0 {
 		panic("num < 0")
 	}
@@ -121,14 +143,10 @@ func (w *SerializeBuffer) PrependBytes(num int) []byte {
 		w.data = newData[:toPrepend+len(w.data)]
 	}
 	w.start -= num
-	return w.data[w.start : w.start+num]
+	return w.data[w.start : w.start+num], nil
 }
 
-// AppendBytes returns a set of bytes which prepends the current bytes in this
-// buffer.  These bytes start in an indeterminate state, so they should be
-// overwritten by the caller.  The caller must only call AppendBytes if they
-// know they're going to immediately overwrite all bytes returned.
-func (w *SerializeBuffer) AppendBytes(num int) []byte {
+func (w *serializeBuffer) AppendBytes(num int) ([]byte, error) {
 	if num < 0 {
 		panic("num < 0")
 	}
@@ -145,15 +163,13 @@ func (w *SerializeBuffer) AppendBytes(num int) []byte {
 	}
 	// Grow the buffer.  We know it'll be under capacity given above.
 	w.data = w.data[:initialLength+num]
-	return w.data[initialLength:]
+	return w.data[initialLength:], nil
 }
 
-// Clear resets the SerializeBuffer to a new, empty buffer.  After a call to clear,
-// the byte slice returned by any previous call to Bytes() for this buffer
-// should be considered invalidated.
-func (w *SerializeBuffer) Clear() {
+func (w *serializeBuffer) Clear() error {
 	w.start = w.prepended
 	w.data = w.data[:w.start]
+	return nil
 }
 
 // SerializeLayers clears the given write buffer, then writes all layers into it so
@@ -161,14 +177,13 @@ func (w *SerializeBuffer) Clear() {
 // invalidates all slices previously returned by w.Bytes()
 //
 // Example:
-//   var buf SerializeBuffer
-//   var opts SerializeOptions
-//   buf.SerializeLayers([]SerializableLayer{a, b, c}, opts)
+//   buf := gopacket.NewSerializeBuffer()
+//   opts := gopacket.SerializeOptions{}
+//   gopacket.SerializeLayers(buf, []SerializableLayer{a, b, c}, opts)
 //   firstPayload := buf.Bytes()  // contains byte representation of a(b(c))
-//   buf.SerializeLayers([]SerializableLayer{d, e, f}, opts)
-//   secondPayload := buf.Bytes()  // contains byte representation of d(e(f)).
-//   firstPayload is now invalidated, since the SerializeLayers call Clears buf.
-func (w *SerializeBuffer) SerializeLayers(opts SerializeOptions, layers ...SerializableLayer) error {
+//   gopacket.SerializeLayers(buf, []SerializableLayer{d, e, f}, opts)
+//   secondPayload := buf.Bytes()  // contains byte representation of d(e(f)). firstPayload is now invalidated, since the SerializeLayers call Clears buf.
+func SerializeLayers(w SerializeBuffer, opts SerializeOptions, layers ...SerializableLayer) error {
 	w.Clear()
 	for i := len(layers) - 1; i >= 0; i-- {
 		layer := layers[i]

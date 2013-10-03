@@ -53,8 +53,11 @@ func decodeDot1Q(data []byte, p gopacket.PacketBuilder) error {
 // SerializeTo writes the serialized form of this layer into the
 // SerializationBuffer, implementing gopacket.SerializableLayer.
 // See the docs for gopacket.SerializableLayer for more info.
-func (d *Dot1Q) SerializeTo(b *gopacket.SerializeBuffer, opts gopacket.SerializeOptions) error {
-	bytes := b.PrependBytes(4)
+func (d *Dot1Q) SerializeTo(b gopacket.SerializeBuffer, opts gopacket.SerializeOptions) error {
+	bytes, err := b.PrependBytes(4)
+	if err != nil {
+		return err
+	}
 	if d.VLANIdentifier > 0xFFF {
 		return fmt.Errorf("vlan identifier %v is too high", d.VLANIdentifier)
 	}

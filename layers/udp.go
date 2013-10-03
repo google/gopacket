@@ -53,9 +53,12 @@ func (udp *UDP) DecodeFromBytes(data []byte, df gopacket.DecodeFeedback) error {
 // SerializeTo writes the serialized form of this layer into the
 // SerializationBuffer, implementing gopacket.SerializableLayer.
 // See the docs for gopacket.SerializableLayer for more info.
-func (u *UDP) SerializeTo(b *gopacket.SerializeBuffer, opts gopacket.SerializeOptions) error {
+func (u *UDP) SerializeTo(b gopacket.SerializeBuffer, opts gopacket.SerializeOptions) error {
 	payload := b.Bytes()
-	bytes := b.PrependBytes(8)
+	bytes, err := b.PrependBytes(8)
+	if err != nil {
+		return err
+	}
 	binary.BigEndian.PutUint16(bytes, uint16(u.SrcPort))
 	binary.BigEndian.PutUint16(bytes[2:], uint16(u.DstPort))
 	if opts.FixLengths {

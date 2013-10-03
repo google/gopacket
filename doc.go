@@ -311,6 +311,31 @@ create DecodingLayers that are not themselves Layers... see
 layers.IPv6ExtensionSkipper for an example of this.
 
 
+Creating Packet Data
+
+As well as offering the ability to decode packet data, gopacket will allow you
+to create packets from scratch, as well.  A number of gopacket layers implement
+the SerializableLayer interface; these layers can be serialized to a []byte in
+the following manner:
+
+  ip := &layers.IPv4{
+    SrcIP: net.IP{1, 2, 3, 4},
+    DstIP: net.IP{5, 6, 7, 8},
+    // etc...
+  }
+  buf := gopacket.NewSerializeBuffer()
+  opts := gopacket.SerializeOptions{}  // See SerializeOptions for more details.
+  err := ip.SerializeTo(&buf, opts)
+  if err != nil { panic(err) }
+  fmt.Println(buf.Bytes())  // prints out a byte slice containing the serialized IPv4 layer.
+
+SerializeTo PREPENDS the given layer onto the SerializeBuffer, and they treat
+the current buffer's Bytes() slice as the payload of the serializing layer.
+Therefore, you can serialize an entire packet by serializing a set of layers in
+reverse order (Payload, then TCP, then IP, then Ethernet, for example).  The
+SerializeBuffer's SerializeLayers function is a helper that does exactly that.
+
+
 A Final Note
 
 If you use gopacket, you'll almost definitely want to make sure gopacket/layers
