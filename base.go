@@ -30,26 +30,35 @@ type Layer interface {
 // what constitutes the payload of a packet depends on previous layers; for
 // TCP and UDP, we stop decoding above layer 4 and return the remaining
 // bytes as a Payload.  Payload is an ApplicationLayer.
-type Payload struct {
-	data []byte
-}
+type Payload []byte
 
 // LayerType returns LayerTypePayload
 func (p *Payload) LayerType() LayerType     { return LayerTypePayload }
-func (p *Payload) LayerContents() []byte    { return p.data }
+func (p *Payload) LayerContents() []byte    { return []byte(*p) }
 func (p *Payload) LayerPayload() []byte     { return nil }
-func (p *Payload) Payload() []byte          { return p.data }
-func (p *Payload) String() string           { return fmt.Sprintf("%d byte(s)", len(p.data)) }
+func (p *Payload) Payload() []byte          { return []byte(*p) }
+func (p *Payload) String() string           { return fmt.Sprintf("%d byte(s)", len(*p)) }
 func (p *Payload) CanDecode() LayerClass    { return LayerTypePayload }
 func (p *Payload) NextLayerType() LayerType { return LayerTypeZero }
 func (p *Payload) DecodeFromBytes(data []byte, df DecodeFeedback) error {
-	p.data = data
+	*p = Payload(data)
+	return nil
+}
+
+// SerializeTo writes the serialized form of this layer into the
+// SerializationBuffer, implementing gopacket.SerializableLayer.
+// See the docs for gopacket.SerializableLayer for more info.
+func (p *Payload) SerializeTo(b *SerializeBuffer, opts SerializeOptions) error {
+	copy(b.PrependBytes(len(*p)), *p)
 	return nil
 }
 
 // decodePayload decodes data by returning it all in a Payload layer.
 func decodePayload(data []byte, p PacketBuilder) error {
-	payload := &Payload{data: data}
+	payload := &Payload{}
+	if err := payload.DecodeFromBytes(data, p); err != nil {
+		return nil
+	}
 	p.AddLayer(payload)
 	p.SetApplicationLayer(payload)
 	return nil

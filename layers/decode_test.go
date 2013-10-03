@@ -8,7 +8,9 @@
 package layers
 
 import (
+	"bytes"
 	"code.google.com/p/gopacket"
+	"encoding/hex"
 	"fmt"
 	"net"
 	"reflect"
@@ -21,7 +23,7 @@ var testSimpleTCPPacket []byte = []byte{
 	0x08, 0x00, 0x45, 0x00, 0x01, 0xa4, 0x39, 0xdf, 0x40, 0x00, 0x40, 0x06,
 	0x55, 0x5a, 0xac, 0x11, 0x51, 0x49, 0xad, 0xde, 0xfe, 0xe1, 0xc5, 0xf7,
 	0x00, 0x50, 0xc5, 0x7e, 0x0e, 0x48, 0x49, 0x07, 0x42, 0x32, 0x80, 0x18,
-	0x00, 0x73, 0xab, 0xb1, 0x00, 0x00, 0x01, 0x01, 0x08, 0x0a, 0x03, 0x77,
+	0x00, 0x73, 0x9a, 0x8f, 0x00, 0x00, 0x01, 0x01, 0x08, 0x0a, 0x03, 0x77,
 	0x37, 0x9c, 0x42, 0x77, 0x5e, 0x3a, 0x47, 0x45, 0x54, 0x20, 0x2f, 0x20,
 	0x48, 0x54, 0x54, 0x50, 0x2f, 0x31, 0x2e, 0x31, 0x0d, 0x0a, 0x48, 0x6f,
 	0x73, 0x74, 0x3a, 0x20, 0x77, 0x77, 0x77, 0x2e, 0x66, 0x69, 0x73, 0x68,
@@ -103,6 +105,53 @@ func BenchmarkLazyNoCopyAllLayers(b *testing.B) {
 func BenchmarkDefault(b *testing.B) {
 	for i := 0; i < b.N; i++ {
 		gopacket.NewPacket(testSimpleTCPPacket, LinkTypeEthernet, gopacket.Default)
+	}
+}
+
+func getSerializeLayers() []gopacket.SerializableLayer {
+	p := gopacket.NewPacket(testSimpleTCPPacket, LinkTypeEthernet, gopacket.Default)
+	slayers := []gopacket.SerializableLayer{}
+	for _, l := range p.Layers() {
+		slayers = append(slayers, l.(gopacket.SerializableLayer))
+	}
+	p.Layer(LayerTypeTCP).(*TCP).SetNetworkLayerForChecksum(
+		p.NetworkLayer())
+	return slayers
+}
+
+func BenchmarkSerializeTcpNoOptions(b *testing.B) {
+	slayers := getSerializeLayers()
+	var buf gopacket.SerializeBuffer
+	opts := gopacket.SerializeOptions{}
+	for i := 0; i < b.N; i++ {
+		buf.SerializeLayers(opts, slayers...)
+	}
+}
+
+func BenchmarkSerializeTcpFixLengths(b *testing.B) {
+	slayers := getSerializeLayers()
+	var buf gopacket.SerializeBuffer
+	opts := gopacket.SerializeOptions{FixLengths: true}
+	for i := 0; i < b.N; i++ {
+		buf.SerializeLayers(opts, slayers...)
+	}
+}
+
+func BenchmarkSerializeTcpComputeChecksums(b *testing.B) {
+	slayers := getSerializeLayers()
+	var buf gopacket.SerializeBuffer
+	opts := gopacket.SerializeOptions{ComputeChecksums: true}
+	for i := 0; i < b.N; i++ {
+		buf.SerializeLayers(opts, slayers...)
+	}
+}
+
+func BenchmarkSerializeTcpFixLengthsComputeChecksums(b *testing.B) {
+	slayers := getSerializeLayers()
+	var buf gopacket.SerializeBuffer
+	opts := gopacket.SerializeOptions{FixLengths: true, ComputeChecksums: true}
+	for i := 0; i < b.N; i++ {
+		buf.SerializeLayers(opts, slayers...)
 	}
 }
 
@@ -325,7 +374,7 @@ func TestDecodeSimpleTCPPacket(t *testing.T) {
 			ACK:        true,
 			PSH:        true,
 			Window:     0x73,
-			Checksum:   0xabb1,
+			Checksum:   0x9a8f,
 			Urgent:     0,
 			sPort:      []byte{0xc5, 0xf7},
 			dPort:      []byte{0x0, 0x50},
@@ -372,22 +421,66 @@ func TestDecodeSimpleTCPPacket(t *testing.T) {
 			t.Error("--- Payload STRING ---\n", string(payload.Payload()), "\n--- Payload BYTES ---\n", payload.Payload())
 		}
 	}
+
+	// Test re-serialization.
+	slayers := []gopacket.SerializableLayer{}
+	for _, l := range p.Layers() {
+		slayers = append(slayers, l.(gopacket.SerializableLayer))
+	}
+	p.Layer(LayerTypeTCP).(*TCP).SetNetworkLayerForChecksum(
+		p.NetworkLayer())
+	for _, opts := range []gopacket.SerializeOptions{
+		gopacket.SerializeOptions{},
+		gopacket.SerializeOptions{FixLengths: true},
+		gopacket.SerializeOptions{ComputeChecksums: true},
+		gopacket.SerializeOptions{FixLengths: true, ComputeChecksums: true},
+	} {
+		var buf gopacket.SerializeBuffer
+		err := buf.SerializeLayers(opts, slayers...)
+		if err != nil {
+			t.Errorf("unable to reserialize layers with opts %#v: %v", opts, err)
+		} else if !bytes.Equal(buf.Bytes(), testSimpleTCPPacket) {
+			t.Errorf("serialization failure with opts %#v :\n---want---\n%v\n---got---\n%v", opts, hex.Dump(testSimpleTCPPacket), hex.Dump(buf.Bytes()))
+		}
+	}
 }
 
 // Makes sure packet payload doesn't display the 6 trailing null of this packet
 // as part of the payload.  They're actually the ethernet trailer.
 func TestDecodeSmallTCPPacketHasEmptyPayload(t *testing.T) {
-	p := gopacket.NewPacket(
-		[]byte{
-			0xbc, 0x30, 0x5b, 0xe8, 0xd3, 0x49, 0xb8, 0xac, 0x6f, 0x92, 0xd5, 0xbf,
-			0x08, 0x00, 0x45, 0x00, 0x00, 0x28, 0x00, 0x00, 0x40, 0x00, 0x40, 0x06,
-			0x3f, 0x9f, 0xac, 0x11, 0x51, 0xc5, 0xac, 0x11, 0x51, 0x49, 0x00, 0x63,
-			0x9a, 0xef, 0x00, 0x00, 0x00, 0x00, 0x2e, 0xc1, 0x27, 0x83, 0x50, 0x14,
-			0x00, 0x00, 0xc3, 0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
-		}, LinkTypeEthernet, gopacket.Default)
+	smallPacket := []byte{
+		0xbc, 0x30, 0x5b, 0xe8, 0xd3, 0x49, 0xb8, 0xac, 0x6f, 0x92, 0xd5, 0xbf,
+		0x08, 0x00, 0x45, 0x00, 0x00, 0x28, 0x00, 0x00, 0x40, 0x00, 0x40, 0x06,
+		0x3f, 0x9f, 0xac, 0x11, 0x51, 0xc5, 0xac, 0x11, 0x51, 0x49, 0x00, 0x63,
+		0x9a, 0xef, 0x00, 0x00, 0x00, 0x00, 0x2e, 0xc1, 0x27, 0x83, 0x50, 0x14,
+		0x00, 0x00, 0xc3, 0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+	}
+	p := gopacket.NewPacket(smallPacket, LinkTypeEthernet, gopacket.Default)
 
 	if payload := p.Layer(gopacket.LayerTypePayload); payload != nil {
 		t.Error("Payload found for empty TCP packet")
+	}
+
+	// Test re-serialization.
+	slayers := []gopacket.SerializableLayer{}
+	for _, l := range p.Layers() {
+		slayers = append(slayers, l.(gopacket.SerializableLayer))
+	}
+	p.Layer(LayerTypeTCP).(*TCP).SetNetworkLayerForChecksum(
+		p.NetworkLayer())
+	for _, opts := range []gopacket.SerializeOptions{
+		gopacket.SerializeOptions{},
+		gopacket.SerializeOptions{FixLengths: true},
+		gopacket.SerializeOptions{ComputeChecksums: true},
+		gopacket.SerializeOptions{FixLengths: true, ComputeChecksums: true},
+	} {
+		var buf gopacket.SerializeBuffer
+		err := buf.SerializeLayers(opts, slayers...)
+		if err != nil {
+			t.Errorf("unable to reserialize layers with opts %#v: %v", opts, err)
+		} else if !bytes.Equal(buf.Bytes(), smallPacket) {
+			t.Errorf("serialization failure with opts %#v :\n---want---\n%v\n---got---\n%v", opts, hex.Dump(smallPacket), hex.Dump(buf.Bytes()))
+		}
 	}
 }
 

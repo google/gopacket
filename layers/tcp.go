@@ -29,6 +29,7 @@ type TCP struct {
 	Options                                    []TCPOption
 	Padding                                    []byte
 	opts                                       [4]TCPOption
+	tcpipchecksum
 }
 
 type TCPOption struct {
@@ -54,6 +55,92 @@ func (t TCPOption) String() string {
 // LayerType returns gopacket.LayerTypeTCP
 func (t *TCP) LayerType() gopacket.LayerType { return LayerTypeTCP }
 
+// SerializeTo writes the serialized form of this layer into the
+// SerializationBuffer, implementing gopacket.SerializableLayer.
+// See the docs for gopacket.SerializableLayer for more info.
+func (t *TCP) SerializeTo(b *gopacket.SerializeBuffer, opts gopacket.SerializeOptions) error {
+	var optionLength int
+	for _, o := range t.Options {
+		switch o.OptionType {
+		case 0, 1:
+			optionLength += 1
+		default:
+			optionLength += 2 + len(o.OptionData)
+		}
+	}
+	if opts.FixLengths {
+		t.Padding = lotsOfZeros[:optionLength%4]
+	}
+	bytes := b.PrependBytes(20 + optionLength + len(t.Padding))
+	binary.BigEndian.PutUint16(bytes, uint16(t.SrcPort))
+	binary.BigEndian.PutUint16(bytes[2:], uint16(t.DstPort))
+	binary.BigEndian.PutUint32(bytes[4:], t.Seq)
+	binary.BigEndian.PutUint32(bytes[8:], t.Ack)
+	binary.BigEndian.PutUint16(bytes[12:], t.flagsAndOffset())
+	binary.BigEndian.PutUint16(bytes[14:], t.Window)
+	binary.BigEndian.PutUint16(bytes[18:], t.Urgent)
+	start := 20
+	for _, o := range t.Options {
+		bytes[start] = o.OptionType
+		switch o.OptionType {
+		case 0, 1:
+			start++
+		default:
+			if opts.FixLengths {
+				o.OptionLength = uint8(len(o.OptionData) + 2)
+			}
+			bytes[start+1] = o.OptionLength
+			copy(bytes[start+2:start+len(o.OptionData)+2], o.OptionData)
+			start += int(o.OptionLength)
+		}
+	}
+	copy(bytes[start:], t.Padding)
+	if opts.ComputeChecksums {
+		// zero out checksum bytes in current serialization.
+		bytes[16] = 0
+		bytes[17] = 0
+		csum, err := t.computeChecksum(b.Bytes())
+		if err != nil {
+			return err
+		}
+		t.Checksum = csum
+	}
+	binary.BigEndian.PutUint16(bytes[16:], t.Checksum)
+	return nil
+}
+
+func (t *TCP) flagsAndOffset() uint16 {
+	f := uint16(t.DataOffset) << 12
+	if t.FIN {
+		f |= 0x0001
+	}
+	if t.SYN {
+		f |= 0x0002
+	}
+	if t.RST {
+		f |= 0x0004
+	}
+	if t.PSH {
+		f |= 0x0008
+	}
+	if t.ACK {
+		f |= 0x0010
+	}
+	if t.URG {
+		f |= 0x0020
+	}
+	if t.ECE {
+		f |= 0x0040
+	}
+	if t.CWR {
+		f |= 0x0080
+	}
+	if t.NS {
+		f |= 0x0100
+	}
+	return f
+}
+
 func (tcp *TCP) DecodeFromBytes(data []byte, df gopacket.DecodeFeedback) error {
 	tcp.SrcPort = TCPPort(binary.BigEndian.Uint16(data[0:2]))
 	tcp.sPort = data[0:2]
@@ -61,7 +148,7 @@ func (tcp *TCP) DecodeFromBytes(data []byte, df gopacket.DecodeFeedback) error {
 	tcp.dPort = data[2:4]
 	tcp.Seq = binary.BigEndian.Uint32(data[4:8])
 	tcp.Ack = binary.BigEndian.Uint32(data[8:12])
-	tcp.DataOffset = (data[12] & 0xF0) >> 4
+	tcp.DataOffset = data[12] >> 4
 	tcp.FIN = data[13]&0x01 != 0
 	tcp.SYN = data[13]&0x02 != 0
 	tcp.RST = data[13]&0x04 != 0

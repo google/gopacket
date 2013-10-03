@@ -72,6 +72,50 @@ func (i IPv4Option) String() string {
 	return fmt.Sprintf("IPv4Option(%v:%v)", i.OptionType, i.OptionData)
 }
 
+// SerializeTo writes the serialized form of this layer into the
+// SerializationBuffer, implementing gopacket.SerializableLayer.
+func (ip *IPv4) SerializeTo(b *gopacket.SerializeBuffer, opts gopacket.SerializeOptions) error {
+	bytes := b.PrependBytes(20)
+	bytes[0] = (ip.Version << 4) | ip.IHL
+	bytes[1] = ip.TOS
+	if opts.FixLengths {
+		ip.Length = uint16(len(b.Bytes()))
+	}
+	binary.BigEndian.PutUint16(bytes[2:], ip.Length)
+	binary.BigEndian.PutUint16(bytes[4:], ip.Id)
+	binary.BigEndian.PutUint16(bytes[6:], ip.flagsfrags())
+	bytes[8] = ip.TTL
+	bytes[9] = byte(ip.Protocol)
+	if len(ip.SrcIP) != 4 {
+		return fmt.Errorf("invalid src IP %v", ip.SrcIP)
+	}
+	if len(ip.DstIP) != 4 {
+		return fmt.Errorf("invalid dst IP %v", ip.DstIP)
+	}
+	copy(bytes[12:16], ip.SrcIP)
+	copy(bytes[16:20], ip.DstIP)
+	if opts.ComputeChecksums {
+		// Clear checksum bytes
+		bytes[10] = 0
+		bytes[11] = 0
+		// Compute checksum
+		var csum uint32
+		for i := 0; i < len(bytes); i += 2 {
+			csum += uint32(bytes[i]) << 8
+			csum += uint32(bytes[i+1])
+		}
+		ip.Checksum = ^uint16((csum >> 16) + csum)
+	}
+	binary.BigEndian.PutUint16(bytes[10:], ip.Checksum)
+	return nil
+}
+
+func (ip *IPv4) flagsfrags() (ff uint16) {
+	ff |= uint16(ip.Flags) << 13
+	ff |= ip.FragOffset
+	return
+}
+
 // DecodeFromBytes decodes the given bytes into this layer.
 func (ip *IPv4) DecodeFromBytes(data []byte, df gopacket.DecodeFeedback) error {
 	flagsfrags := binary.BigEndian.Uint16(data[6:8])

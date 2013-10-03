@@ -41,6 +41,35 @@ const (
 	IPv6HopByHopOptionJumbogram = 0xC2 // RFC 2675
 )
 
+// SerializeTo writes the serialized form of this layer into the
+// SerializationBuffer, implementing gopacket.SerializableLayer.
+// See the docs for gopacket.SerializableLayer for more info.
+func (ip6 *IPv6) SerializeTo(b *gopacket.SerializeBuffer, opts gopacket.SerializeOptions) error {
+	payload := b.Bytes()
+	if ip6.HopByHop != nil {
+		return fmt.Errorf("unable to serialize hopbyhop for now")
+	}
+	bytes := b.PrependBytes(40)
+	bytes[0] = (ip6.Version << 4) | (ip6.TrafficClass >> 4)
+	bytes[1] = (ip6.TrafficClass << 4) | uint8(ip6.FlowLabel>>16)
+	binary.BigEndian.PutUint16(bytes[2:], uint16(ip6.FlowLabel))
+	if opts.FixLengths {
+		ip6.Length = uint16(len(payload))
+	}
+	binary.BigEndian.PutUint16(bytes[4:], ip6.Length)
+	bytes[6] = byte(ip6.NextHeader)
+	bytes[7] = byte(ip6.HopLimit)
+	if len(ip6.SrcIP) != 16 {
+		return fmt.Errorf("invalid src ip %v", ip6.SrcIP)
+	}
+	if len(ip6.DstIP) != 16 {
+		return fmt.Errorf("invalid dst ip %v", ip6.DstIP)
+	}
+	copy(bytes[8:], ip6.SrcIP)
+	copy(bytes[24:], ip6.DstIP)
+	return nil
+}
+
 func (ip6 *IPv6) DecodeFromBytes(data []byte, df gopacket.DecodeFeedback) error {
 	ip6.Version = uint8(data[0]) >> 4
 	ip6.TrafficClass = uint8((binary.BigEndian.Uint16(data[0:2]) >> 4) & 0x00FF)

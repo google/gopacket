@@ -20,6 +20,7 @@ type UDP struct {
 	Length           uint16
 	Checksum         uint16
 	sPort, dPort     []byte
+	tcpipchecksum
 }
 
 // LayerType returns gopacket.LayerTypeUDP
@@ -46,6 +47,32 @@ func (udp *UDP) DecodeFromBytes(data []byte, df gopacket.DecodeFeedback) error {
 	default:
 		return fmt.Errorf("UDP packet too small: %d bytes", udp.Length)
 	}
+	return nil
+}
+
+// SerializeTo writes the serialized form of this layer into the
+// SerializationBuffer, implementing gopacket.SerializableLayer.
+// See the docs for gopacket.SerializableLayer for more info.
+func (u *UDP) SerializeTo(b *gopacket.SerializeBuffer, opts gopacket.SerializeOptions) error {
+	payload := b.Bytes()
+	bytes := b.PrependBytes(8)
+	binary.BigEndian.PutUint16(bytes, uint16(u.SrcPort))
+	binary.BigEndian.PutUint16(bytes[2:], uint16(u.DstPort))
+	if opts.FixLengths {
+		u.Length = uint16(len(payload)) + 8
+	}
+	binary.BigEndian.PutUint16(bytes[4:], u.Length)
+	if opts.ComputeChecksums {
+		// zero out checksum bytes
+		bytes[6] = 0
+		bytes[7] = 0
+		csum, err := u.computeChecksum(b.Bytes())
+		if err != nil {
+			return err
+		}
+		u.Checksum = csum
+	}
+	binary.BigEndian.PutUint16(bytes[6:], u.Checksum)
 	return nil
 }
 

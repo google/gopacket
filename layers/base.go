@@ -47,3 +47,6 @@ func decodingLayerDecoder(d layerDecodingLayer, data []byte, p gopacket.PacketBu
 	}
 	return p.NextDecoder(next)
 }
+
+// hacky way to zero out memory... there must be a better way?
+var lotsOfZeros [1024]byte
