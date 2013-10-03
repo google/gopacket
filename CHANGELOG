@@ -1,0 +1,89 @@
+GoPacket ChangeLog
+==================
+
+Overview
+--------
+
+This changelog is meant to provide a history of the high (and low) points of the
+gopacket library.  We won't put things into it for every change that's
+submitted, but it will hightlight some of the particulary interesting or
+largescale changes made along the way.  Also, importantly, every change which
+could cause backwards incompatibility will be documented here.
+
+If you're adding a change here, please use the already-established style for
+doing so.  Major changes or additions should also be announced at the
+gopacket@googlegroups.com mailing list.
+
+Changes
+-------
+
+### Sep 30 2013 *minor* Add DecodingLayer implementation to numerous layers
+
+Commit:  https://code.google.com/p/gopacket/source/detail?r=c3135e34b82b6439303aa44b0f92d047f877fb70
+
+Add DecodingLayer capabilities to ARP, Dot1Q, EAP, EAPOL, EtherIP, GRE, ICMPv6,
+and IGMP.
+
+### Sep 30 2013 *minor* zero-copy capabilities for *pcap*
+
+Commit:  https://code.google.com/p/gopacket/source/detail?r=18af9281fcf4d396d4fe3767ad1413f28c242d9e
+
+Adds the ability to use *pcap* subpackage without copying packet data from C to
+Go, saving a full copy of all data.  Benchmarks against live traffic have shown
+a 2x increase in the throughput processable by a single core.
+
+### Sep 27 2013 *minor* IGMP support
+
+Commit:  https://code.google.com/p/gopacket/source/detail?r=1c9fcb5b211d2b721ace744a410103c4eef69233
+
+### Aug 21 2013 **MAJOR** AF_PACKET support
+
+Commit:  https://code.google.com/p/gopacket/source/detail?r=3a810335f15ad55ba4b6cdf76181c5bbbade5df3
+
+### Jul 22 2013 *minor* BACKWARDS INCOMPATIBLE Moved valid mac prefixes into subpackage
+
+Commit:  https://code.google.com/p/gopacket/source/detail?r=27312f15fcf8cd261a3bd576263ec587d4a19a20
+Commit:  https://code.google.com/p/gopacket/source/detail?r=43cd11eec5c6f690e73420d534e3605c2076f7d7
+
+In order to speed up compiles, the map of valid MAC addresses was moved into a
+subpackage.
+
+Adds support for linux AF_PACKET into the *afpacket* subpackage.
+
+### Jul 11 2013 *minor* Fix build breakage on Windows
+
+Commit:  https://code.google.com/p/gopacket/source/detail?r=6a82289fba56b8628388b8a57398da587859e3e9
+
+Issue:  https://code.google.com/p/gopacket/issues/detail?id=2
+
+### Jun 18 2013 **MAJOR** TCP Reassembly
+
+Commit:  https://code.google.com/p/gopacket/source/detail?r=119d4fcbfd8aa12f449ac44ec3e54c92b0ede64b
+
+Added the *tcpassembly* subpackage to quickly reassemble TCP streams for
+sniffing applications.  Along with reassembling streams, this new subpackage
+also has some logic to provide those streams as an io.Reader interface, allowing
+callers to make use of existing standard library implementations (net/http) for
+stream processing.
+
+### Jun 11 2013 **MAJOR** Decoding Known Packet Stacks
+
+Commit:  https://code.google.com/p/gopacket/source/detail?r=1688462e35ceda1b5914434bd1add89190c0526e
+
+Allowed users to decode a known layer stack from packet data with zero
+memory allocations, creating a much faster packet processing framework.
+10x speed up for simple packet stacks (eth/ip/tcp/payload).
+
+### May 22 2013 **MAJOR** Lots of work on LLDP, NortelDiscovery, and CDP contributed by bdaglish@restorepoint.com
+
+Lots of commits for this one, but everything was fully committed as of https://code.google.com/p/gopacket/source/detail?r=45d548af72767a6401fa3f928704c236461fffcd
+
+### Jan 28 2013 *minor* Fixes to support winpcap
+
+Commit:  https://code.google.com/p/gopacket/source/detail?r=a9bd872c6cba98a3180a37a21839d14de2f19f6d
+
+### Jan 23 2013 **MAJOR** GoPacket initially released
+
+Commit:  https://code.google.com/p/gopacket/source/detail?r=7445adfdcf570bd7227fd26c95734b7b21b619f0
+Reddit announcement:  http://www.reddit.com/r/golang/comments/174s3e/go_library_for_decoding_packet_data/
+
