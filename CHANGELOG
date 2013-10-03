@@ -17,6 +17,12 @@ gopacket@googlegroups.com mailing list.
 Changes
 -------
 
+### Oct 03 2013 **MAJOR** Packet serialization.
+
+Commit:  https://code.google.com/p/gopacket/source/detail?r=63984d308e5f90225599c32dffd885c5c3d49aba
+
+Adds the ability to create packet data from layer structs.
+
 ### Sep 30 2013 *minor* Add DecodingLayer implementation to numerous layers
 
 Commit:  https://code.google.com/p/gopacket/source/detail?r=c3135e34b82b6439303aa44b0f92d047f877fb70
