@@ -18,6 +18,13 @@ gopacket@googlegroups.com mailing list.
 
 ==Changes==
 
+===20131004 Semantic Versioning===
+
+Added semantic versioning (http://semver.org/) to gopacket, for easier go
+dependency management.  Starting at v1.0.0 since the current API is
+relatively stable and usable, and I don't want anyone scared away by
+a v0 version number.
+
 ===20131003 Packet serialization.===
 
 Commit:
