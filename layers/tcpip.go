@@ -34,6 +34,28 @@ func (ip *IPv6) pseudoheaderChecksum() (csum uint32) {
 	return
 }
 
+// Calculate the TCP/IP checksum defined in rfc1071.  The passed-in csum is any
+// initial checksum data that's already been computed.
+func tcpipChecksum(data []byte, csum uint32) uint16 {
+	// to handle odd lengths, we loop to length - 1, incrementing by 2, then
+	// handle the last byte specifically by checking against the original
+	// length.
+	length := len(data) - 1
+	for i := 0; i < length; i += 2 {
+		// For our test packet, doing this manually is about 25% faster
+		// (740 ns vs. 1000ns) than doing it by calling binary.BigEndian.Uint16.
+		csum += uint32(data[i]) << 8
+		csum += uint32(data[i+1])
+	}
+	if len(data)%2 == 1 {
+		csum += uint32(data[length] << 8)
+	}
+	for csum > 0xffff {
+		csum = (csum >> 16) + (csum & 0xffff)
+	}
+	return ^uint16(csum + (csum >> 16))
+}
+
 // computeChecksum computes a TCP or UDP checksum.  headerAndPayload is the
 // serialized TCP or UDP header plus its payload, with the checksum zero'd
 // out.
@@ -45,24 +67,7 @@ func (c *tcpipchecksum) computeChecksum(headerAndPayload []byte) (uint16, error)
 	csum := c.pseudoheader.pseudoheaderChecksum()
 	csum += length & 0xffff
 	csum += length >> 16
-	// to handle odd lengths, we loop to length - 1, incrementing by 2, then
-	// handle the last byte specifically by checking against the original
-	// length.
-	length--
-	for i := uint32(0); i < length; i += 2 {
-		// For our test packet, doing this manually is about 25% faster
-		// (740 ns vs. 1000ns) than doing it by calling binary.BigEndian.Uint16.
-		csum += uint32(headerAndPayload[i]) << 8
-		csum += uint32(headerAndPayload[i+1])
-	}
-	if len(headerAndPayload)%2 == 1 {
-		csum += uint32(headerAndPayload[len(headerAndPayload)-1]) << 8
-	}
-	// Fold up the bits to make a uint16.
-	for csum > 0xffff {
-		csum = (csum >> 16) + (csum & 0xffff)
-	}
-	return ^uint16(csum), nil
+	return tcpipChecksum(headerAndPayload, csum), nil
 }
 
 // SetNetworkLayerForChecksum tells this layer which network layer is wrapping it.

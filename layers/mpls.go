@@ -57,9 +57,27 @@ func decodeMPLS(data []byte, p gopacket.PacketBuilder) error {
 	p.AddLayer(&MPLS{
 		Label:        decoded >> 12,
 		TrafficClass: uint8(decoded>>9) & 0x7,
-		StackBottom:  decoded&0x10 != 0,
+		StackBottom:  decoded&0x100 != 0,
 		TTL:          uint8(decoded),
 		BaseLayer:    BaseLayer{data[:4], data[4:]},
 	})
 	return p.NextDecoder(MPLSPayloadDecoder)
+}
+
+// SerializeTo writes the serialized form of this layer into the
+// SerializationBuffer, implementing gopacket.SerializableLayer.
+// See the docs for gopacket.SerializableLayer for more info.
+func (m *MPLS) SerializeTo(b gopacket.SerializeBuffer, opts gopacket.SerializeOptions) error {
+	bytes, err := b.PrependBytes(4)
+	if err != nil {
+		return err
+	}
+	encoded := m.Label << 12
+	encoded |= uint32(m.TrafficClass) << 9
+	encoded |= uint32(m.TTL)
+	if m.StackBottom {
+		encoded |= 0x100
+	}
+	binary.BigEndian.PutUint32(bytes, encoded)
+	return nil
 }

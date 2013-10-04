@@ -52,3 +52,23 @@ func decodePPP(data []byte, p gopacket.PacketBuilder) error {
 	p.SetLinkLayer(ppp)
 	return p.NextDecoder(ppp.PPPType)
 }
+
+// SerializeTo writes the serialized form of this layer into the
+// SerializationBuffer, implementing gopacket.SerializableLayer.
+// See the docs for gopacket.SerializableLayer for more info.
+func (p *PPP) SerializeTo(b gopacket.SerializeBuffer, opts gopacket.SerializeOptions) error {
+	if p.PPPType&0x100 == 0 {
+		bytes, err := b.PrependBytes(2)
+		if err != nil {
+			return err
+		}
+		binary.BigEndian.PutUint16(bytes, uint16(p.PPPType))
+	} else {
+		bytes, err := b.PrependBytes(1)
+		if err != nil {
+			return err
+		}
+		bytes[0] = uint8(p.PPPType)
+	}
+	return nil
+}

@@ -34,8 +34,27 @@ func decodePPPoE(data []byte, p gopacket.PacketBuilder) error {
 		Code:      PPPoECode(data[1]),
 		SessionId: binary.BigEndian.Uint16(data[2:4]),
 		Length:    binary.BigEndian.Uint16(data[4:6]),
-		BaseLayer: BaseLayer{data[:6], data[6:]},
 	}
+	pppoe.BaseLayer = BaseLayer{data[:6], data[6 : 6+pppoe.Length]}
 	p.AddLayer(pppoe)
 	return p.NextDecoder(pppoe.Code)
+}
+
+// SerializeTo writes the serialized form of this layer into the
+// SerializationBuffer, implementing gopacket.SerializableLayer.
+// See the docs for gopacket.SerializableLayer for more info.
+func (p *PPPoE) SerializeTo(b gopacket.SerializeBuffer, opts gopacket.SerializeOptions) error {
+	payload := b.Bytes()
+	bytes, err := b.PrependBytes(6)
+	if err != nil {
+		return err
+	}
+	bytes[0] = (p.Version << 4) | p.Type
+	bytes[1] = byte(p.Code)
+	binary.BigEndian.PutUint16(bytes[2:], p.SessionId)
+	if opts.FixLengths {
+		p.Length = uint16(len(payload))
+	}
+	binary.BigEndian.PutUint16(bytes[4:], p.Length)
+	return nil
 }

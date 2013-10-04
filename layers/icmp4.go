@@ -17,17 +17,21 @@ import (
 type ICMPv4TypeCode uint16
 
 const (
+	ICMPv4TypeEchoReply              = 0
 	ICMPv4TypeDestinationUnreachable = 3
-	ICMPv4TypeTimeExceeded           = 11
-	ICMPv4TypeParameterProblem       = 12
 	ICMPv4TypeSourceQuench           = 4
 	ICMPv4TypeRedirect               = 5
 	ICMPv4TypeEchoRequest            = 8
-	ICMPv4TypeEchoReply              = 0
+	ICMPv4TypeRouterAdvertisement    = 9
+	ICMPv4TypeRouterSolicitation     = 10
+	ICMPv4TypeTimeExceeded           = 11
+	ICMPv4TypeParameterProblem       = 12
 	ICMPv4TypeTimestampRequest       = 13
 	ICMPv4TypeTimestampReply         = 14
 	ICMPv4TypeInfoRequest            = 15
 	ICMPv4TypeInfoReply              = 16
+	ICMPv4TypeAddressMaskRequest     = 17
+	ICMPv4TypeAddressMaskReply       = 18
 )
 
 // ICMPv4 is the layer for IPv4 ICMP packet data.
@@ -67,6 +71,26 @@ func (i *ICMPv4) DecodeFromBytes(data []byte, df gopacket.DecodeFeedback) error 
 	return nil
 }
 
+// SerializeTo writes the serialized form of this layer into the
+// SerializationBuffer, implementing gopacket.SerializableLayer.
+// See the docs for gopacket.SerializableLayer for more info.
+func (i *ICMPv4) SerializeTo(b gopacket.SerializeBuffer, opts gopacket.SerializeOptions) error {
+	bytes, err := b.PrependBytes(8)
+	if err != nil {
+		return err
+	}
+	binary.BigEndian.PutUint16(bytes, uint16(i.TypeCode))
+	binary.BigEndian.PutUint16(bytes[4:], i.Id)
+	binary.BigEndian.PutUint16(bytes[6:], i.Seq)
+	if opts.ComputeChecksums {
+		bytes[2] = 0
+		bytes[3] = 0
+		i.Checksum = tcpipChecksum(b.Bytes(), 0)
+	}
+	binary.BigEndian.PutUint16(bytes[2:], i.Checksum)
+	return nil
+}
+
 func (i *ICMPv4) CanDecode() gopacket.LayerClass {
 	return LayerTypeICMPv4
 }
@@ -95,6 +119,26 @@ func (a ICMPv4TypeCode) String() string {
 			codeStr = "FragmentationNeeded"
 		case 5:
 			codeStr = "SourceRoutingFailed"
+		case 6:
+			codeStr = "NetUnknown"
+		case 7:
+			codeStr = "HostUnknown"
+		case 8:
+			codeStr = "SourceIsolated"
+		case 9:
+			codeStr = "NetAdminProhibited"
+		case 10:
+			codeStr = "HostAdminProhibited"
+		case 11:
+			codeStr = "NetTOS"
+		case 12:
+			codeStr = "HostTOS"
+		case 13:
+			codeStr = "CommAdminProhibited"
+		case 14:
+			codeStr = "HostPrecedence"
+		case 15:
+			codeStr = "PrecedenceCutoff"
 		}
 	case ICMPv4TypeTimeExceeded:
 		typeStr = "TimeExceeded"
@@ -106,6 +150,14 @@ func (a ICMPv4TypeCode) String() string {
 		}
 	case ICMPv4TypeParameterProblem:
 		typeStr = "ParameterProblem"
+		switch code {
+		case 0:
+			codeStr = "PointerIndicatesError"
+		case 1:
+			codeStr = "MissingOption"
+		case 2:
+			codeStr = "BadLength"
+		}
 	case ICMPv4TypeSourceQuench:
 		typeStr = "SourceQuench"
 	case ICMPv4TypeRedirect:
@@ -132,6 +184,14 @@ func (a ICMPv4TypeCode) String() string {
 		typeStr = "InfoRequest"
 	case ICMPv4TypeInfoReply:
 		typeStr = "InfoReply"
+	case ICMPv4TypeRouterSolicitation:
+		typeStr = "RouterSolicitation"
+	case ICMPv4TypeRouterAdvertisement:
+		typeStr = "RouterAdvertisement"
+	case ICMPv4TypeAddressMaskRequest:
+		typeStr = "AddressMaskRequest"
+	case ICMPv4TypeAddressMaskReply:
+		typeStr = "AddressMaskReply"
 	default:
 		typeStr = strconv.Itoa(int(typ))
 	}

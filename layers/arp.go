@@ -10,6 +10,7 @@ package layers
 import (
 	"code.google.com/p/gopacket"
 	"encoding/binary"
+	"fmt"
 )
 
 // ARP is a ARP packet header.
@@ -44,6 +45,43 @@ func (arp *ARP) DecodeFromBytes(data []byte, df gopacket.DecodeFeedback) error {
 	arpLength := 8 + 2*arp.HwAddressSize + 2*arp.ProtAddressSize
 	arp.Contents = data[:arpLength]
 	arp.Payload = data[arpLength:]
+	return nil
+}
+
+// SerializeTo writes the serialized form of this layer into the
+// SerializationBuffer, implementing gopacket.SerializableLayer.
+// See the docs for gopacket.SerializableLayer for more info.
+func (arp *ARP) SerializeTo(b gopacket.SerializeBuffer, opts gopacket.SerializeOptions) error {
+	size := 8 + len(arp.SourceHwAddress) + len(arp.SourceProtAddress) + len(arp.DstHwAddress) + len(arp.DstProtAddress)
+	bytes, err := b.PrependBytes(size)
+	if err != nil {
+		return err
+	}
+	if opts.FixLengths {
+		if len(arp.SourceHwAddress) != len(arp.DstHwAddress) {
+			return fmt.Errorf("mismatched hardware address sizes")
+		}
+		arp.HwAddressSize = uint8(len(arp.SourceHwAddress))
+		if len(arp.SourceProtAddress) != len(arp.DstProtAddress) {
+			return fmt.Errorf("mismatched prot address sizes")
+		}
+		arp.ProtAddressSize = uint8(len(arp.SourceProtAddress))
+	}
+	binary.BigEndian.PutUint16(bytes, uint16(arp.AddrType))
+	binary.BigEndian.PutUint16(bytes[2:], uint16(arp.Protocol))
+	bytes[4] = arp.HwAddressSize
+	bytes[5] = arp.ProtAddressSize
+	binary.BigEndian.PutUint16(bytes[6:], arp.Operation)
+	start := 8
+	for _, addr := range [][]byte{
+		arp.SourceHwAddress,
+		arp.SourceProtAddress,
+		arp.DstHwAddress,
+		arp.DstProtAddress,
+	} {
+		copy(bytes[start:], addr)
+		start += len(addr)
+	}
 	return nil
 }
 

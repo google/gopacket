@@ -9,6 +9,7 @@ package layers
 import (
 	"code.google.com/p/gopacket"
 	"encoding/binary"
+	"fmt"
 )
 
 type EAPCode uint8
@@ -49,15 +50,43 @@ func (e *EAP) DecodeFromBytes(data []byte, df gopacket.DecodeFeedback) error {
 	e.Code = EAPCode(data[0])
 	e.Id = data[1]
 	e.Length = binary.BigEndian.Uint16(data[2:4])
-	if e.Length > 4 {
+	switch {
+	case e.Length > 4:
 		e.Type = EAPType(data[4])
 		e.TypeData = data[5:]
-	} else {
+	case e.Length == 4:
 		e.Type = 0
 		e.TypeData = nil
+	default:
+		return fmt.Errorf("invalid EAP length %d", e.Length)
 	}
 	e.BaseLayer.Contents = data[:e.Length]
 	e.BaseLayer.Payload = data[e.Length:] // Should be 0 bytes
+	return nil
+}
+
+// SerializeTo writes the serialized form of this layer into the
+// SerializationBuffer, implementing gopacket.SerializableLayer.
+// See the docs for gopacket.SerializableLayer for more info.
+func (e *EAP) SerializeTo(b gopacket.SerializeBuffer, opts gopacket.SerializeOptions) error {
+	if opts.FixLengths {
+		e.Length = uint16(len(e.TypeData) + 1)
+	}
+	size := len(e.TypeData) + 4
+	if size > 4 {
+		size++
+	}
+	bytes, err := b.PrependBytes(size)
+	if err != nil {
+		return err
+	}
+	bytes[0] = byte(e.Code)
+	bytes[1] = e.Id
+	binary.BigEndian.PutUint16(bytes[2:], e.Length)
+	if size > 4 {
+		bytes[4] = byte(e.Type)
+		copy(bytes[5:], e.TypeData)
+	}
 	return nil
 }
 
