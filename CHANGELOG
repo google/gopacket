@@ -18,16 +18,15 @@ gopacket@googlegroups.com mailing list.
 
 ==Changes==
 
-===20131004 More serialization, MPLS bugfix
+===v1.0.1 20131004 More serialization, MPLS bugfix===
 
 Commit:
 https://code.google.com/p/gopacket/source/detail?r=96888560c968dd5b5b3b1e2212147792e25769bf
-Version:  1.0.1
 
 Adds serialization for ARP, EAP, ICMPv4, ICMPv6, MPLS, PPP, and PPPoE.
 Fixes bug in MPLS where wrong bit was being used for bottom-of-stack.
 
-===20131004 Semantic Versioning===
+===v1.0.0 20131004 Semantic Versioning===
 
 Added semantic versioning (http://semver.org/) to gopacket, for easier go
 dependency management.  Starting at v1.0.0 since the current API is
