@@ -17,7 +17,6 @@ import "C"
 
 import (
 	"code.google.com/p/gopacket"
-	"errors"
 	"fmt"
 	"os"
 	"strconv"
@@ -61,9 +60,9 @@ func NewRing(device string, snaplen uint32, flags Flag) (ring *Ring, _ error) {
 	dev := C.CString(device)
 	defer C.free(unsafe.Pointer(dev))
 
-	cptr := C.pfring_open(dev, C.u_int32_t(snaplen), C.u_int32_t(flags))
-	if cptr == nil {
-		return nil, errors.New("PFRing failure")
+	cptr, err := C.pfring_open(dev, C.u_int32_t(snaplen), C.u_int32_t(flags))
+	if cptr == nil || err != nil {
+		return nil, fmt.Errorf("pfring NewRing error: %v", err)
 	}
 	ring = &Ring{cptr: cptr, snaplen: int(snaplen)}
 	ring.SetApplicationName(os.Args[0])
