@@ -164,7 +164,7 @@ func (tcp *TCP) DecodeFromBytes(data []byte, df gopacket.DecodeFeedback) error {
 	tcp.Window = binary.BigEndian.Uint16(data[14:16])
 	tcp.Checksum = binary.BigEndian.Uint16(data[16:18])
 	tcp.Urgent = binary.BigEndian.Uint16(data[18:20])
-	tcp.Options = nil
+	tcp.Options = tcp.opts[:0]
 	if tcp.DataOffset < 5 {
 		return fmt.Errorf("Invalid TCP data offset %d < 5", tcp.DataOffset)
 	}
