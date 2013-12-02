@@ -452,7 +452,7 @@ func testSerialization(t *testing.T, p gopacket.Packet, data []byte) {
 		if err != nil {
 			t.Errorf("unable to reserialize layers with opts %#v: %v", opts, err)
 		} else if !bytes.Equal(buf.Bytes(), data) {
-			t.Errorf("serialization failure with opts %#v:\n---want---\n%v\n---got---\n%v", opts, hex.Dump(data), hex.Dump(buf.Bytes()))
+			t.Errorf("serialization failure with opts %#v:\n---want---\n%v\n---got---\n%v\nBASH-colorized diff, want->got:\n%v", opts, hex.Dump(data), hex.Dump(buf.Bytes()), diffString(data, buf.Bytes()))
 		}
 	}
 }

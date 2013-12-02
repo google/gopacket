@@ -75,15 +75,19 @@ func (i IPv4Option) String() string {
 // SerializeTo writes the serialized form of this layer into the
 // SerializationBuffer, implementing gopacket.SerializableLayer.
 func (ip *IPv4) SerializeTo(b gopacket.SerializeBuffer, opts gopacket.SerializeOptions) error {
+	if len(ip.Options) > 0 {
+		return fmt.Errorf("cannot currently serialize IPv4 options")
+	}
 	bytes, err := b.PrependBytes(20)
 	if err != nil {
 		return err
 	}
-	bytes[0] = (ip.Version << 4) | ip.IHL
-	bytes[1] = ip.TOS
 	if opts.FixLengths {
+		ip.IHL = 5 // Fix when we add support for options.
 		ip.Length = uint16(len(b.Bytes()))
 	}
+	bytes[0] = (ip.Version << 4) | ip.IHL
+	bytes[1] = ip.TOS
 	binary.BigEndian.PutUint16(bytes[2:], ip.Length)
 	binary.BigEndian.PutUint16(bytes[4:], ip.Id)
 	binary.BigEndian.PutUint16(bytes[6:], ip.flagsfrags())
