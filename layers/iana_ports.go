@@ -3,7 +3,7 @@
 package layers
 
 // Created by gen.go, don't edit manually
-// Generated at 2013-10-04 21:48:58.538604122 -0600 MDT
+// Generated at 2013-12-02 10:37:00.446300703 -0700 MST
 // Fetched from "http://www.iana.org/assignments/service-names-port-numbers/service-names-port-numbers.xml"
 
 // TCPPortNames contains the port names for all TCP ports.
@@ -4527,6 +4527,7 @@ var tcpPortNames = map[TCPPort]string{
 	6325:  "dt-mgmtsvc",
 	6326:  "dt-vra",
 	6343:  "sflow",
+	6344:  "streletz",
 	6346:  "gnutella-svc",
 	6347:  "gnutella-rtr",
 	6350:  "adap",
@@ -5353,6 +5354,7 @@ var tcpPortNames = map[TCPPort]string{
 	16994: "amt-redir-tcp",
 	16995: "amt-redir-tls",
 	17007: "isode-dua",
+	17184: "vestasdlp",
 	17185: "soundsvirtual",
 	17219: "chipper",
 	17221: "avdecc",
@@ -5614,6 +5616,7 @@ var tcpPortNames = map[TCPPort]string{
 	44123: "z-wave-s",
 	44321: "pmcd",
 	44322: "pmcdproxy",
+	44323: "pmwebapi",
 	44444: "cognex-dataman",
 	44553: "rbr-debug",
 	44818: "EtherNet-IP-2",
@@ -10062,6 +10065,7 @@ var udpPortNames = map[UDPPort]string{
 	6350:  "adap",
 	6355:  "pmcs",
 	6360:  "metaedit-mu",
+	6363:  "ndn",
 	6370:  "metaedit-se",
 	6382:  "metatude-mds",
 	6389:  "clariion-evr01",
