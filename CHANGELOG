@@ -18,6 +18,13 @@ gopacket@googlegroups.com mailing list.
 
 ==Changes==
 
+===v1.0.2 20131202 Serialization bugfixes for IPv4/TCP
+
+Commit:
+https://code.google.com/p/gopacket/source/detail?r=e28112142a483f757bbc2c13e22cbbd7bd29fa13
+
+Fixes FixLengths in gopacket to correctly set tcp.DataOffset and ip4.IHL.
+
 ===v1.0.1 20131004 More serialization, MPLS bugfix===
 
 Commit:
