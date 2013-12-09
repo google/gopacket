@@ -335,6 +335,17 @@ Therefore, you can serialize an entire packet by serializing a set of layers in
 reverse order (Payload, then TCP, then IP, then Ethernet, for example).  The
 SerializeBuffer's SerializeLayers function is a helper that does exactly that.
 
+To generate a (empty and useless, because no fields are set)
+Ethernet(IPv4(TCP(Payload))) packet, for exmaple, you can run:
+
+  buf := gopacket.NewSerializeBuffer()
+  opts := gopacket.SerializeOptions{}
+  gopacket.SerializeLayers(buf, opts,
+    &layers.Ethernet{},
+    &layers.IPv4{},
+    &layers.TCP{},
+    gopacket.Payload([]byte{1, 2, 3, 4}))
+  packetData := buf.Bytes()
 
 A Final Note
 

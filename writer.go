@@ -179,9 +179,9 @@ func (w *serializeBuffer) Clear() error {
 // Example:
 //   buf := gopacket.NewSerializeBuffer()
 //   opts := gopacket.SerializeOptions{}
-//   gopacket.SerializeLayers(buf, []SerializableLayer{a, b, c}, opts)
+//   gopacket.SerializeLayers(buf, opts, a, b, c)
 //   firstPayload := buf.Bytes()  // contains byte representation of a(b(c))
-//   gopacket.SerializeLayers(buf, []SerializableLayer{d, e, f}, opts)
+//   gopacket.SerializeLayers(buf, opts, d, e, f)
 //   secondPayload := buf.Bytes()  // contains byte representation of d(e(f)). firstPayload is now invalidated, since the SerializeLayers call Clears buf.
 func SerializeLayers(w SerializeBuffer, opts SerializeOptions, layers ...SerializableLayer) error {
 	w.Clear()
