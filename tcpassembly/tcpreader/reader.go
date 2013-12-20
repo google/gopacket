@@ -110,6 +110,7 @@ type ReaderStream struct {
 	closed       bool
 	lossReported bool
 	first        bool
+	initiated    bool
 }
 
 type ReaderStreamOptions struct {
@@ -125,12 +126,16 @@ func NewReaderStream() ReaderStream {
 		reassembled: make(chan []tcpassembly.Reassembly),
 		done:        make(chan bool),
 		first:       true,
+		initiated:   true,
 	}
 	return r
 }
 
 // Reassembled implements tcpassembly.Stream's Reassembled function.
 func (r *ReaderStream) Reassembled(reassembly []tcpassembly.Reassembly) {
+	if !r.initiated {
+		panic("ReaderStream not created via NewReaderStream")
+	}
 	r.reassembled <- reassembly
 	<-r.done
 }
@@ -159,6 +164,9 @@ var DataLost error = errors.New("lost data")
 // that slice and return the number of bytes and a nil error, or it will
 // leave slice p as is and return 0, io.EOF.
 func (r *ReaderStream) Read(p []byte) (int, error) {
+	if !r.initiated {
+		panic("ReaderStream not created via NewReaderStream")
+	}
 	var ok bool
 	r.stripEmpty()
 	for !r.closed && len(r.current) == 0 {
