@@ -23,9 +23,10 @@ import (
 	"time"
 )
 
-var iface = flag.String("i", "", "Interface to get packets from")
+var iface = flag.String("i", "eth0", "Interface to get packets from")
 var snaplen = flag.Int("s", 1600, "SnapLen for pcap packet capture")
 var filter = flag.String("f", "tcp and dst port 80", "BPF filter for pcap")
+var logAllPackets = flag.Bool("v", false, "Logs every packet in great detail")
 
 // Build a simple HTTP request parser using tcpassembly.StreamFactory and tcpassembly.Stream interfaces
 
@@ -42,6 +43,7 @@ func (h *httpStreamFactory) New(net, transport gopacket.Flow) tcpassembly.Stream
 	hstream := &httpStream{
 		net:       net,
 		transport: transport,
+		r:         tcpreader.NewReaderStream(),
 	}
 	go hstream.run() // Important... we must guarantee that data from the reader stream is read.
 
@@ -60,13 +62,15 @@ func (h *httpStream) run() {
 			log.Println("Error reading stream", h.net, h.transport, ":", err)
 		} else {
 			bodyBytes := tcpreader.DiscardBytesToEOF(req.Body)
-			log.Println("Received request from stream", h.net, h.transport, ":", req, "with", bodyBytes, "bytes in body")
+			req.Body.Close()
+			log.Println("Received request from stream", h.net, h.transport, ":", req, "with", bodyBytes, "bytes in request body")
 		}
 	}
 }
 
 func main() {
 	flag.Parse()
+	log.Printf("starting capture on interface %q", *iface)
 	// Set up pcap packet capture
 	handle, err := pcap.OpenLive(*iface, int32(*snaplen), true, 0)
 	if err != nil {
@@ -83,9 +87,13 @@ func main() {
 
 	nextFlushTime := time.Now().Add(time.Minute)
 
+	log.Println("reading in packets")
 	// Read in packets, pass to assembler.
 	packetSource := gopacket.NewPacketSource(handle, handle.LinkType())
 	for packet := range packetSource.Packets() {
+		if *logAllPackets {
+			log.Println(packet)
+		}
 		if packet.NetworkLayer() == nil || packet.TransportLayer() == nil || packet.TransportLayer().LayerType() != layers.LayerTypeTCP {
 			log.Println("Unusable packet")
 			continue
