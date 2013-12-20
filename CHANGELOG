@@ -18,6 +18,14 @@ gopacket@googlegroups.com mailing list.
 
 ==Changes==
 
+===v1.0.3 20131220 Write/Fix/Move example code
+
+Commit:
+https://code.google.com/p/gopacket/source/detail?r=26e14693245d21d9dfb69381803f373a44dcbab6
+
+Wrote arp scanning example to show basic packet generation and sending.  Fixed tcp assembly
+example to not hang forever.  Moved all example binaries into examples subdirectory.
+
 ===v1.0.2 20131202 Serialization bugfixes for IPv4/TCP
 
 Commit:
