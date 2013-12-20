@@ -18,7 +18,17 @@ gopacket@googlegroups.com mailing list.
 
 ==Changes==
 
-===v1.0.3 20131220 Write/Fix/Move example code
+===v1.0.4 20131220 SYN scanning example, simple routing table.===
+
+Commit:
+https://code.google.com/p/gopacket/source/detail?r=181aef30c2f5c0488c81cdfbab97fed70e7625ab
+
+Added a SYN scanner.  Due to needing to send data off the local network, I also had to do
+some routing, so I created a very simplistic router using the routing table provided by
+netlink.  This router is very untested so far, but it should allow simple network
+utilities to send packets pretty easily.
+
+===v1.0.3 20131220 Write/Fix/Move example code===
 
 Commit:
 https://code.google.com/p/gopacket/source/detail?r=26e14693245d21d9dfb69381803f373a44dcbab6
@@ -26,7 +36,7 @@ https://code.google.com/p/gopacket/source/detail?r=26e14693245d21d9dfb69381803f3
 Wrote arp scanning example to show basic packet generation and sending.  Fixed tcp assembly
 example to not hang forever.  Moved all example binaries into examples subdirectory.
 
-===v1.0.2 20131202 Serialization bugfixes for IPv4/TCP
+===v1.0.2 20131202 Serialization bugfixes for IPv4/TCP===
 
 Commit:
 https://code.google.com/p/gopacket/source/detail?r=e28112142a483f757bbc2c13e22cbbd7bd29fa13
