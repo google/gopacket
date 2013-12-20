@@ -3,7 +3,7 @@
 package layers
 
 // Created by gen.go, don't edit manually
-// Generated at 2013-12-02 10:37:00.446300703 -0700 MST
+// Generated at 2013-12-20 13:53:01.17218746 -0700 MST
 // Fetched from "http://www.iana.org/assignments/service-names-port-numbers/service-names-port-numbers.xml"
 
 // TCPPortNames contains the port names for all TCP ports.
@@ -5592,6 +5592,7 @@ var tcpPortNames = map[TCPPort]string{
 	38865: "secrmmsafecopya",
 	39681: "turbonote-1",
 	40000: "safetynetp",
+	40404: "sptx",
 	40841: "cscp",
 	40842: "csccredir",
 	40843: "csccfirewall",

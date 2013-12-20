@@ -112,6 +112,12 @@ if [ -f /usr/include/pcap.h ]; then
   pushd examples/pcapdump
   go build
   popd
+  pushd examples/arpscan
+  go build
+  popd
+  pushd examples/synscan
+  go build
+  popd
   pushd examples/httpassembly
   go build
   popd

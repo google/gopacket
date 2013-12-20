@@ -1,3 +1,9 @@
+// Copyright 2012 Google, Inc. All rights reserved.
+//
+// Use of this source code is governed by a BSD-style license
+// that can be found in the LICENSE file in the root of the source
+// tree.
+
 // Package routing provides a very basic but mostly functional implementation of
 // a routing table for IPv4/IPv6 addresses.  It uses a routing table pulled from
 // the kernel via netlink to find the correct interface, gateway, and preferred
@@ -250,7 +256,6 @@ loop:
 						}
 					}
 				}
-				fmt.Println("iface ", iface.Name, " addrs ", addrs)
 			}
 			rtr.addrs = append(rtr.addrs, addrs)
 		}
