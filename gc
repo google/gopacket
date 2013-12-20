@@ -101,11 +101,20 @@ if [ -f /usr/include/pcap.h ]; then
   go test ./...
   go build ./...
   popd
+  pushd examples/pcapdump
+  go build
+  popd
+  pushd examples/httpassembly
+  go build
+  popd
 fi
 if [ -f /usr/include/pfring.h ]; then
   pushd pfring
   go test ./...
   go build ./...
+  popd
+  pushd examples/pfdump
+  go build
   popd
 fi
 
