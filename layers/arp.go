@@ -13,6 +13,11 @@ import (
 	"fmt"
 )
 
+const (
+	ARPRequest = 1
+	ARPReply   = 2
+)
+
 // ARP is a ARP packet header.
 type ARP struct {
 	BaseLayer
