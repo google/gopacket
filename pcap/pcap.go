@@ -173,7 +173,8 @@ func (p *Handle) getNextBufPtrLocked(ci *gopacket.CaptureInfo) error {
 			return result
 		}
 	}
-	ci.Timestamp = time.Unix(int64(p.pkthdr.ts.tv_sec), int64(p.pkthdr.ts.tv_usec))
+	ci.Timestamp = time.Unix(int64(p.pkthdr.ts.tv_sec),
+		int64(p.pkthdr.ts.tv_usec)*1000) // convert micros to nanos
 	ci.CaptureLength = int(p.pkthdr.caplen)
 	ci.Length = int(p.pkthdr.len)
 	return nil

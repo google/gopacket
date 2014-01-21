@@ -115,7 +115,8 @@ func (r *Ring) ReadPacketDataTo(data []byte) (ci gopacket.CaptureInfo, err error
 		r.mu.Unlock()
 		return
 	}
-	ci.Timestamp = time.Unix(int64(r.pkthdr.ts.tv_sec), int64(r.pkthdr.ts.tv_usec))
+	ci.Timestamp = time.Unix(int64(r.pkthdr.ts.tv_sec),
+		int64(r.pkthdr.ts.tv_usec)*1000) // convert micros to nanos
 	ci.CaptureLength = int(r.pkthdr.caplen)
 	ci.Length = int(r.pkthdr.len)
 	r.mu.Unlock()
