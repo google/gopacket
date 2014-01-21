@@ -18,6 +18,10 @@ gopacket@googlegroups.com mailing list.
 
 ==Changes==
 
+===v1.0.5 20140121 Fix pcap/pfring timestamps.===
+
+We were incorrectly treating timestamps coming from pfring and pcap as nanoseconds, when they were in fact microseconds.  Thanks to Peter Membrey for pointing this out.
+
 ===v1.0.4 20131220 SYN scanning example, simple routing table.===
 
 Commit:
