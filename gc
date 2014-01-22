@@ -121,6 +121,9 @@ if [ -f /usr/include/pcap.h ]; then
   pushd examples/httpassembly
   go build
   popd
+  pushd examples/statsassembly
+  go build
+  popd
 fi
 if [ -f /usr/include/pfring.h ]; then
   pushd pfring

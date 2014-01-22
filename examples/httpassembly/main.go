@@ -85,25 +85,26 @@ func main() {
 	streamPool := tcpassembly.NewStreamPool(streamFactory)
 	assembler := tcpassembly.NewAssembler(streamPool)
 
-	nextFlushTime := time.Now().Add(time.Minute)
-
 	log.Println("reading in packets")
 	// Read in packets, pass to assembler.
 	packetSource := gopacket.NewPacketSource(handle, handle.LinkType())
-	for packet := range packetSource.Packets() {
-		if *logAllPackets {
-			log.Println(packet)
-		}
-		if packet.NetworkLayer() == nil || packet.TransportLayer() == nil || packet.TransportLayer().LayerType() != layers.LayerTypeTCP {
-			log.Println("Unusable packet")
-			continue
-		}
-		tcp := packet.TransportLayer().(*layers.TCP)
-		assembler.Assemble(packet.NetworkLayer().NetworkFlow(), tcp)
+	packets := packetSource.Packets()
+	ticker := time.Tick(time.Minute)
+	for {
+		select {
+		case packet := <-packets:
+			if *logAllPackets {
+				log.Println(packet)
+			}
+			if packet.NetworkLayer() == nil || packet.TransportLayer() == nil || packet.TransportLayer().LayerType() != layers.LayerTypeTCP {
+				log.Println("Unusable packet")
+				continue
+			}
+			tcp := packet.TransportLayer().(*layers.TCP)
+			assembler.Assemble(packet.NetworkLayer().NetworkFlow(), tcp)
 
-		// Every minute, flush connections that haven't seen activity in the past 2 minutes.
-		if time.Now().After(nextFlushTime) {
-			nextFlushTime = time.Now().Add(time.Minute)
+		case <-ticker:
+			// Every minute, flush connections that haven't seen activity in the past 2 minutes.
 			assembler.FlushOlderThan(time.Now().Add(time.Minute * -2))
 		}
 	}

@@ -22,12 +22,14 @@ import (
 	"code.google.com/p/gopacket"
 	"code.google.com/p/gopacket/layers"
 	"flag"
+	"fmt"
 	"log"
 	"sync"
 	"time"
 )
 
-var memLog = flag.Bool("assembly_memuse_log", false, "If true, the github.com/gconnell/assembly library will log information regarding its memory use every once in a while.")
+var memLog = flag.Bool("assembly_memuse_log", false, "If true, the code.google.com/p/gopacket/tcpassembly library will log information regarding its memory use every once in a while.")
+var debugLog = flag.Bool("assembly_debug_log", false, "If true, the code.google.com/p/gopacket/tcpassembly library will log verbose debugging information (at least one line per packet)")
 
 const invalidSequence = -1
 const uint32Max = 0xFFFFFFFF
@@ -272,6 +274,10 @@ func (a *Assembler) FlushAll() (closed int) {
 
 type key [2]gopacket.Flow
 
+func (k *key) String() string {
+	return fmt.Sprintf("%s:%s", k[0], k[1])
+}
+
 // StreamPool stores all streams created by Assemblers, allowing multiple
 // assemblers to work together on stream processing while enforcing the fact
 // that a single stream receives its data serially.  It is safe
@@ -326,8 +332,8 @@ const assemblerReturnValueInitialSize = 16
 // NewAssembler creates a new assembler.  Pass in the StreamPool
 // to use, may be shared across assemblers.
 //
-// This sets some sane defaults for the assembler options, specifically:
-//  MaxBufferedPagesPerConnection: 10
+// This sets some sane defaults for the assembler options,
+// see DefaultAssemblerOptions for details.
 func NewAssembler(pool *StreamPool) *Assembler {
 	pool.mu.Lock()
 	pool.users++
@@ -340,11 +346,15 @@ func NewAssembler(pool *StreamPool) *Assembler {
 	}
 }
 
-// DefaultAssemblerOptions provides sane default options for an assembler.
+// DefaultAssemblerOptions provides default options for an assembler.
 // These options are used by default when calling NewAssembler, so if
 // modified before a NewAssembler call they'll affect the resulting Assembler.
+//
+// Note that the default options can result in ever-increasing memory usage
+// unless one of the Flush* methods is called on a regular basis.
 var DefaultAssemblerOptions = AssemblerOptions{
-	MaxBufferedPagesPerConnection: 10,
+	MaxBufferedPagesPerConnection: 0, // unlimited
+	MaxBufferedPagesTotal:         0, // unlimited
 }
 
 type connection struct {
@@ -465,12 +475,14 @@ func (p *StreamPool) newConnection(k key, s Stream) (c *connection) {
 	return c
 }
 
-// getConnection returns a (locked) connection.
-func (p *StreamPool) getConnection(k key) *connection {
+// getConnection returns a connection.  If end is true and a connection
+// does not already exist, returns nil.  This allows us to check for a
+// connection without actually creating one if it doesn't already exist.
+func (p *StreamPool) getConnection(k key, end bool) *connection {
 	p.mu.RLock()
 	conn := p.conns[k]
 	p.mu.RUnlock()
-	if conn != nil {
+	if end || conn != nil {
 		return conn
 	}
 	s := p.factory.New(k[0], k[1])
@@ -494,6 +506,9 @@ func (p *StreamPool) getConnection(k key) *connection {
 func (a *Assembler) Assemble(netFlow gopacket.Flow, t *layers.TCP) {
 	// Ignore empty TCP packets
 	if !t.SYN && !t.FIN && !t.RST && len(t.LayerPayload()) == 0 {
+		if *debugLog {
+			log.Println("ignoring useless packet")
+		}
 		return
 	}
 
@@ -505,7 +520,13 @@ func (a *Assembler) Assemble(netFlow gopacket.Flow, t *layers.TCP) {
 	// pool it's returned to another Assemble statement.  This should loop 0-1
 	// times for the VAST majority of cases.
 	for {
-		conn = a.connPool.getConnection(key)
+		conn = a.connPool.getConnection(key, !t.SYN && len(t.LayerPayload()) == 0)
+		if conn == nil {
+			if *debugLog {
+				log.Printf("%v got empty packet on otherwise empty connection", key)
+			}
+			return
+		}
 		conn.mu.Lock()
 		if !conn.closed {
 			break
@@ -514,18 +535,34 @@ func (a *Assembler) Assemble(netFlow gopacket.Flow, t *layers.TCP) {
 	}
 	conn.lastSeen = time.Now()
 	seq, bytes := Sequence(t.Seq), t.Payload
-	if t.SYN {
-		a.ret = append(a.ret, Reassembly{
-			Bytes: bytes,
-			Skip:  0,
-			Start: true,
-			Seen:  time.Now(),
-		})
-		conn.nextSeq = seq.Add(len(bytes) + 1)
-	} else if conn.nextSeq == invalidSequence || conn.nextSeq.Difference(seq) > 0 {
+	if conn.nextSeq == invalidSequence {
+		if t.SYN {
+			if *debugLog {
+				log.Printf("%v saw first SYN packet, returning immediately, seq=%v", key, seq)
+			}
+			a.ret = append(a.ret, Reassembly{
+				Bytes: bytes,
+				Skip:  0,
+				Start: true,
+				Seen:  time.Now(),
+			})
+			conn.nextSeq = seq.Add(len(bytes) + 1)
+		} else {
+			if *debugLog {
+				log.Printf("%v waiting for start, storing into connection", key)
+			}
+			a.insertIntoConn(t, conn)
+		}
+	} else if diff := conn.nextSeq.Difference(seq); diff > 0 {
+		if *debugLog {
+			log.Printf("%v gap in sequence numbers (%v, %v) diff %v, storing into connection", key, conn.nextSeq, seq, diff)
+		}
 		a.insertIntoConn(t, conn)
 	} else {
 		bytes, conn.nextSeq = byteSpan(conn.nextSeq, seq, bytes)
+		if *debugLog {
+			log.Printf("%v found contiguous data (%v, %v), returning immediately", key, seq, conn.nextSeq)
+		}
 		a.ret = append(a.ret, Reassembly{
 			Bytes: bytes,
 			Skip:  0,
@@ -576,6 +613,9 @@ func (a *Assembler) addContiguous(conn *connection) {
 // first set of bytes we have.  If we have no bytes pending, it closes the
 // connection.
 func (a *Assembler) skipFlush(conn *connection) {
+	if *debugLog {
+		log.Printf("%v skipFlush", conn.key, conn.nextSeq)
+	}
 	if conn.first == nil {
 		a.closeConnection(conn)
 		return
@@ -594,6 +634,9 @@ func (p *StreamPool) remove(conn *connection) {
 }
 
 func (a *Assembler) closeConnection(conn *connection) {
+	if *debugLog {
+		log.Printf("%v closing", conn.key)
+	}
 	conn.stream.ReassemblyComplete()
 	conn.closed = true
 	a.connPool.remove(conn)
@@ -646,6 +689,9 @@ func (a *Assembler) insertIntoConn(t *layers.TCP, conn *connection) {
 	conn.pages++
 	if (a.MaxBufferedPagesPerConnection > 0 && conn.pages >= a.MaxBufferedPagesPerConnection) ||
 		(a.MaxBufferedPagesTotal > 0 && a.pc.used >= a.MaxBufferedPagesTotal) {
+		if *debugLog {
+			log.Printf("%v hit max buffer size: %+v, %v, %v", conn.key, a.AssemblerOptions, conn.pages, a.pc.used)
+		}
 		a.addNextFromConn(conn)
 	}
 }
@@ -686,6 +732,9 @@ func (a *Assembler) addNextFromConn(conn *connection) {
 		conn.first.Skip = int(diff)
 	}
 	conn.first.Bytes, conn.nextSeq = byteSpan(conn.nextSeq, conn.first.seq, conn.first.Bytes)
+	if *debugLog {
+		log.Printf("%v   adding from conn (%v, %v)", conn.key, conn.first.seq, conn.nextSeq)
+	}
 	a.ret = append(a.ret, conn.first.Reassembly)
 	a.pc.replace(conn.first)
 	if conn.first == conn.last {
