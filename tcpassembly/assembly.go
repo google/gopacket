@@ -134,7 +134,7 @@ func (c *pageCache) grow() {
 }
 
 // next returns a clean, ready-to-use page object.
-func (c *pageCache) next() (p *page) {
+func (c *pageCache) next(ts time.Time) (p *page) {
 	if *memLog {
 		c.pageRequests++
 		if c.pageRequests&0xFFFF == 0 {
@@ -148,7 +148,7 @@ func (c *pageCache) next() (p *page) {
 	p, c.free = c.free[i], c.free[:i]
 	p.prev = nil
 	p.next = nil
-	p.Seen = time.Now()
+	p.Seen = ts
 	p.Bytes = p.buf[:0]
 	c.used++
 	return p
@@ -368,12 +368,12 @@ type connection struct {
 	mu                sync.Mutex
 }
 
-func (c *connection) reset(k key, s Stream) {
+func (c *connection) reset(k key, s Stream, ts time.Time) {
 	c.key = k
 	c.pages = 0
 	c.first, c.last = nil, nil
 	c.nextSeq = invalidSequence
-	c.created = time.Now()
+	c.created = ts
 	c.stream = s
 	c.closed = false
 }
@@ -459,7 +459,7 @@ type Assembler struct {
 	connPool *StreamPool
 }
 
-func (p *StreamPool) newConnection(k key, s Stream) (c *connection) {
+func (p *StreamPool) newConnection(k key, s Stream, ts time.Time) (c *connection) {
 	if *memLog {
 		p.newConnectionCount++
 		if p.newConnectionCount&0x7FFF == 0 {
@@ -471,14 +471,14 @@ func (p *StreamPool) newConnection(k key, s Stream) (c *connection) {
 	}
 	index := len(p.free) - 1
 	c, p.free = p.free[index], p.free[:index]
-	c.reset(k, s)
+	c.reset(k, s, ts)
 	return c
 }
 
 // getConnection returns a connection.  If end is true and a connection
 // does not already exist, returns nil.  This allows us to check for a
 // connection without actually creating one if it doesn't already exist.
-func (p *StreamPool) getConnection(k key, end bool) *connection {
+func (p *StreamPool) getConnection(k key, end bool, ts time.Time) *connection {
 	p.mu.RLock()
 	conn := p.conns[k]
 	p.mu.RUnlock()
@@ -487,7 +487,7 @@ func (p *StreamPool) getConnection(k key, end bool) *connection {
 	}
 	s := p.factory.New(k[0], k[1])
 	p.mu.Lock()
-	conn = p.newConnection(k, s)
+	conn = p.newConnection(k, s, ts)
 	if conn2 := p.conns[k]; conn2 != nil {
 		p.mu.Unlock()
 		return conn2
@@ -497,13 +497,26 @@ func (p *StreamPool) getConnection(k key, end bool) *connection {
 	return conn
 }
 
-// Assemble reassembles the given TCP packet into its appropriate stream.
+// Assemble calls AssembleWithTimestamp with the current timestamp, useful for
+// packets being read directly off the wire.
+func (a *Assembler) Assemble(netFlow gopacket.Flow, t *layers.TCP) {
+	a.AssembleWithTimestamp(netFlow, t, time.Now())
+}
+
+// AssembleWithTimestamp reassembles the given TCP packet into its appropriate
+// stream.
+//
+// The timestamp passed in must be the timestamp the packet was seen.
+// For packets read off the wire, time.Now() should be fine.  For packets read
+// from PCAP files, CaptureInfo.Timestamp should be passed in.  This timestamp
+// will affect which streams are flushed by a call to FlushOlderThan.
+//
 // Each Assemble call results in, in order:
 //
 //    zero or one calls to StreamFactory.New, creating a stream
 //    zero or one calls to Reassembled on a single stream
 //    zero or one calls to ReassemblyComplete on the same stream
-func (a *Assembler) Assemble(netFlow gopacket.Flow, t *layers.TCP) {
+func (a *Assembler) AssembleWithTimestamp(netFlow gopacket.Flow, t *layers.TCP, timestamp time.Time) {
 	// Ignore empty TCP packets
 	if !t.SYN && !t.FIN && !t.RST && len(t.LayerPayload()) == 0 {
 		if *debugLog {
@@ -520,7 +533,8 @@ func (a *Assembler) Assemble(netFlow gopacket.Flow, t *layers.TCP) {
 	// pool it's returned to another Assemble statement.  This should loop 0-1
 	// times for the VAST majority of cases.
 	for {
-		conn = a.connPool.getConnection(key, !t.SYN && len(t.LayerPayload()) == 0)
+		conn = a.connPool.getConnection(
+			key, !t.SYN && len(t.LayerPayload()) == 0, timestamp)
 		if conn == nil {
 			if *debugLog {
 				log.Printf("%v got empty packet on otherwise empty connection", key)
@@ -533,7 +547,9 @@ func (a *Assembler) Assemble(netFlow gopacket.Flow, t *layers.TCP) {
 		}
 		conn.mu.Unlock()
 	}
-	conn.lastSeen = time.Now()
+	if conn.lastSeen.Before(timestamp) {
+		conn.lastSeen = timestamp
+	}
 	seq, bytes := Sequence(t.Seq), t.Payload
 	if conn.nextSeq == invalidSequence {
 		if t.SYN {
@@ -544,20 +560,20 @@ func (a *Assembler) Assemble(netFlow gopacket.Flow, t *layers.TCP) {
 				Bytes: bytes,
 				Skip:  0,
 				Start: true,
-				Seen:  time.Now(),
+				Seen:  timestamp,
 			})
 			conn.nextSeq = seq.Add(len(bytes) + 1)
 		} else {
 			if *debugLog {
 				log.Printf("%v waiting for start, storing into connection", key)
 			}
-			a.insertIntoConn(t, conn)
+			a.insertIntoConn(t, conn, timestamp)
 		}
 	} else if diff := conn.nextSeq.Difference(seq); diff > 0 {
 		if *debugLog {
 			log.Printf("%v gap in sequence numbers (%v, %v) diff %v, storing into connection", key, conn.nextSeq, seq, diff)
 		}
-		a.insertIntoConn(t, conn)
+		a.insertIntoConn(t, conn, timestamp)
 	} else {
 		bytes, conn.nextSeq = byteSpan(conn.nextSeq, seq, bytes)
 		if *debugLog {
@@ -567,7 +583,7 @@ func (a *Assembler) Assemble(netFlow gopacket.Flow, t *layers.TCP) {
 			Bytes: bytes,
 			Skip:  0,
 			End:   t.RST || t.FIN,
-			Seen:  time.Now(),
+			Seen:  timestamp,
 		})
 	}
 	if len(a.ret) > 0 {
@@ -679,11 +695,11 @@ func (conn *connection) pushBetween(prev, next, first, last *page) {
 	}
 }
 
-func (a *Assembler) insertIntoConn(t *layers.TCP, conn *connection) {
+func (a *Assembler) insertIntoConn(t *layers.TCP, conn *connection, ts time.Time) {
 	if conn.first != nil && conn.first.seq == conn.nextSeq {
 		panic("wtf")
 	}
-	p, p2 := a.pagesFromTcp(t)
+	p, p2 := a.pagesFromTcp(t, ts)
 	prev, current := conn.traverseConn(Sequence(t.Seq))
 	conn.pushBetween(prev, current, p, p2)
 	conn.pages++
@@ -701,8 +717,8 @@ func (a *Assembler) insertIntoConn(t *layers.TCP, conn *connection) {
 // correctly.
 //
 // It returns the first and last page in its doubly-linked list of new pages.
-func (a *Assembler) pagesFromTcp(t *layers.TCP) (p, p2 *page) {
-	first := a.pc.next()
+func (a *Assembler) pagesFromTcp(t *layers.TCP, ts time.Time) (p, p2 *page) {
+	first := a.pc.next(ts)
 	current := first
 	seq, bytes := Sequence(t.Seq), t.Payload
 	for {
@@ -715,7 +731,7 @@ func (a *Assembler) pagesFromTcp(t *layers.TCP) (p, p2 *page) {
 			break
 		}
 		seq = seq.Add(length)
-		current.next = a.pc.next()
+		current.next = a.pc.next(ts)
 		current.next.prev = current
 		current = current.next
 	}
