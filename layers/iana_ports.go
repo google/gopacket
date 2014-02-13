@@ -3,7 +3,7 @@
 package layers
 
 // Created by gen.go, don't edit manually
-// Generated at 2013-12-20 13:53:01.17218746 -0700 MST
+// Generated at 2014-02-13 10:35:30.966483614 -0700 MST
 // Fetched from "http://www.iana.org/assignments/service-names-port-numbers/service-names-port-numbers.xml"
 
 // TCPPortNames contains the port names for all TCP ports.
@@ -4615,6 +4615,7 @@ var tcpPortNames = map[TCPPort]string{
 	6687:  "clever-ctrace",
 	6688:  "clever-tcpip",
 	6689:  "tsa",
+	6697:  "ircs-u",
 	6701:  "kti-icad-srvr",
 	6702:  "e-design-net",
 	6703:  "e-design-web",
@@ -4882,6 +4883,7 @@ var tcpPortNames = map[TCPPort]string{
 	8097:  "sac",
 	8100:  "xprint-server",
 	8101:  "ldoms-migr",
+	8102:  "kz-migr",
 	8115:  "mtl8000-matrix",
 	8116:  "cp-cluster",
 	8117:  "purityrpc",
@@ -4902,6 +4904,7 @@ var tcpPortNames = map[TCPPort]string{
 	8182:  "vmware-fdm",
 	8183:  "proremote",
 	8184:  "itach",
+	8191:  "limnerpressure",
 	8192:  "spytechphone",
 	8194:  "blp1",
 	8195:  "blp2",
@@ -4954,6 +4957,7 @@ var tcpPortNames = map[TCPPort]string{
 	8474:  "noteshare",
 	8500:  "fmtp",
 	8501:  "cmtp-mgt",
+	8502:  "ftnmtp",
 	8554:  "rtsp-alt",
 	8555:  "d-fence",
 	8567:  "enc-tunnel",
@@ -5227,6 +5231,7 @@ var tcpPortNames = map[TCPPort]string{
 	10990: "rmiaux",
 	11000: "irisa",
 	11001: "metasys",
+	11095: "weave",
 	11103: "origo-sync",
 	11104: "netapp-icmgmt",
 	11105: "netapp-icdata",
@@ -5324,6 +5329,7 @@ var tcpPortNames = map[TCPPort]string{
 	14936: "hde-lcesrvr-1",
 	14937: "hde-lcesrvr-2",
 	15000: "hydap",
+	15002: "onep-tls",
 	15345: "xpilot",
 	15363: "3link",
 	15555: "cisco-snat",
@@ -5650,6 +5656,7 @@ var tcpPortNames = map[TCPPort]string{
 	48129: "blp5",
 	48556: "com-bardac-dw",
 	48619: "iqobject",
+	48653: "robotraconteur",
 	49000: "matahari",
 }
 var udpPortNames = map[UDPPort]string{
@@ -10223,9 +10230,11 @@ var udpPortNames = map[UDPPort]string{
 	7170:  "nsrp",
 	7171:  "drm-production",
 	7174:  "clutild",
+	7181:  "janus-disc",
 	7200:  "fodms",
 	7201:  "dlip",
 	7227:  "ramp",
+	7235:  "aspcoordination",
 	7262:  "cnap",
 	7272:  "watchme-7272",
 	7273:  "oma-rlp",
@@ -10675,6 +10684,8 @@ var udpPortNames = map[UDPPort]string{
 	10990: "rmiaux",
 	11000: "irisa",
 	11001: "metasys",
+	10023: "cefd-vmp",
+	11095: "weave",
 	11106: "sgi-lk",
 	11108: "myq-termlink",
 	11111: "vce",
@@ -11037,6 +11048,7 @@ var udpPortNames = map[UDPPort]string{
 	48129: "blp5",
 	48556: "com-bardac-dw",
 	48619: "iqobject",
+	48653: "robotraconteur",
 }
 var sctpPortNames = map[SCTPPort]string{
 	9:     "discard",
