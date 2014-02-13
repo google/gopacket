@@ -22,6 +22,7 @@ import (
 var iface = flag.String("i", "eth0", "Interface to read packets from")
 var fname = flag.String("r", "", "Filename to read from, overrides -i")
 var snaplen = flag.Int("s", 65536, "Snap length (number of bytes max to read per packet")
+var tstype = flag.String("timestamp_type", "", "Type of timestamps to use")
 
 func main() {
 	flag.Parse()
@@ -34,6 +35,13 @@ func main() {
 	} else {
 		if handle, err = pcap.OpenLive(*iface, int32(*snaplen), true, time.Second); err != nil {
 			log.Fatalln("PCAP OpenLive error:", err)
+		}
+		if *tstype != "" {
+			if t, err := pcap.TimestampSourceFromString(*tstype); err != nil {
+				log.Fatalf("Supported timestamp types: %v", handle.SupportedTimestamps())
+			} else if err := handle.SetTimestampSource(t); err != nil {
+				log.Fatalf("Supported timestamp types: %v", handle.SupportedTimestamps())
+			}
 		}
 		if len(flag.Args()) > 0 {
 			bpffilter := strings.Join(flag.Args(), " ")
