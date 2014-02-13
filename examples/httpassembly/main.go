@@ -101,7 +101,7 @@ func main() {
 				continue
 			}
 			tcp := packet.TransportLayer().(*layers.TCP)
-			assembler.Assemble(packet.NetworkLayer().NetworkFlow(), tcp)
+			assembler.AssembleWithTimestamp(packet.NetworkLayer().NetworkFlow(), tcp, packet.Metadata().Timestamp)
 
 		case <-ticker:
 			// Every minute, flush connections that haven't seen activity in the past 2 minutes.

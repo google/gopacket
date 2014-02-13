@@ -167,7 +167,7 @@ loop:
 		// appropriate for high-throughput sniffing:  it avoids a packet
 		// copy, but its cost is much more careful handling of the
 		// resulting byte slice.
-		data, _, err := handle.ZeroCopyReadPacketData()
+		data, ci, err := handle.ZeroCopyReadPacketData()
 
 		if err != nil {
 			log.Printf("error getting packet: %v", err)
@@ -196,7 +196,7 @@ loop:
 				foundNetLayer = true
 			case layers.LayerTypeTCP:
 				if foundNetLayer {
-					assembler.Assemble(netFlow, &tcp)
+					assembler.AssembleWithTimestamp(netFlow, &tcp, ci.Timestamp)
 				} else {
 					log.Println("could not find IPv4 or IPv6 layer, inoring")
 				}
