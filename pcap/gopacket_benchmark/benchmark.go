@@ -19,7 +19,9 @@ package main
 
 import (
 	"code.google.com/p/gopacket"
+	"code.google.com/p/gopacket/layers"
 	"code.google.com/p/gopacket/pcap"
+	"code.google.com/p/gopacket/tcpassembly"
 	"compress/gzip"
 	"encoding/hex"
 	"flag"
@@ -37,7 +39,7 @@ var decodeLazy *bool = flag.Bool("lazy", false, "If true, use lazy decoding")
 var decodeNoCopy *bool = flag.Bool("nocopy", true, "If true, avoid an extra copy when decoding packets")
 var printErrors *bool = flag.Bool("printErrors", false, "If true, check for and print error layers.")
 var printLayers *bool = flag.Bool("printLayers", false, "If true, print out the layers of each packet")
-var repeat *int = flag.Int("repeat", 10, "Read over the file N times")
+var repeat *int = flag.Int("repeat", 5, "Read over the file N times")
 var cpuProfile *string = flag.String("cpuprofile", "", "If set, write CPU profile to filename")
 var url *string = flag.String("url", "http://www.ll.mit.edu/mission/communications/cyber/CSTcorpora/ideval/data/1999/training/week1/tuesday/inside.tcpdump.gz", "URL to gzip'd pcap file")
 
@@ -75,6 +77,7 @@ func (b *BufferPacketSource) ReadPacketData() (data []byte, ci gopacket.CaptureI
 }
 
 func (b *BufferPacketSource) Reset() {
+	runtime.GC()
 	b.index = 0
 }
 
@@ -140,37 +143,105 @@ func main() {
 		packetSource.DecodeOptions.Lazy = *decodeLazy
 		packetSource.DecodeOptions.NoCopy = *decodeNoCopy
 	}
+	fmt.Println()
 	for i := 0; i < *repeat; i++ {
 		packetDataSource.Reset()
-		count, errors := 0, 0
-		runtime.GC()
 		fmt.Printf("Benchmarking decode %d/%d\n", i+1, *repeat)
-		start := time.Now()
-		for packet, err := packetSource.NextPacket(); err != io.EOF; packet, err = packetSource.NextPacket() {
-			if err != nil {
-				fmt.Println("Error reading in packet:", err)
-			}
-			count++
-			var hasError bool
-			if *printErrors && packet.ErrorLayer() != nil {
-				fmt.Println("\n\n\nError decoding packet:", packet.ErrorLayer().Error())
-				fmt.Println(hex.Dump(packet.Data()))
-				fmt.Printf("%#v\n", packet.Data())
-				errors++
-				hasError = true
-			}
-			if *printLayers || hasError {
-				fmt.Printf("\n=== PACKET %d ===\n", count)
-				for _, l := range packet.Layers() {
-					fmt.Printf("--- LAYER %v ---\n%#v\n\n", l.LayerType(), l)
-				}
-				fmt.Println()
-			}
+		benchmarkPacketDecode(packetSource)
+	}
+	fmt.Println()
+	for i := 0; i < *repeat; i++ {
+		packetDataSource.Reset()
+		fmt.Printf("Benchmarking decoding layer parser %d/%d\n", i+1, *repeat)
+		benchmarkLayerDecode(packetDataSource, false)
+	}
+	fmt.Println()
+	for i := 0; i < *repeat; i++ {
+		packetDataSource.Reset()
+		fmt.Printf("Benchmarking decoding layer parser with assembly %d/%d\n", i+1, *repeat)
+		benchmarkLayerDecode(packetDataSource, true)
+	}
+}
+
+func benchmarkPacketDecode(packetSource *gopacket.PacketSource) {
+	count, errors := 0, 0
+	start := time.Now()
+	for packet, err := packetSource.NextPacket(); err != io.EOF; packet, err = packetSource.NextPacket() {
+		if err != nil {
+			fmt.Println("Error reading in packet:", err)
+			continue
 		}
-		duration := time.Since(start)
-		fmt.Printf("\tRead in %v packets in %v, %v per packet\n", count, duration, duration/time.Duration(count))
-		if *printErrors {
-			fmt.Printf("%v errors, successfully decoded %.02f%%\n", errors, float64(count-errors)*100.0/float64(count))
+		count++
+		var hasError bool
+		if *printErrors && packet.ErrorLayer() != nil {
+			fmt.Println("\n\n\nError decoding packet:", packet.ErrorLayer().Error())
+			fmt.Println(hex.Dump(packet.Data()))
+			fmt.Printf("%#v\n", packet.Data())
+			errors++
+			hasError = true
+		}
+		if *printLayers || hasError {
+			fmt.Printf("\n=== PACKET %d ===\n", count)
+			for _, l := range packet.Layers() {
+				fmt.Printf("--- LAYER %v ---\n%#v\n\n", l.LayerType(), l)
+			}
+			fmt.Println()
 		}
 	}
+	duration := time.Since(start)
+	fmt.Printf("\tRead in %v packets in %v, %v per packet\n", count, duration, duration/time.Duration(count))
+	if *printErrors {
+		fmt.Printf("%v errors, successfully decoded %.02f%%\n", errors, float64(count-errors)*100.0/float64(count))
+	}
+}
+
+type streamFactory struct {
+}
+
+func (s *streamFactory) New(netFlow, tcpFlow gopacket.Flow) tcpassembly.Stream {
+	return s
+}
+func (s *streamFactory) Reassembled([]tcpassembly.Reassembly) {
+}
+func (s *streamFactory) ReassemblyComplete() {
+}
+
+func benchmarkLayerDecode(source *BufferPacketSource, assemble bool) {
+	var tcp layers.TCP
+	var ip layers.IPv4
+	var eth layers.Ethernet
+	var udp layers.UDP
+	var icmp layers.ICMPv4
+	var payload gopacket.Payload
+	parser := gopacket.NewDecodingLayerParser(
+		layers.LayerTypeEthernet,
+		&eth, &ip, &icmp, &tcp, &udp, &payload)
+	pool := tcpassembly.NewStreamPool(&streamFactory{})
+	assembler := tcpassembly.NewAssembler(pool)
+	var decoded []gopacket.LayerType
+	start := time.Now()
+	packets, decodedlayers, assembled := 0, 0, 0
+	for {
+		packets++
+		data, ci, err := source.ReadPacketData()
+		if err == io.EOF {
+			break
+		} else if err != nil {
+			fmt.Println("Error reading packet: ", err)
+			continue
+		}
+		err = parser.DecodeLayers(data, &decoded)
+		for _, typ := range decoded {
+			decodedlayers++
+			if typ == layers.LayerTypeTCP && assemble {
+				assembled++
+				assembler.AssembleWithTimestamp(ip.NetworkFlow(), &tcp, ci.Timestamp)
+			}
+		}
+	}
+	if assemble {
+		assembler.FlushAll()
+	}
+	duration := time.Since(start)
+	fmt.Printf("\tRead in %d packets in %v, decoded %v layers, assembled %v packets: %v per packet\n", packets, duration, decodedlayers, assembled, duration/time.Duration(packets))
 }
