@@ -265,6 +265,7 @@ func (p *Handle) Stats() (stat *Stats, err error) {
 
 // SetBPFFilter compiles and sets a BPF filter for the pcap handle.
 func (p *Handle) SetBPFFilter(expr string) (err error) {
+	p.activate.Do(p.activation)
 	var bpf _Ctype_struct_bpf_program
 	cexpr := C.CString(expr)
 	defer C.free(unsafe.Pointer(cexpr))
