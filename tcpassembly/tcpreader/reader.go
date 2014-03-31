@@ -150,7 +150,7 @@ func (r *ReaderStream) ReassemblyComplete() {
 // slices.
 func (r *ReaderStream) stripEmpty() {
 	for len(r.current) > 0 && len(r.current[0].Bytes) == 0 {
-		r.current = r.current[:len(r.current)-1]
+		r.current = r.current[1:]
 		r.lossReported = false
 	}
 }
