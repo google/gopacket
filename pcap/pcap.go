@@ -370,6 +370,7 @@ func sockaddr_to_IP(rsa *syscall.RawSockaddr) (IP []byte, err error) {
 
 // WritePacketData calls pcap_sendpacket, injecting the given data into the pcap handle.
 func (p *Handle) WritePacketData(data []byte) (err error) {
+	p.activate.Do(p.activation)
 	buf := C.CString(string(data))
 	defer C.free(unsafe.Pointer(buf))
 
