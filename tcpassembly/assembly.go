@@ -630,7 +630,7 @@ func (a *Assembler) addContiguous(conn *connection) {
 // connection.
 func (a *Assembler) skipFlush(conn *connection) {
 	if *debugLog {
-		log.Printf("%v skipFlush", conn.key, conn.nextSeq)
+		log.Printf("%v skipFlush %v", conn.key, conn.nextSeq)
 	}
 	if conn.first == nil {
 		a.closeConnection(conn)

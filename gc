@@ -82,28 +82,28 @@ fi
 go fmt ./...
 go test -i ./... 2>/dev/null >/dev/null || true
 go test
-go build
+go build -race
 pushd macs
 go test ./...
 gofmt -w gen.go
-go build gen.go
+go build -race gen.go
 popd
 pushd tcpassembly
 go test ./...
 popd
 pushd layers
 gofmt -w gen.go
-go build gen.go
+go build -race gen.go
 go test ./...
 popd
 pushd pcapgo
 go test ./...
-go build ./...
+go build -race ./...
 popd
 if [ -f /usr/include/linux/if_packet.h ]; then
   if grep -q TPACKET_V3 /usr/include/linux/if_packet.h; then
     pushd afpacket
-    go build ./...
+    go build -race ./...
     go test ./...
     popd
   fi
@@ -111,31 +111,31 @@ fi
 if [ -f /usr/include/pcap.h ]; then
   pushd pcap
   go test ./...
-  go build ./...
+  go build -race ./...
   popd
   pushd examples/pcapdump
-  go build
+  go build -race
   popd
   pushd examples/arpscan
-  go build
+  go build -race
   popd
   pushd examples/synscan
-  go build
+  go build -race
   popd
   pushd examples/httpassembly
-  go build
+  go build -race
   popd
   pushd examples/statsassembly
-  go build
+  go build -race
   popd
 fi
 if [ -f /usr/include/pfring.h ]; then
   pushd pfring
   go test ./...
-  go build ./...
+  go build -race ./...
   popd
   pushd examples/pfdump
-  go build
+  go build -race
   popd
 fi
 
