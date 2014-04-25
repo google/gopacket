@@ -26,7 +26,7 @@ type Writer struct {
 	w io.Writer
 }
 
-const magicNanoseconds = 0xA1B23C4D
+const magicNanoseconds = 0xA1B2C3D4
 const versionMajor = 2
 const versionMinor = 4
 
@@ -66,14 +66,15 @@ func (w *Writer) WriteFileHeader(snaplen uint32, linktype layers.LinkType) error
 	return err
 }
 
-const nanosPerSecond = 1000000000
+const nanosPerMicro = 1000
+const microsPerSecond = 1000000
 
 func (w *Writer) writePacketHeader(ci gopacket.CaptureInfo) error {
 	var buf [16]byte
-	nanos := ci.Timestamp.UnixNano()
-	secs, nsecs := uint32(nanos/nanosPerSecond), uint32(nanos%nanosPerSecond)
+	micros := ci.Timestamp.UnixNano() / nanosPerMicro
+	secs, usecs := uint32(micros/microsPerSecond), uint32(micros%microsPerSecond)
 	binary.LittleEndian.PutUint32(buf[0:4], secs)
-	binary.LittleEndian.PutUint32(buf[4:8], nsecs)
+	binary.LittleEndian.PutUint32(buf[4:8], usecs)
 	binary.LittleEndian.PutUint32(buf[8:12], uint32(ci.CaptureLength))
 	binary.LittleEndian.PutUint32(buf[12:16], uint32(ci.Length))
 	_, err := w.w.Write(buf[:])
