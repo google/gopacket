@@ -4,11 +4,9 @@
 // that can be found in the LICENSE file in the root of the source
 // tree.
 
-// Package pcaputil allows users to write PCAP data to files.
-//
-// We keep PCAP writing outside of the pcap/ package, since that package
-// requires libpcap installation to be compiled, while this does not.
-package pcaputil
+// Package pcapgo provides some native PCAP support, not requiring
+// C libpcap to be installed.
+package pcapgo
 
 import (
 	"code.google.com/p/gopacket"
@@ -38,13 +36,13 @@ const versionMinor = 4
 //
 //  // Write a new file:
 //  f, _ := os.Create("/tmp/file.pcap")
-//  w := pcaputil.NewWriter(f)
+//  w := pcapgo.NewWriter(f)
 //  w.WriteFileHeader(65536, layers.LinkTypeEthernet)  // new file, must do this.
 //  w.WritePacket(gopacket.CaptureInfo{...}, data1)
 //  f.Close()
 //  // Append to existing file (must have same snaplen and linktype)
 //  f2, _ := os.OpenFile("/tmp/file.pcap", os.O_APPEND, 0700)
-//  w2 := pcaputil.NewWriter(f2)
+//  w2 := pcapgo.NewWriter(f2)
 //  // no need for file header, it's already written.
 //  w2.WritePacket(gopacket.CaptureInfo{...}, data2)
 //  f2.Close()
