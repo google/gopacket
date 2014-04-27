@@ -39,6 +39,7 @@ import (
 	"code.google.com/p/gopacket"
 	"code.google.com/p/gopacket/layers"
 	"errors"
+	"fmt"
 	"io"
 	"net"
 	"reflect"
@@ -66,7 +67,8 @@ type Handle struct {
 	pkthdr  *C.struct_pcap_pkthdr
 	buf_ptr *C.u_char
 
-	activate sync.Once
+	activateError activateError
+	activate      sync.Once
 }
 
 // Stats contains statistics on how many packets were handled by a pcap handle,
@@ -136,6 +138,14 @@ func newHandle(cptr *C.pcap_t) (handle *Handle) {
 	return
 }
 
+func (h *Handle) activateIfNecessary() error {
+	h.activate.Do(h.activation)
+	if h.activateError != aeNoError {
+		return h.activateError
+	}
+	return nil
+}
+
 // OpenOffline opens a file and returns its contents as a *Handle.
 func OpenOffline(file string) (handle *Handle, err error) {
 	var buf *C.char
@@ -167,6 +177,8 @@ func (n NextError) Error() string {
 		return "Read Error"
 	case NextErrorNoMorePackets:
 		return "No More Packets In File"
+	case NextErrorNotActivated:
+		return "Not Activated"
 	}
 	return strconv.Itoa(int(n))
 }
@@ -178,6 +190,7 @@ const (
 	// NextErrorNoMorePackets is returned when reading from a file (OpenOffline) and
 	// EOF is reached.  When this happens, Next() returns io.EOF instead of this.
 	NextErrorNoMorePackets NextError = -2
+	NextErrorNotActivated  NextError = -3
 )
 
 // NextError returns the next packet read from the pcap handle, along with an error
@@ -193,14 +206,46 @@ func (p *Handle) ReadPacketData() (data []byte, ci gopacket.CaptureInfo, err err
 	return
 }
 
+type activateError C.int
+
+const (
+	aeNoError      = 0
+	aeActivated    = C.PCAP_ERROR_ACTIVATED
+	aePromisc      = C.PCAP_WARNING_PROMISC_NOTSUP
+	aeNoSuchDevice = C.PCAP_ERROR_NO_SUCH_DEVICE
+	aeDenied       = C.PCAP_ERROR_PERM_DENIED
+	aeNotUp        = C.PCAP_ERROR_IFACE_NOT_UP
+)
+
+func (a activateError) Error() string {
+	switch a {
+	case aeNoError:
+		return "No Error"
+	case aeActivated:
+		return "Already Activated"
+	case aePromisc:
+		return "Cannot set as promisc"
+	case aeNoSuchDevice:
+		return "No Such Device"
+	case aeDenied:
+		return "Permission Denied"
+	case aeNotUp:
+		return "Interface Not Up"
+	default:
+		return fmt.Sprintf("unknown activated error: %d", a)
+	}
+}
+
 func (p *Handle) activation() {
-	C.pcap_activate(p.cptr)
+	p.activateError = activateError(C.pcap_activate(p.cptr))
 }
 
 // getNextBufPtrLocked is shared code for ReadPacketData and
 // ZeroCopyReadPacketData.
 func (p *Handle) getNextBufPtrLocked(ci *gopacket.CaptureInfo) error {
-	p.activate.Do(p.activation)
+	if err := p.activateIfNecessary(); err != nil {
+		return err
+	}
 	result := NextError(C.pcap_next_ex(p.cptr, &p.pkthdr, &p.buf_ptr))
 
 	if result != NextErrorOk {
@@ -265,7 +310,9 @@ func (p *Handle) Stats() (stat *Stats, err error) {
 
 // SetBPFFilter compiles and sets a BPF filter for the pcap handle.
 func (p *Handle) SetBPFFilter(expr string) (err error) {
-	p.activate.Do(p.activation)
+	if err := p.activateIfNecessary(); err != nil {
+		return err
+	}
 	var bpf _Ctype_struct_bpf_program
 	cexpr := C.CString(expr)
 	defer C.free(unsafe.Pointer(cexpr))
@@ -370,7 +417,9 @@ func sockaddr_to_IP(rsa *syscall.RawSockaddr) (IP []byte, err error) {
 
 // WritePacketData calls pcap_sendpacket, injecting the given data into the pcap handle.
 func (p *Handle) WritePacketData(data []byte) (err error) {
-	p.activate.Do(p.activation)
+	if err := p.activateIfNecessary(); err != nil {
+		return err
+	}
 	buf := C.CString(string(data))
 	defer C.free(unsafe.Pointer(buf))
 
