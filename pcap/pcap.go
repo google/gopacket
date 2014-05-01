@@ -32,6 +32,13 @@ int pcap_tstamp_type_name_to_val(const char* t) {
 #ifndef PCAP_ERROR_PROMISC_PERM_DENIED
 #define PCAP_ERROR_PROMISC_PERM_DENIED -11
 #endif
+
+// WinPcap doesn't export a pcap_statustostr, so use the less-specific
+// pcap_strerror.  Note that linking against something like cygwin libpcap
+// may result is less-specific error messages.
+#ifdef WIN32
+#define pcap_statustostr pcap_strerror
+#endif
 */
 import "C"
 
