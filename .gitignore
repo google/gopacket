@@ -22,6 +22,11 @@ _testmain.go
 *.exe
 #*
 *~
-/tools/pass/pass
-/tools/pcaptest/pcaptest
-/tools/tcpdump/tcpdump
+
+# examples binaries
+examples/synscan/synscan
+examples/pfdump/pfdump
+examples/pcapdump/pcapdump
+examples/httpassembly/httpassembly
+examples/statsassembly/statsassembly
+examples/arpscan/arpscan
