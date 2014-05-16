@@ -9,6 +9,8 @@ package layers
 import (
 	"fmt"
 	"strconv"
+
+	"code.google.com/p/gopacket"
 )
 
 // TCPPort is a port in a TCP layer.
@@ -52,6 +54,15 @@ func (a UDPPort) String() string {
 		return fmt.Sprintf("%d(%s)", a, name)
 	}
 	return strconv.Itoa(int(a))
+}
+
+// NextApplicationLayer returns a LayerType that would be able to decode the
+// application payload. It use some well-known port such as 53 for DNS
+func (a UDPPort) NextApplicationLayer() gopacket.LayerType {
+	if a == 53 {
+		return LayerTypeDNS
+	}
+	return gopacket.LayerTypePayload
 }
 
 // String returns the port as "number(name)" if there's a well-known port name,
