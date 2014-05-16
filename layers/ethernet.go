@@ -15,6 +15,10 @@ import (
 	"net"
 )
 
+var (
+	EthernetBroadcast = []byte{0xff, 0xff, 0xff, 0xff, 0xff, 0xff}
+)
+
 // Ethernet is the layer for Ethernet frame headers.
 type Ethernet struct {
 	BaseLayer
