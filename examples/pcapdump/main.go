@@ -23,6 +23,7 @@ var iface = flag.String("i", "eth0", "Interface to read packets from")
 var fname = flag.String("r", "", "Filename to read from, overrides -i")
 var snaplen = flag.Int("s", 65536, "Snap length (number of bytes max to read per packet")
 var tstype = flag.String("timestamp_type", "", "Type of timestamps to use")
+var promisc = flag.Bool("promisc", true, "Set promiscuous mode")
 
 func main() {
 	flag.Parse()
@@ -30,24 +31,40 @@ func main() {
 	var err error
 	if *fname != "" {
 		if handle, err = pcap.OpenOffline(*fname); err != nil {
-			log.Fatalln("PCAP OpenOffline error:", err)
+			log.Fatal("PCAP OpenOffline error:", err)
 		}
 	} else {
-		if handle, err = pcap.OpenLive(*iface, int32(*snaplen), true, time.Second); err != nil {
-			log.Fatalln("PCAP OpenLive error:", err)
+		// This is a little complicated because we want to allow all possible options
+		// for creating the packet capture handle... instead of all this you can
+		// just call pcap.OpenLive if you want a simple handle.
+		unactivated, err := pcap.Create(*iface)
+		if err != nil {
+			log.Fatal("could not create: %v", err)
+		}
+		defer unactivated.CleanUp()
+		if err = unactivated.SetSnapLen(*snaplen); err != nil {
+			log.Fatal("could not set snap length: %v", err)
+		} else if err = unactivated.SetPromisc(*promisc); err != nil {
+			log.Fatal("could not set promisc mode: %v", err)
+		} else if err = unactivated.SetTimeout(time.Second); err != nil {
+			log.Fatal("could not set timeout: %v", err)
 		}
 		if *tstype != "" {
 			if t, err := pcap.TimestampSourceFromString(*tstype); err != nil {
-				log.Fatalf("Supported timestamp types: %v", handle.SupportedTimestamps())
-			} else if err := handle.SetTimestampSource(t); err != nil {
-				log.Fatalf("Supported timestamp types: %v", handle.SupportedTimestamps())
+				log.Fatalf("Supported timestamp types: %v", unactivated.SupportedTimestamps())
+			} else if err := unactivated.SetTimestampSource(t); err != nil {
+				log.Fatalf("Supported timestamp types: %v", unactivated.SupportedTimestamps())
 			}
 		}
+		if handle, err = unactivated.Activate(); err != nil {
+			log.Fatal("PCAP Activate error:", err)
+		}
+		defer handle.Close()
 		if len(flag.Args()) > 0 {
 			bpffilter := strings.Join(flag.Args(), " ")
 			fmt.Fprintf(os.Stderr, "Using BPF filter %q\n", bpffilter)
 			if err = handle.SetBPFFilter(bpffilter); err != nil {
-				log.Fatalln("BPF filter error:", err)
+				log.Fatal("BPF filter error:", err)
 			}
 		}
 	}

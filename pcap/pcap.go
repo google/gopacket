@@ -22,6 +22,7 @@ package pcap
 #ifndef PCAP_TSTAMP_HOST
 int pcap_set_tstamp_type(pcap_t* p, int t) { return -1; }
 int pcap_list_tstamp_types(pcap_t* p, int** t) { return 0; }
+void pcap_free_tstamp_types(int *tstamp_types) {}
 const char* pcap_tstamp_type_val_to_name(int t) {
 	return "pcap timestamp types not supported";
 }
@@ -62,6 +63,8 @@ const errorBufferSize = 256
 // Handle provides a connection to a pcap handle, allowing users to read packets
 // off the wire (Next), inject packets onto the wire (Inject), and
 // perform a number of other functions to affect and understand packet output.
+//
+// Handles are already pcap_activate'd
 type Handle struct {
 	// cptr is the handle for the actual pcap C object.
 	cptr *C.pcap_t
@@ -73,9 +76,6 @@ type Handle struct {
 	// huge memory hit, so to handle that we store them here instead.
 	pkthdr  *C.struct_pcap_pkthdr
 	buf_ptr *C.u_char
-
-	activateError activateError
-	activate      sync.Once
 }
 
 // Stats contains statistics on how many packets were handled by a pcap handle,
@@ -110,8 +110,7 @@ const BlockForever = time.Duration(0)
 // read for each packet (snaplen), whether to put the interface in promiscuous
 // mode, and a timeout.
 func OpenLive(device string, snaplen int32, promisc bool, timeout time.Duration) (handle *Handle, _ error) {
-	var buf *C.char
-	buf = (*C.char)(C.calloc(errorBufferSize, 1))
+	buf := (*C.char)(C.calloc(errorBufferSize, 1))
 	defer C.free(unsafe.Pointer(buf))
 	var pro C.int
 	if promisc {
@@ -121,42 +120,16 @@ func OpenLive(device string, snaplen int32, promisc bool, timeout time.Duration)
 	dev := C.CString(device)
 	defer C.free(unsafe.Pointer(dev))
 
-	// This copies a bunch of the pcap_open_live implementation from pcap.c:
-	cptr := C.pcap_create(dev, buf)
+	cptr := C.pcap_open_live(dev, C.int(snaplen), pro, C.int(timeout/time.Millisecond), buf)
 	if cptr == nil {
 		return nil, errors.New(C.GoString(buf))
 	}
-	var status C.int
-	if status = C.pcap_set_snaplen(cptr, C.int(snaplen)); status < 0 {
-		goto fail
-	} else if status = C.pcap_set_promisc(cptr, pro); status < 0 {
-		goto fail
-	} else if status = C.pcap_set_timeout(cptr, C.int(timeout/time.Millisecond)); status < 0 {
-		goto fail
-	}
-	return newHandle(cptr), nil
-fail:
-	C.pcap_close(cptr)
-	return nil, statusError(status)
-}
-
-func newHandle(cptr *C.pcap_t) (handle *Handle) {
-	handle = &Handle{cptr: cptr}
-	return
-}
-
-func (h *Handle) activateIfNecessary() error {
-	h.activate.Do(h.activation)
-	if h.activateError != aeNoError {
-		return h.activateError
-	}
-	return nil
+	return &Handle{cptr: cptr}, nil
 }
 
 // OpenOffline opens a file and returns its contents as a *Handle.
 func OpenOffline(file string) (handle *Handle, err error) {
-	var buf *C.char
-	buf = (*C.char)(C.calloc(errorBufferSize, 1))
+	buf := (*C.char)(C.calloc(errorBufferSize, 1))
 	defer C.free(unsafe.Pointer(buf))
 	cf := C.CString(file)
 	defer C.free(unsafe.Pointer(cf))
@@ -165,9 +138,7 @@ func OpenOffline(file string) (handle *Handle, err error) {
 	if cptr == nil {
 		return nil, errors.New(C.GoString(buf))
 	}
-	h := newHandle(cptr)
-	h.activate.Do(func() {}) // skip activation
-	return h, nil
+	return &Handle{cptr: cptr}, nil
 }
 
 // NextError is the return code from a call to Next.
@@ -243,16 +214,9 @@ func (a activateError) Error() string {
 	}
 }
 
-func (p *Handle) activation() {
-	p.activateError = activateError(C.pcap_activate(p.cptr))
-}
-
 // getNextBufPtrLocked is shared code for ReadPacketData and
 // ZeroCopyReadPacketData.
 func (p *Handle) getNextBufPtrLocked(ci *gopacket.CaptureInfo) error {
-	if err := p.activateIfNecessary(); err != nil {
-		return err
-	}
 	result := NextError(C.pcap_next_ex(p.cptr, &p.pkthdr, &p.buf_ptr))
 
 	if result != NextErrorOk {
@@ -317,9 +281,6 @@ func (p *Handle) Stats() (stat *Stats, err error) {
 
 // SetBPFFilter compiles and sets a BPF filter for the pcap handle.
 func (p *Handle) SetBPFFilter(expr string) (err error) {
-	if err := p.activateIfNecessary(); err != nil {
-		return err
-	}
 	var bpf _Ctype_struct_bpf_program
 	cexpr := C.CString(expr)
 	defer C.free(unsafe.Pointer(cexpr))
@@ -424,9 +385,6 @@ func sockaddr_to_IP(rsa *syscall.RawSockaddr) (IP []byte, err error) {
 
 // WritePacketData calls pcap_sendpacket, injecting the given data into the pcap handle.
 func (p *Handle) WritePacketData(data []byte) (err error) {
-	if err := p.activateIfNecessary(); err != nil {
-		return err
-	}
 	buf := C.CString(string(data))
 	defer C.free(unsafe.Pointer(buf))
 
@@ -458,12 +416,87 @@ func statusError(status C.int) error {
 	return errors.New(C.GoString(C.pcap_statustostr(status)))
 }
 
+// Unactivated allows you to call pre-pcap_activate functions on your pcap
+// handle to set it up just the way you'd like.
+type Unactivated struct {
+	// cptr is the handle for the actual pcap C object.
+	cptr *C.pcap_t
+}
+
+// Activate activates the handle.  The current Unactivated becomes invalid
+// and all future function calls on it will fail.
+func (p *Unactivated) Activate() (*Handle, error) {
+	err := activateError(C.pcap_activate(p.cptr))
+	if err != aeNoError {
+		return nil, err
+	}
+	h := &Handle{cptr: p.cptr}
+	p.cptr = nil
+	return h, nil
+}
+
+// CleanUp cleans up any stuff left over from a successful or failed building
+// of a handle.
+func (p *Unactivated) CleanUp() {
+	if p.cptr != nil {
+		C.pcap_close(p.cptr)
+	}
+}
+
+// Create creates a new Unactivated, which wraps an un-activated PCAP handle.
+// Callers of Create should immediately defer 'CleanUp', as in:
+//   builder := Create("eth0")
+//   defer builder.CleanUp()
+// Builder allows users
+func Create(device string) (*Unactivated, error) {
+	buf := (*C.char)(C.calloc(errorBufferSize, 1))
+	defer C.free(unsafe.Pointer(buf))
+	dev := C.CString(device)
+	defer C.free(unsafe.Pointer(dev))
+
+	// This copies a bunch of the pcap_open_live implementation from pcap.c:
+	cptr := C.pcap_create(dev, buf)
+	if cptr == nil {
+		return nil, errors.New(C.GoString(buf))
+	}
+	return &Unactivated{cptr: cptr}, nil
+}
+
+// SetSnapLen sets the snap length (max bytes per packet to capture).
+func (p *Unactivated) SetSnapLen(snaplen int) error {
+	if status := C.pcap_set_snaplen(p.cptr, C.int(snaplen)); status < 0 {
+		return statusError(status)
+	}
+	return nil
+}
+
+// SetPromisc sets the handle to either be promiscuous (capture packets
+// unrelated to this host) or not.
+func (p *Unactivated) SetPromisc(promisc bool) error {
+	var pro C.int
+	if promisc {
+		pro = 1
+	}
+	if status := C.pcap_set_promisc(p.cptr, pro); status < 0 {
+		return statusError(status)
+	}
+	return nil
+}
+
+// SetTimeout sets the read timeout for the handle.
+func (p *Unactivated) SetTimeout(timeout time.Duration) error {
+	if status := C.pcap_set_timeout(p.cptr, C.int(timeout/time.Millisecond)); status < 0 {
+		return statusError(status)
+	}
+	return nil
+}
+
 // SupportedTimestamps returns a list of supported timstamp types for this
 // handle.
-func (p *Handle) SupportedTimestamps() (out []TimestampSource) {
+func (p *Unactivated) SupportedTimestamps() (out []TimestampSource) {
 	var types *C.int
 	n := int(C.pcap_list_tstamp_types(p.cptr, &types))
-	defer C.free(unsafe.Pointer(types))
+	defer C.pcap_free_tstamp_types(types)
 	typesArray := (*[100]C.int)(unsafe.Pointer(types))
 	for i := 0; i < n; i++ {
 		out = append(out, TimestampSource((*typesArray)[i]))
@@ -473,7 +506,7 @@ func (p *Handle) SupportedTimestamps() (out []TimestampSource) {
 
 // SetTimestampSource sets the type of timestamp generator PCAP uses when
 // attaching timestamps to packets.
-func (p *Handle) SetTimestampSource(t TimestampSource) error {
+func (p *Unactivated) SetTimestampSource(t TimestampSource) error {
 	if status := C.pcap_set_tstamp_type(p.cptr, C.int(t)); status < 0 {
 		return statusError(status)
 	}

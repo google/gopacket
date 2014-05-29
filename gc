@@ -68,7 +68,7 @@ function Root {
     local exec="$1"
     # Some folks (like me) keep source code in places inaccessible by root (like
     # NFS), so to make sure things run smoothly we copy them to a /tmp location.
-    local tmpfile="$(mktemp --tmpdir gopacket_XXXXXXXX)"
+    local tmpfile="$(mktemp -t gopacket_XXXXXXXX)"
     echo "Running root test executable $exec as $tmpfile"
     cp "$exec" "$tmpfile"
     chmod a+x "$tmpfile"
