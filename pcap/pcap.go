@@ -445,9 +445,8 @@ func (p *Unactivated) CleanUp() {
 
 // Create creates a new Unactivated, which wraps an un-activated PCAP handle.
 // Callers of Create should immediately defer 'CleanUp', as in:
-//   builder := Create("eth0")
-//   defer builder.CleanUp()
-// Builder allows users
+//   unactivated := Create("eth0")
+//   defer unactivated.CleanUp()
 func Create(device string) (*Unactivated, error) {
 	buf := (*C.char)(C.calloc(errorBufferSize, 1))
 	defer C.free(unsafe.Pointer(buf))
