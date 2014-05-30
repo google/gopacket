@@ -540,3 +540,55 @@ func (p *InactiveHandle) SetTimestampSource(t TimestampSource) error {
 	}
 	return nil
 }
+
+// DumpOpen open a PCAP file where packets will be
+// dumped next. Please note only one dump per Handle
+// could be open.
+func (p *Handle) DumpOpen(file string) (err error) {
+	if p.cptr != nil {
+		return fmt.Errorf("a dump is already open")
+	}
+
+	fn := C.CString(file)
+	defer C.free(unsafe.Pointer(fn))
+
+	p.cptr = C.pcap_dump_open(p.cptr, fn)
+	if p.cptr == nil {
+		return fmt.Errorf("unable to open %s", file)
+	}
+	return
+}
+
+// DumpClose close the PCAP file previously open
+// by DumpOpen
+func (p *Handle) DumpClose() (err error) {
+	if p.cptr == nil {
+		return fmt.Errorf("a dump is not open")
+	}
+
+	C.pcap_dump_close(p.cptr)
+	p.cptr = nil
+
+	return
+}
+
+// Dump write the packet in the PCAP file opened
+// by DumpOpen
+func (p *Handle) Dump(pkt gopacket.Packet) (err error) {
+	if p.cptr == nil {
+		return fmt.Errorf("a dump is not open")
+	}
+
+	var _pkthdr C.struct_pcap_pkthdr
+	_pkthdr.ts.tv_sec = (C.__time_t)(pkt.Metadata().Timestamp.Unix())
+	_pkthdr.ts.tv_usec = (C.__suseconds_t)(pkt.Metadata().Timestamp.Nanosecond())
+	_pkthdr.caplen = (C.bpf_u_int32)(pkt.Metadata().CaptureLength)
+	_pkthdr.len = (C.bpf_u_int32)(pkt.Metadata().Length)
+
+	packetData := pkt.Data()
+
+	C.pcap_dump((*C.u_char)(unsafe.Pointer(p.cptr)),
+		&_pkthdr, (*C.u_char)(unsafe.Pointer(&packetData)))
+
+	return
+}

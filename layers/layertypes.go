@@ -65,6 +65,7 @@ var (
 	LayerTypeNortelDiscovery        = gopacket.RegisterLayerType(61, gopacket.LayerTypeMetadata{"NortelDiscovery", gopacket.DecodeFunc(decodeNortelDiscovery)})
 	LayerTypeIGMP                   = gopacket.RegisterLayerType(62, gopacket.LayerTypeMetadata{"IGMP", gopacket.DecodeFunc(decodeIGMP)})
 	LayerTypePFLog                  = gopacket.RegisterLayerType(63, gopacket.LayerTypeMetadata{"PFLog", gopacket.DecodeFunc(decodePFLog)})
+	LayerTypeDNS                    = gopacket.RegisterLayerType(64, gopacket.LayerTypeMetadata{"DNS", gopacket.DecodeFunc(decodeDNS)})
 )
 
 var (
