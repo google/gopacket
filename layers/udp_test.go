@@ -57,8 +57,7 @@ func TestUDPPacketDNS(t *testing.T) {
 	if p.ErrorLayer() != nil {
 		t.Error("Failed to decode packet:", p.ErrorLayer().Error())
 	}
-	checkLayers(p, []gopacket.LayerType{LayerTypeEthernet, LayerTypeIPv4,
-		LayerTypeUDP, LayerTypeDNS}, t)
+	checkLayers(p, []gopacket.LayerType{LayerTypeEthernet, LayerTypeIPv4, LayerTypeUDP, LayerTypeDNS}, t)
 	if got, ok := p.TransportLayer().(*UDP); ok {
 		want := &UDP{
 			BaseLayer: BaseLayer{

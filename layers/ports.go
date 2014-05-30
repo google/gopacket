@@ -56,13 +56,17 @@ func (a UDPPort) String() string {
 	return strconv.Itoa(int(a))
 }
 
-// NextApplicationLayer returns a LayerType that would be able to decode the
-// application payload. It use some well-known port such as 53 for DNS
-func (a UDPPort) NextApplicationLayer() gopacket.LayerType {
-	if a == 53 {
+// LayerType returns a LayerType that would be able to decode the
+// application payload. It use some well-known port such as 53 for DNS.
+//
+// Returns gopacket.LayerTypePayload for unknown/unsupported port numbers.
+func (a UDPPort) LayerType() gopacket.LayerType {
+	switch a {
+	case 53:
 		return LayerTypeDNS
+	default:
+		return gopacket.LayerTypePayload
 	}
-	return gopacket.LayerTypePayload
 }
 
 // String returns the port as "number(name)" if there's a well-known port name,
