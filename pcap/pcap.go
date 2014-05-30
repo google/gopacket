@@ -441,17 +441,17 @@ func statusError(status C.int) error {
 	return errors.New(C.GoString(C.pcap_statustostr(status)))
 }
 
-// Unactivated allows you to call pre-pcap_activate functions on your pcap
+// InactiveHandle allows you to call pre-pcap_activate functions on your pcap
 // handle to set it up just the way you'd like.
-type Unactivated struct {
+type InactiveHandle struct {
 	// cptr is the handle for the actual pcap C object.
 	cptr         *C.pcap_t
 	blockForever bool
 }
 
-// Activate activates the handle.  The current Unactivated becomes invalid
+// Activate activates the handle.  The current InactiveHandle becomes invalid
 // and all future function calls on it will fail.
-func (p *Unactivated) Activate() (*Handle, error) {
+func (p *InactiveHandle) Activate() (*Handle, error) {
 	err := activateError(C.pcap_activate(p.cptr))
 	if err != aeNoError {
 		return nil, err
@@ -463,17 +463,17 @@ func (p *Unactivated) Activate() (*Handle, error) {
 
 // CleanUp cleans up any stuff left over from a successful or failed building
 // of a handle.
-func (p *Unactivated) CleanUp() {
+func (p *InactiveHandle) CleanUp() {
 	if p.cptr != nil {
 		C.pcap_close(p.cptr)
 	}
 }
 
-// Create creates a new Unactivated, which wraps an un-activated PCAP handle.
-// Callers of Create should immediately defer 'CleanUp', as in:
-//   unactivated := Create("eth0")
-//   defer unactivated.CleanUp()
-func Create(device string) (*Unactivated, error) {
+// NewInactiveHandle creates a new InactiveHandle, which wraps an un-activated PCAP handle.
+// Callers of NewInactiveHandle should immediately defer 'CleanUp', as in:
+//   inactive := NewInactiveHandle("eth0")
+//   defer inactive.CleanUp()
+func NewInactiveHandle(device string) (*InactiveHandle, error) {
 	buf := (*C.char)(C.calloc(errorBufferSize, 1))
 	defer C.free(unsafe.Pointer(buf))
 	dev := C.CString(device)
@@ -484,11 +484,11 @@ func Create(device string) (*Unactivated, error) {
 	if cptr == nil {
 		return nil, errors.New(C.GoString(buf))
 	}
-	return &Unactivated{cptr: cptr}, nil
+	return &InactiveHandle{cptr: cptr}, nil
 }
 
 // SetSnapLen sets the snap length (max bytes per packet to capture).
-func (p *Unactivated) SetSnapLen(snaplen int) error {
+func (p *InactiveHandle) SetSnapLen(snaplen int) error {
 	if status := C.pcap_set_snaplen(p.cptr, C.int(snaplen)); status < 0 {
 		return statusError(status)
 	}
@@ -497,7 +497,7 @@ func (p *Unactivated) SetSnapLen(snaplen int) error {
 
 // SetPromisc sets the handle to either be promiscuous (capture packets
 // unrelated to this host) or not.
-func (p *Unactivated) SetPromisc(promisc bool) error {
+func (p *InactiveHandle) SetPromisc(promisc bool) error {
 	var pro C.int
 	if promisc {
 		pro = 1
@@ -511,7 +511,7 @@ func (p *Unactivated) SetPromisc(promisc bool) error {
 // SetTimeout sets the read timeout for the handle.
 //
 // See the package documentation for important details regarding 'timeout'.
-func (p *Unactivated) SetTimeout(timeout time.Duration) error {
+func (p *InactiveHandle) SetTimeout(timeout time.Duration) error {
 	p.blockForever = timeout < 0
 	if status := C.pcap_set_timeout(p.cptr, timeoutMillis(timeout)); status < 0 {
 		return statusError(status)
@@ -521,7 +521,7 @@ func (p *Unactivated) SetTimeout(timeout time.Duration) error {
 
 // SupportedTimestamps returns a list of supported timstamp types for this
 // handle.
-func (p *Unactivated) SupportedTimestamps() (out []TimestampSource) {
+func (p *InactiveHandle) SupportedTimestamps() (out []TimestampSource) {
 	var types *C.int
 	n := int(C.pcap_list_tstamp_types(p.cptr, &types))
 	defer C.pcap_free_tstamp_types(types)
@@ -534,7 +534,7 @@ func (p *Unactivated) SupportedTimestamps() (out []TimestampSource) {
 
 // SetTimestampSource sets the type of timestamp generator PCAP uses when
 // attaching timestamps to packets.
-func (p *Unactivated) SetTimestampSource(t TimestampSource) error {
+func (p *InactiveHandle) SetTimestampSource(t TimestampSource) error {
 	if status := C.pcap_set_tstamp_type(p.cptr, C.int(t)); status < 0 {
 		return statusError(status)
 	}

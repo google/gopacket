@@ -72,7 +72,7 @@ func tryCapture(iface net.Interface) error {
 			return fmt.Errorf("setbpf: %v", err)
 		}
 	case "timestamp":
-		u, err := pcap.Create(iface.Name)
+		u, err := pcap.NewInactiveHandle(iface.Name)
 		if err != nil {
 			return err
 		}

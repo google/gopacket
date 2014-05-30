@@ -41,29 +41,29 @@ The following code can be used to read in data from a live device, in this case
    }
  }
 
-Unactivated Handles
+Inactive Handles
 
-Newer PCAP functionality requires the concept of an 'unactivated' PCAP handle.
+Newer PCAP functionality requires the concept of an 'inactive' PCAP handle.
 Instead of constantly adding new arguments to pcap_open_live, users now call
 pcap_create to create a handle, set it up with a bunch of optional function
 calls, then call pcap_activate to activate it.  This library mirrors that
 mechanism, for those that want to expose/use these new features:
 
-  unactivated, err := pcap.Create(deviceName)
+  inactive, err := pcap.NewInactiveHandle(deviceName)
   if err != nil {
     log.Fatal(err)
   }
-  defer unactivated.CleanUp()
+  defer inactive.CleanUp()
 
-  // Call various functions on unactivated to set it up the way you'd like:
-  if err = unactivated.SetTimeout(time.Minute); err != nil {
+  // Call various functions on inactive to set it up the way you'd like:
+  if err = inactive.SetTimeout(time.Minute); err != nil {
     log.Fatal(err)
-  } else if err = unactivated.SetTimestampSource("foo"); err != nil {
+  } else if err = inactive.SetTimestampSource("foo"); err != nil {
     log.Fatal(err)
   }
 
   // Finally, create the actual handle by calling Activate:
-  handle, err := unactivated.Activate()  // after this, unactivated is no longer valid
+  handle, err := inactive.Activate()  // after this, inactive is no longer valid
   if err != nil {
     log.Fatal(err)
   }

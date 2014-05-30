@@ -37,26 +37,26 @@ func main() {
 		// This is a little complicated because we want to allow all possible options
 		// for creating the packet capture handle... instead of all this you can
 		// just call pcap.OpenLive if you want a simple handle.
-		unactivated, err := pcap.Create(*iface)
+		inactive, err := pcap.NewInactiveHandle(*iface)
 		if err != nil {
 			log.Fatal("could not create: %v", err)
 		}
-		defer unactivated.CleanUp()
-		if err = unactivated.SetSnapLen(*snaplen); err != nil {
+		defer inactive.CleanUp()
+		if err = inactive.SetSnapLen(*snaplen); err != nil {
 			log.Fatal("could not set snap length: %v", err)
-		} else if err = unactivated.SetPromisc(*promisc); err != nil {
+		} else if err = inactive.SetPromisc(*promisc); err != nil {
 			log.Fatal("could not set promisc mode: %v", err)
-		} else if err = unactivated.SetTimeout(time.Second); err != nil {
+		} else if err = inactive.SetTimeout(time.Second); err != nil {
 			log.Fatal("could not set timeout: %v", err)
 		}
 		if *tstype != "" {
 			if t, err := pcap.TimestampSourceFromString(*tstype); err != nil {
-				log.Fatalf("Supported timestamp types: %v", unactivated.SupportedTimestamps())
-			} else if err := unactivated.SetTimestampSource(t); err != nil {
-				log.Fatalf("Supported timestamp types: %v", unactivated.SupportedTimestamps())
+				log.Fatalf("Supported timestamp types: %v", inactive.SupportedTimestamps())
+			} else if err := inactive.SetTimestampSource(t); err != nil {
+				log.Fatalf("Supported timestamp types: %v", inactive.SupportedTimestamps())
 			}
 		}
-		if handle, err = unactivated.Activate(); err != nil {
+		if handle, err = inactive.Activate(); err != nil {
 			log.Fatal("PCAP Activate error:", err)
 		}
 		defer handle.Close()
