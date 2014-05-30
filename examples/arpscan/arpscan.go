@@ -77,7 +77,7 @@ func scan(iface *net.Interface) error {
 	log.Printf("using address %v for interface %v", addr, iface.Name)
 
 	// Open up a pcap handle for packet reads/writes.
-	handle, err := pcap.OpenLive(iface.Name, 65536, true, 0)
+	handle, err := pcap.OpenLive(iface.Name, 65536, true, pcap.BlockForever)
 	if err != nil {
 		return err
 	}

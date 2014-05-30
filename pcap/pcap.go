@@ -67,7 +67,8 @@ const errorBufferSize = 256
 // Handles are already pcap_activate'd
 type Handle struct {
 	// cptr is the handle for the actual pcap C object.
-	cptr *C.pcap_t
+	cptr         *C.pcap_t
+	blockForever bool
 
 	mu sync.Mutex
 	// Since pointers to these objects are passed into a C function, if
@@ -102,13 +103,29 @@ type InterfaceAddress struct {
 	// TODO: add broadcast + PtP dst ?
 }
 
-// BlockForever, when passed into OpenLive, causes it to block forever waiting for packets.
-const BlockForever = time.Duration(0)
+// BlockForever, when passed into OpenLive/SetTimeout, causes it to block forever
+// waiting for packets, while still returning incoming packets to userland relatively
+// quickly.
+const BlockForever = -time.Millisecond * 10
+
+func timeoutMillis(timeout time.Duration) C.int {
+	// Flip sign if necessary.  See package docs on timeout for reasoning behind this.
+	if timeout < 0 {
+		timeout *= -1
+	}
+	// Round up
+	if timeout != 0 && timeout < time.Millisecond {
+		timeout = time.Millisecond
+	}
+	return C.int(timeout / time.Millisecond)
+}
 
 // OpenLive opens a device and returns a *Handle.
 // It takes as arguments the name of the device ("eth0"), the maximum size to
 // read for each packet (snaplen), whether to put the interface in promiscuous
 // mode, and a timeout.
+//
+// See the package documentation for important details regarding 'timeout'.
 func OpenLive(device string, snaplen int32, promisc bool, timeout time.Duration) (handle *Handle, _ error) {
 	buf := (*C.char)(C.calloc(errorBufferSize, 1))
 	defer C.free(unsafe.Pointer(buf))
@@ -116,15 +133,16 @@ func OpenLive(device string, snaplen int32, promisc bool, timeout time.Duration)
 	if promisc {
 		pro = 1
 	}
-
+	p := &Handle{}
+	p.blockForever = timeout < 0
 	dev := C.CString(device)
 	defer C.free(unsafe.Pointer(dev))
 
-	cptr := C.pcap_open_live(dev, C.int(snaplen), pro, C.int(timeout/time.Millisecond), buf)
-	if cptr == nil {
+	p.cptr = C.pcap_open_live(dev, C.int(snaplen), pro, timeoutMillis(timeout), buf)
+	if p.cptr == nil {
 		return nil, errors.New(C.GoString(buf))
 	}
-	return &Handle{cptr: cptr}, nil
+	return p, nil
 }
 
 // OpenOffline opens a file and returns its contents as a *Handle.
@@ -217,8 +235,14 @@ func (a activateError) Error() string {
 // getNextBufPtrLocked is shared code for ReadPacketData and
 // ZeroCopyReadPacketData.
 func (p *Handle) getNextBufPtrLocked(ci *gopacket.CaptureInfo) error {
-	result := NextError(C.pcap_next_ex(p.cptr, &p.pkthdr, &p.buf_ptr))
-
+	var result NextError
+	for {
+		result = NextError(C.pcap_next_ex(p.cptr, &p.pkthdr, &p.buf_ptr))
+		if p.blockForever && result == NextErrorTimeoutExpired {
+			continue
+		}
+		break
+	}
 	if result != NextErrorOk {
 		if result == NextErrorNoMorePackets {
 			return io.EOF
@@ -238,7 +262,7 @@ func (p *Handle) getNextBufPtrLocked(ci *gopacket.CaptureInfo) error {
 // the Handle.  Each call to ZeroCopyReadPacketData invalidates any data previously
 // returned by ZeroCopyReadPacketData.  Care must be taken not to keep pointers
 // to old bytes when using ZeroCopyReadPacketData... if you need to keep data past
-// the next time you call ZeroCopyReadPacketData, use ReadPacketDataData, which copies
+// the next time you call ZeroCopyReadPacketData, use ReadPacketData, which copies
 // the bytes into a new buffer for you.
 //  data1, _, _ := handle.ZeroCopyReadPacketData()
 //  // do everything you want with data1 here, copying bytes out of it if you'd like to keep them around.
@@ -285,7 +309,8 @@ func (p *Handle) SetBPFFilter(expr string) (err error) {
 	cexpr := C.CString(expr)
 	defer C.free(unsafe.Pointer(cexpr))
 
-	if -1 == C.pcap_compile(p.cptr, &bpf, cexpr, 1, 0) {
+	// TODO(gconnell):  Get netmask with pcap_lookupnet.
+	if -1 == C.pcap_compile(p.cptr, &bpf, cexpr, 1, C.PCAP_NETMASK_UNKNOWN) {
 		return p.Error()
 	}
 
@@ -420,7 +445,8 @@ func statusError(status C.int) error {
 // handle to set it up just the way you'd like.
 type Unactivated struct {
 	// cptr is the handle for the actual pcap C object.
-	cptr *C.pcap_t
+	cptr         *C.pcap_t
+	blockForever bool
 }
 
 // Activate activates the handle.  The current Unactivated becomes invalid
@@ -430,7 +456,7 @@ func (p *Unactivated) Activate() (*Handle, error) {
 	if err != aeNoError {
 		return nil, err
 	}
-	h := &Handle{cptr: p.cptr}
+	h := &Handle{cptr: p.cptr, blockForever: p.blockForever}
 	p.cptr = nil
 	return h, nil
 }
@@ -483,8 +509,11 @@ func (p *Unactivated) SetPromisc(promisc bool) error {
 }
 
 // SetTimeout sets the read timeout for the handle.
+//
+// See the package documentation for important details regarding 'timeout'.
 func (p *Unactivated) SetTimeout(timeout time.Duration) error {
-	if status := C.pcap_set_timeout(p.cptr, C.int(timeout/time.Millisecond)); status < 0 {
+	p.blockForever = timeout < 0
+	if status := C.pcap_set_timeout(p.cptr, timeoutMillis(timeout)); status < 0 {
 		return statusError(status)
 	}
 	return nil

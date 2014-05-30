@@ -69,7 +69,7 @@ func newScanner(ip net.IP, router routing.Router) (*scanner, error) {
 	// Note we could very easily add some BPF filtering here to greatly
 	// decrease the number of packets we have to look at when getting back
 	// scan results.
-	handle, err := pcap.OpenLive(iface.Name, 65536, true, time.Millisecond)
+	handle, err := pcap.OpenLive(iface.Name, 65536, true, pcap.BlockForever)
 	if err != nil {
 		return nil, err
 	}

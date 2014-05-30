@@ -23,24 +23,20 @@ import (
 
 var mode = flag.String("mode", "basic", "One of: basic,filtered,timestamp")
 
+func generatePackets() {
+	if resp, err := http.Get("http://code.google.com"); err != nil {
+		log.Printf("Could not get HTTP: %v", err)
+	} else {
+		resp.Body.Close()
+	}
+}
+
 func main() {
 	flag.Parse()
 	ifaces, err := net.Interfaces()
 	if err != nil {
 		log.Fatal(err)
 	}
-	go func() {
-		// Generate traffic to look for.
-		for _ = range time.Tick(time.Second) {
-			go func() {
-				if resp, err := http.Get("http://code.google.com"); err != nil {
-					log.Printf("Could not get HTTP: %v", err)
-				} else {
-					resp.Body.Close()
-				}
-			}()
-		}
-	}()
 	for _, iface := range ifaces {
 		log.Printf("Trying capture on %q", iface.Name)
 		if err := tryCapture(iface); err != nil {
@@ -100,6 +96,7 @@ func tryCapture(iface net.Interface) error {
 	default:
 		panic("Invalid --mode: " + *mode)
 	}
+	go generatePackets()
 	h.ReadPacketData() // Do one dummy read to clear any timeouts.
 	data, ci, err := h.ReadPacketData()
 	if err != nil {

@@ -70,5 +70,26 @@ mechanism, for those that want to expose/use these new features:
   defer handle.Close()
 
   // Now use your handle as you see fit.
+
+PCAP Timeouts
+
+pcap.OpenLive and pcap.SetTimeout both take timeouts.
+If you don't care about timeouts, just pass in BlockForever,
+which should do what you expect with minimal fuss.
+
+A timeout of 0 is not recommended.  Some platforms, like Macs
+(http://www.manpages.info/macosx/pcap.3.html) say:
+  The read timeout is used to arrange that the read not necessarily return
+  immediately when a packet is seen, but that it wait for some amount of time
+  to allow more packets to arrive and to read multiple packets from the OS
+  kernel in one operation.
+This means that if you only capture one packet, the kernel might decide to wait
+'timeout' for more packets to batch with it before returning.  A timeout of
+0, then, means 'wait forever for more packets', which is... not good.
+
+To get around this, we've introduced the following behavior:  if a negative
+timeout is passed in, we set the positive timeout in the handle, then loop
+internally in ReadPacketData/ZeroCopyReadPacketData when we see timeout
+errors.
 */
 package pcap

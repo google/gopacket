@@ -72,7 +72,7 @@ func main() {
 	flag.Parse()
 	log.Printf("starting capture on interface %q", *iface)
 	// Set up pcap packet capture
-	handle, err := pcap.OpenLive(*iface, int32(*snaplen), true, 0)
+	handle, err := pcap.OpenLive(*iface, int32(*snaplen), true, pcap.BlockForever)
 	if err != nil {
 		panic(err)
 	}
