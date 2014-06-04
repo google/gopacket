@@ -69,6 +69,47 @@ const (
 	DNSResponseCodeBadTruc  DNSResponseCode = 22 // Bad Truncation                     [RFC4635]
 )
 
+func (drc DNSResponseCode) String() string {
+	switch drc {
+	default:
+		return "Unknown"
+	case DNSResponseCodeFormErr:
+		return "Format Error"
+	case DNSResponseCodeServFail:
+		return "Server Failure "
+	case DNSResponseCodeNXDomain:
+		return "Non-Existent Domain"
+	case DNSResponseCodeNotImp:
+		return "Not Implemented"
+	case DNSResponseCodeRefused:
+		return "Query Refused"
+	case DNSResponseCodeYXDomain:
+		return "Name Exists when it should not"
+	case DNSResponseCodeYXRRSet:
+		return "RR Set Exists when it should not"
+	case DNSResponseCodeNXRRSet:
+		return "RR Set that should exist does not"
+	case DNSResponseCodeNotAuth:
+		return "Server Not Authoritative for zone"
+	case DNSResponseCodeNotZone:
+		return "Name not contained in zone"
+	case DNSResponseCodeBadVers:
+		return "Bad OPT Version"
+	case DNSResponseCodeBadKey:
+		return "Key not recognized"
+	case DNSResponseCodeBadTime:
+		return "Signature out of time window"
+	case DNSResponseCodeBadMode:
+		return "Bad TKEY Mode"
+	case DNSResponseCodeBadName:
+		return "Duplicate key name"
+	case DNSResponseCodeBadAlg:
+		return "Algorithm not supported"
+	case DNSResponseCodeBadTruc:
+		return "Bad Truncation"
+	}
+}
+
 type DNSOpCode uint8
 
 const (
@@ -118,9 +159,12 @@ func decodeDNS(data []byte, p gopacket.PacketBuilder) error {
 
 // DecodeFromBytes decodes the slice into the DNS struct.
 func (d *DNS) DecodeFromBytes(data []byte, df gopacket.DecodeFeedback) error {
-	//TODO Check minimum len
-	//TODO Review DPKT code
-	//TODO Review Wireshark dissector code
+	//TODO Review Wireshark dissector code, could be
+
+	if len(data) < 12 {
+		return fmt.Errorf("DNS packet too short")
+	}
+
 	if err := d.Header.decode(data, df); err != nil {
 		return err
 	}
@@ -280,7 +324,7 @@ func decodeName(data []byte, offset int) ([]byte, int, error) {
 
 		/* EDNS, or other DNS option ? */
 		case 0x40: // RFC 2673
-			return nil, 0, fmt.Errorf("qname '0x40' unsupported yet (data=%x index=%d)",
+			return nil, 0, fmt.Errorf("qname '0x40' - RFC 2673 unsupported yet (data=%x index=%d)",
 				data[index], index)
 
 		case 0x80:
