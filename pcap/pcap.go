@@ -17,6 +17,11 @@ package pcap
 #include <stdlib.h>
 #include <pcap.h>
 
+// Some old versions of pcap don't define this constant.
+#ifndef PCAP_NETMASK_UNKNOWN
+#define PCAP_NETMASK_UNKNOWN 0xffffffff
+#endif
+
 // Currently, there's a ton of old PCAP libs out there (including the default
 // install on ubuntu machines) that don't support timestamps, so handle those.
 #ifndef PCAP_TSTAMP_HOST

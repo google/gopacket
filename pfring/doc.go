@@ -26,7 +26,7 @@ pfring:
  } else if err := ring.Enable(); err != nil { // Must do this!, or you get no packets!
    panic(err)
  } else {
-   packetSource := gopacket.NewPacketSource(ring, gopacket.LinkTypeEthernet)
+   packetSource := gopacket.NewPacketSource(ring, layers.LinkTypeEthernet)
 	 for packet := range packetSource.Packets() {
      handlePacket(packet)  // Do something with a packet here.
    }
