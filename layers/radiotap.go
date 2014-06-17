@@ -35,117 +35,130 @@ import (
 	"code.google.com/p/gopacket"
 )
 
+// This functions calculates the number of bytes needed to align with the width 
+// on the offset.
+// returns the number of bytes we need to skip to align to the offset (width) 
 func align(offset uint, width uint) uint {
     return ( (((offset) + ((width) - 1)) & (^((width) - 1))) - offset )
 }
 
-type IEEE80211RadioPresent uint16;
+type RadiotapPresent uint32
 
 const (
-	IEEE80211RadioPresentTSFT               IEEE80211RadioPresent = 0
-	IEEE80211RadioPresentFlags              IEEE80211RadioPresent = 1
-	IEEE80211RadioPresentRate               IEEE80211RadioPresent = 2
-	IEEE80211RadioPresentChannel            IEEE80211RadioPresent = 3
-	IEEE80211RadioPresentFHSS               IEEE80211RadioPresent = 4
-	IEEE80211RadioPresentDbmAntennaSignal   IEEE80211RadioPresent = 5
-	IEEE80211RadioPresentDbmAntennaNoise    IEEE80211RadioPresent = 6
-	IEEE80211RadioPresentLockQuality        IEEE80211RadioPresent = 7
-	IEEE80211RadioPresentTxAttenuation      IEEE80211RadioPresent = 8
-	IEEE80211RadioPresentDbTxAttenuation    IEEE80211RadioPresent = 9
-	IEEE80211RadioPresentDbmTxPower         IEEE80211RadioPresent = 10
-	IEEE80211RadioPresentAntenna            IEEE80211RadioPresent = 11
-	IEEE80211RadioPresentDbAntennaSignal    IEEE80211RadioPresent = 12
-	IEEE80211RadioPresentDbAntennaNoise     IEEE80211RadioPresent = 13
-	IEEE80211RadioPresentEXT                IEEE80211RadioPresent = 31
+	RadiotapPresentTSFT               RadiotapPresent = 1 << iota
+	RadiotapPresentFlags
+	RadiotapPresentRate
+	RadiotapPresentChannel
+	RadiotapPresentFHSS
+	RadiotapPresentDbmAntennaSignal
+	RadiotapPresentDbmAntennaNoise
+	RadiotapPresentLockQuality
+	RadiotapPresentTxAttenuation
+	RadiotapPresentDbTxAttenuation
+	RadiotapPresentDbmTxPower
+	RadiotapPresentAntenna
+	RadiotapPresentDbAntennaSignal
+	RadiotapPresentDbAntennaNoise
+	RadiotapPresentRxFlags
+	RadiotapPresentTxFlags
+	RadiotapPresentRtsRetries
+	RadiotapPresentDataRetries
+	RadiotapPresentEXT                 RadiotapPresent = 31 << iota
 )
 
-type IEEE80211RadioChannelFlags uint16;
+type RadiotapChannelFlags uint16
 
 const (
-        /* Channel flags. */
-	IEEE80211RadioChannelFlagsTurbo     IEEE80211RadioChannelFlags = 0x0010	/* Turbo channel */
-	IEEE80211RadioChannelFlagsCCK       IEEE80211RadioChannelFlags = 0x0020	/* CCK channel */
-	IEEE80211RadioChannelFlagsOFDM      IEEE80211RadioChannelFlags = 0x0040	/* OFDM channel */
-	IEEE80211RadioChannelFlags2Ghz	    IEEE80211RadioChannelFlags = 0x0080	/* 2 GHz spectrum channel. */
-	IEEE80211RadioChannelFlags5Ghz	    IEEE80211RadioChannelFlags = 0x0100	/* 5 GHz spectrum channel */
-	IEEE80211RadioChannelFlagsPassive   IEEE80211RadioChannelFlags = 0x0200	/* Only passive scan allowed */
-	IEEE80211RadioChannelFlagsDynamic   IEEE80211RadioChannelFlags = 0x0400	/* Dynamic CCK-OFDM channel */
-	IEEE80211RadioChannelFlagsGFSK	    IEEE80211RadioChannelFlags = 0x0800	/* GFSK channel (FHSS PHY) */
-)
+        /* Turbo channel */
+        RadiotapChannelFlagsTurbo           RadiotapChannelFlags = 0x0010
+        /* CCK channel */
+        RadiotapChannelFlagsCCK             RadiotapChannelFlags = 0x0020
+        /* OFDM channel */
+        RadiotapChannelFlagsOFDM            RadiotapChannelFlags = 0x0040
+        /* 2 GHz spectrum channel. */
+        RadiotapChannelFlags2Ghz	    RadiotapChannelFlags = 0x0080
+        /* 5 GHz spectrum channel */
+        RadiotapChannelFlags5Ghz	    RadiotapChannelFlags = 0x0100
+        /* Only passive scan allowed */
+        RadiotapChannelFlagsPassive         RadiotapChannelFlags = 0x0200
+        /* Dynamic CCK-OFDM channel */
+        RadiotapChannelFlagsDynamic         RadiotapChannelFlags = 0x0400
+        /* GFSK channel (FHSS PHY) */
+        RadiotapChannelFlagsGFSK	    RadiotapChannelFlags = 0x0800
+      )
 
-func (a IEEE80211RadioChannelFlags) String() string {
+func (a RadiotapChannelFlags) String() string {
     outStr := ""
-    if ((a & IEEE80211RadioChannelFlagsTurbo) == IEEE80211RadioChannelFlagsTurbo) {
+    if ((a & RadiotapChannelFlagsTurbo) == RadiotapChannelFlagsTurbo) {
         outStr += "Turbo,"
     }
-    if ((a & IEEE80211RadioChannelFlagsCCK) == IEEE80211RadioChannelFlagsCCK) {
+    if ((a & RadiotapChannelFlagsCCK) == RadiotapChannelFlagsCCK) {
         outStr += "CCK,"
     }
-    if ((a & IEEE80211RadioChannelFlagsOFDM) == IEEE80211RadioChannelFlagsOFDM) {
+    if ((a & RadiotapChannelFlagsOFDM) == RadiotapChannelFlagsOFDM) {
         outStr += "OFDM,"
     }
-    if ((a & IEEE80211RadioChannelFlags2Ghz) == IEEE80211RadioChannelFlags2Ghz) {
+    if ((a & RadiotapChannelFlags2Ghz) == RadiotapChannelFlags2Ghz) {
         outStr += "2Ghz,"
     }
-    if ((a & IEEE80211RadioChannelFlags5Ghz) == IEEE80211RadioChannelFlags5Ghz) {
+    if ((a & RadiotapChannelFlags5Ghz) == RadiotapChannelFlags5Ghz) {
         outStr += "5Ghz,"
     }
-    if ((a & IEEE80211RadioChannelFlagsPassive) == IEEE80211RadioChannelFlagsPassive) {
+    if ((a & RadiotapChannelFlagsPassive) == RadiotapChannelFlagsPassive) {
         outStr += "Passive,"
     }
-    if ((a & IEEE80211RadioChannelFlagsDynamic) == IEEE80211RadioChannelFlagsDynamic) {
+    if ((a & RadiotapChannelFlagsDynamic) == RadiotapChannelFlagsDynamic) {
         outStr += "Dynamic,"
     }
-    if ((a & IEEE80211RadioChannelFlagsGFSK) == IEEE80211RadioChannelFlagsGFSK) {
+    if ((a & RadiotapChannelFlagsGFSK) == RadiotapChannelFlagsGFSK) {
         outStr += "GFSK,"
     }
 
     return outStr
 }
 
-/* For IEEE80211_RADIOTAP_FLAGS */
-type IEEE80211RadioFlags uint8;
+type RadiotapFlags uint8
 
 const (
         /* sent/received during CFP */
-        IEEE80211RadioFlagsCFP	                IEEE80211RadioFlags = 0x01
+        RadiotapFlagsCFP	                RadiotapFlags = 1 << iota
         /* sent/received * with short * preamble */
-	IEEE80211RadioFlagsShortPreamble        IEEE80211RadioFlags = 0x02
+	RadiotapFlagsShortPreamble
 	/* sent/received * with WEP encryption */
-        IEEE80211RadioFlagsWEP		        IEEE80211RadioFlags = 0x04
+        RadiotapFlagsWEP
         /* sent/received * with fragmentation */
-	IEEE80211RadioFlagsFrag                 IEEE80211RadioFlags = 0x08
+	RadiotapFlagsFrag
         /* frame includes FCS */
-	IEEE80211RadioFlagsFCS                  IEEE80211RadioFlags = 0x10
+	RadiotapFlagsFCS
 	/* frame has padding between * 802.11 header and payload * (to 32-bit boundary) */
-        IEEE80211RadioFlagsDatapad              IEEE80211RadioFlags = 0x20
+        RadiotapFlagsDatapad
 	/* does not pass FCS check */
-        IEEE80211RadioFlagsBadFCS               IEEE80211RadioFlags = 0x40
+        RadiotapFlagsBadFCS
 	/* HT short GI */
-        IEEE80211RadioFlagsShortGI              IEEE80211RadioFlags = 0x80
+        RadiotapFlagsShortGI
 )
 
-func (a IEEE80211RadioFlags) String() string {
+func (a RadiotapFlags) String() string {
     outStr := ""
-    if ((a & IEEE80211RadioFlagsCFP) == IEEE80211RadioFlagsCFP) {
+    if ((a & RadiotapFlagsCFP) == RadiotapFlagsCFP) {
         outStr += "CFP,"
     }
-    if ((a & IEEE80211RadioFlagsShortPreamble) == IEEE80211RadioFlagsShortPreamble) {
+    if ((a & RadiotapFlagsShortPreamble) == RadiotapFlagsShortPreamble) {
         outStr += "SHORT-PREAMBLE,"
     }
-    if ((a & IEEE80211RadioFlagsWEP) == IEEE80211RadioFlagsWEP) {
+    if ((a & RadiotapFlagsWEP) == RadiotapFlagsWEP) {
         outStr += "WEP,"
     }
-    if ((a & IEEE80211RadioFlagsFrag) == IEEE80211RadioFlagsFrag) {
+    if ((a & RadiotapFlagsFrag) == RadiotapFlagsFrag) {
         outStr += "FRAG,"
     }
-    if ((a & IEEE80211RadioFlagsFCS) == IEEE80211RadioFlagsFCS) {
+    if ((a & RadiotapFlagsFCS) == RadiotapFlagsFCS) {
         outStr += "FCS,"
     }
-    if ((a & IEEE80211RadioFlagsDatapad) == IEEE80211RadioFlagsDatapad) {
+    if ((a & RadiotapFlagsDatapad) == RadiotapFlagsDatapad) {
         outStr += "DATAPAD,"
     }
-    if ((a & IEEE80211RadioFlagsShortGI) == IEEE80211RadioFlagsShortGI) {
+    if ((a & RadiotapFlagsShortGI) == RadiotapFlagsShortGI) {
         outStr += "SHORT-GI,"
     }
 
@@ -153,163 +166,178 @@ func (a IEEE80211RadioFlags) String() string {
 }
 
 
-type IEEE80211RadioRate uint8
+type RadiotapRate uint8
 
-func (a IEEE80211RadioRate) String() string {
+func (a RadiotapRate) String() string {
     return fmt.Sprintf("%v Mb/s", 0.5 * float32(a))
 }
 
-func decodeIEEE80211Radio(data []byte, p gopacket.PacketBuilder) error {
-	d := &IEEE80211Radio{}
+type RadiotapChannelFrequency uint16
+
+func (a RadiotapChannelFrequency) String() string {
+    return fmt.Sprintf("%d MHz", a)
+}
+
+func decodeRadiotap(data []byte, p gopacket.PacketBuilder) error {
+	d := &Radiotap{}
 	return decodingLayerDecoder(d, data, p)
 }
 
-type IEEE80211Radio struct {
+type Radiotap struct {
 	BaseLayer
 
 	// Version 0. Only increases for drastic changes, introduction of compatible new fields does not count.
-	Version uint8 
-
-        // length of the whole header in bytes, including it_version, it_pad, it_len, and data fields.
+	Version uint8
+        // Length of the whole header in bytes, including it_version, it_pad, it_len, and data fields.
         Length uint16
-
-	// A bitmap telling which fields are present. Set bit 31 (0x80000000) to extend the bitmap by another 32 bits. Additional extensions are made by setting bit 31.
-	Present uint32 
-
-	Tsft uint64
-	Flags IEEE80211RadioFlags
-	ChannelTx uint16
-	ChannelRx uint16
-	ChannelFlags IEEE80211RadioChannelFlags
-	Rate IEEE80211RadioRate
-	Fhss uint16
-	DbmSignal int8
-	DbmNoise int8
+	// Present is a bitmap telling which fields are present. Set bit 31 (0x80000000) to extend the bitmap by another 32 bits. Additional extensions are made by setting bit 31.
+	Present RadiotapPresent
+        // TSFT: value in microseconds of the MAC's 64-bit 802.11 Time Synchronization Function timer when the first bit of the MPDU arrived at the MAC. For received frames, only.  
+	TSFT uint64
+	Flags RadiotapFlags
+        // Rate Tx/Rx data rate
+	Rate RadiotapRate
+        // ChannelFrequency Tx/Rx frequency in MHz, followed by flags 
+	ChannelFrequency RadiotapChannelFrequency
+	ChannelFlags RadiotapChannelFlags
+	// FHSS For frequency-hopping radios, the hop set (first byte) and pattern (second byte).
+        FHSS uint16
+        // DbmAntennaSignal RF signal power at the antenna, decibel difference from one milliwatt.
+	DbmAntennaSignal int8
+        // DbmAntennaNoise RF noise power at the antenna, decibel difference from one milliwatt.
+	DbmAntennaNoise int8
+        // LockQuality Quality of Barker code lock. Unitless. Monotonically nondecreasing with "better" lock strength. Called "Signal Quality" in datasheets.  
 	LockQuality uint16
+        // TxAttenuation Transmit power expressed as unitless distance from max power set at factory calibration.  0 is max power. Monotonically nondecreasing with lower power levels.
 	TxAttenuation uint16
+        // DbTxAttenuation Transmit power expressed as decibel distance from max power set at factory calibration.  0 is max power.  Monotonically nondecreasing with lower power levels.
 	DbTxAttenuation uint16
-	Power int8	
+        // DbmTxPower Transmit power expressed as dBm (decibels from a 1 milliwatt reference). This is the absolute power level measured at the antenna port.
+	DbmTxPower int8
+        // Antenna Unitless indication of the Rx/Tx antenna for this packet. The first antenna is antenna 0.
 	Antenna uint8
-	DbSignal uint8
-	DbNoise uint8
+	// DbAntennaSignal RF signal power at the antenna, decibel difference from an arbitrary, fixed reference.
+        DbAntennaSignal uint8
+	// DbAntennaNoise RF noise power at the antenna, decibel difference from an arbitrary, fixed reference point.
+	DbAntennaNoise uint8
 }
 
-func (m IEEE80211Radio) SerializeTo(b gopacket.SerializeBuffer, opts gopacket.SerializeOptions) error { return nil }
-func (m *IEEE80211Radio) LayerType() gopacket.LayerType { return LayerTypeIEEE80211Radio }
+func (m *Radiotap) LayerType() gopacket.LayerType { return LayerTypeRadiotap }
 
-func (m *IEEE80211Radio) DecodeFromBytes(data []byte, df gopacket.DecodeFeedback) error {
+func (m *Radiotap) DecodeFromBytes(data []byte, df gopacket.DecodeFeedback) error {
 	m.Version = (uint8)(data[0])
 	m.Length = binary.LittleEndian.Uint16(data[2:4])
-	m.Present = binary.LittleEndian.Uint32(data[4:8])
-	if ((m.Present & 0x80000000) == 0x80000000 ) {
-		// offsef = offset + 1
+	m.Present = RadiotapPresent(binary.LittleEndian.Uint32(data[4:8]))
+
+	offset := uint(4)
+
+        for ((binary.LittleEndian.Uint32(data[offset:offset+4]) & 0x80000000) == 0x80000000 ) {
+            // Extended bitmap. 
+            offset+=4
 	}
 
-	offset := uint(8)
+	m.BaseLayer = BaseLayer{Contents: data[:(m.Length)], Payload: data[(m.Length):]}
 
-	if ((m.Present & (1 << IEEE80211RadioPresentTSFT))>0) {
+	if ((m.Present & RadiotapPresentTSFT)==RadiotapPresentTSFT) {
 		offset+=align(offset, 8)
-		m.Tsft=binary.LittleEndian.Uint64(data[offset:offset+8])
+		m.TSFT=binary.LittleEndian.Uint64(data[offset:offset+8])
 		offset+=8
 	}
 
-	if ((m.Present & (1 << IEEE80211RadioPresentFlags))>0) {
-		m.Flags=(IEEE80211RadioFlags)(data[offset])
+	if ((m.Present & RadiotapPresentFlags) == RadiotapPresentFlags) {
+		m.Flags=(RadiotapFlags)(data[offset])
 		offset++
 	}
 
-	if ((m.Present & (1 << IEEE80211RadioPresentRate))>0) {
-		m.Rate=(IEEE80211RadioRate)(data[offset])
+	if ((m.Present & RadiotapPresentRate) == RadiotapPresentRate) {
+		m.Rate=(RadiotapRate)(data[offset])
 		offset++
 	}
 
-	if ((m.Present & (1 << IEEE80211RadioPresentChannel))>0) {
-		offset+=align(offset, 2)
-		m.ChannelTx=binary.LittleEndian.Uint16(data[offset:offset+2])
-		offset += 2
-		m.ChannelFlags=(IEEE80211RadioChannelFlags)(data[offset])
+	if ((m.Present & RadiotapPresentFHSS) == RadiotapPresentFHSS) {
+		m.FHSS=binary.LittleEndian.Uint16(data[offset:offset+2])
+		offset+=2
+	}
+
+	if ((m.Present & RadiotapPresentChannel) == RadiotapPresentChannel) {
+		m.ChannelFrequency=RadiotapChannelFrequency(binary.LittleEndian.Uint16(data[offset:offset+2]))
+		offset+=2
+		m.ChannelFlags=(RadiotapChannelFlags)(data[offset])
 		offset++
 	}
 
-	if ((m.Present & (1 << IEEE80211RadioPresentDbmAntennaSignal))>0) {
-		m.DbmSignal=(int8)(data[offset])
+	if ((m.Present & RadiotapPresentDbmAntennaSignal) == RadiotapPresentDbmAntennaSignal) {
+		m.DbmAntennaSignal=(int8)(data[offset])
 		offset++
 	}
 
 
-	if ((m.Present & (1 << IEEE80211RadioPresentDbmAntennaNoise))>0) {
-		m.DbmNoise=(int8)(data[offset])
+	if ((m.Present & RadiotapPresentDbmAntennaNoise) == RadiotapPresentDbmAntennaNoise) {
+		m.DbmAntennaNoise=(int8)(data[offset])
 		offset++
 	}
 
 
-	if ((m.Present & (1 << IEEE80211RadioPresentLockQuality))>0) {
+	if ((m.Present & RadiotapPresentLockQuality) == RadiotapPresentLockQuality) {
 		offset+=align(offset, 2)
 		m.LockQuality=binary.LittleEndian.Uint16(data[offset:offset+2])
 		offset+=2
 	}
 
 
-	if ((m.Present & (1 << IEEE80211RadioPresentTxAttenuation))>0) {
+	if ((m.Present & RadiotapPresentTxAttenuation) == RadiotapPresentTxAttenuation) {
 		offset+=align(offset, 2)
 		m.TxAttenuation=binary.LittleEndian.Uint16(data[offset:offset+2])
 		offset+=2
 	}
 
 
-	if ((m.Present & (1 << IEEE80211RadioPresentDbTxAttenuation))>0) {
+	if ((m.Present & RadiotapPresentDbTxAttenuation) == RadiotapPresentDbTxAttenuation) {
 		offset+=align(offset, 2)
 		m.DbTxAttenuation=binary.LittleEndian.Uint16(data[offset:offset+2])
 		offset+=2
 	}
 
 
-	if ((m.Present & (1 << IEEE80211RadioPresentDbmTxPower))>0) {
-		m.Power=(int8)(data[offset])
+	if ((m.Present & RadiotapPresentDbmTxPower) == RadiotapPresentDbmTxPower) {
+		m.DbmTxPower=(int8)(data[offset])
 		offset++
 	}
 
 
-	if ((m.Present & (1 << IEEE80211RadioPresentAntenna))>0) {
+	if ((m.Present & RadiotapPresentAntenna) == RadiotapPresentAntenna) {
 		m.Antenna=(uint8)(data[offset])
 		offset++
 	}
 
 
-	if ((m.Present & (1 << IEEE80211RadioPresentDbAntennaSignal))>0) {
-		m.DbSignal=(uint8)(data[offset])
+	if ((m.Present & RadiotapPresentDbAntennaSignal) == RadiotapPresentDbAntennaSignal) {
+		m.DbAntennaSignal=(uint8)(data[offset])
 		offset++
 	}
 
 
-	if ((m.Present & (1 << IEEE80211RadioPresentDbAntennaNoise))>0) {
-		m.DbNoise=(uint8)(data[offset])
+	if ((m.Present & RadiotapPresentDbAntennaNoise) == RadiotapPresentDbAntennaNoise) {
+		m.DbAntennaNoise=(uint8)(data[offset])
 		offset++
 	}
 
 
-	if ((m.Present & (1 << IEEE80211RadioPresentEXT))>0) {
+	if ((m.Present & RadiotapPresentEXT) == RadiotapPresentEXT) {
 		offset+=align(offset, 4)
+                // TODO: Implement EXT
 		_ = data[offset:offset+4]
                 offset+=4
 	}
 
-	// if present contains ext, parse extra header
 
-	/*
-	d.Priority = (data[0] & 0xE0) >> 13
-	d.DropEligible = data[0]&0x10 != 0
-	d.VLANIdentifier = binary.BigEndian.Uint16(data[:2]) & 0x0FFF
-	d.Type = EthernetType(binary.BigEndian.Uint16(data[2:4]))
-	*/
-
-	if ((m.Flags & IEEE80211RadioFlagsDatapad) == IEEE80211RadioFlagsDatapad ) {
+	if ((m.Flags & RadiotapFlagsDatapad) == RadiotapFlagsDatapad ) {
+                // frame has padding between 802.11 header and payload (to 32-bit boundary)
+		offset+=align(offset, 4)
 	}
 
-	// fmt.Printf("%v %v %v %v",8+m.Length, offset, string(data[:(8+m.Length)]), string(data[(8+m.Length):]))
-	m.BaseLayer = BaseLayer{Contents: data[:(m.Length)], Payload: data[(m.Length):]}
 	return nil
 }
 
-func (m *IEEE80211Radio) CanDecode() gopacket.LayerClass { return LayerTypeIEEE80211Radio }
-func (m *IEEE80211Radio) NextLayerType() gopacket.LayerType { return LayerTypeIEEE802_11 }
+func (m *Radiotap) CanDecode() gopacket.LayerClass { return LayerTypeRadiotap }
+func (m *Radiotap) NextLayerType() gopacket.LayerType { return LayerTypeDot11 }

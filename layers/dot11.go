@@ -96,7 +96,7 @@ const (
 )
 
 
-type IEEE802_11 struct {
+type Dot11 struct {
 	BaseLayer
         Subtype uint8
         Type uint8
@@ -118,90 +118,90 @@ type IEEE802_11 struct {
         Address4 net.HardwareAddr
 }
 
-func decodeIEEE802_11(data []byte, p gopacket.PacketBuilder) error {
-	d := &IEEE802_11{}
+func decodeDot11(data []byte, p gopacket.PacketBuilder) error {
+	d := &Dot11{}
 	return decodingLayerDecoder(d, data, p)
 }
 
-func (m *IEEE802_11) LayerType() gopacket.LayerType { return LayerTypeIEEE802_11 }
-func (m *IEEE802_11) CanDecode() gopacket.LayerClass { return LayerTypeIEEE802_11 }
-func (m *IEEE802_11) NextLayerType() gopacket.LayerType {
+func (m *Dot11) LayerType() gopacket.LayerType { return LayerTypeDot11 }
+func (m *Dot11) CanDecode() gopacket.LayerClass { return LayerTypeDot11 }
+func (m *Dot11) NextLayerType() gopacket.LayerType {
         switch(m.Type) {
             case MGT_FRAME: {
                 // same header for all management frames, 24 bytes
                 switch (m.Subtype) {
                     case MGT_ASSOC_REQ: {
-                        return LayerTypeIEEE802_11MgmtAssocReq
+                        return LayerTypeDot11MgmtAssocReq
                     }
                     case MGT_ASSOC_RESP: {
-                        return LayerTypeIEEE802_11MgmtAssocResp
+                        return LayerTypeDot11MgmtAssocResp
                     }
                     case MGT_REASSOC_REQ: {
-                        return LayerTypeIEEE802_11MgmtReassocReq
+                        return LayerTypeDot11MgmtReassocReq
                     }
                     case MGT_REASSOC_RESP: {
-                        return LayerTypeIEEE802_11MgmtReassocResp
+                        return LayerTypeDot11MgmtReassocResp
                     }
                     case MGT_PROBE_REQ: {
-                        return LayerTypeIEEE802_11MgmtProbeReq
+                        return LayerTypeDot11MgmtProbeReq
                     }
                     case MGT_PROBE_RESP: {
-                        return LayerTypeIEEE802_11MgmtProbeResp
+                        return LayerTypeDot11MgmtProbeResp
                     }
                     case MGT_MEASUREMENT_PILOT: {
-                        return LayerTypeIEEE802_11MgmtMeasurementPilot
+                        return LayerTypeDot11MgmtMeasurementPilot
                     }
                     case MGT_BEACON: {
-                        return LayerTypeIEEE802_11MgmtBeacon
+                        return LayerTypeDot11MgmtBeacon
                     }
                     case MGT_ATIM: {
-                        return LayerTypeIEEE802_11MgmtATIM
+                        return LayerTypeDot11MgmtATIM
                     }
                     case MGT_DISASS: {
-                        return LayerTypeIEEE802_11MgmtDisassociation
+                        return LayerTypeDot11MgmtDisassociation
                     }
                     case MGT_AUTHENTICATION: {
-                        return LayerTypeIEEE802_11MgmtAuthentication
+                        return LayerTypeDot11MgmtAuthentication
                     }
                     case MGT_DEAUTHENTICATION: {
-                        return LayerTypeIEEE802_11MgmtDeauthentication
+                        return LayerTypeDot11MgmtDeauthentication
                     }
                     case MGT_ACTION: {
-                        return LayerTypeIEEE802_11MgmtAction
+                        return LayerTypeDot11MgmtAction
                     }
                     case MGT_ACTION_NO_ACK: {
-                        return LayerTypeIEEE802_11MgmtActionNoAck
+                        return LayerTypeDot11MgmtActionNoAck
                     }
                     case MGT_ARUBA_WLAN: {
-                        return LayerTypeIEEE802_11MgmtArubaWlan
+                        return LayerTypeDot11MgmtArubaWlan
                     }
                 }
             }
             case CONTROL_FRAME: {
                 switch (m.Subtype) {
                     case CTRL_BLOCK_ACK_REQ: {
-                        return LayerTypeIEEE802_11ControlBlockAckReq
+                        return LayerTypeDot11ControlBlockAckReq
                     }
                     case CTRL_BLOCK_ACK: {
-                        return LayerTypeIEEE802_11ControlBlockAck
+                        return LayerTypeDot11ControlBlockAck
                     }
                     case CTRL_RTS: {
-                        return LayerTypeIEEE802_11ControlRequestToSend
+                        return LayerTypeDot11ControlRequestToSend
                     }
                     case CTRL_CTS: {
-                        return LayerTypeIEEE802_11ControlClearToSend
+                        return LayerTypeDot11ControlClearToSend
                     }
                     case CTRL_PS_POLL: {
-                        return LayerTypeIEEE802_11ControlPowersavePoll
+                        return LayerTypeDot11ControlPowersavePoll
                     }
                     case CTRL_ACKNOWLEDGEMENT: {
-                        return LayerTypeIEEE802_11ControlAcknowledgement
+                        return LayerTypeDot11ControlAcknowledgement
                     }
                     case CTRL_CFP_END: {
-                        return LayerTypeIEEE802_11ControlContentionFreePeriodEnd
+                        return LayerTypeDot11ControlContentionFreePeriodEnd
                     }
                     case CTRL_CFP_ENDACK: {
-                        return LayerTypeIEEE802_11ControlContentionFreePeriodEndAck
+                        return LayerTypeDot11ControlContentionFreePeriodEndAck
                     }
                 }
                 return gopacket.LayerTypePayload
@@ -209,49 +209,49 @@ func (m *IEEE802_11) NextLayerType() gopacket.LayerType {
             case DATA_FRAME: {
                 switch (m.Subtype) {
                     case DATA: {
-                        return LayerTypeIEEE802_11DataFrame
+                        return LayerTypeDot11DataFrame
                     }
                     case DATA_CF_ACK: {
-                        return LayerTypeIEEE802_11DataCfAck
+                        return LayerTypeDot11DataCfAck
                     }
                     case DATA_CF_POLL: {
-                        return LayerTypeIEEE802_11DataCfPoll
+                        return LayerTypeDot11DataCfPoll
                     }
                     case DATA_CF_ACK_POLL: {
-                        return LayerTypeIEEE802_11DataCfAckPoll
+                        return LayerTypeDot11DataCfAckPoll
                     }
                     case DATA_NULL_FUNCTION: {
-                        return LayerTypeIEEE802_11DataNull
+                        return LayerTypeDot11DataNull
                     }
                     case DATA_CF_ACK_NOD: {
-                        return LayerTypeIEEE802_11DataCfAckNoData
+                        return LayerTypeDot11DataCfAckNoData
                     }
                     case DATA_CF_POLL_NOD: {
-                        return LayerTypeIEEE802_11DataCfPollNoData
+                        return LayerTypeDot11DataCfPollNoData
                     }
                     case DATA_CF_ACK_POLL_NOD: {
-                        return LayerTypeIEEE802_11DataCfAckPollNoData
+                        return LayerTypeDot11DataCfAckPollNoData
                     }
                     case DATA_QOS_DATA: {
-                        return LayerTypeIEEE802_11DataQosData
+                        return LayerTypeDot11DataQosData
                     }
                     case DATA_QOS_DATA_CF_ACK: {
-                        return LayerTypeIEEE802_11DataQosDataCfAck
+                        return LayerTypeDot11DataQosDataCfAck
                     }
                     case DATA_QOS_DATA_CF_POLL: {
-                        return LayerTypeIEEE802_11DataQosDataCfPoll
+                        return LayerTypeDot11DataQosDataCfPoll
                     }
                     case DATA_QOS_DATA_CF_ACK_POLL: {
-                        return LayerTypeIEEE802_11DataQosDataCfAckPoll
+                        return LayerTypeDot11DataQosDataCfAckPoll
                     }
                     case DATA_QOS_NULL: {
-                        return LayerTypeIEEE802_11DataQosNull
+                        return LayerTypeDot11DataQosNull
                     }
                     case DATA_QOS_CF_POLL_NOD: {
-                        return LayerTypeIEEE802_11DataQosCfPollNoData
+                        return LayerTypeDot11DataQosCfPollNoData
                     }
                     case DATA_QOS_CF_ACK_POLL_NOD: {
-                        return LayerTypeIEEE802_11DataQosCfAckPollNoData
+                        return LayerTypeDot11DataQosCfAckPollNoData
                     }
                 }
                 return gopacket.LayerTypePayload
@@ -261,7 +261,7 @@ func (m *IEEE802_11) NextLayerType() gopacket.LayerType {
         // not implemented yet
 	return gopacket.LayerTypePayload}
 
-func (m *IEEE802_11) DecodeFromBytes(data []byte, df gopacket.DecodeFeedback) error {
+func (m *Dot11) DecodeFromBytes(data []byte, df gopacket.DecodeFeedback) error {
     m.Subtype = ((uint8)(data[0]) & 0xF0) >> 4
     m.Type = ((uint8)(data[0]) & 0x000C) >> 2
     m.Proto = ((uint8)(data[0]) & 0x0003)
@@ -330,11 +330,11 @@ func (m *IEEE802_11) DecodeFromBytes(data []byte, df gopacket.DecodeFeedback) er
     return (nil)
 }
 
-func (m IEEE802_11) SerializeTo(b gopacket.SerializeBuffer, opts gopacket.SerializeOptions) error {
+func (m Dot11) SerializeTo(b gopacket.SerializeBuffer, opts gopacket.SerializeOptions) error {
 	return nil
 }
 
-func (m *IEEE802_11) String() string {
+func (m *Dot11) String() string {
     text := fmt.Sprintf("802.11 Type: %v Subtype: %v Protocol: %v ", m.Type, m.Subtype, m.Proto)
 
     if (!m.Valid) {
@@ -364,172 +364,172 @@ func (m *IEEE802_11) String() string {
 }
 
 
-type IEEE802_11MgmtFrame struct {
+type Dot11MgmtFrame struct {
 	BaseLayer
 }
 
-func (m *IEEE802_11MgmtFrame) NextLayerType() gopacket.LayerType { return gopacket.LayerTypePayload }
+func (m *Dot11MgmtFrame) NextLayerType() gopacket.LayerType { return gopacket.LayerTypePayload }
 
-var LayerTypeIEEE802_11ControlFrame = gopacket.RegisterLayerType(103001, gopacket.LayerTypeMetadata{"LayerTypeIEEE802_11ControlFrame", gopacket.DecodeFunc(decodeIEEE802_11ControlFrame)})
+var LayerTypeDot11ControlFrame = gopacket.RegisterLayerType(103001, gopacket.LayerTypeMetadata{"LayerTypeDot11ControlFrame", gopacket.DecodeFunc(decodeDot11ControlFrame)})
 
-type IEEE802_11ControlFrame struct {
+type Dot11ControlFrame struct {
 	BaseLayer
 }
 
-func (m *IEEE802_11ControlFrame) NextLayerType() gopacket.LayerType { return gopacket.LayerTypePayload }
+func (m *Dot11ControlFrame) NextLayerType() gopacket.LayerType { return gopacket.LayerTypePayload }
 
-func (m *IEEE802_11ControlFrame) LayerType() gopacket.LayerType { return LayerTypeIEEE802_11ControlFrame }
-func (m *IEEE802_11ControlFrame) CanDecode() gopacket.LayerClass { return LayerTypeIEEE802_11ControlFrame }
-func (m *IEEE802_11ControlFrame) DecodeFromBytes(data []byte, df gopacket.DecodeFeedback) error {
+func (m *Dot11ControlFrame) LayerType() gopacket.LayerType { return LayerTypeDot11ControlFrame }
+func (m *Dot11ControlFrame) CanDecode() gopacket.LayerClass { return LayerTypeDot11ControlFrame }
+func (m *Dot11ControlFrame) DecodeFromBytes(data []byte, df gopacket.DecodeFeedback) error {
     return nil
 }
 
-func decodeIEEE802_11ControlFrame(data []byte, p gopacket.PacketBuilder) error {
-	d := &IEEE802_11ControlFrame{}
+func decodeDot11ControlFrame(data []byte, p gopacket.PacketBuilder) error {
+	d := &Dot11ControlFrame{}
 	return decodingLayerDecoder(d, data, p)
 }
 
-var LayerTypeIEEE802_11DataFrame = gopacket.RegisterLayerType(105001, gopacket.LayerTypeMetadata{"LayerTypeIEEE802_11DataFrame", gopacket.DecodeFunc(decodeIEEE802_11DataFrame)})
+var LayerTypeDot11DataFrame = gopacket.RegisterLayerType(105001, gopacket.LayerTypeMetadata{"LayerTypeDot11DataFrame", gopacket.DecodeFunc(decodeDot11DataFrame)})
 
-type IEEE802_11DataFrame struct {
+type Dot11DataFrame struct {
 	BaseLayer
 }
 
-func (m *IEEE802_11DataFrame) NextLayerType() gopacket.LayerType { return gopacket.LayerTypePayload }
+func (m *Dot11DataFrame) NextLayerType() gopacket.LayerType { return gopacket.LayerTypePayload }
 
-func (m *IEEE802_11DataFrame) LayerType() gopacket.LayerType { return LayerTypeIEEE802_11DataFrame }
-func (m *IEEE802_11DataFrame) CanDecode() gopacket.LayerClass { return LayerTypeIEEE802_11DataFrame }
-func (m *IEEE802_11DataFrame) DecodeFromBytes(data []byte, df gopacket.DecodeFeedback) error {
+func (m *Dot11DataFrame) LayerType() gopacket.LayerType { return LayerTypeDot11DataFrame }
+func (m *Dot11DataFrame) CanDecode() gopacket.LayerClass { return LayerTypeDot11DataFrame }
+func (m *Dot11DataFrame) DecodeFromBytes(data []byte, df gopacket.DecodeFeedback) error {
     return nil
 }
 
-func decodeIEEE802_11DataFrame(data []byte, p gopacket.PacketBuilder) error {
-	d := &IEEE802_11DataFrame{}
+func decodeDot11DataFrame(data []byte, p gopacket.PacketBuilder) error {
+	d := &Dot11DataFrame{}
 	return decodingLayerDecoder(d, data, p)
 }
 
 
-var LayerTypeIEEE802_11DataCfAck = gopacket.RegisterLayerType(105002, gopacket.LayerTypeMetadata{"LayerTypeIEEE802_11DataCfAck", gopacket.DecodeFunc(decodeIEEE802_11DataCfAck)})
+var LayerTypeDot11DataCfAck = gopacket.RegisterLayerType(105002, gopacket.LayerTypeMetadata{"LayerTypeDot11DataCfAck", gopacket.DecodeFunc(decodeDot11DataCfAck)})
 
-type IEEE802_11DataCfAck struct {
-	IEEE802_11ControlFrame
+type Dot11DataCfAck struct {
+	Dot11ControlFrame
 }
 
-func decodeIEEE802_11DataCfAck(data []byte, p gopacket.PacketBuilder) error {
-	d := &IEEE802_11DataCfAck{}
+func decodeDot11DataCfAck(data []byte, p gopacket.PacketBuilder) error {
+	d := &Dot11DataCfAck{}
 	return decodingLayerDecoder(d, data, p)
 }
 
-func (m *IEEE802_11DataCfAck) LayerType() gopacket.LayerType { return LayerTypeIEEE802_11DataCfAck }
-func (m *IEEE802_11DataCfAck) CanDecode() gopacket.LayerClass { return LayerTypeIEEE802_11DataCfAck }
-func (m *IEEE802_11DataCfAck) DecodeFromBytes(data []byte, df gopacket.DecodeFeedback) error {
+func (m *Dot11DataCfAck) LayerType() gopacket.LayerType { return LayerTypeDot11DataCfAck }
+func (m *Dot11DataCfAck) CanDecode() gopacket.LayerClass { return LayerTypeDot11DataCfAck }
+func (m *Dot11DataCfAck) DecodeFromBytes(data []byte, df gopacket.DecodeFeedback) error {
     return nil
 }
 
-var LayerTypeIEEE802_11DataCfPoll = gopacket.RegisterLayerType(105003, gopacket.LayerTypeMetadata{"LayerTypeIEEE802_11DataCfPoll", gopacket.DecodeFunc(decodeIEEE802_11DataCfPoll)})
+var LayerTypeDot11DataCfPoll = gopacket.RegisterLayerType(105003, gopacket.LayerTypeMetadata{"LayerTypeDot11DataCfPoll", gopacket.DecodeFunc(decodeDot11DataCfPoll)})
 
-type IEEE802_11DataCfPoll struct {
-	IEEE802_11ControlFrame
+type Dot11DataCfPoll struct {
+	Dot11ControlFrame
 }
 
-func decodeIEEE802_11DataCfPoll(data []byte, p gopacket.PacketBuilder) error {
-	d := &IEEE802_11DataCfPoll{}
+func decodeDot11DataCfPoll(data []byte, p gopacket.PacketBuilder) error {
+	d := &Dot11DataCfPoll{}
 	return decodingLayerDecoder(d, data, p)
 }
 
-func (m *IEEE802_11DataCfPoll) LayerType() gopacket.LayerType { return LayerTypeIEEE802_11DataCfPoll }
-func (m *IEEE802_11DataCfPoll) CanDecode() gopacket.LayerClass { return LayerTypeIEEE802_11DataCfPoll }
-func (m *IEEE802_11DataCfPoll) DecodeFromBytes(data []byte, df gopacket.DecodeFeedback) error {
+func (m *Dot11DataCfPoll) LayerType() gopacket.LayerType { return LayerTypeDot11DataCfPoll }
+func (m *Dot11DataCfPoll) CanDecode() gopacket.LayerClass { return LayerTypeDot11DataCfPoll }
+func (m *Dot11DataCfPoll) DecodeFromBytes(data []byte, df gopacket.DecodeFeedback) error {
     return nil
 }
 
-var LayerTypeIEEE802_11DataCfAckPoll = gopacket.RegisterLayerType(105043, gopacket.LayerTypeMetadata{"LayerTypeIEEE802_11DataCfAckPoll", gopacket.DecodeFunc(decodeIEEE802_11DataCfAckPoll)})
+var LayerTypeDot11DataCfAckPoll = gopacket.RegisterLayerType(105043, gopacket.LayerTypeMetadata{"LayerTypeDot11DataCfAckPoll", gopacket.DecodeFunc(decodeDot11DataCfAckPoll)})
 
-type IEEE802_11DataCfAckPoll struct {
-	IEEE802_11ControlFrame
+type Dot11DataCfAckPoll struct {
+	Dot11ControlFrame
 }
 
-func decodeIEEE802_11DataCfAckPoll(data []byte, p gopacket.PacketBuilder) error {
-	d := &IEEE802_11DataCfAckPoll{}
+func decodeDot11DataCfAckPoll(data []byte, p gopacket.PacketBuilder) error {
+	d := &Dot11DataCfAckPoll{}
 	return decodingLayerDecoder(d, data, p)
 }
 
-func (m *IEEE802_11DataCfAckPoll) LayerType() gopacket.LayerType { return LayerTypeIEEE802_11DataCfAckPoll }
-func (m *IEEE802_11DataCfAckPoll) CanDecode() gopacket.LayerClass { return LayerTypeIEEE802_11DataCfAckPoll }
-func (m *IEEE802_11DataCfAckPoll) DecodeFromBytes(data []byte, df gopacket.DecodeFeedback) error {
+func (m *Dot11DataCfAckPoll) LayerType() gopacket.LayerType { return LayerTypeDot11DataCfAckPoll }
+func (m *Dot11DataCfAckPoll) CanDecode() gopacket.LayerClass { return LayerTypeDot11DataCfAckPoll }
+func (m *Dot11DataCfAckPoll) DecodeFromBytes(data []byte, df gopacket.DecodeFeedback) error {
     return nil
 }
 
-var LayerTypeIEEE802_11DataNull = gopacket.RegisterLayerType(105004, gopacket.LayerTypeMetadata{"LayerTypeIEEE802_11DataNull", gopacket.DecodeFunc(decodeIEEE802_11DataNull)})
+var LayerTypeDot11DataNull = gopacket.RegisterLayerType(105004, gopacket.LayerTypeMetadata{"LayerTypeDot11DataNull", gopacket.DecodeFunc(decodeDot11DataNull)})
 
-type IEEE802_11DataNull struct {
-	IEEE802_11ControlFrame
+type Dot11DataNull struct {
+	Dot11ControlFrame
 }
 
-func decodeIEEE802_11DataNull(data []byte, p gopacket.PacketBuilder) error {
-	d := &IEEE802_11DataNull{}
+func decodeDot11DataNull(data []byte, p gopacket.PacketBuilder) error {
+	d := &Dot11DataNull{}
 	return decodingLayerDecoder(d, data, p)
 }
 
-func (m *IEEE802_11DataNull) LayerType() gopacket.LayerType { return LayerTypeIEEE802_11DataNull }
-func (m *IEEE802_11DataNull) CanDecode() gopacket.LayerClass { return LayerTypeIEEE802_11DataNull }
-func (m *IEEE802_11DataNull) DecodeFromBytes(data []byte, df gopacket.DecodeFeedback) error {
+func (m *Dot11DataNull) LayerType() gopacket.LayerType { return LayerTypeDot11DataNull }
+func (m *Dot11DataNull) CanDecode() gopacket.LayerClass { return LayerTypeDot11DataNull }
+func (m *Dot11DataNull) DecodeFromBytes(data []byte, df gopacket.DecodeFeedback) error {
     return nil
 }
 
-var LayerTypeIEEE802_11DataCfAckNoData = gopacket.RegisterLayerType(105005, gopacket.LayerTypeMetadata{"LayerTypeIEEE802_11DataCfAckNoData", gopacket.DecodeFunc(decodeIEEE802_11DataCfAckNoData)})
+var LayerTypeDot11DataCfAckNoData = gopacket.RegisterLayerType(105005, gopacket.LayerTypeMetadata{"LayerTypeDot11DataCfAckNoData", gopacket.DecodeFunc(decodeDot11DataCfAckNoData)})
 
-type IEEE802_11DataCfAckNoData struct {
-	IEEE802_11ControlFrame
+type Dot11DataCfAckNoData struct {
+	Dot11ControlFrame
 }
 
-func decodeIEEE802_11DataCfAckNoData(data []byte, p gopacket.PacketBuilder) error {
-	d := &IEEE802_11DataCfAckNoData{}
+func decodeDot11DataCfAckNoData(data []byte, p gopacket.PacketBuilder) error {
+	d := &Dot11DataCfAckNoData{}
 	return decodingLayerDecoder(d, data, p)
 }
 
-func (m *IEEE802_11DataCfAckNoData) LayerType() gopacket.LayerType { return LayerTypeIEEE802_11DataCfAckNoData }
-func (m *IEEE802_11DataCfAckNoData) CanDecode() gopacket.LayerClass { return LayerTypeIEEE802_11DataCfAckNoData }
-func (m *IEEE802_11DataCfAckNoData) DecodeFromBytes(data []byte, df gopacket.DecodeFeedback) error {
+func (m *Dot11DataCfAckNoData) LayerType() gopacket.LayerType { return LayerTypeDot11DataCfAckNoData }
+func (m *Dot11DataCfAckNoData) CanDecode() gopacket.LayerClass { return LayerTypeDot11DataCfAckNoData }
+func (m *Dot11DataCfAckNoData) DecodeFromBytes(data []byte, df gopacket.DecodeFeedback) error {
     return nil
 }
 
-var LayerTypeIEEE802_11DataCfPollNoData = gopacket.RegisterLayerType(105006, gopacket.LayerTypeMetadata{"LayerTypeIEEE802_11DataCfPollNoData", gopacket.DecodeFunc(decodeIEEE802_11DataCfPollNoData)})
+var LayerTypeDot11DataCfPollNoData = gopacket.RegisterLayerType(105006, gopacket.LayerTypeMetadata{"LayerTypeDot11DataCfPollNoData", gopacket.DecodeFunc(decodeDot11DataCfPollNoData)})
 
-type IEEE802_11DataCfPollNoData struct {
-	IEEE802_11ControlFrame
+type Dot11DataCfPollNoData struct {
+	Dot11ControlFrame
 }
 
-func decodeIEEE802_11DataCfPollNoData(data []byte, p gopacket.PacketBuilder) error {
-	d := &IEEE802_11DataCfPollNoData{}
+func decodeDot11DataCfPollNoData(data []byte, p gopacket.PacketBuilder) error {
+	d := &Dot11DataCfPollNoData{}
 	return decodingLayerDecoder(d, data, p)
 }
 
-func (m *IEEE802_11DataCfPollNoData) LayerType() gopacket.LayerType { return LayerTypeIEEE802_11DataCfPollNoData }
-func (m *IEEE802_11DataCfPollNoData) CanDecode() gopacket.LayerClass { return LayerTypeIEEE802_11DataCfPollNoData }
-func (m *IEEE802_11DataCfPollNoData) DecodeFromBytes(data []byte, df gopacket.DecodeFeedback) error {
+func (m *Dot11DataCfPollNoData) LayerType() gopacket.LayerType { return LayerTypeDot11DataCfPollNoData }
+func (m *Dot11DataCfPollNoData) CanDecode() gopacket.LayerClass { return LayerTypeDot11DataCfPollNoData }
+func (m *Dot11DataCfPollNoData) DecodeFromBytes(data []byte, df gopacket.DecodeFeedback) error {
     return nil
 }
 
-var LayerTypeIEEE802_11DataCfAckPollNoData = gopacket.RegisterLayerType(105007, gopacket.LayerTypeMetadata{"LayerTypeIEEE802_11DataCfAckPollNoData", gopacket.DecodeFunc(decodeIEEE802_11DataCfAckPollNoData)})
+var LayerTypeDot11DataCfAckPollNoData = gopacket.RegisterLayerType(105007, gopacket.LayerTypeMetadata{"LayerTypeDot11DataCfAckPollNoData", gopacket.DecodeFunc(decodeDot11DataCfAckPollNoData)})
 
-type IEEE802_11DataCfAckPollNoData struct {
-	IEEE802_11ControlFrame
+type Dot11DataCfAckPollNoData struct {
+	Dot11ControlFrame
 }
 
-func decodeIEEE802_11DataCfAckPollNoData(data []byte, p gopacket.PacketBuilder) error {
-	d := &IEEE802_11DataCfAckPollNoData{}
+func decodeDot11DataCfAckPollNoData(data []byte, p gopacket.PacketBuilder) error {
+	d := &Dot11DataCfAckPollNoData{}
 	return decodingLayerDecoder(d, data, p)
 }
 
-func (m *IEEE802_11DataCfAckPollNoData) LayerType() gopacket.LayerType { return LayerTypeIEEE802_11DataCfAckPollNoData }
-func (m *IEEE802_11DataCfAckPollNoData) CanDecode() gopacket.LayerClass { return LayerTypeIEEE802_11DataCfAckPollNoData }
-func (m *IEEE802_11DataCfAckPollNoData) DecodeFromBytes(data []byte, df gopacket.DecodeFeedback) error {
+func (m *Dot11DataCfAckPollNoData) LayerType() gopacket.LayerType { return LayerTypeDot11DataCfAckPollNoData }
+func (m *Dot11DataCfAckPollNoData) CanDecode() gopacket.LayerClass { return LayerTypeDot11DataCfAckPollNoData }
+func (m *Dot11DataCfAckPollNoData) DecodeFromBytes(data []byte, df gopacket.DecodeFeedback) error {
     return nil
 }
 
-type IEEE802_11DataQos struct {
-    IEEE802_11ControlFrame
+type Dot11DataQos struct {
+    Dot11ControlFrame
     TID uint8 /* Traffic Identifier */
     EOSP bool /* End of service period */
     AckPolicy uint8
@@ -545,7 +545,7 @@ type IEEE802_11DataQos struct {
     */
 }
 
-func (m *IEEE802_11DataQos) DecodeFromBytes(data []byte, df gopacket.DecodeFeedback) error {
+func (m *Dot11DataQos) DecodeFromBytes(data []byte, df gopacket.DecodeFeedback) error {
     m.TID = ((uint8)(data[0]) & 0x0F) 
     m.EOSP = ((uint8)(data[0]) & 0x10) == 0x10
     m.AckPolicy = ((uint8)(data[0]) & 0x60) >> 5
@@ -554,149 +554,149 @@ func (m *IEEE802_11DataQos) DecodeFromBytes(data []byte, df gopacket.DecodeFeedb
     return nil
 }
 
-func (d *IEEE802_11DataQos) String() string {
+func (d *Dot11DataQos) String() string {
     ack_policies:=map[uint8]string{0:"Normal Ack", 1:"No Ack", 2: "No Explicit Acknowledgement", 3:"Block Acknowledgement"}
     return fmt.Sprintf("Ack policy: %v[%v]", ack_policies[d.AckPolicy], d.AckPolicy)
 }
 
 
-var LayerTypeIEEE802_11DataQosData = gopacket.RegisterLayerType(105008, gopacket.LayerTypeMetadata{"LayerTypeIEEE802_11DataQosData", gopacket.DecodeFunc(decodeIEEE802_11DataQosData)})
+var LayerTypeDot11DataQosData = gopacket.RegisterLayerType(105008, gopacket.LayerTypeMetadata{"LayerTypeDot11DataQosData", gopacket.DecodeFunc(decodeDot11DataQosData)})
 
-type IEEE802_11DataQosData struct {
-	IEEE802_11DataQos
+type Dot11DataQosData struct {
+	Dot11DataQos
 }
 
-func decodeIEEE802_11DataQosData(data []byte, p gopacket.PacketBuilder) error {
-	d := &IEEE802_11DataQosData{}
+func decodeDot11DataQosData(data []byte, p gopacket.PacketBuilder) error {
+	d := &Dot11DataQosData{}
 	return decodingLayerDecoder(d, data, p)
 }
 
-func (m *IEEE802_11DataQosData) LayerType() gopacket.LayerType { return LayerTypeIEEE802_11DataQosData }
-func (m *IEEE802_11DataQosData) CanDecode() gopacket.LayerClass { return LayerTypeIEEE802_11DataQosData }
+func (m *Dot11DataQosData) LayerType() gopacket.LayerType { return LayerTypeDot11DataQosData }
+func (m *Dot11DataQosData) CanDecode() gopacket.LayerClass { return LayerTypeDot11DataQosData }
 
-func (m *IEEE802_11DataQosData) NextLayerType() gopacket.LayerType { 
-    return LayerTypeIEEE802_11DataFrame
+func (m *Dot11DataQosData) NextLayerType() gopacket.LayerType { 
+    return LayerTypeDot11DataFrame
 }
 
-func (d *IEEE802_11DataQosData) String() string {
-    return fmt.Sprintf("IEEE802_11DataQosData %v", d.IEEE802_11DataQos.String())
+func (d *Dot11DataQosData) String() string {
+    return fmt.Sprintf("Dot11DataQosData %v", d.Dot11DataQos.String())
 }
 
-var LayerTypeIEEE802_11DataQosDataCfAck = gopacket.RegisterLayerType(105009, gopacket.LayerTypeMetadata{"LayerTypeIEEE802_11DataQosDataCfAck", gopacket.DecodeFunc(decodeIEEE802_11DataQosDataCfAck)})
+var LayerTypeDot11DataQosDataCfAck = gopacket.RegisterLayerType(105009, gopacket.LayerTypeMetadata{"LayerTypeDot11DataQosDataCfAck", gopacket.DecodeFunc(decodeDot11DataQosDataCfAck)})
 
-type IEEE802_11DataQosDataCfAck struct {
-	IEEE802_11DataQos
+type Dot11DataQosDataCfAck struct {
+	Dot11DataQos
 }
 
-func decodeIEEE802_11DataQosDataCfAck(data []byte, p gopacket.PacketBuilder) error {
-	d := &IEEE802_11DataQosDataCfAck{}
+func decodeDot11DataQosDataCfAck(data []byte, p gopacket.PacketBuilder) error {
+	d := &Dot11DataQosDataCfAck{}
 	return decodingLayerDecoder(d, data, p)
 }
 
-func (m *IEEE802_11DataQosDataCfAck) LayerType() gopacket.LayerType { return LayerTypeIEEE802_11DataQosDataCfAck }
-func (m *IEEE802_11DataQosDataCfAck) CanDecode() gopacket.LayerClass { return LayerTypeIEEE802_11DataQosDataCfAck }
+func (m *Dot11DataQosDataCfAck) LayerType() gopacket.LayerType { return LayerTypeDot11DataQosDataCfAck }
+func (m *Dot11DataQosDataCfAck) CanDecode() gopacket.LayerClass { return LayerTypeDot11DataQosDataCfAck }
 
-func (m *IEEE802_11DataQosDataCfAck) NextLayerType() gopacket.LayerType { 
-    return LayerTypeIEEE802_11DataCfAck
+func (m *Dot11DataQosDataCfAck) NextLayerType() gopacket.LayerType { 
+    return LayerTypeDot11DataCfAck
 }
 
-func (d *IEEE802_11DataQosDataCfAck) String() string {
-    return fmt.Sprintf("IEEE802_11DataQosDataCfAck %v", d.IEEE802_11DataQos.String())
+func (d *Dot11DataQosDataCfAck) String() string {
+    return fmt.Sprintf("Dot11DataQosDataCfAck %v", d.Dot11DataQos.String())
 }
 
-var LayerTypeIEEE802_11DataQosDataCfPoll = gopacket.RegisterLayerType(105010, gopacket.LayerTypeMetadata{"LayerTypeIEEE802_11DataQosDataCfPoll", gopacket.DecodeFunc(decodeIEEE802_11DataQosDataCfPoll)})
+var LayerTypeDot11DataQosDataCfPoll = gopacket.RegisterLayerType(105010, gopacket.LayerTypeMetadata{"LayerTypeDot11DataQosDataCfPoll", gopacket.DecodeFunc(decodeDot11DataQosDataCfPoll)})
 
-type IEEE802_11DataQosDataCfPoll struct {
-	IEEE802_11DataQos
+type Dot11DataQosDataCfPoll struct {
+	Dot11DataQos
 }
 
-func decodeIEEE802_11DataQosDataCfPoll(data []byte, p gopacket.PacketBuilder) error {
-	d := &IEEE802_11DataQosDataCfPoll{}
+func decodeDot11DataQosDataCfPoll(data []byte, p gopacket.PacketBuilder) error {
+	d := &Dot11DataQosDataCfPoll{}
 	return decodingLayerDecoder(d, data, p)
 }
 
-func (m *IEEE802_11DataQosDataCfPoll) LayerType() gopacket.LayerType { return LayerTypeIEEE802_11DataQosDataCfPoll }
-func (m *IEEE802_11DataQosDataCfPoll) CanDecode() gopacket.LayerClass { return LayerTypeIEEE802_11DataQosDataCfPoll }
-func (m *IEEE802_11DataQosDataCfPoll) NextLayerType() gopacket.LayerType { return LayerTypeIEEE802_11DataCfPoll } 
-func (d *IEEE802_11DataQosDataCfPoll) String() string {
-    return fmt.Sprintf("IEEE802_11DataQosDataCfAck %v", d.IEEE802_11DataQos.String())
+func (m *Dot11DataQosDataCfPoll) LayerType() gopacket.LayerType { return LayerTypeDot11DataQosDataCfPoll }
+func (m *Dot11DataQosDataCfPoll) CanDecode() gopacket.LayerClass { return LayerTypeDot11DataQosDataCfPoll }
+func (m *Dot11DataQosDataCfPoll) NextLayerType() gopacket.LayerType { return LayerTypeDot11DataCfPoll } 
+func (d *Dot11DataQosDataCfPoll) String() string {
+    return fmt.Sprintf("Dot11DataQosDataCfAck %v", d.Dot11DataQos.String())
 }
 
-var LayerTypeIEEE802_11DataQosDataCfAckPoll = gopacket.RegisterLayerType(105011, gopacket.LayerTypeMetadata{"LayerTypeIEEE802_11DataQosDataCfAckPoll", gopacket.DecodeFunc(decodeIEEE802_11DataQosDataCfAckPoll)})
+var LayerTypeDot11DataQosDataCfAckPoll = gopacket.RegisterLayerType(105011, gopacket.LayerTypeMetadata{"LayerTypeDot11DataQosDataCfAckPoll", gopacket.DecodeFunc(decodeDot11DataQosDataCfAckPoll)})
 
-type IEEE802_11DataQosDataCfAckPoll struct {
-	IEEE802_11DataQos
+type Dot11DataQosDataCfAckPoll struct {
+	Dot11DataQos
 }
 
-func decodeIEEE802_11DataQosDataCfAckPoll(data []byte, p gopacket.PacketBuilder) error {
-	d := &IEEE802_11DataQosDataCfAckPoll{}
+func decodeDot11DataQosDataCfAckPoll(data []byte, p gopacket.PacketBuilder) error {
+	d := &Dot11DataQosDataCfAckPoll{}
 	return decodingLayerDecoder(d, data, p)
 }
 
-func (m *IEEE802_11DataQosDataCfAckPoll) LayerType() gopacket.LayerType { return LayerTypeIEEE802_11DataQosDataCfAckPoll }
-func (m *IEEE802_11DataQosDataCfAckPoll) CanDecode() gopacket.LayerClass { return LayerTypeIEEE802_11DataQosDataCfAckPoll }
-func (m *IEEE802_11DataQosDataCfAckPoll) NextLayerType() gopacket.LayerType { return LayerTypeIEEE802_11DataCfAckPoll }
-func (d *IEEE802_11DataQosDataCfAckPoll) String() string {
-    return fmt.Sprintf("IEEE802_11DataQosDataCfAckPoll %v", d.IEEE802_11DataQos.String())
+func (m *Dot11DataQosDataCfAckPoll) LayerType() gopacket.LayerType { return LayerTypeDot11DataQosDataCfAckPoll }
+func (m *Dot11DataQosDataCfAckPoll) CanDecode() gopacket.LayerClass { return LayerTypeDot11DataQosDataCfAckPoll }
+func (m *Dot11DataQosDataCfAckPoll) NextLayerType() gopacket.LayerType { return LayerTypeDot11DataCfAckPoll }
+func (d *Dot11DataQosDataCfAckPoll) String() string {
+    return fmt.Sprintf("Dot11DataQosDataCfAckPoll %v", d.Dot11DataQos.String())
 }
 
-var LayerTypeIEEE802_11DataQosNull = gopacket.RegisterLayerType(105012, gopacket.LayerTypeMetadata{"LayerTypeIEEE802_11DataQosNull", gopacket.DecodeFunc(decodeIEEE802_11DataQosNull)})
+var LayerTypeDot11DataQosNull = gopacket.RegisterLayerType(105012, gopacket.LayerTypeMetadata{"LayerTypeDot11DataQosNull", gopacket.DecodeFunc(decodeDot11DataQosNull)})
 
-type IEEE802_11DataQosNull struct {
-	IEEE802_11DataQos
+type Dot11DataQosNull struct {
+	Dot11DataQos
 }
 
-func decodeIEEE802_11DataQosNull(data []byte, p gopacket.PacketBuilder) error {
-	d := &IEEE802_11DataQosNull{}
+func decodeDot11DataQosNull(data []byte, p gopacket.PacketBuilder) error {
+	d := &Dot11DataQosNull{}
 	return decodingLayerDecoder(d, data, p)
 }
 
-func (m *IEEE802_11DataQosNull) LayerType() gopacket.LayerType { return LayerTypeIEEE802_11DataQosNull }
-func (m *IEEE802_11DataQosNull) CanDecode() gopacket.LayerClass { return LayerTypeIEEE802_11DataQosNull }
-func (m *IEEE802_11DataQosNull) NextLayerType() gopacket.LayerType { return LayerTypeIEEE802_11DataNull } 
-func (d *IEEE802_11DataQosNull) String() string {
-    return fmt.Sprintf("IEEE802_11DataQosNull %v", d.IEEE802_11DataQos.String())
+func (m *Dot11DataQosNull) LayerType() gopacket.LayerType { return LayerTypeDot11DataQosNull }
+func (m *Dot11DataQosNull) CanDecode() gopacket.LayerClass { return LayerTypeDot11DataQosNull }
+func (m *Dot11DataQosNull) NextLayerType() gopacket.LayerType { return LayerTypeDot11DataNull } 
+func (d *Dot11DataQosNull) String() string {
+    return fmt.Sprintf("Dot11DataQosNull %v", d.Dot11DataQos.String())
 }
 
-var LayerTypeIEEE802_11DataQosCfPollNoData = gopacket.RegisterLayerType(105013, gopacket.LayerTypeMetadata{"LayerTypeIEEE802_11DataQosCfPollNoData", gopacket.DecodeFunc(decodeIEEE802_11DataQosCfPollNoData)})
+var LayerTypeDot11DataQosCfPollNoData = gopacket.RegisterLayerType(105013, gopacket.LayerTypeMetadata{"LayerTypeDot11DataQosCfPollNoData", gopacket.DecodeFunc(decodeDot11DataQosCfPollNoData)})
 
-type IEEE802_11DataQosCfPollNoData struct {
-	IEEE802_11DataQos
+type Dot11DataQosCfPollNoData struct {
+	Dot11DataQos
 }
 
-func decodeIEEE802_11DataQosCfPollNoData(data []byte, p gopacket.PacketBuilder) error {
-	d := &IEEE802_11DataQosCfPollNoData{}
+func decodeDot11DataQosCfPollNoData(data []byte, p gopacket.PacketBuilder) error {
+	d := &Dot11DataQosCfPollNoData{}
 	return decodingLayerDecoder(d, data, p)
 }
 
-func (m *IEEE802_11DataQosCfPollNoData) LayerType() gopacket.LayerType { return LayerTypeIEEE802_11DataQosCfPollNoData }
-func (m *IEEE802_11DataQosCfPollNoData) CanDecode() gopacket.LayerClass { return LayerTypeIEEE802_11DataQosCfPollNoData }
-func (m *IEEE802_11DataQosCfPollNoData) NextLayerType() gopacket.LayerType { return LayerTypeIEEE802_11DataCfPollNoData } 
-func (d *IEEE802_11DataQosCfPollNoData) String() string {
-    return fmt.Sprintf("IEEE802_11DataQosCfPollNoData %v", d.IEEE802_11DataQos.String())
+func (m *Dot11DataQosCfPollNoData) LayerType() gopacket.LayerType { return LayerTypeDot11DataQosCfPollNoData }
+func (m *Dot11DataQosCfPollNoData) CanDecode() gopacket.LayerClass { return LayerTypeDot11DataQosCfPollNoData }
+func (m *Dot11DataQosCfPollNoData) NextLayerType() gopacket.LayerType { return LayerTypeDot11DataCfPollNoData } 
+func (d *Dot11DataQosCfPollNoData) String() string {
+    return fmt.Sprintf("Dot11DataQosCfPollNoData %v", d.Dot11DataQos.String())
 }
 
-var LayerTypeIEEE802_11DataQosCfAckPollNoData = gopacket.RegisterLayerType(105014, gopacket.LayerTypeMetadata{"LayerTypeIEEE802_11DataQosCfAckPollNoData", gopacket.DecodeFunc(decodeIEEE802_11DataQosCfAckPollNoData)})
+var LayerTypeDot11DataQosCfAckPollNoData = gopacket.RegisterLayerType(105014, gopacket.LayerTypeMetadata{"LayerTypeDot11DataQosCfAckPollNoData", gopacket.DecodeFunc(decodeDot11DataQosCfAckPollNoData)})
 
-type IEEE802_11DataQosCfAckPollNoData struct {
-	IEEE802_11DataQos
+type Dot11DataQosCfAckPollNoData struct {
+	Dot11DataQos
 }
 
-func decodeIEEE802_11DataQosCfAckPollNoData(data []byte, p gopacket.PacketBuilder) error {
-	d := &IEEE802_11DataQosCfAckPollNoData{}
+func decodeDot11DataQosCfAckPollNoData(data []byte, p gopacket.PacketBuilder) error {
+	d := &Dot11DataQosCfAckPollNoData{}
 	return decodingLayerDecoder(d, data, p)
 }
 
-func (m *IEEE802_11DataQosCfAckPollNoData) LayerType() gopacket.LayerType { return LayerTypeIEEE802_11DataQosCfAckPollNoData }
-func (m *IEEE802_11DataQosCfAckPollNoData) CanDecode() gopacket.LayerClass { return LayerTypeIEEE802_11DataQosCfAckPollNoData }
-func (m *IEEE802_11DataQosCfAckPollNoData) NextLayerType() gopacket.LayerType { return LayerTypeIEEE802_11DataCfAckPollNoData } 
-func (d *IEEE802_11DataQosCfAckPollNoData) String() string {
-    return fmt.Sprintf("IEEE802_11DataQosCfAckPollNoData %v", d.IEEE802_11DataQos.String())
+func (m *Dot11DataQosCfAckPollNoData) LayerType() gopacket.LayerType { return LayerTypeDot11DataQosCfAckPollNoData }
+func (m *Dot11DataQosCfAckPollNoData) CanDecode() gopacket.LayerClass { return LayerTypeDot11DataQosCfAckPollNoData }
+func (m *Dot11DataQosCfAckPollNoData) NextLayerType() gopacket.LayerType { return LayerTypeDot11DataCfAckPollNoData } 
+func (d *Dot11DataQosCfAckPollNoData) String() string {
+    return fmt.Sprintf("Dot11DataQosCfAckPollNoData %v", d.Dot11DataQos.String())
 }
 
-var LayerTypeIEEE802_11InformationElement = gopacket.RegisterLayerType(105015, gopacket.LayerTypeMetadata{"LayerTypeIEEE802_11InformationElement", gopacket.DecodeFunc(decodeIEEE802_11InformationElement)})
+var LayerTypeDot11InformationElement = gopacket.RegisterLayerType(105015, gopacket.LayerTypeMetadata{"LayerTypeDot11InformationElement", gopacket.DecodeFunc(decodeDot11InformationElement)})
 
-type IEEE802_11InformationElement struct {
+type Dot11InformationElement struct {
 	BaseLayer
         Id uint8 
         Length uint8
@@ -704,19 +704,19 @@ type IEEE802_11InformationElement struct {
         Info []byte
 }
 
-func (m *IEEE802_11InformationElement) LayerType() gopacket.LayerType { return LayerTypeIEEE802_11InformationElement }
-func (m *IEEE802_11InformationElement) CanDecode() gopacket.LayerClass { return LayerTypeIEEE802_11InformationElement }
+func (m *Dot11InformationElement) LayerType() gopacket.LayerType { return LayerTypeDot11InformationElement }
+func (m *Dot11InformationElement) CanDecode() gopacket.LayerClass { return LayerTypeDot11InformationElement }
 
-func (m *IEEE802_11InformationElement) NextLayerType() gopacket.LayerType { 
+func (m *Dot11InformationElement) NextLayerType() gopacket.LayerType { 
     /*    
     if (false) {
         Return NIL)
     } 
     */
-    return LayerTypeIEEE802_11InformationElement 
+    return LayerTypeDot11InformationElement 
 }
 
-func (m *IEEE802_11InformationElement) DecodeFromBytes(data []byte, df gopacket.DecodeFeedback) error {
+func (m *Dot11InformationElement) DecodeFromBytes(data []byte, df gopacket.DecodeFeedback) error {
     m.Id = data[0]
     m.Length = data[1]
     offset := uint8(2)
@@ -734,7 +734,7 @@ func (m *IEEE802_11InformationElement) DecodeFromBytes(data []byte, df gopacket.
     return nil
 }
 
-func (d *IEEE802_11InformationElement) String() string {
+func (d *Dot11InformationElement) String() string {
     ids:=map[uint8]string{0:"SSID", 1:"Rates", 2: "FHset", 3:"DSset", 4:"CFset", 5:"TIM", 6:"IBSSset", 16:"challenge",
                                             42:"ERPinfo", 46:"QoS Capability", 47:"ERPinfo", 48:"RSNinfo", 50:"ESRates",221:"vendor",68:"reserved"}
     if (d.Id==0) {
@@ -756,191 +756,191 @@ func (d *IEEE802_11InformationElement) String() string {
     }
 }
 
-func decodeIEEE802_11InformationElement(data []byte, p gopacket.PacketBuilder) error {
-	d := &IEEE802_11InformationElement{}
+func decodeDot11InformationElement(data []byte, p gopacket.PacketBuilder) error {
+	d := &Dot11InformationElement{}
 	return decodingLayerDecoder(d, data, p)
 }
 
 
-var LayerTypeIEEE802_11ControlClearToSend = gopacket.RegisterLayerType(104001, gopacket.LayerTypeMetadata{"LayerTypeIEEE802_11ControlClearToSend", gopacket.DecodeFunc(decodeIEEE802_11ControlClearToSend)})
+var LayerTypeDot11ControlClearToSend = gopacket.RegisterLayerType(104001, gopacket.LayerTypeMetadata{"LayerTypeDot11ControlClearToSend", gopacket.DecodeFunc(decodeDot11ControlClearToSend)})
 
-type IEEE802_11ControlClearToSend struct {
-	IEEE802_11ControlFrame
+type Dot11ControlClearToSend struct {
+	Dot11ControlFrame
 }
 
-func decodeIEEE802_11ControlClearToSend(data []byte, p gopacket.PacketBuilder) error {
-	d := &IEEE802_11ControlClearToSend{}
+func decodeDot11ControlClearToSend(data []byte, p gopacket.PacketBuilder) error {
+	d := &Dot11ControlClearToSend{}
 	return decodingLayerDecoder(d, data, p)
 }
 
-func (m *IEEE802_11ControlClearToSend) LayerType() gopacket.LayerType { return LayerTypeIEEE802_11ControlClearToSend }
-func (m *IEEE802_11ControlClearToSend) CanDecode() gopacket.LayerClass { return LayerTypeIEEE802_11ControlClearToSend }
-func (m *IEEE802_11ControlClearToSend) DecodeFromBytes(data []byte, df gopacket.DecodeFeedback) error {
+func (m *Dot11ControlClearToSend) LayerType() gopacket.LayerType { return LayerTypeDot11ControlClearToSend }
+func (m *Dot11ControlClearToSend) CanDecode() gopacket.LayerClass { return LayerTypeDot11ControlClearToSend }
+func (m *Dot11ControlClearToSend) DecodeFromBytes(data []byte, df gopacket.DecodeFeedback) error {
     return nil
 }
 
-var LayerTypeIEEE802_11ControlRequestToSend = gopacket.RegisterLayerType(104002, gopacket.LayerTypeMetadata{"LayerTypeIEEE802_11ControlRequestToSend", gopacket.DecodeFunc(decodeIEEE802_11ControlRequestToSend)})
+var LayerTypeDot11ControlRequestToSend = gopacket.RegisterLayerType(104002, gopacket.LayerTypeMetadata{"LayerTypeDot11ControlRequestToSend", gopacket.DecodeFunc(decodeDot11ControlRequestToSend)})
 
-type IEEE802_11ControlRequestToSend struct {
-	IEEE802_11ControlFrame
+type Dot11ControlRequestToSend struct {
+	Dot11ControlFrame
 }
 
-func decodeIEEE802_11ControlRequestToSend(data []byte, p gopacket.PacketBuilder) error {
-	d := &IEEE802_11ControlRequestToSend{}
+func decodeDot11ControlRequestToSend(data []byte, p gopacket.PacketBuilder) error {
+	d := &Dot11ControlRequestToSend{}
 	return decodingLayerDecoder(d, data, p)
 }
 
-func (m *IEEE802_11ControlRequestToSend) LayerType() gopacket.LayerType { return LayerTypeIEEE802_11ControlRequestToSend }
-func (m *IEEE802_11ControlRequestToSend) CanDecode() gopacket.LayerClass { return LayerTypeIEEE802_11ControlRequestToSend }
-func (m *IEEE802_11ControlRequestToSend) DecodeFromBytes(data []byte, df gopacket.DecodeFeedback) error {
+func (m *Dot11ControlRequestToSend) LayerType() gopacket.LayerType { return LayerTypeDot11ControlRequestToSend }
+func (m *Dot11ControlRequestToSend) CanDecode() gopacket.LayerClass { return LayerTypeDot11ControlRequestToSend }
+func (m *Dot11ControlRequestToSend) DecodeFromBytes(data []byte, df gopacket.DecodeFeedback) error {
     return nil
 }
 
-var LayerTypeIEEE802_11ControlBlockAckReq = gopacket.RegisterLayerType(104003, gopacket.LayerTypeMetadata{"LayerTypeIEEE802_11ControlBlockAckReq", gopacket.DecodeFunc(decodeIEEE802_11ControlBlockAckReq)})
+var LayerTypeDot11ControlBlockAckReq = gopacket.RegisterLayerType(104003, gopacket.LayerTypeMetadata{"LayerTypeDot11ControlBlockAckReq", gopacket.DecodeFunc(decodeDot11ControlBlockAckReq)})
 
-type IEEE802_11ControlBlockAckReq struct {
-	IEEE802_11ControlFrame
+type Dot11ControlBlockAckReq struct {
+	Dot11ControlFrame
 }
 
-func decodeIEEE802_11ControlBlockAckReq(data []byte, p gopacket.PacketBuilder) error {
-	d := &IEEE802_11ControlBlockAckReq{}
+func decodeDot11ControlBlockAckReq(data []byte, p gopacket.PacketBuilder) error {
+	d := &Dot11ControlBlockAckReq{}
 	return decodingLayerDecoder(d, data, p)
 }
 
-func (m *IEEE802_11ControlBlockAckReq) LayerType() gopacket.LayerType { return LayerTypeIEEE802_11ControlBlockAckReq }
-func (m *IEEE802_11ControlBlockAckReq) CanDecode() gopacket.LayerClass { return LayerTypeIEEE802_11ControlBlockAckReq }
-func (m *IEEE802_11ControlBlockAckReq) DecodeFromBytes(data []byte, df gopacket.DecodeFeedback) error {
+func (m *Dot11ControlBlockAckReq) LayerType() gopacket.LayerType { return LayerTypeDot11ControlBlockAckReq }
+func (m *Dot11ControlBlockAckReq) CanDecode() gopacket.LayerClass { return LayerTypeDot11ControlBlockAckReq }
+func (m *Dot11ControlBlockAckReq) DecodeFromBytes(data []byte, df gopacket.DecodeFeedback) error {
     return nil
 }
 
-var LayerTypeIEEE802_11ControlBlockAck = gopacket.RegisterLayerType(104004, gopacket.LayerTypeMetadata{"LayerTypeIEEE802_11ControlBlockAck", gopacket.DecodeFunc(decodeIEEE802_11ControlBlockAck)})
+var LayerTypeDot11ControlBlockAck = gopacket.RegisterLayerType(104004, gopacket.LayerTypeMetadata{"LayerTypeDot11ControlBlockAck", gopacket.DecodeFunc(decodeDot11ControlBlockAck)})
 
-type IEEE802_11ControlBlockAck struct {
-	IEEE802_11ControlFrame
+type Dot11ControlBlockAck struct {
+	Dot11ControlFrame
 }
 
-func decodeIEEE802_11ControlBlockAck(data []byte, p gopacket.PacketBuilder) error {
-	d := &IEEE802_11ControlBlockAck{}
+func decodeDot11ControlBlockAck(data []byte, p gopacket.PacketBuilder) error {
+	d := &Dot11ControlBlockAck{}
 	return decodingLayerDecoder(d, data, p)
 }
 
-func (m *IEEE802_11ControlBlockAck) LayerType() gopacket.LayerType { return LayerTypeIEEE802_11ControlBlockAck }
-func (m *IEEE802_11ControlBlockAck) CanDecode() gopacket.LayerClass { return LayerTypeIEEE802_11ControlBlockAck }
-func (m *IEEE802_11ControlBlockAck) DecodeFromBytes(data []byte, df gopacket.DecodeFeedback) error {
+func (m *Dot11ControlBlockAck) LayerType() gopacket.LayerType { return LayerTypeDot11ControlBlockAck }
+func (m *Dot11ControlBlockAck) CanDecode() gopacket.LayerClass { return LayerTypeDot11ControlBlockAck }
+func (m *Dot11ControlBlockAck) DecodeFromBytes(data []byte, df gopacket.DecodeFeedback) error {
     return nil
 }
 
-var LayerTypeIEEE802_11ControlPowersavePoll = gopacket.RegisterLayerType(104005, gopacket.LayerTypeMetadata{"LayerTypeIEEE802_11ControlPowersavePoll", gopacket.DecodeFunc(decodeIEEE802_11ControlPowersavePoll)})
+var LayerTypeDot11ControlPowersavePoll = gopacket.RegisterLayerType(104005, gopacket.LayerTypeMetadata{"LayerTypeDot11ControlPowersavePoll", gopacket.DecodeFunc(decodeDot11ControlPowersavePoll)})
 
-type IEEE802_11ControlPowersavePoll struct {
-	IEEE802_11ControlFrame
+type Dot11ControlPowersavePoll struct {
+	Dot11ControlFrame
 }
 
-func decodeIEEE802_11ControlPowersavePoll(data []byte, p gopacket.PacketBuilder) error {
-	d := &IEEE802_11ControlPowersavePoll{}
+func decodeDot11ControlPowersavePoll(data []byte, p gopacket.PacketBuilder) error {
+	d := &Dot11ControlPowersavePoll{}
 	return decodingLayerDecoder(d, data, p)
 }
 
-func (m *IEEE802_11ControlPowersavePoll) LayerType() gopacket.LayerType { return LayerTypeIEEE802_11ControlPowersavePoll }
-func (m *IEEE802_11ControlPowersavePoll) CanDecode() gopacket.LayerClass { return LayerTypeIEEE802_11ControlPowersavePoll }
-func (m *IEEE802_11ControlPowersavePoll) DecodeFromBytes(data []byte, df gopacket.DecodeFeedback) error {
+func (m *Dot11ControlPowersavePoll) LayerType() gopacket.LayerType { return LayerTypeDot11ControlPowersavePoll }
+func (m *Dot11ControlPowersavePoll) CanDecode() gopacket.LayerClass { return LayerTypeDot11ControlPowersavePoll }
+func (m *Dot11ControlPowersavePoll) DecodeFromBytes(data []byte, df gopacket.DecodeFeedback) error {
     return nil
 }
 
-var LayerTypeIEEE802_11ControlAcknowledgement = gopacket.RegisterLayerType(104006, gopacket.LayerTypeMetadata{"LayerTypeIEEE802_11ControlAcknowledgement", gopacket.DecodeFunc(decodeIEEE802_11ControlAcknowledgement)})
+var LayerTypeDot11ControlAcknowledgement = gopacket.RegisterLayerType(104006, gopacket.LayerTypeMetadata{"LayerTypeDot11ControlAcknowledgement", gopacket.DecodeFunc(decodeDot11ControlAcknowledgement)})
 
-type IEEE802_11ControlAcknowledgement struct {
-	IEEE802_11ControlFrame
+type Dot11ControlAcknowledgement struct {
+	Dot11ControlFrame
 }
 
-func decodeIEEE802_11ControlAcknowledgement(data []byte, p gopacket.PacketBuilder) error {
-	d := &IEEE802_11ControlAcknowledgement{}
+func decodeDot11ControlAcknowledgement(data []byte, p gopacket.PacketBuilder) error {
+	d := &Dot11ControlAcknowledgement{}
 	return decodingLayerDecoder(d, data, p)
 }
 
-func (m *IEEE802_11ControlAcknowledgement) LayerType() gopacket.LayerType { return LayerTypeIEEE802_11ControlAcknowledgement }
-func (m *IEEE802_11ControlAcknowledgement) CanDecode() gopacket.LayerClass { return LayerTypeIEEE802_11ControlAcknowledgement }
-func (m *IEEE802_11ControlAcknowledgement) DecodeFromBytes(data []byte, df gopacket.DecodeFeedback) error {
+func (m *Dot11ControlAcknowledgement) LayerType() gopacket.LayerType { return LayerTypeDot11ControlAcknowledgement }
+func (m *Dot11ControlAcknowledgement) CanDecode() gopacket.LayerClass { return LayerTypeDot11ControlAcknowledgement }
+func (m *Dot11ControlAcknowledgement) DecodeFromBytes(data []byte, df gopacket.DecodeFeedback) error {
     return nil
 }
 
-var LayerTypeIEEE802_11ControlContentionFreePeriodEnd = gopacket.RegisterLayerType(104007, gopacket.LayerTypeMetadata{"LayerTypeIEEE802_11ControlContentionFreePeriodEnd", gopacket.DecodeFunc(decodeIEEE802_11ControlContentionFreePeriodEnd)})
+var LayerTypeDot11ControlContentionFreePeriodEnd = gopacket.RegisterLayerType(104007, gopacket.LayerTypeMetadata{"LayerTypeDot11ControlContentionFreePeriodEnd", gopacket.DecodeFunc(decodeDot11ControlContentionFreePeriodEnd)})
 
-type IEEE802_11ControlContentionFreePeriodEnd struct {
-	IEEE802_11ControlFrame
+type Dot11ControlContentionFreePeriodEnd struct {
+	Dot11ControlFrame
 }
 
-func decodeIEEE802_11ControlContentionFreePeriodEnd(data []byte, p gopacket.PacketBuilder) error {
-	d := &IEEE802_11ControlContentionFreePeriodEnd{}
+func decodeDot11ControlContentionFreePeriodEnd(data []byte, p gopacket.PacketBuilder) error {
+	d := &Dot11ControlContentionFreePeriodEnd{}
 	return decodingLayerDecoder(d, data, p)
 }
 
-func (m *IEEE802_11ControlContentionFreePeriodEnd) LayerType() gopacket.LayerType { return LayerTypeIEEE802_11ControlContentionFreePeriodEnd }
-func (m *IEEE802_11ControlContentionFreePeriodEnd) CanDecode() gopacket.LayerClass { return LayerTypeIEEE802_11ControlContentionFreePeriodEnd }
-func (m *IEEE802_11ControlContentionFreePeriodEnd) DecodeFromBytes(data []byte, df gopacket.DecodeFeedback) error {
+func (m *Dot11ControlContentionFreePeriodEnd) LayerType() gopacket.LayerType { return LayerTypeDot11ControlContentionFreePeriodEnd }
+func (m *Dot11ControlContentionFreePeriodEnd) CanDecode() gopacket.LayerClass { return LayerTypeDot11ControlContentionFreePeriodEnd }
+func (m *Dot11ControlContentionFreePeriodEnd) DecodeFromBytes(data []byte, df gopacket.DecodeFeedback) error {
     return nil
 }
 
-var LayerTypeIEEE802_11ControlContentionFreePeriodEndAck = gopacket.RegisterLayerType(104008, gopacket.LayerTypeMetadata{"LayerTypeIEEE802_11ControlContentionFreePeriodEndAck", gopacket.DecodeFunc(decodeIEEE802_11ControlContentionFreePeriodEndAck)})
+var LayerTypeDot11ControlContentionFreePeriodEndAck = gopacket.RegisterLayerType(104008, gopacket.LayerTypeMetadata{"LayerTypeDot11ControlContentionFreePeriodEndAck", gopacket.DecodeFunc(decodeDot11ControlContentionFreePeriodEndAck)})
 
-type IEEE802_11ControlContentionFreePeriodEndAck struct {
-	IEEE802_11ControlFrame
+type Dot11ControlContentionFreePeriodEndAck struct {
+	Dot11ControlFrame
 }
 
-func decodeIEEE802_11ControlContentionFreePeriodEndAck(data []byte, p gopacket.PacketBuilder) error {
-	d := &IEEE802_11ControlContentionFreePeriodEndAck{}
+func decodeDot11ControlContentionFreePeriodEndAck(data []byte, p gopacket.PacketBuilder) error {
+	d := &Dot11ControlContentionFreePeriodEndAck{}
 	return decodingLayerDecoder(d, data, p)
 }
 
-func (m *IEEE802_11ControlContentionFreePeriodEndAck) LayerType() gopacket.LayerType { return LayerTypeIEEE802_11ControlContentionFreePeriodEndAck }
-func (m *IEEE802_11ControlContentionFreePeriodEndAck) CanDecode() gopacket.LayerClass { return LayerTypeIEEE802_11ControlContentionFreePeriodEndAck }
-func (m *IEEE802_11ControlContentionFreePeriodEndAck) DecodeFromBytes(data []byte, df gopacket.DecodeFeedback) error {
+func (m *Dot11ControlContentionFreePeriodEndAck) LayerType() gopacket.LayerType { return LayerTypeDot11ControlContentionFreePeriodEndAck }
+func (m *Dot11ControlContentionFreePeriodEndAck) CanDecode() gopacket.LayerClass { return LayerTypeDot11ControlContentionFreePeriodEndAck }
+func (m *Dot11ControlContentionFreePeriodEndAck) DecodeFromBytes(data []byte, df gopacket.DecodeFeedback) error {
     return nil
 }
 
 
 
-var LayerTypeIEEE802_11MgmtAssocReq = gopacket.RegisterLayerType(DOT11_MGT_ASSOC_REQ_REGISTER_NUM, gopacket.LayerTypeMetadata{"LayerTypeIEEE802_11MgmtAssocReq", gopacket.DecodeFunc(decodeIEEE802_11MgmtAssocReq)})
+var LayerTypeDot11MgmtAssocReq = gopacket.RegisterLayerType(DOT11_MGT_ASSOC_REQ_REGISTER_NUM, gopacket.LayerTypeMetadata{"LayerTypeDot11MgmtAssocReq", gopacket.DecodeFunc(decodeDot11MgmtAssocReq)})
 
-type IEEE802_11MgmtAssocReq struct {
-	IEEE802_11MgmtFrame
+type Dot11MgmtAssocReq struct {
+	Dot11MgmtFrame
         CapabilityInfo uint16 
         ListenInterval uint16 
 }
 
-func decodeIEEE802_11MgmtAssocReq(data []byte, p gopacket.PacketBuilder) error {
-	d := &IEEE802_11MgmtAssocReq{}
+func decodeDot11MgmtAssocReq(data []byte, p gopacket.PacketBuilder) error {
+	d := &Dot11MgmtAssocReq{}
 	return decodingLayerDecoder(d, data, p)
 }
 
-func (m *IEEE802_11MgmtAssocReq) LayerType() gopacket.LayerType { return LayerTypeIEEE802_11MgmtAssocReq }
-func (m *IEEE802_11MgmtAssocReq) CanDecode() gopacket.LayerClass { return LayerTypeIEEE802_11MgmtAssocReq }
-func (m *IEEE802_11MgmtAssocReq) NextLayerType() gopacket.LayerType { return LayerTypeIEEE802_11InformationElement }
-func (m *IEEE802_11MgmtAssocReq) DecodeFromBytes(data []byte, df gopacket.DecodeFeedback) error {
+func (m *Dot11MgmtAssocReq) LayerType() gopacket.LayerType { return LayerTypeDot11MgmtAssocReq }
+func (m *Dot11MgmtAssocReq) CanDecode() gopacket.LayerClass { return LayerTypeDot11MgmtAssocReq }
+func (m *Dot11MgmtAssocReq) NextLayerType() gopacket.LayerType { return LayerTypeDot11InformationElement }
+func (m *Dot11MgmtAssocReq) DecodeFromBytes(data []byte, df gopacket.DecodeFeedback) error {
     m.CapabilityInfo=binary.LittleEndian.Uint16(data[0:2])
     m.ListenInterval=binary.LittleEndian.Uint16(data[2:4])
     m.BaseLayer = BaseLayer{Contents: data[:4], Payload: data[4:]}
     return nil
 }
 
-var LayerTypeIEEE802_11MgmtAssocResp = gopacket.RegisterLayerType(1059981, gopacket.LayerTypeMetadata{"LayerTypeIEEE802_11MgmtAssocResp", gopacket.DecodeFunc(decodeIEEE802_11MgmtAssocResp)})
+var LayerTypeDot11MgmtAssocResp = gopacket.RegisterLayerType(1059981, gopacket.LayerTypeMetadata{"LayerTypeDot11MgmtAssocResp", gopacket.DecodeFunc(decodeDot11MgmtAssocResp)})
 
-type IEEE802_11MgmtAssocResp struct {
-	IEEE802_11MgmtFrame
+type Dot11MgmtAssocResp struct {
+	Dot11MgmtFrame
         CapabilityInfo uint16 
         Status uint16 
         AID uint16 
 }
 
-func decodeIEEE802_11MgmtAssocResp(data []byte, p gopacket.PacketBuilder) error {
-	d := &IEEE802_11MgmtAssocResp{}
+func decodeDot11MgmtAssocResp(data []byte, p gopacket.PacketBuilder) error {
+	d := &Dot11MgmtAssocResp{}
 	return decodingLayerDecoder(d, data, p)
 }
 
-func (m *IEEE802_11MgmtAssocResp) CanDecode() gopacket.LayerClass { return LayerTypeIEEE802_11MgmtAssocResp }
-func (m *IEEE802_11MgmtAssocResp) LayerType() gopacket.LayerType { return LayerTypeIEEE802_11MgmtAssocResp }
-func (m *IEEE802_11MgmtAssocResp) NextLayerType() gopacket.LayerType { return LayerTypeIEEE802_11InformationElement }
-func (m *IEEE802_11MgmtAssocResp) DecodeFromBytes(data []byte, df gopacket.DecodeFeedback) error {
+func (m *Dot11MgmtAssocResp) CanDecode() gopacket.LayerClass { return LayerTypeDot11MgmtAssocResp }
+func (m *Dot11MgmtAssocResp) LayerType() gopacket.LayerType { return LayerTypeDot11MgmtAssocResp }
+func (m *Dot11MgmtAssocResp) NextLayerType() gopacket.LayerType { return LayerTypeDot11InformationElement }
+func (m *Dot11MgmtAssocResp) DecodeFromBytes(data []byte, df gopacket.DecodeFeedback) error {
     m.CapabilityInfo=binary.LittleEndian.Uint16(data[0:2])
     m.Status=binary.LittleEndian.Uint16(data[2:4])
     m.AID=binary.LittleEndian.Uint16(data[4:6])
@@ -948,24 +948,24 @@ func (m *IEEE802_11MgmtAssocResp) DecodeFromBytes(data []byte, df gopacket.Decod
     return nil
 }
 
-var LayerTypeIEEE802_11MgmtReassocReq = gopacket.RegisterLayerType(1059999, gopacket.LayerTypeMetadata{"LayerTypeIEEE802_11MgmtReassocReq", gopacket.DecodeFunc(decodeIEEE802_11MgmtReassocReq)})
+var LayerTypeDot11MgmtReassocReq = gopacket.RegisterLayerType(1059999, gopacket.LayerTypeMetadata{"LayerTypeDot11MgmtReassocReq", gopacket.DecodeFunc(decodeDot11MgmtReassocReq)})
 
-type IEEE802_11MgmtReassocReq struct {
-	IEEE802_11MgmtFrame
+type Dot11MgmtReassocReq struct {
+	Dot11MgmtFrame
         CapabilityInfo uint16
         ListenInterval uint16
         CurrentApAddress net.HardwareAddr
 }
 
-func decodeIEEE802_11MgmtReassocReq(data []byte, p gopacket.PacketBuilder) error {
-	d := &IEEE802_11MgmtReassocReq{}
+func decodeDot11MgmtReassocReq(data []byte, p gopacket.PacketBuilder) error {
+	d := &Dot11MgmtReassocReq{}
 	return decodingLayerDecoder(d, data, p)
 }
 
-func (m *IEEE802_11MgmtReassocReq) LayerType() gopacket.LayerType { return LayerTypeIEEE802_11MgmtReassocReq }
-func (m *IEEE802_11MgmtReassocReq) CanDecode() gopacket.LayerClass { return LayerTypeIEEE802_11MgmtReassocReq }
-func (m *IEEE802_11MgmtReassocReq) NextLayerType() gopacket.LayerType { return LayerTypeIEEE802_11InformationElement }
-func (m *IEEE802_11MgmtReassocReq) DecodeFromBytes(data []byte, df gopacket.DecodeFeedback) error {
+func (m *Dot11MgmtReassocReq) LayerType() gopacket.LayerType { return LayerTypeDot11MgmtReassocReq }
+func (m *Dot11MgmtReassocReq) CanDecode() gopacket.LayerClass { return LayerTypeDot11MgmtReassocReq }
+func (m *Dot11MgmtReassocReq) NextLayerType() gopacket.LayerType { return LayerTypeDot11InformationElement }
+func (m *Dot11MgmtReassocReq) DecodeFromBytes(data []byte, df gopacket.DecodeFeedback) error {
     m.CapabilityInfo=binary.LittleEndian.Uint16(data[0:2])
     m.ListenInterval=binary.LittleEndian.Uint16(data[2:4])
     m.CurrentApAddress=net.HardwareAddr(data[4:10])
@@ -974,98 +974,98 @@ func (m *IEEE802_11MgmtReassocReq) DecodeFromBytes(data []byte, df gopacket.Deco
 }
 
 
-var LayerTypeIEEE802_11MgmtReassocResp = gopacket.RegisterLayerType(1059991, gopacket.LayerTypeMetadata{"LayerTypeIEEE802_11MgmtReassocResp", gopacket.DecodeFunc(decodeIEEE802_11MgmtReassocResp)})
+var LayerTypeDot11MgmtReassocResp = gopacket.RegisterLayerType(1059991, gopacket.LayerTypeMetadata{"LayerTypeDot11MgmtReassocResp", gopacket.DecodeFunc(decodeDot11MgmtReassocResp)})
 
-type IEEE802_11MgmtReassocResp struct {
-	IEEE802_11MgmtFrame
+type Dot11MgmtReassocResp struct {
+	Dot11MgmtFrame
 }
 
-func decodeIEEE802_11MgmtReassocResp(data []byte, p gopacket.PacketBuilder) error {
-	d := &IEEE802_11MgmtReassocResp{}
+func decodeDot11MgmtReassocResp(data []byte, p gopacket.PacketBuilder) error {
+	d := &Dot11MgmtReassocResp{}
 	return decodingLayerDecoder(d, data, p)
 }
 
-func (m *IEEE802_11MgmtReassocResp) LayerType() gopacket.LayerType { return LayerTypeIEEE802_11MgmtReassocResp }
-func (m *IEEE802_11MgmtReassocResp) CanDecode() gopacket.LayerClass { return LayerTypeIEEE802_11MgmtReassocResp }
-func (m *IEEE802_11MgmtReassocResp) NextLayerType() gopacket.LayerType { return LayerTypeIEEE802_11InformationElement }
-func (m *IEEE802_11MgmtReassocResp) DecodeFromBytes(data []byte, df gopacket.DecodeFeedback) error {
+func (m *Dot11MgmtReassocResp) LayerType() gopacket.LayerType { return LayerTypeDot11MgmtReassocResp }
+func (m *Dot11MgmtReassocResp) CanDecode() gopacket.LayerClass { return LayerTypeDot11MgmtReassocResp }
+func (m *Dot11MgmtReassocResp) NextLayerType() gopacket.LayerType { return LayerTypeDot11InformationElement }
+func (m *Dot11MgmtReassocResp) DecodeFromBytes(data []byte, df gopacket.DecodeFeedback) error {
     m.BaseLayer = BaseLayer{Contents: data, Payload: data[0:]}
     return nil
 }
 
-var LayerTypeIEEE802_11MgmtProbeReq = gopacket.RegisterLayerType(1059992, gopacket.LayerTypeMetadata{"LayerTypeIEEE802_11MgmtProbeReq", gopacket.DecodeFunc(decodeIEEE802_11MgmtProbeReq)})
+var LayerTypeDot11MgmtProbeReq = gopacket.RegisterLayerType(1059992, gopacket.LayerTypeMetadata{"LayerTypeDot11MgmtProbeReq", gopacket.DecodeFunc(decodeDot11MgmtProbeReq)})
 
-type IEEE802_11MgmtProbeReq struct {
-	IEEE802_11MgmtFrame
+type Dot11MgmtProbeReq struct {
+	Dot11MgmtFrame
 }
 
-func decodeIEEE802_11MgmtProbeReq(data []byte, p gopacket.PacketBuilder) error {
-	d := &IEEE802_11MgmtProbeReq{}
+func decodeDot11MgmtProbeReq(data []byte, p gopacket.PacketBuilder) error {
+	d := &Dot11MgmtProbeReq{}
 	return decodingLayerDecoder(d, data, p)
 }
 
-func (m *IEEE802_11MgmtProbeReq) LayerType() gopacket.LayerType { return LayerTypeIEEE802_11MgmtProbeReq }
-func (m *IEEE802_11MgmtProbeReq) CanDecode() gopacket.LayerClass { return LayerTypeIEEE802_11MgmtProbeReq }
-func (m *IEEE802_11MgmtProbeReq) NextLayerType() gopacket.LayerType { return LayerTypeIEEE802_11InformationElement }
-func (m *IEEE802_11MgmtProbeReq) DecodeFromBytes(data []byte, df gopacket.DecodeFeedback) error {
+func (m *Dot11MgmtProbeReq) LayerType() gopacket.LayerType { return LayerTypeDot11MgmtProbeReq }
+func (m *Dot11MgmtProbeReq) CanDecode() gopacket.LayerClass { return LayerTypeDot11MgmtProbeReq }
+func (m *Dot11MgmtProbeReq) NextLayerType() gopacket.LayerType { return LayerTypeDot11InformationElement }
+func (m *Dot11MgmtProbeReq) DecodeFromBytes(data []byte, df gopacket.DecodeFeedback) error {
     m.BaseLayer = BaseLayer{Contents: data, Payload: nil}
     return nil
 }
 
-var LayerTypeIEEE802_11MgmtProbeResp = gopacket.RegisterLayerType(1059993, gopacket.LayerTypeMetadata{"LayerTypeIEEE802_11MgmtProbeResp", gopacket.DecodeFunc(decodeIEEE802_11MgmtProbeResp)})
+var LayerTypeDot11MgmtProbeResp = gopacket.RegisterLayerType(1059993, gopacket.LayerTypeMetadata{"LayerTypeDot11MgmtProbeResp", gopacket.DecodeFunc(decodeDot11MgmtProbeResp)})
 
-type IEEE802_11MgmtProbeResp struct {
-	IEEE802_11MgmtFrame
+type Dot11MgmtProbeResp struct {
+	Dot11MgmtFrame
 }
 
-func decodeIEEE802_11MgmtProbeResp(data []byte, p gopacket.PacketBuilder) error {
-	d := &IEEE802_11MgmtProbeResp{}
+func decodeDot11MgmtProbeResp(data []byte, p gopacket.PacketBuilder) error {
+	d := &Dot11MgmtProbeResp{}
 	return decodingLayerDecoder(d, data, p)
 }
 
-func (m *IEEE802_11MgmtProbeResp) LayerType() gopacket.LayerType { return LayerTypeIEEE802_11MgmtProbeResp }
-func (m *IEEE802_11MgmtProbeResp) CanDecode() gopacket.LayerClass { return LayerTypeIEEE802_11MgmtProbeResp }
-func (m *IEEE802_11MgmtProbeResp) NextLayerType() gopacket.LayerType { return LayerTypeIEEE802_11InformationElement }
-func (m *IEEE802_11MgmtProbeResp) DecodeFromBytes(data []byte, df gopacket.DecodeFeedback) error {
+func (m *Dot11MgmtProbeResp) LayerType() gopacket.LayerType { return LayerTypeDot11MgmtProbeResp }
+func (m *Dot11MgmtProbeResp) CanDecode() gopacket.LayerClass { return LayerTypeDot11MgmtProbeResp }
+func (m *Dot11MgmtProbeResp) NextLayerType() gopacket.LayerType { return LayerTypeDot11InformationElement }
+func (m *Dot11MgmtProbeResp) DecodeFromBytes(data []byte, df gopacket.DecodeFeedback) error {
     m.BaseLayer = BaseLayer{Contents: data, Payload: nil}
     return nil
 }
 
-var LayerTypeIEEE802_11MgmtMeasurementPilot = gopacket.RegisterLayerType(1059994, gopacket.LayerTypeMetadata{"LayerTypeIEEE802_11MgmtMeasurementPilot", gopacket.DecodeFunc(decodeIEEE802_11MgmtMeasurementPilot)})
+var LayerTypeDot11MgmtMeasurementPilot = gopacket.RegisterLayerType(1059994, gopacket.LayerTypeMetadata{"LayerTypeDot11MgmtMeasurementPilot", gopacket.DecodeFunc(decodeDot11MgmtMeasurementPilot)})
 
-type IEEE802_11MgmtMeasurementPilot struct {
-	IEEE802_11MgmtFrame
+type Dot11MgmtMeasurementPilot struct {
+	Dot11MgmtFrame
 }
 
-func decodeIEEE802_11MgmtMeasurementPilot(data []byte, p gopacket.PacketBuilder) error {
-	d := &IEEE802_11MgmtMeasurementPilot{}
+func decodeDot11MgmtMeasurementPilot(data []byte, p gopacket.PacketBuilder) error {
+	d := &Dot11MgmtMeasurementPilot{}
 	return decodingLayerDecoder(d, data, p)
 }
 
-func (m *IEEE802_11MgmtMeasurementPilot) LayerType() gopacket.LayerType { return LayerTypeIEEE802_11MgmtMeasurementPilot }
-func (m *IEEE802_11MgmtMeasurementPilot) CanDecode() gopacket.LayerClass { return LayerTypeIEEE802_11MgmtMeasurementPilot }
-func (m *IEEE802_11MgmtMeasurementPilot) DecodeFromBytes(data []byte, df gopacket.DecodeFeedback) error {
+func (m *Dot11MgmtMeasurementPilot) LayerType() gopacket.LayerType { return LayerTypeDot11MgmtMeasurementPilot }
+func (m *Dot11MgmtMeasurementPilot) CanDecode() gopacket.LayerClass { return LayerTypeDot11MgmtMeasurementPilot }
+func (m *Dot11MgmtMeasurementPilot) DecodeFromBytes(data []byte, df gopacket.DecodeFeedback) error {
     m.BaseLayer = BaseLayer{Contents: data, Payload: nil}
     return nil
 }
 
-var LayerTypeIEEE802_11MgmtBeacon = gopacket.RegisterLayerType(1059995, gopacket.LayerTypeMetadata{"LayerTypeIEEE802_11MgmtBeacon", gopacket.DecodeFunc(decodeIEEE802_11MgmtBeacon)})
+var LayerTypeDot11MgmtBeacon = gopacket.RegisterLayerType(1059995, gopacket.LayerTypeMetadata{"LayerTypeDot11MgmtBeacon", gopacket.DecodeFunc(decodeDot11MgmtBeacon)})
 
-type IEEE802_11MgmtBeacon struct {
-	IEEE802_11MgmtFrame
+type Dot11MgmtBeacon struct {
+	Dot11MgmtFrame
         Timestamp uint64 
         Interval uint16
         Flags uint16
 }
 
-func decodeIEEE802_11MgmtBeacon(data []byte, p gopacket.PacketBuilder) error {
-	d := &IEEE802_11MgmtBeacon{}
+func decodeDot11MgmtBeacon(data []byte, p gopacket.PacketBuilder) error {
+	d := &Dot11MgmtBeacon{}
 	return decodingLayerDecoder(d, data, p)
 }
 
-func (m *IEEE802_11MgmtBeacon) LayerType() gopacket.LayerType { return LayerTypeIEEE802_11MgmtBeacon }
-func (m *IEEE802_11MgmtBeacon) CanDecode() gopacket.LayerClass { return LayerTypeIEEE802_11MgmtBeacon }
-func (m *IEEE802_11MgmtBeacon) DecodeFromBytes(data []byte, df gopacket.DecodeFeedback) error {
+func (m *Dot11MgmtBeacon) LayerType() gopacket.LayerType { return LayerTypeDot11MgmtBeacon }
+func (m *Dot11MgmtBeacon) CanDecode() gopacket.LayerClass { return LayerTypeDot11MgmtBeacon }
+func (m *Dot11MgmtBeacon) DecodeFromBytes(data []byte, df gopacket.DecodeFeedback) error {
     m.Timestamp=binary.LittleEndian.Uint64(data[0:8])
     m.Interval=binary.LittleEndian.Uint16(data[8:10])
     m.Flags=binary.LittleEndian.Uint16(data[10:12])
@@ -1073,55 +1073,55 @@ func (m *IEEE802_11MgmtBeacon) DecodeFromBytes(data []byte, df gopacket.DecodeFe
     return nil
 }
 
-func (d *IEEE802_11MgmtBeacon) String() string {
+func (d *Dot11MgmtBeacon) String() string {
     return fmt.Sprintf("Beacon timestamp=%.1f (seconds) interval=%v (ms) flags=%v", (float32(d.Timestamp) / 100000.0), d.Interval, d.Flags)
 }
 
-func (m *IEEE802_11MgmtBeacon) NextLayerType() gopacket.LayerType { return LayerTypeIEEE802_11InformationElement }
+func (m *Dot11MgmtBeacon) NextLayerType() gopacket.LayerType { return LayerTypeDot11InformationElement }
 
-var LayerTypeIEEE802_11MgmtATIM = gopacket.RegisterLayerType(1059996, gopacket.LayerTypeMetadata{"LayerTypeIEEE802_11MgmtATIM", gopacket.DecodeFunc(decodeIEEE802_11MgmtATIM)})
+var LayerTypeDot11MgmtATIM = gopacket.RegisterLayerType(1059996, gopacket.LayerTypeMetadata{"LayerTypeDot11MgmtATIM", gopacket.DecodeFunc(decodeDot11MgmtATIM)})
 
-type IEEE802_11MgmtATIM struct {
-	IEEE802_11MgmtFrame
+type Dot11MgmtATIM struct {
+	Dot11MgmtFrame
 }
 
-func decodeIEEE802_11MgmtATIM(data []byte, p gopacket.PacketBuilder) error {
-	d := &IEEE802_11MgmtATIM{}
+func decodeDot11MgmtATIM(data []byte, p gopacket.PacketBuilder) error {
+	d := &Dot11MgmtATIM{}
 	return decodingLayerDecoder(d, data, p)
 }
 
-func (m *IEEE802_11MgmtATIM) LayerType() gopacket.LayerType { return LayerTypeIEEE802_11MgmtATIM }
-func (m *IEEE802_11MgmtATIM) CanDecode() gopacket.LayerClass { return LayerTypeIEEE802_11MgmtATIM }
-func (m *IEEE802_11MgmtATIM) DecodeFromBytes(data []byte, df gopacket.DecodeFeedback) error {
+func (m *Dot11MgmtATIM) LayerType() gopacket.LayerType { return LayerTypeDot11MgmtATIM }
+func (m *Dot11MgmtATIM) CanDecode() gopacket.LayerClass { return LayerTypeDot11MgmtATIM }
+func (m *Dot11MgmtATIM) DecodeFromBytes(data []byte, df gopacket.DecodeFeedback) error {
     m.BaseLayer = BaseLayer{Contents: data, Payload: nil}
     return nil
 }
 
-func (d *IEEE802_11MgmtATIM) String() string {
+func (d *Dot11MgmtATIM) String() string {
     return fmt.Sprintf("802.11 ATIM")
 }
 
-var LayerTypeIEEE802_11MgmtDisassociation = gopacket.RegisterLayerType(1059997, gopacket.LayerTypeMetadata{"LayerTypeIEEE802_11MgmtDisassociation", gopacket.DecodeFunc(decodeIEEE802_11MgmtDisassociation)})
+var LayerTypeDot11MgmtDisassociation = gopacket.RegisterLayerType(1059997, gopacket.LayerTypeMetadata{"LayerTypeDot11MgmtDisassociation", gopacket.DecodeFunc(decodeDot11MgmtDisassociation)})
 
-type IEEE802_11MgmtDisassociation struct {
-	IEEE802_11MgmtFrame
+type Dot11MgmtDisassociation struct {
+	Dot11MgmtFrame
         Reason uint16 
 }
 
-func decodeIEEE802_11MgmtDisassociation(data []byte, p gopacket.PacketBuilder) error {
-	d := &IEEE802_11MgmtDisassociation{}
+func decodeDot11MgmtDisassociation(data []byte, p gopacket.PacketBuilder) error {
+	d := &Dot11MgmtDisassociation{}
 	return decodingLayerDecoder(d, data, p)
 }
 
-func (m *IEEE802_11MgmtDisassociation) LayerType() gopacket.LayerType { return LayerTypeIEEE802_11MgmtDisassociation }
-func (m *IEEE802_11MgmtDisassociation) CanDecode() gopacket.LayerClass { return LayerTypeIEEE802_11MgmtDisassociation }
-func (m *IEEE802_11MgmtDisassociation) DecodeFromBytes(data []byte, df gopacket.DecodeFeedback) error {
+func (m *Dot11MgmtDisassociation) LayerType() gopacket.LayerType { return LayerTypeDot11MgmtDisassociation }
+func (m *Dot11MgmtDisassociation) CanDecode() gopacket.LayerClass { return LayerTypeDot11MgmtDisassociation }
+func (m *Dot11MgmtDisassociation) DecodeFromBytes(data []byte, df gopacket.DecodeFeedback) error {
     m.Reason=binary.LittleEndian.Uint16(data[0:2])
     m.BaseLayer = BaseLayer{Contents: data, Payload: nil}
     return nil
 }
 
-func (d *IEEE802_11MgmtDisassociation) String() string {
+func (d *Dot11MgmtDisassociation) String() string {
     reasons:=map[uint16]string{
         0:"reserved",
         1:"unspec", 
@@ -1137,24 +1137,24 @@ func (d *IEEE802_11MgmtDisassociation) String() string {
 }
 
 
-var LayerTypeIEEE802_11MgmtAuthentication = gopacket.RegisterLayerType(1054327, gopacket.LayerTypeMetadata{"LayerTypeIEEE802_11MgmtAuthentication", gopacket.DecodeFunc(decodeIEEE802_11MgmtAuthentication)})
+var LayerTypeDot11MgmtAuthentication = gopacket.RegisterLayerType(1054327, gopacket.LayerTypeMetadata{"LayerTypeDot11MgmtAuthentication", gopacket.DecodeFunc(decodeDot11MgmtAuthentication)})
 
-type IEEE802_11MgmtAuthentication struct {
-	IEEE802_11MgmtFrame
+type Dot11MgmtAuthentication struct {
+	Dot11MgmtFrame
         Algorithm uint16
         Sequence uint16
         Statuscode uint16
 }
 
-func decodeIEEE802_11MgmtAuthentication(data []byte, p gopacket.PacketBuilder) error {
-	d := &IEEE802_11MgmtAuthentication{}
+func decodeDot11MgmtAuthentication(data []byte, p gopacket.PacketBuilder) error {
+	d := &Dot11MgmtAuthentication{}
 	return decodingLayerDecoder(d, data, p)
 }
 
-func (m *IEEE802_11MgmtAuthentication) LayerType() gopacket.LayerType { return LayerTypeIEEE802_11MgmtAuthentication }
-func (m *IEEE802_11MgmtAuthentication) CanDecode() gopacket.LayerClass { return LayerTypeIEEE802_11MgmtAuthentication }
-func (m *IEEE802_11MgmtAuthentication) NextLayerType() gopacket.LayerType { return LayerTypeIEEE802_11InformationElement }
-func (m *IEEE802_11MgmtAuthentication) DecodeFromBytes(data []byte, df gopacket.DecodeFeedback) error {
+func (m *Dot11MgmtAuthentication) LayerType() gopacket.LayerType { return LayerTypeDot11MgmtAuthentication }
+func (m *Dot11MgmtAuthentication) CanDecode() gopacket.LayerClass { return LayerTypeDot11MgmtAuthentication }
+func (m *Dot11MgmtAuthentication) NextLayerType() gopacket.LayerType { return LayerTypeDot11InformationElement }
+func (m *Dot11MgmtAuthentication) DecodeFromBytes(data []byte, df gopacket.DecodeFeedback) error {
     m.Algorithm=binary.LittleEndian.Uint16(data[0:2])
     m.Sequence=binary.LittleEndian.Uint16(data[2:4])
     m.Statuscode=binary.LittleEndian.Uint16(data[4:6])
@@ -1162,7 +1162,7 @@ func (m *IEEE802_11MgmtAuthentication) DecodeFromBytes(data []byte, df gopacket.
     return nil
 }
 
-func (d *IEEE802_11MgmtAuthentication) String() string {
+func (d *Dot11MgmtAuthentication) String() string {
     algorithms:=map[uint16]string{
         0:"open",
         1:"shared-key"}
@@ -1183,27 +1183,27 @@ func (d *IEEE802_11MgmtAuthentication) String() string {
     return fmt.Sprintf("802.11 Authentication (Algorithm: %v[%v], Sequence: %v, Statuscode: %v[%v])", algorithms[d.Algorithm], d.Algorithm, d.Statuscode, status_code[d.Statuscode], d.Statuscode)
 }
 
-var LayerTypeIEEE802_11MgmtDeauthentication = gopacket.RegisterLayerType(1054328, gopacket.LayerTypeMetadata{"LayerTypeIEEE802_11MgmtDeauthentication", gopacket.DecodeFunc(decodeIEEE802_11MgmtDeauthentication)})
+var LayerTypeDot11MgmtDeauthentication = gopacket.RegisterLayerType(1054328, gopacket.LayerTypeMetadata{"LayerTypeDot11MgmtDeauthentication", gopacket.DecodeFunc(decodeDot11MgmtDeauthentication)})
 
-type IEEE802_11MgmtDeauthentication struct {
-	IEEE802_11MgmtFrame
+type Dot11MgmtDeauthentication struct {
+	Dot11MgmtFrame
         Reason uint16
 }
 
-func decodeIEEE802_11MgmtDeauthentication(data []byte, p gopacket.PacketBuilder) error {
-	d := &IEEE802_11MgmtDeauthentication{}
+func decodeDot11MgmtDeauthentication(data []byte, p gopacket.PacketBuilder) error {
+	d := &Dot11MgmtDeauthentication{}
 	return decodingLayerDecoder(d, data, p)
 }
 
-func (m *IEEE802_11MgmtDeauthentication) LayerType() gopacket.LayerType { return LayerTypeIEEE802_11MgmtDeauthentication }
-func (m *IEEE802_11MgmtDeauthentication) CanDecode() gopacket.LayerClass { return LayerTypeIEEE802_11MgmtDeauthentication }
-func (m *IEEE802_11MgmtDeauthentication) DecodeFromBytes(data []byte, df gopacket.DecodeFeedback) error {
+func (m *Dot11MgmtDeauthentication) LayerType() gopacket.LayerType { return LayerTypeDot11MgmtDeauthentication }
+func (m *Dot11MgmtDeauthentication) CanDecode() gopacket.LayerClass { return LayerTypeDot11MgmtDeauthentication }
+func (m *Dot11MgmtDeauthentication) DecodeFromBytes(data []byte, df gopacket.DecodeFeedback) error {
     m.Reason=binary.LittleEndian.Uint16(data[0:2])
     m.BaseLayer = BaseLayer{Contents: data, Payload: nil}
     return nil
 }
 
-func (d *IEEE802_11MgmtDeauthentication) String() string {
+func (d *Dot11MgmtDeauthentication) String() string {
     reasons:=map[uint16]string{
         0:"reserved",
         1:"unspec", 
@@ -1218,56 +1218,56 @@ func (d *IEEE802_11MgmtDeauthentication) String() string {
     return fmt.Sprintf("802.11 Deauthentication (Reason: %v[%v])", reasons[d.Reason], d.Reason)
 }
 
-var LayerTypeIEEE802_11MgmtAction = gopacket.RegisterLayerType(1054329, gopacket.LayerTypeMetadata{"LayerTypeIEEE802_11MgmtAction", gopacket.DecodeFunc(decodeIEEE802_11MgmtAction)})
+var LayerTypeDot11MgmtAction = gopacket.RegisterLayerType(1054329, gopacket.LayerTypeMetadata{"LayerTypeDot11MgmtAction", gopacket.DecodeFunc(decodeDot11MgmtAction)})
 
-type IEEE802_11MgmtAction struct {
-	IEEE802_11MgmtFrame
+type Dot11MgmtAction struct {
+	Dot11MgmtFrame
 }
 
-func decodeIEEE802_11MgmtAction(data []byte, p gopacket.PacketBuilder) error {
-	d := &IEEE802_11MgmtAction{}
+func decodeDot11MgmtAction(data []byte, p gopacket.PacketBuilder) error {
+	d := &Dot11MgmtAction{}
 	return decodingLayerDecoder(d, data, p)
 }
 
-func (m *IEEE802_11MgmtAction) LayerType() gopacket.LayerType { return LayerTypeIEEE802_11MgmtAction }
-func (m *IEEE802_11MgmtAction) CanDecode() gopacket.LayerClass { return LayerTypeIEEE802_11MgmtAction }
-func (m *IEEE802_11MgmtAction) DecodeFromBytes(data []byte, df gopacket.DecodeFeedback) error {
+func (m *Dot11MgmtAction) LayerType() gopacket.LayerType { return LayerTypeDot11MgmtAction }
+func (m *Dot11MgmtAction) CanDecode() gopacket.LayerClass { return LayerTypeDot11MgmtAction }
+func (m *Dot11MgmtAction) DecodeFromBytes(data []byte, df gopacket.DecodeFeedback) error {
     m.BaseLayer = BaseLayer{Contents: data, Payload: nil}
     return nil
 }
 
-var LayerTypeIEEE802_11MgmtActionNoAck = gopacket.RegisterLayerType(1054330, gopacket.LayerTypeMetadata{"LayerTypeIEEE802_11MgmtActionNoAck", gopacket.DecodeFunc(decodeIEEE802_11MgmtActionNoAck)})
+var LayerTypeDot11MgmtActionNoAck = gopacket.RegisterLayerType(1054330, gopacket.LayerTypeMetadata{"LayerTypeDot11MgmtActionNoAck", gopacket.DecodeFunc(decodeDot11MgmtActionNoAck)})
 
-type IEEE802_11MgmtActionNoAck struct {
-	IEEE802_11MgmtFrame
+type Dot11MgmtActionNoAck struct {
+	Dot11MgmtFrame
 }
 
-func decodeIEEE802_11MgmtActionNoAck(data []byte, p gopacket.PacketBuilder) error {
-	d := &IEEE802_11MgmtActionNoAck{}
+func decodeDot11MgmtActionNoAck(data []byte, p gopacket.PacketBuilder) error {
+	d := &Dot11MgmtActionNoAck{}
 	return decodingLayerDecoder(d, data, p)
 }
 
-func (m *IEEE802_11MgmtActionNoAck) LayerType() gopacket.LayerType { return LayerTypeIEEE802_11MgmtActionNoAck }
-func (m *IEEE802_11MgmtActionNoAck) CanDecode() gopacket.LayerClass { return LayerTypeIEEE802_11MgmtActionNoAck }
-func (m *IEEE802_11MgmtActionNoAck) DecodeFromBytes(data []byte, df gopacket.DecodeFeedback) error {
+func (m *Dot11MgmtActionNoAck) LayerType() gopacket.LayerType { return LayerTypeDot11MgmtActionNoAck }
+func (m *Dot11MgmtActionNoAck) CanDecode() gopacket.LayerClass { return LayerTypeDot11MgmtActionNoAck }
+func (m *Dot11MgmtActionNoAck) DecodeFromBytes(data []byte, df gopacket.DecodeFeedback) error {
     m.BaseLayer = BaseLayer{Contents: data, Payload: nil}
     return nil
 }
 
-var LayerTypeIEEE802_11MgmtArubaWlan = gopacket.RegisterLayerType(1054331, gopacket.LayerTypeMetadata{"LayerTypeIEEE802_11MgmtArubaWlan", gopacket.DecodeFunc(decodeIEEE802_11MgmtArubaWlan)})
+var LayerTypeDot11MgmtArubaWlan = gopacket.RegisterLayerType(1054331, gopacket.LayerTypeMetadata{"LayerTypeDot11MgmtArubaWlan", gopacket.DecodeFunc(decodeDot11MgmtArubaWlan)})
 
-type IEEE802_11MgmtArubaWlan struct {
-	IEEE802_11MgmtFrame
+type Dot11MgmtArubaWlan struct {
+	Dot11MgmtFrame
 }
 
-func decodeIEEE802_11MgmtArubaWlan(data []byte, p gopacket.PacketBuilder) error {
-	d := &IEEE802_11MgmtArubaWlan{}
+func decodeDot11MgmtArubaWlan(data []byte, p gopacket.PacketBuilder) error {
+	d := &Dot11MgmtArubaWlan{}
 	return decodingLayerDecoder(d, data, p)
 }
 
-func (m *IEEE802_11MgmtArubaWlan) LayerType() gopacket.LayerType { return LayerTypeIEEE802_11MgmtArubaWlan }
-func (m *IEEE802_11MgmtArubaWlan) CanDecode() gopacket.LayerClass { return LayerTypeIEEE802_11MgmtArubaWlan }
-func (m *IEEE802_11MgmtArubaWlan) DecodeFromBytes(data []byte, df gopacket.DecodeFeedback) error {
+func (m *Dot11MgmtArubaWlan) LayerType() gopacket.LayerType { return LayerTypeDot11MgmtArubaWlan }
+func (m *Dot11MgmtArubaWlan) CanDecode() gopacket.LayerClass { return LayerTypeDot11MgmtArubaWlan }
+func (m *Dot11MgmtArubaWlan) DecodeFromBytes(data []byte, df gopacket.DecodeFeedback) error {
     m.BaseLayer = BaseLayer{Contents: data, Payload: nil}
     return nil
 }
