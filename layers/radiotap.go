@@ -1,31 +1,9 @@
-/**!
- * The MIT License
- *
- * Copyright (c) 2014 Remco Verhoef (github.com/dutchcoders/gopacket-80211)
- *
- * Permission is hereby granted, free of charge, to any person obtaining a copy
- * of this software and associated documentation files (the "Software"), to deal
- * in the Software without restriction, including without limitation the rights
- * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
- * copies of the Software, and to permit persons to whom the Software is
- * furnished to do so, subject to the following conditions:
- *
- * The above copyright notice and this permission notice shall be included in
- * all copies or substantial portions of the Software.
- *
- * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
- * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
- * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
- * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
- * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
- * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
- * THE SOFTWARE.
- *
- * gopacket-80211
- * http://github.com/dutchcoders/gopacket-80211
- *
- * @authors http://github.com/dutchcoders/gopacket-80211/graphs/contributors
-*/
+// Copyright 2014 Google, Inc. All rights reserved.
+// Copyright 2014 Remco Verhoef. All rights reserved.
+//
+// Use of this source code is governed by a BSD-style license
+// that can be found in the LICENSE file in the root of the source
+// tree.
 
 package layers
 
@@ -42,123 +20,123 @@ func align(offset uint, width uint) uint {
     return ( (((offset) + ((width) - 1)) & (^((width) - 1))) - offset )
 }
 
-type RadiotapPresent uint32
+type RadioTapPresent uint32
 
 const (
-	RadiotapPresentTSFT               RadiotapPresent = 1 << iota
-	RadiotapPresentFlags
-	RadiotapPresentRate
-	RadiotapPresentChannel
-	RadiotapPresentFHSS
-	RadiotapPresentDbmAntennaSignal
-	RadiotapPresentDbmAntennaNoise
-	RadiotapPresentLockQuality
-	RadiotapPresentTxAttenuation
-	RadiotapPresentDbTxAttenuation
-	RadiotapPresentDbmTxPower
-	RadiotapPresentAntenna
-	RadiotapPresentDbAntennaSignal
-	RadiotapPresentDbAntennaNoise
-	RadiotapPresentRxFlags
-	RadiotapPresentTxFlags
-	RadiotapPresentRtsRetries
-	RadiotapPresentDataRetries
-	RadiotapPresentEXT                 RadiotapPresent = 31 << iota
+	RadioTapPresentTSFT               RadioTapPresent = 1 << iota
+	RadioTapPresentFlags
+	RadioTapPresentRate
+	RadioTapPresentChannel
+	RadioTapPresentFHSS
+	RadioTapPresentDBMAntennaSignal
+	RadioTapPresentDBMAntennaNoise
+	RadioTapPresentLockQuality
+	RadioTapPresentTxAttenuation
+	RadioTapPresentDBTxAttenuation
+	RadioTapPresentDBMTxPower
+	RadioTapPresentAntenna
+	RadioTapPresentDBAntennaSignal
+	RadioTapPresentDBAntennaNoise
+	RadioTapPresentRxFlags
+	RadioTapPresentTxFlags
+	RadioTapPresentRtsRetries
+	RadioTapPresentDataRetries
+	RadioTapPresentEXT                 RadioTapPresent = 1 << 31
 )
 
-type RadiotapChannelFlags uint16
+type RadioTapChannelFlags uint16
 
 const (
         /* Turbo channel */
-        RadiotapChannelFlagsTurbo           RadiotapChannelFlags = 0x0010
+        RadioTapChannelFlagsTurbo           RadioTapChannelFlags = 0x0010
         /* CCK channel */
-        RadiotapChannelFlagsCCK             RadiotapChannelFlags = 0x0020
+        RadioTapChannelFlagsCCK             RadioTapChannelFlags = 0x0020
         /* OFDM channel */
-        RadiotapChannelFlagsOFDM            RadiotapChannelFlags = 0x0040
+        RadioTapChannelFlagsOFDM            RadioTapChannelFlags = 0x0040
         /* 2 GHz spectrum channel. */
-        RadiotapChannelFlags2Ghz	    RadiotapChannelFlags = 0x0080
+        RadioTapChannelFlags2Ghz	    RadioTapChannelFlags = 0x0080
         /* 5 GHz spectrum channel */
-        RadiotapChannelFlags5Ghz	    RadiotapChannelFlags = 0x0100
+        RadioTapChannelFlags5Ghz	    RadioTapChannelFlags = 0x0100
         /* Only passive scan allowed */
-        RadiotapChannelFlagsPassive         RadiotapChannelFlags = 0x0200
+        RadioTapChannelFlagsPassive         RadioTapChannelFlags = 0x0200
         /* Dynamic CCK-OFDM channel */
-        RadiotapChannelFlagsDynamic         RadiotapChannelFlags = 0x0400
+        RadioTapChannelFlagsDynamic         RadioTapChannelFlags = 0x0400
         /* GFSK channel (FHSS PHY) */
-        RadiotapChannelFlagsGFSK	    RadiotapChannelFlags = 0x0800
+        RadioTapChannelFlagsGFSK	    RadioTapChannelFlags = 0x0800
       )
 
-func (a RadiotapChannelFlags) String() string {
+func (a RadioTapChannelFlags) String() string {
     outStr := ""
-    if ((a & RadiotapChannelFlagsTurbo) == RadiotapChannelFlagsTurbo) {
+    if ((a & RadioTapChannelFlagsTurbo) == RadioTapChannelFlagsTurbo) {
         outStr += "Turbo,"
     }
-    if ((a & RadiotapChannelFlagsCCK) == RadiotapChannelFlagsCCK) {
+    if ((a & RadioTapChannelFlagsCCK) == RadioTapChannelFlagsCCK) {
         outStr += "CCK,"
     }
-    if ((a & RadiotapChannelFlagsOFDM) == RadiotapChannelFlagsOFDM) {
+    if ((a & RadioTapChannelFlagsOFDM) == RadioTapChannelFlagsOFDM) {
         outStr += "OFDM,"
     }
-    if ((a & RadiotapChannelFlags2Ghz) == RadiotapChannelFlags2Ghz) {
+    if ((a & RadioTapChannelFlags2Ghz) == RadioTapChannelFlags2Ghz) {
         outStr += "2Ghz,"
     }
-    if ((a & RadiotapChannelFlags5Ghz) == RadiotapChannelFlags5Ghz) {
+    if ((a & RadioTapChannelFlags5Ghz) == RadioTapChannelFlags5Ghz) {
         outStr += "5Ghz,"
     }
-    if ((a & RadiotapChannelFlagsPassive) == RadiotapChannelFlagsPassive) {
+    if ((a & RadioTapChannelFlagsPassive) == RadioTapChannelFlagsPassive) {
         outStr += "Passive,"
     }
-    if ((a & RadiotapChannelFlagsDynamic) == RadiotapChannelFlagsDynamic) {
+    if ((a & RadioTapChannelFlagsDynamic) == RadioTapChannelFlagsDynamic) {
         outStr += "Dynamic,"
     }
-    if ((a & RadiotapChannelFlagsGFSK) == RadiotapChannelFlagsGFSK) {
+    if ((a & RadioTapChannelFlagsGFSK) == RadioTapChannelFlagsGFSK) {
         outStr += "GFSK,"
     }
 
     return outStr
 }
 
-type RadiotapFlags uint8
+type RadioTapFlags uint8
 
 const (
         /* sent/received during CFP */
-        RadiotapFlagsCFP	                RadiotapFlags = 1 << iota
+        RadioTapFlagsCFP	                RadioTapFlags = 1 << iota
         /* sent/received * with short * preamble */
-	RadiotapFlagsShortPreamble
+	RadioTapFlagsShortPreamble
 	/* sent/received * with WEP encryption */
-        RadiotapFlagsWEP
+        RadioTapFlagsWEP
         /* sent/received * with fragmentation */
-	RadiotapFlagsFrag
+	RadioTapFlagsFrag
         /* frame includes FCS */
-	RadiotapFlagsFCS
+	RadioTapFlagsFCS
 	/* frame has padding between * 802.11 header and payload * (to 32-bit boundary) */
-        RadiotapFlagsDatapad
+        RadioTapFlagsDatapad
 	/* does not pass FCS check */
-        RadiotapFlagsBadFCS
+        RadioTapFlagsBadFCS
 	/* HT short GI */
-        RadiotapFlagsShortGI
+        RadioTapFlagsShortGI
 )
 
-func (a RadiotapFlags) String() string {
+func (a RadioTapFlags) String() string {
     outStr := ""
-    if ((a & RadiotapFlagsCFP) == RadiotapFlagsCFP) {
+    if ((a & RadioTapFlagsCFP) == RadioTapFlagsCFP) {
         outStr += "CFP,"
     }
-    if ((a & RadiotapFlagsShortPreamble) == RadiotapFlagsShortPreamble) {
+    if ((a & RadioTapFlagsShortPreamble) == RadioTapFlagsShortPreamble) {
         outStr += "SHORT-PREAMBLE,"
     }
-    if ((a & RadiotapFlagsWEP) == RadiotapFlagsWEP) {
+    if ((a & RadioTapFlagsWEP) == RadioTapFlagsWEP) {
         outStr += "WEP,"
     }
-    if ((a & RadiotapFlagsFrag) == RadiotapFlagsFrag) {
+    if ((a & RadioTapFlagsFrag) == RadioTapFlagsFrag) {
         outStr += "FRAG,"
     }
-    if ((a & RadiotapFlagsFCS) == RadiotapFlagsFCS) {
+    if ((a & RadioTapFlagsFCS) == RadioTapFlagsFCS) {
         outStr += "FCS,"
     }
-    if ((a & RadiotapFlagsDatapad) == RadiotapFlagsDatapad) {
+    if ((a & RadioTapFlagsDatapad) == RadioTapFlagsDatapad) {
         outStr += "DATAPAD,"
     }
-    if ((a & RadiotapFlagsShortGI) == RadiotapFlagsShortGI) {
+    if ((a & RadioTapFlagsShortGI) == RadioTapFlagsShortGI) {
         outStr += "SHORT-GI,"
     }
 
@@ -166,24 +144,24 @@ func (a RadiotapFlags) String() string {
 }
 
 
-type RadiotapRate uint8
+type RadioTapRate uint8
 
-func (a RadiotapRate) String() string {
+func (a RadioTapRate) String() string {
     return fmt.Sprintf("%v Mb/s", 0.5 * float32(a))
 }
 
-type RadiotapChannelFrequency uint16
+type RadioTapChannelFrequency uint16
 
-func (a RadiotapChannelFrequency) String() string {
+func (a RadioTapChannelFrequency) String() string {
     return fmt.Sprintf("%d MHz", a)
 }
 
-func decodeRadiotap(data []byte, p gopacket.PacketBuilder) error {
-	d := &Radiotap{}
+func decodeRadioTap(data []byte, p gopacket.PacketBuilder) error {
+	d := &RadioTap{}
 	return decodingLayerDecoder(d, data, p)
 }
 
-type Radiotap struct {
+type RadioTap struct {
 	BaseLayer
 
 	// Version 0. Only increases for drastic changes, introduction of compatible new fields does not count.
@@ -191,43 +169,43 @@ type Radiotap struct {
         // Length of the whole header in bytes, including it_version, it_pad, it_len, and data fields.
         Length uint16
 	// Present is a bitmap telling which fields are present. Set bit 31 (0x80000000) to extend the bitmap by another 32 bits. Additional extensions are made by setting bit 31.
-	Present RadiotapPresent
+	Present RadioTapPresent
         // TSFT: value in microseconds of the MAC's 64-bit 802.11 Time Synchronization Function timer when the first bit of the MPDU arrived at the MAC. For received frames, only.  
 	TSFT uint64
-	Flags RadiotapFlags
+	Flags RadioTapFlags
         // Rate Tx/Rx data rate
-	Rate RadiotapRate
+	Rate RadioTapRate
         // ChannelFrequency Tx/Rx frequency in MHz, followed by flags 
-	ChannelFrequency RadiotapChannelFrequency
-	ChannelFlags RadiotapChannelFlags
+	ChannelFrequency RadioTapChannelFrequency
+	ChannelFlags RadioTapChannelFlags
 	// FHSS For frequency-hopping radios, the hop set (first byte) and pattern (second byte).
         FHSS uint16
-        // DbmAntennaSignal RF signal power at the antenna, decibel difference from one milliwatt.
-	DbmAntennaSignal int8
-        // DbmAntennaNoise RF noise power at the antenna, decibel difference from one milliwatt.
-	DbmAntennaNoise int8
+        // DBMAntennaSignal RF signal power at the antenna, decibel difference from one milliwatt.
+	DBMAntennaSignal int8
+        // DBMAntennaNoise RF noise power at the antenna, decibel difference from one milliwatt.
+	DBMAntennaNoise int8
         // LockQuality Quality of Barker code lock. Unitless. Monotonically nondecreasing with "better" lock strength. Called "Signal Quality" in datasheets.  
 	LockQuality uint16
         // TxAttenuation Transmit power expressed as unitless distance from max power set at factory calibration.  0 is max power. Monotonically nondecreasing with lower power levels.
 	TxAttenuation uint16
-        // DbTxAttenuation Transmit power expressed as decibel distance from max power set at factory calibration.  0 is max power.  Monotonically nondecreasing with lower power levels.
-	DbTxAttenuation uint16
-        // DbmTxPower Transmit power expressed as dBm (decibels from a 1 milliwatt reference). This is the absolute power level measured at the antenna port.
-	DbmTxPower int8
+        // DBTxAttenuation Transmit power expressed as decibel distance from max power set at factory calibration.  0 is max power.  Monotonically nondecreasing with lower power levels.
+	DBTxAttenuation uint16
+        // DBMTxPower Transmit power expressed as dBm (decibels from a 1 milliwatt reference). This is the absolute power level measured at the antenna port.
+	DBMTxPower int8
         // Antenna Unitless indication of the Rx/Tx antenna for this packet. The first antenna is antenna 0.
 	Antenna uint8
-	// DbAntennaSignal RF signal power at the antenna, decibel difference from an arbitrary, fixed reference.
-        DbAntennaSignal uint8
-	// DbAntennaNoise RF noise power at the antenna, decibel difference from an arbitrary, fixed reference point.
-	DbAntennaNoise uint8
+	// DBAntennaSignal RF signal power at the antenna, decibel difference from an arbitrary, fixed reference.
+        DBAntennaSignal uint8
+	// DBAntennaNoise RF noise power at the antenna, decibel difference from an arbitrary, fixed reference point.
+	DBAntennaNoise uint8
 }
 
-func (m *Radiotap) LayerType() gopacket.LayerType { return LayerTypeRadiotap }
+func (m *RadioTap) LayerType() gopacket.LayerType { return LayerTypeRadioTap }
 
-func (m *Radiotap) DecodeFromBytes(data []byte, df gopacket.DecodeFeedback) error {
+func (m *RadioTap) DecodeFromBytes(data []byte, df gopacket.DecodeFeedback) error {
 	m.Version = (uint8)(data[0])
 	m.Length = binary.LittleEndian.Uint16(data[2:4])
-	m.Present = RadiotapPresent(binary.LittleEndian.Uint32(data[4:8]))
+	m.Present = RadioTapPresent(binary.LittleEndian.Uint32(data[4:8]))
 
 	offset := uint(4)
 
@@ -238,92 +216,103 @@ func (m *Radiotap) DecodeFromBytes(data []byte, df gopacket.DecodeFeedback) erro
 
 	m.BaseLayer = BaseLayer{Contents: data[:(m.Length)], Payload: data[(m.Length):]}
 
-	if ((m.Present & RadiotapPresentTSFT)==RadiotapPresentTSFT) {
+	if (m.Present & RadioTapPresentTSFT) != 0 {
 		offset+=align(offset, 8)
 		m.TSFT=binary.LittleEndian.Uint64(data[offset:offset+8])
 		offset+=8
 	}
 
-	if ((m.Present & RadiotapPresentFlags) == RadiotapPresentFlags) {
-		m.Flags=(RadiotapFlags)(data[offset])
+	if (m.Present & RadioTapPresentFlags) != 0{
+		m.Flags=(RadioTapFlags)(data[offset])
 		offset++
 	}
 
-	if ((m.Present & RadiotapPresentRate) == RadiotapPresentRate) {
-		m.Rate=(RadiotapRate)(data[offset])
+	if (m.Present & RadioTapPresentRate) != 0 {
+		m.Rate=(RadioTapRate)(data[offset])
 		offset++
 	}
 
-	if ((m.Present & RadiotapPresentFHSS) == RadiotapPresentFHSS) {
+	if (m.Present & RadioTapPresentFHSS) != 0{
 		m.FHSS=binary.LittleEndian.Uint16(data[offset:offset+2])
 		offset+=2
 	}
 
-	if ((m.Present & RadiotapPresentChannel) == RadiotapPresentChannel) {
-		m.ChannelFrequency=RadiotapChannelFrequency(binary.LittleEndian.Uint16(data[offset:offset+2]))
+	if (m.Present & RadioTapPresentChannel) != 0 {
+		m.ChannelFrequency=RadioTapChannelFrequency(binary.LittleEndian.Uint16(data[offset:offset+2]))
 		offset+=2
-		m.ChannelFlags=(RadiotapChannelFlags)(data[offset])
+		m.ChannelFlags=(RadioTapChannelFlags)(data[offset])
 		offset++
 	}
 
-	if ((m.Present & RadiotapPresentDbmAntennaSignal) == RadiotapPresentDbmAntennaSignal) {
-		m.DbmAntennaSignal=(int8)(data[offset])
-		offset++
-	}
-
-
-	if ((m.Present & RadiotapPresentDbmAntennaNoise) == RadiotapPresentDbmAntennaNoise) {
-		m.DbmAntennaNoise=(int8)(data[offset])
+	if (m.Present & RadioTapPresentDBMAntennaSignal) != 0 {
+		m.DBMAntennaSignal=(int8)(data[offset])
 		offset++
 	}
 
 
-	if ((m.Present & RadiotapPresentLockQuality) == RadiotapPresentLockQuality) {
+	if (m.Present & RadioTapPresentDBMAntennaNoise) != 0 {
+		m.DBMAntennaNoise=(int8)(data[offset])
+		offset++
+	}
+
+
+	if (m.Present & RadioTapPresentLockQuality) != 0 {
 		offset+=align(offset, 2)
 		m.LockQuality=binary.LittleEndian.Uint16(data[offset:offset+2])
 		offset+=2
 	}
 
-
-	if ((m.Present & RadiotapPresentTxAttenuation) == RadiotapPresentTxAttenuation) {
+	if (m.Present & RadioTapPresentTxAttenuation) != 0{
 		offset+=align(offset, 2)
 		m.TxAttenuation=binary.LittleEndian.Uint16(data[offset:offset+2])
 		offset+=2
 	}
 
-
-	if ((m.Present & RadiotapPresentDbTxAttenuation) == RadiotapPresentDbTxAttenuation) {
+	if (m.Present & RadioTapPresentDBTxAttenuation) != 0 {
 		offset+=align(offset, 2)
-		m.DbTxAttenuation=binary.LittleEndian.Uint16(data[offset:offset+2])
+		m.DBTxAttenuation=binary.LittleEndian.Uint16(data[offset:offset+2])
 		offset+=2
 	}
 
-
-	if ((m.Present & RadiotapPresentDbmTxPower) == RadiotapPresentDbmTxPower) {
-		m.DbmTxPower=(int8)(data[offset])
+	if (m.Present & RadioTapPresentDBMTxPower) != 0 {
+		m.DBMTxPower=(int8)(data[offset])
 		offset++
 	}
 
-
-	if ((m.Present & RadiotapPresentAntenna) == RadiotapPresentAntenna) {
+	if (m.Present & RadioTapPresentAntenna) != 0 {
 		m.Antenna=(uint8)(data[offset])
 		offset++
 	}
 
 
-	if ((m.Present & RadiotapPresentDbAntennaSignal) == RadiotapPresentDbAntennaSignal) {
-		m.DbAntennaSignal=(uint8)(data[offset])
+	if (m.Present & RadioTapPresentDBAntennaSignal) != 0 {
+		m.DBAntennaSignal=(uint8)(data[offset])
 		offset++
 	}
 
 
-	if ((m.Present & RadiotapPresentDbAntennaNoise) == RadiotapPresentDbAntennaNoise) {
-		m.DbAntennaNoise=(uint8)(data[offset])
+	if (m.Present & RadioTapPresentDBAntennaNoise) != 0 {
+		m.DBAntennaNoise=(uint8)(data[offset])
 		offset++
 	}
 
+	if (m.Present & RadioTapPresentRxFlags) != 0 {
+                // TODO: Implement RxFlags
+        }
 
-	if ((m.Present & RadiotapPresentEXT) == RadiotapPresentEXT) {
+	if (m.Present & RadioTapPresentTxFlags) != 0 {
+                // TODO: Implement TxFlags
+        }
+
+	if (m.Present & RadioTapPresentRtsRetries) != 0 {
+                // TODO: Implement RtsRetries
+        }
+
+	if (m.Present & RadioTapPresentDataRetries) != 0 {
+                // TODO: Implement DataRetries
+        }
+
+	if (m.Present & RadioTapPresentEXT) != 0 {
 		offset+=align(offset, 4)
                 // TODO: Implement EXT
 		_ = data[offset:offset+4]
@@ -331,7 +320,7 @@ func (m *Radiotap) DecodeFromBytes(data []byte, df gopacket.DecodeFeedback) erro
 	}
 
 
-	if ((m.Flags & RadiotapFlagsDatapad) == RadiotapFlagsDatapad ) {
+	if (m.Flags & RadioTapFlagsDatapad) != 0 {
                 // frame has padding between 802.11 header and payload (to 32-bit boundary)
 		offset+=align(offset, 4)
 	}
@@ -339,5 +328,5 @@ func (m *Radiotap) DecodeFromBytes(data []byte, df gopacket.DecodeFeedback) erro
 	return nil
 }
 
-func (m *Radiotap) CanDecode() gopacket.LayerClass { return LayerTypeRadiotap }
-func (m *Radiotap) NextLayerType() gopacket.LayerType { return LayerTypeDot11 }
+func (m *RadioTap) CanDecode() gopacket.LayerClass { return LayerTypeRadioTap }
+func (m *RadioTap) NextLayerType() gopacket.LayerType { return LayerTypeDot11 }
