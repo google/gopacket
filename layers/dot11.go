@@ -39,77 +39,261 @@ import (
 )
 
 const (
-    DOT11_REGISTER_NUM int= 0x11000
-    DOT11_MGT_REGISTER_NUM int= 0x11100
-    DOT11_MGT_ASSOC_REQ_REGISTER_NUM int= DOT11_MGT_REGISTER_NUM + int(MGT_ASSOC_REQ)
+    /* Frame type is management */
+    Dot11ManagementType         uint8=0x00  
+    /* Frame type is control */
+    Dot11ControlType            uint8=0x01  
+    /* Frame type is Data */
+    Dot11DataType               uint8=0x02  
+    /* Frame type is Reserved */
+    Dot11ReservedType           uint8=0x03  
 )
 
 const (
-    MGT_FRAME            uint8=0x00  /* Frame type is management */
-    CONTROL_FRAME        uint8=0x01  /* Frame type is control */
-    DATA_FRAME           uint8=0x02  /* Frame type is Data */
-    RESERVED_FRAME       uint8=0x03  /* Frame type is Reserved */
+    Dot11ManagementAssocReqSubtype          uint8=0x00  /* association request        */
+    Dot11ManagementAssocRespSubtype         uint8=0x01  /* association response       */
+    Dot11ManagementReassocReqSubtype        uint8=0x02  /* reassociation request      */
+    Dot11ManagementReassocRespSubtype       uint8=0x03  /* reassociation response     */
+    Dot11ManagementProbeReqSubtype          uint8=0x04  /* Probe request              */
+    Dot11ManagementProbeRespSubtype         uint8=0x05  /* Probe response             */
+    Dot11ManagementMeasurementPilotSubtype  uint8=0x06  /* Measurement Pilot          */
+    Dot11ManagementBeaconSubtype             uint8=0x08  /* Beacon frame               */
+    Dot11ManagementATIMSubtype               uint8=0x09  /* ATIM                       */
+    Dot11ManagementDisassociationSubtype             uint8=0x0A  /* Disassociation             */
+    Dot11ManagementAuthenticationSubtype     uint8=0x0B  /* Authentication             */
+    Dot11ManagementDeauthenticationSubtype   uint8=0x0C  /* Deauthentication           */
+    Dot11ManagementActionSubtype             uint8=0x0D  /* Action                     */
+    Dot11ManagementActionNoAckSubtype      uint8=0x0E  /* Action No Ack              */
+    Dot11ManagementArubaWlanSubtype         uint8=0x0F  /* Aruba WLAN Specific        */
+
+    Dot11ControlWrapper uint8=0x07  /* Control Wrapper        */
+    Dot11ControlBlockAckReqSubtype   uint8=0x08  /* Block ack Request        */
+    Dot11ControlBlockAckSubtype       uint8=0x09  /* Block ack          */
+    Dot11ControlPowersavePollSubtype         uint8=0x0A  /* power-save poll               */
+    Dot11ControlBlockRequestToSendSubtype             uint8=0x0B  /* request to send               */
+    Dot11ControlClearToSendSubtype             uint8=0x0C  /* clear to send                 */
+    Dot11ControlAcknowledgementSubtype uint8=0x0D  /* acknowledgement               */
+    Dot11ControlContentionFreePeriodEndSubtype         uint8=0x0E  /* contention-free period end    */
+    Dot11ControlContentionFreePeriodEndAckSubtype      uint8=0x0F  /* contention-free period end/ack */
+
+    Dot11DataSubtype                        uint8=0x00  /* Data                       */
+    Dot11DataCfAckSubtype                 uint8=0x01  /* Data + CF-Ack              */
+    Dot11DataCfPollSubtype                uint8=0x02  /* Data + CF-Poll             */
+    Dot11DataCfAckPollSubtype            uint8=0x03  /* Data + CF-Ack + CF-Poll    */
+    Dot11DataNullFunctionSubtype          uint8=0x04  /* Null function (no data)    */
+    Dot11DataCfAckNoDataSubtype             uint8=0x05  /* CF-Ack (no data)           */
+    Dot11DataCfPollNoDataSubtype            uint8=0x06  /* CF-Poll (No data)          */
+    Dot11DataCfAckPollNoDataSubtype        uint8=0x07  /* CF-Ack + CF-Poll (no data) */
+    Dot11DataQosDataSubtype               uint8=0x08  /* QoS Data                   */
+    Dot11DataQosDataCfAckSubtype        uint8=0x09  /* QoS Data + CF-Ack        */
+    Dot11DataQosDataCfPollSubtype       uint8=0x0A  /* QoS Data + CF-Poll      */
+    Dot11DataQosDataCfAckPollSubtype   uint8=0x0B  /* QoS Data + CF-Ack + CF-Poll    */
+    Dot11DataQosNullSubtype               uint8=0x0C  /* QoS Null        */
+    Dot11DataQosCfPollNoDataSubtype        uint8=0x0E  /* QoS CF-Poll (No Data)      */
+    Dot11DataQosCfAckPollNoDataSubtype    uint8=0x0F  /* QoS CF-Ack + CF-Poll (No Data) */
 )
+
+type Dot11Flags uint8
 
 const (
-    MGT_ASSOC_REQ          uint8=0x00  /* association request        */
-    MGT_ASSOC_RESP         uint8=0x01  /* association response       */
-    MGT_REASSOC_REQ        uint8=0x02  /* reassociation request      */
-    MGT_REASSOC_RESP       uint8=0x03  /* reassociation response     */
-    MGT_PROBE_REQ          uint8=0x04  /* Probe request              */
-    MGT_PROBE_RESP         uint8=0x05  /* Probe response             */
-    MGT_MEASUREMENT_PILOT  uint8=0x06  /* Measurement Pilot          */
-    MGT_BEACON             uint8=0x08  /* Beacon frame               */
-    MGT_ATIM               uint8=0x09  /* ATIM                       */
-    MGT_DISASS             uint8=0x0A  /* Disassociation             */
-    MGT_AUTHENTICATION     uint8=0x0B  /* Authentication             */
-    MGT_DEAUTHENTICATION   uint8=0x0C  /* Deauthentication           */
-    MGT_ACTION             uint8=0x0D  /* Action                     */
-    MGT_ACTION_NO_ACK      uint8=0x0E  /* Action No Ack              */
-    MGT_ARUBA_WLAN         uint8=0x0F  /* Aruba WLAN Specific        */
-
-    CTRL_CONTROL_WRAPPER uint8=0x07  /* Control Wrapper        */
-    CTRL_BLOCK_ACK_REQ   uint8=0x08  /* Block ack Request        */
-    CTRL_BLOCK_ACK       uint8=0x09  /* Block ack          */
-    CTRL_PS_POLL         uint8=0x0A  /* power-save poll               */
-    CTRL_RTS             uint8=0x0B  /* request to send               */
-    CTRL_CTS             uint8=0x0C  /* clear to send                 */
-    CTRL_ACKNOWLEDGEMENT uint8=0x0D  /* acknowledgement               */
-    CTRL_CFP_END         uint8=0x0E  /* contention-free period end    */
-    CTRL_CFP_ENDACK      uint8=0x0F  /* contention-free period end/ack */
-
-    DATA                        uint8=0x00  /* Data                       */
-    DATA_CF_ACK                 uint8=0x01  /* Data + CF-Ack              */
-    DATA_CF_POLL                uint8=0x02  /* Data + CF-Poll             */
-    DATA_CF_ACK_POLL            uint8=0x03  /* Data + CF-Ack + CF-Poll    */
-    DATA_NULL_FUNCTION          uint8=0x04  /* Null function (no data)    */
-    DATA_CF_ACK_NOD             uint8=0x05  /* CF-Ack (no data)           */
-    DATA_CF_POLL_NOD            uint8=0x06  /* CF-Poll (No data)          */
-    DATA_CF_ACK_POLL_NOD        uint8=0x07  /* CF-Ack + CF-Poll (no data) */
-    DATA_QOS_DATA               uint8=0x08  /* QoS Data                   */
-    DATA_QOS_DATA_CF_ACK        uint8=0x09  /* QoS Data + CF-Ack        */
-    DATA_QOS_DATA_CF_POLL       uint8=0x0A  /* QoS Data + CF-Poll      */
-    DATA_QOS_DATA_CF_ACK_POLL   uint8=0x0B  /* QoS Data + CF-Ack + CF-Poll    */
-    DATA_QOS_NULL               uint8=0x0C  /* QoS Null        */
-    DATA_QOS_CF_POLL_NOD        uint8=0x0E  /* QoS CF-Poll (No Data)      */
-    DATA_QOS_CF_ACK_POLL_NOD    uint8=0x0F  /* QoS CF-Ack + CF-Poll (No Data) */
+        Dot11FlagsToDS	                Dot11Flags = 1 << iota
+	Dot11FlagsFromDS
+        Dot11FlagsMF
+	Dot11FlagsRetry
+	Dot11FlagsPowerManagement
+        Dot11FlagsMD
+        Dot11FlagsWEP
+        Dot11FlagsOrder
 )
 
+func (a Dot11Flags) String() string {
+    outStr := ""
+    if ((a & Dot11FlagsToDS) == Dot11FlagsToDS) {
+        outStr += "TO-DS,"
+    }
+    if ((a & Dot11FlagsFromDS) == Dot11FlagsFromDS) {
+        outStr += "FROM-DS,"
+    }
+    if ((a & Dot11FlagsMF) == Dot11FlagsMF) {
+        outStr += "MF,"
+    }
+    if ((a & Dot11FlagsRetry) == Dot11FlagsRetry) {
+        outStr += "Retry,"
+    }
+    if ((a & Dot11FlagsPowerManagement) == Dot11FlagsPowerManagement) {
+        outStr += "PowerManagement,"
+    }
+    if ((a & Dot11FlagsMD) == Dot11FlagsMD) {
+        outStr += "MD,"
+    }
+    if ((a & Dot11FlagsWEP) == Dot11FlagsWEP) {
+        outStr += "WEP,"
+    }
+    if ((a & Dot11FlagsOrder) == Dot11FlagsOrder) {
+        outStr += "Order,"
+    }
+
+    return outStr
+}
+
+type Dot11Reason uint16
+
+// TODO: Update codes
+
+const (
+        Dot11ReasonReserved	                Dot11Reason = 1
+	Dot11ReasonUnspecified                  Dot11Reason = 2
+        Dot11ReasonAuthExpired                  Dot11Reason = 3
+	Dot11ReasonDeauthStLeaving              Dot11Reason = 4
+	Dot11ReasonInactivity                   Dot11Reason = 5
+        Dot11ReasonApFull                       Dot11Reason = 6
+        Dot11ReasonClass2FromNonAuth            Dot11Reason = 7
+        Dot11ReasonClass3FromNonAss             Dot11Reason = 8
+        Dot11ReasonDisasStLeaving               Dot11Reason = 9
+        Dot11ReasonStNotAuth                    Dot11Reason = 10
+)
+
+func (a Dot11Reason) String() string {
+    switch (a) {
+        case Dot11ReasonReserved: {
+            return ("Reserved")
+        }
+        case Dot11ReasonUnspecified: {
+            return ("Unspecified")
+        }
+        case Dot11ReasonAuthExpired: {
+            return ("Auth. expired")
+        }
+        case Dot11ReasonDeauthStLeaving: {
+            return ("Deauth. st. leaving")
+        }
+        case Dot11ReasonInactivity: {
+            return ("Inactivity")
+        }
+        case Dot11ReasonApFull: {
+            return ("Ap. full")
+        }
+        case Dot11ReasonClass2FromNonAuth: {
+            return ("Class2 from non auth.")
+        }
+        case Dot11ReasonClass3FromNonAss: {
+            return ("Class3 from non ass.")
+        }
+        case Dot11ReasonDisasStLeaving: {
+            return ("Disass st. leaving")
+        }
+        case Dot11ReasonStNotAuth: {
+            return ("St. not auth.")
+        }
+        default: {
+            return ("Unknown reason")
+        }
+    }
+}
+
+type Dot11Algorithm uint16 
+
+
+const (
+        Dot11AlgorithmOpen	                Dot11Algorithm = 0
+	Dot11AlgorithmSharedKey                 Dot11Algorithm = 1
+)
+
+func (a Dot11Algorithm) String() string {
+    switch (a) {
+        case Dot11AlgorithmOpen: {
+            return ("Open")
+        }
+        case Dot11AlgorithmSharedKey: {
+            return ("Shared key")
+        }
+        default: {
+            return ("Unknown algorithm")
+        }
+    }
+}
+
+type Dot11InformationElementId uint8 
+
+
+const (
+        Dot11InformationElementIdSSID	                Dot11InformationElementId = 0
+        Dot11InformationElementIdRates	                Dot11InformationElementId = 1
+        Dot11InformationElementIdFHSet	                Dot11InformationElementId = 2
+        Dot11InformationElementIdDSSet	                Dot11InformationElementId = 3
+        Dot11InformationElementIdCFSet	                Dot11InformationElementId = 4
+        Dot11InformationElementIdTIM	                Dot11InformationElementId = 5
+        Dot11InformationElementIdIBSSSet	        Dot11InformationElementId = 6
+        Dot11InformationElementIdChallenge	        Dot11InformationElementId = 16
+        Dot11InformationElementIdERPInfo	        Dot11InformationElementId = 42
+        Dot11InformationElementIdQoSCapability	        Dot11InformationElementId = 46
+        Dot11InformationElementIdERPInfo2	        Dot11InformationElementId = 47
+        Dot11InformationElementIdRSNInfo	        Dot11InformationElementId = 48
+        Dot11InformationElementIdESRates	        Dot11InformationElementId = 50
+        Dot11InformationElementIdVendor 	        Dot11InformationElementId = 221
+        Dot11InformationElementIdReserved 	        Dot11InformationElementId = 68
+)
+
+func (a Dot11InformationElementId) String() string {
+    switch (a) {
+        case Dot11InformationElementIdSSID: {
+            return ("SSID")
+        }
+        case Dot11InformationElementIdRates: {
+            return ("Rates")
+        }
+        case Dot11InformationElementIdFHSet: {
+            return ("FHset")
+        }
+        case Dot11InformationElementIdDSSet: {
+            return ("DSset")
+        }
+        case Dot11InformationElementIdCFSet: {
+            return ("CFset")
+        }
+        case Dot11InformationElementIdTIM: {
+            return ("TIM")
+        }
+        case Dot11InformationElementIdIBSSSet: {
+            return ("IBSSset")
+        }
+        case Dot11InformationElementIdChallenge: {
+            return ("Challenge")
+        }
+        case Dot11InformationElementIdERPInfo: {
+            return ("ERPinfo")
+        }
+        case Dot11InformationElementIdQoSCapability: {
+            return ("QoS capability")
+        }
+        case Dot11InformationElementIdERPInfo2: {
+            return ("ERPinfo2")
+        }
+        case Dot11InformationElementIdRSNInfo: {
+            return ("RSNinfo")
+        }
+        case Dot11InformationElementIdESRates: {
+            return ("ESrates")
+        }
+        case Dot11InformationElementIdVendor: {
+            return ("Vendor")
+        }
+        case Dot11InformationElementIdReserved: {
+            return ("Reserved")
+        }
+        default: {
+            return ("Unknown information element id")
+        }
+    }
+}
 
 type Dot11 struct {
 	BaseLayer
         Subtype uint8
         Type uint8
         Proto uint8
-        ToDS bool
-        FromDS bool
-        MF bool
-        Retry bool
-        PowerManagement bool
-        MD bool
+        Flags Dot11Flags
         Valid bool
-        Wep bool
-        Order bool
         DurationId uint16
         // DurationId []byte
         Address1 net.HardwareAddr
@@ -127,130 +311,130 @@ func (m *Dot11) LayerType() gopacket.LayerType { return LayerTypeDot11 }
 func (m *Dot11) CanDecode() gopacket.LayerClass { return LayerTypeDot11 }
 func (m *Dot11) NextLayerType() gopacket.LayerType {
         switch(m.Type) {
-            case MGT_FRAME: {
+            case Dot11ManagementType: {
                 // same header for all management frames, 24 bytes
                 switch (m.Subtype) {
-                    case MGT_ASSOC_REQ: {
+                    case Dot11ManagementAssocReqSubtype: {
                         return LayerTypeDot11MgmtAssocReq
                     }
-                    case MGT_ASSOC_RESP: {
+                    case Dot11ManagementAssocRespSubtype: {
                         return LayerTypeDot11MgmtAssocResp
                     }
-                    case MGT_REASSOC_REQ: {
+                    case Dot11ManagementReassocReqSubtype: {
                         return LayerTypeDot11MgmtReassocReq
                     }
-                    case MGT_REASSOC_RESP: {
+                    case Dot11ManagementReassocRespSubtype: {
                         return LayerTypeDot11MgmtReassocResp
                     }
-                    case MGT_PROBE_REQ: {
+                    case Dot11ManagementProbeReqSubtype: {
                         return LayerTypeDot11MgmtProbeReq
                     }
-                    case MGT_PROBE_RESP: {
+                    case Dot11ManagementProbeRespSubtype: {
                         return LayerTypeDot11MgmtProbeResp
                     }
-                    case MGT_MEASUREMENT_PILOT: {
+                    case Dot11ManagementMeasurementPilotSubtype: {
                         return LayerTypeDot11MgmtMeasurementPilot
                     }
-                    case MGT_BEACON: {
+                    case Dot11ManagementBeaconSubtype: {
                         return LayerTypeDot11MgmtBeacon
                     }
-                    case MGT_ATIM: {
+                    case Dot11ManagementATIMSubtype: {
                         return LayerTypeDot11MgmtATIM
                     }
-                    case MGT_DISASS: {
+                    case Dot11ManagementDisassociationSubtype: {
                         return LayerTypeDot11MgmtDisassociation
                     }
-                    case MGT_AUTHENTICATION: {
+                    case Dot11ManagementAuthenticationSubtype: {
                         return LayerTypeDot11MgmtAuthentication
                     }
-                    case MGT_DEAUTHENTICATION: {
+                    case Dot11ManagementDeauthenticationSubtype: {
                         return LayerTypeDot11MgmtDeauthentication
                     }
-                    case MGT_ACTION: {
+                    case Dot11ManagementActionSubtype: {
                         return LayerTypeDot11MgmtAction
                     }
-                    case MGT_ACTION_NO_ACK: {
+                    case Dot11ManagementActionNoAckSubtype: {
                         return LayerTypeDot11MgmtActionNoAck
                     }
-                    case MGT_ARUBA_WLAN: {
+                    case Dot11ManagementArubaWlanSubtype: {
                         return LayerTypeDot11MgmtArubaWlan
                     }
                 }
             }
-            case CONTROL_FRAME: {
+            case Dot11ControlType: {
                 switch (m.Subtype) {
-                    case CTRL_BLOCK_ACK_REQ: {
+                    case Dot11ControlBlockAckReqSubtype: {
                         return LayerTypeDot11ControlBlockAckReq
                     }
-                    case CTRL_BLOCK_ACK: {
+                    case Dot11ControlBlockAckSubtype: {
                         return LayerTypeDot11ControlBlockAck
                     }
-                    case CTRL_RTS: {
+                    case Dot11ControlBlockRequestToSendSubtype: {
                         return LayerTypeDot11ControlRequestToSend
                     }
-                    case CTRL_CTS: {
+                    case Dot11ControlClearToSendSubtype: {
                         return LayerTypeDot11ControlClearToSend
                     }
-                    case CTRL_PS_POLL: {
+                    case Dot11ControlPowersavePollSubtype: {
                         return LayerTypeDot11ControlPowersavePoll
                     }
-                    case CTRL_ACKNOWLEDGEMENT: {
+                    case Dot11ControlAcknowledgementSubtype: {
                         return LayerTypeDot11ControlAcknowledgement
                     }
-                    case CTRL_CFP_END: {
+                    case Dot11ControlContentionFreePeriodEndSubtype: {
                         return LayerTypeDot11ControlContentionFreePeriodEnd
                     }
-                    case CTRL_CFP_ENDACK: {
+                    case Dot11ControlContentionFreePeriodEndAckSubtype: {
                         return LayerTypeDot11ControlContentionFreePeriodEndAck
                     }
                 }
                 return gopacket.LayerTypePayload
             }
-            case DATA_FRAME: {
+            case Dot11DataType: {
                 switch (m.Subtype) {
-                    case DATA: {
+                    case Dot11DataSubtype: {
                         return LayerTypeDot11DataFrame
                     }
-                    case DATA_CF_ACK: {
+                    case Dot11DataCfAckSubtype: {
                         return LayerTypeDot11DataCfAck
                     }
-                    case DATA_CF_POLL: {
+                    case Dot11DataCfPollSubtype: {
                         return LayerTypeDot11DataCfPoll
                     }
-                    case DATA_CF_ACK_POLL: {
+                    case Dot11DataCfAckPollSubtype: {
                         return LayerTypeDot11DataCfAckPoll
                     }
-                    case DATA_NULL_FUNCTION: {
+                    case Dot11DataNullFunctionSubtype: {
                         return LayerTypeDot11DataNull
                     }
-                    case DATA_CF_ACK_NOD: {
+                    case Dot11DataCfAckNoDataSubtype: {
                         return LayerTypeDot11DataCfAckNoData
                     }
-                    case DATA_CF_POLL_NOD: {
+                    case Dot11DataCfPollNoDataSubtype: {
                         return LayerTypeDot11DataCfPollNoData
                     }
-                    case DATA_CF_ACK_POLL_NOD: {
+                    case Dot11DataCfAckPollNoDataSubtype: {
                         return LayerTypeDot11DataCfAckPollNoData
                     }
-                    case DATA_QOS_DATA: {
+                    case Dot11DataQosDataSubtype: {
                         return LayerTypeDot11DataQosData
                     }
-                    case DATA_QOS_DATA_CF_ACK: {
+                    case Dot11DataQosDataCfAckSubtype: {
                         return LayerTypeDot11DataQosDataCfAck
                     }
-                    case DATA_QOS_DATA_CF_POLL: {
+                    case Dot11DataQosDataCfPollSubtype: {
                         return LayerTypeDot11DataQosDataCfPoll
                     }
-                    case DATA_QOS_DATA_CF_ACK_POLL: {
+                    case Dot11DataQosDataCfAckPollSubtype: {
                         return LayerTypeDot11DataQosDataCfAckPoll
                     }
-                    case DATA_QOS_NULL: {
+                    case Dot11DataQosNullSubtype: {
                         return LayerTypeDot11DataQosNull
                     }
-                    case DATA_QOS_CF_POLL_NOD: {
+                    case Dot11DataQosCfPollNoDataSubtype: {
                         return LayerTypeDot11DataQosCfPollNoData
                     }
-                    case DATA_QOS_CF_ACK_POLL_NOD: {
+                    case Dot11DataQosCfAckPollNoDataSubtype: {
                         return LayerTypeDot11DataQosCfAckPollNoData
                     }
                 }
@@ -265,22 +449,15 @@ func (m *Dot11) DecodeFromBytes(data []byte, df gopacket.DecodeFeedback) error {
     m.Subtype = ((uint8)(data[0]) & 0xF0) >> 4
     m.Type = ((uint8)(data[0]) & 0x000C) >> 2
     m.Proto = ((uint8)(data[0]) & 0x0003)
-    m.ToDS = (((uint8)(data[1]) & 0x01)  == 0x01)
-    m.FromDS = (((uint8)(data[1]) & 0x02) == 0x02)
-    m.MF = (((uint8)(data[1]) & 0x04)  == 0x04)
-    m.Retry = (((uint8)(data[1]) & 0x08) == 0x08)
-    m.PowerManagement = (((uint8)(data[1]) & 0x10)  == 0x10)
-    m.MD = (((uint8)(data[1]) & 0x20) == 0x20)
-    m.Wep = (((uint8)(data[1]) & 0x40)  == 0x40)
-    m.Order = (((uint8)(data[1]) & 0x80) == 0x80)
+    m.Flags = Dot11Flags(data[1])
     m.DurationId=binary.LittleEndian.Uint16(data[2:4])
     m.Address1=net.HardwareAddr(data[4:10])
 
     offset := 10
 
-    if (m.Type == CONTROL_FRAME) {
+    if (m.Type == Dot11ControlType) {
         switch(m.Subtype) { 
-            case CTRL_RTS, CTRL_PS_POLL, CTRL_CFP_END, CTRL_CFP_ENDACK: {
+            case Dot11ControlBlockRequestToSendSubtype, Dot11ControlPowersavePollSubtype, Dot11ControlContentionFreePeriodEndSubtype, Dot11ControlContentionFreePeriodEndAckSubtype: {
                 m.Address2=net.HardwareAddr(data[offset:offset+6])
                 offset += 6
             }
@@ -290,35 +467,34 @@ func (m *Dot11) DecodeFromBytes(data []byte, df gopacket.DecodeFeedback) error {
         offset += 6
     }
 
-    if (m.Type == MGT_FRAME || m.Type == DATA_FRAME) {
+    if (m.Type == Dot11ManagementType || m.Type == Dot11DataType) {
         m.Address3=net.HardwareAddr(data[offset:offset+6])
         offset += 6
     }
 
-    if (m.Type != CONTROL_FRAME) {
+    if (m.Type != Dot11ControlType) {
         // Sequence
         offset +=2 
     }
 
-    if (m.Type == DATA_FRAME && m.FromDS && m.ToDS) {
+    if (m.Type == Dot11DataType && ((m.Flags & Dot11FlagsFromDS) == Dot11FlagsFromDS) && ((m.Flags & Dot11FlagsToDS)==Dot11FlagsToDS)) {
         m.Address4=net.HardwareAddr(data[offset:offset+6])
         offset += 6
     }
 
-    // ChecksumIEEE(data)
     // 29:31 SequenceControl
 
     // Frame body
     switch(m.Type) {
-        case MGT_FRAME: {
+        case Dot11ManagementType: {
             m.BaseLayer = BaseLayer{Contents: data[0:offset], Payload: data[offset:len(data)-4]}
             offset = len(data)-4
         }
-        case CONTROL_FRAME: {
+        case Dot11ControlType: {
             m.BaseLayer = BaseLayer{Contents: data[0:offset], Payload: data[offset:len(data)-4]}
             offset = len(data)-4
         }
-        case DATA_FRAME: {
+        case Dot11DataType: {
             m.BaseLayer = BaseLayer{Contents: data[0:offset], Payload: data[offset:len(data)-4]}
             offset = len(data)-4
         }
@@ -330,47 +506,11 @@ func (m *Dot11) DecodeFromBytes(data []byte, df gopacket.DecodeFeedback) error {
     return (nil)
 }
 
-func (m Dot11) SerializeTo(b gopacket.SerializeBuffer, opts gopacket.SerializeOptions) error {
-	return nil
-}
-
-func (m *Dot11) String() string {
-    text := fmt.Sprintf("802.11 Type: %v Subtype: %v Protocol: %v ", m.Type, m.Subtype, m.Proto)
-
-    if (!m.Valid) {
-        text += "bad-fcs "
-    }
-    if (m.Wep) {
-        text += "wep "
-    }
-    if (m.Retry) {
-        text += "Retry"
-    }
-    if (m.MD) {
-        text += "More Data"
-    }
-    if (m.PowerManagement) {
-        text += "Pwr Mgmt"
-    }
-    if (m.Order) {
-        text += "Strictly Ordered "
-    }
-
-    text += fmt.Sprintf("Address1: %s ", m.Address1)
-    text += fmt.Sprintf("Address2: %s ", m.Address2)
-    text += fmt.Sprintf("Address3: %s ", m.Address3)
-    text += fmt.Sprintf("Address4: %s ", m.Address4)
-    return text
-}
-
-
 type Dot11MgmtFrame struct {
 	BaseLayer
 }
 
 func (m *Dot11MgmtFrame) NextLayerType() gopacket.LayerType { return gopacket.LayerTypePayload }
-
-var LayerTypeDot11ControlFrame = gopacket.RegisterLayerType(103001, gopacket.LayerTypeMetadata{"LayerTypeDot11ControlFrame", gopacket.DecodeFunc(decodeDot11ControlFrame)})
 
 type Dot11ControlFrame struct {
 	BaseLayer
@@ -388,8 +528,6 @@ func decodeDot11ControlFrame(data []byte, p gopacket.PacketBuilder) error {
 	d := &Dot11ControlFrame{}
 	return decodingLayerDecoder(d, data, p)
 }
-
-var LayerTypeDot11DataFrame = gopacket.RegisterLayerType(105001, gopacket.LayerTypeMetadata{"LayerTypeDot11DataFrame", gopacket.DecodeFunc(decodeDot11DataFrame)})
 
 type Dot11DataFrame struct {
 	BaseLayer
@@ -409,8 +547,6 @@ func decodeDot11DataFrame(data []byte, p gopacket.PacketBuilder) error {
 }
 
 
-var LayerTypeDot11DataCfAck = gopacket.RegisterLayerType(105002, gopacket.LayerTypeMetadata{"LayerTypeDot11DataCfAck", gopacket.DecodeFunc(decodeDot11DataCfAck)})
-
 type Dot11DataCfAck struct {
 	Dot11ControlFrame
 }
@@ -425,8 +561,6 @@ func (m *Dot11DataCfAck) CanDecode() gopacket.LayerClass { return LayerTypeDot11
 func (m *Dot11DataCfAck) DecodeFromBytes(data []byte, df gopacket.DecodeFeedback) error {
     return nil
 }
-
-var LayerTypeDot11DataCfPoll = gopacket.RegisterLayerType(105003, gopacket.LayerTypeMetadata{"LayerTypeDot11DataCfPoll", gopacket.DecodeFunc(decodeDot11DataCfPoll)})
 
 type Dot11DataCfPoll struct {
 	Dot11ControlFrame
@@ -443,8 +577,6 @@ func (m *Dot11DataCfPoll) DecodeFromBytes(data []byte, df gopacket.DecodeFeedbac
     return nil
 }
 
-var LayerTypeDot11DataCfAckPoll = gopacket.RegisterLayerType(105043, gopacket.LayerTypeMetadata{"LayerTypeDot11DataCfAckPoll", gopacket.DecodeFunc(decodeDot11DataCfAckPoll)})
-
 type Dot11DataCfAckPoll struct {
 	Dot11ControlFrame
 }
@@ -459,8 +591,6 @@ func (m *Dot11DataCfAckPoll) CanDecode() gopacket.LayerClass { return LayerTypeD
 func (m *Dot11DataCfAckPoll) DecodeFromBytes(data []byte, df gopacket.DecodeFeedback) error {
     return nil
 }
-
-var LayerTypeDot11DataNull = gopacket.RegisterLayerType(105004, gopacket.LayerTypeMetadata{"LayerTypeDot11DataNull", gopacket.DecodeFunc(decodeDot11DataNull)})
 
 type Dot11DataNull struct {
 	Dot11ControlFrame
@@ -477,8 +607,6 @@ func (m *Dot11DataNull) DecodeFromBytes(data []byte, df gopacket.DecodeFeedback)
     return nil
 }
 
-var LayerTypeDot11DataCfAckNoData = gopacket.RegisterLayerType(105005, gopacket.LayerTypeMetadata{"LayerTypeDot11DataCfAckNoData", gopacket.DecodeFunc(decodeDot11DataCfAckNoData)})
-
 type Dot11DataCfAckNoData struct {
 	Dot11ControlFrame
 }
@@ -494,8 +622,6 @@ func (m *Dot11DataCfAckNoData) DecodeFromBytes(data []byte, df gopacket.DecodeFe
     return nil
 }
 
-var LayerTypeDot11DataCfPollNoData = gopacket.RegisterLayerType(105006, gopacket.LayerTypeMetadata{"LayerTypeDot11DataCfPollNoData", gopacket.DecodeFunc(decodeDot11DataCfPollNoData)})
-
 type Dot11DataCfPollNoData struct {
 	Dot11ControlFrame
 }
@@ -510,8 +636,6 @@ func (m *Dot11DataCfPollNoData) CanDecode() gopacket.LayerClass { return LayerTy
 func (m *Dot11DataCfPollNoData) DecodeFromBytes(data []byte, df gopacket.DecodeFeedback) error {
     return nil
 }
-
-var LayerTypeDot11DataCfAckPollNoData = gopacket.RegisterLayerType(105007, gopacket.LayerTypeMetadata{"LayerTypeDot11DataCfAckPollNoData", gopacket.DecodeFunc(decodeDot11DataCfAckPollNoData)})
 
 type Dot11DataCfAckPollNoData struct {
 	Dot11ControlFrame
@@ -559,9 +683,6 @@ func (d *Dot11DataQos) String() string {
     return fmt.Sprintf("Ack policy: %v[%v]", ack_policies[d.AckPolicy], d.AckPolicy)
 }
 
-
-var LayerTypeDot11DataQosData = gopacket.RegisterLayerType(105008, gopacket.LayerTypeMetadata{"LayerTypeDot11DataQosData", gopacket.DecodeFunc(decodeDot11DataQosData)})
-
 type Dot11DataQosData struct {
 	Dot11DataQos
 }
@@ -577,12 +698,6 @@ func (m *Dot11DataQosData) CanDecode() gopacket.LayerClass { return LayerTypeDot
 func (m *Dot11DataQosData) NextLayerType() gopacket.LayerType { 
     return LayerTypeDot11DataFrame
 }
-
-func (d *Dot11DataQosData) String() string {
-    return fmt.Sprintf("Dot11DataQosData %v", d.Dot11DataQos.String())
-}
-
-var LayerTypeDot11DataQosDataCfAck = gopacket.RegisterLayerType(105009, gopacket.LayerTypeMetadata{"LayerTypeDot11DataQosDataCfAck", gopacket.DecodeFunc(decodeDot11DataQosDataCfAck)})
 
 type Dot11DataQosDataCfAck struct {
 	Dot11DataQos
@@ -604,8 +719,6 @@ func (d *Dot11DataQosDataCfAck) String() string {
     return fmt.Sprintf("Dot11DataQosDataCfAck %v", d.Dot11DataQos.String())
 }
 
-var LayerTypeDot11DataQosDataCfPoll = gopacket.RegisterLayerType(105010, gopacket.LayerTypeMetadata{"LayerTypeDot11DataQosDataCfPoll", gopacket.DecodeFunc(decodeDot11DataQosDataCfPoll)})
-
 type Dot11DataQosDataCfPoll struct {
 	Dot11DataQos
 }
@@ -621,8 +734,6 @@ func (m *Dot11DataQosDataCfPoll) NextLayerType() gopacket.LayerType { return Lay
 func (d *Dot11DataQosDataCfPoll) String() string {
     return fmt.Sprintf("Dot11DataQosDataCfAck %v", d.Dot11DataQos.String())
 }
-
-var LayerTypeDot11DataQosDataCfAckPoll = gopacket.RegisterLayerType(105011, gopacket.LayerTypeMetadata{"LayerTypeDot11DataQosDataCfAckPoll", gopacket.DecodeFunc(decodeDot11DataQosDataCfAckPoll)})
 
 type Dot11DataQosDataCfAckPoll struct {
 	Dot11DataQos
@@ -640,8 +751,6 @@ func (d *Dot11DataQosDataCfAckPoll) String() string {
     return fmt.Sprintf("Dot11DataQosDataCfAckPoll %v", d.Dot11DataQos.String())
 }
 
-var LayerTypeDot11DataQosNull = gopacket.RegisterLayerType(105012, gopacket.LayerTypeMetadata{"LayerTypeDot11DataQosNull", gopacket.DecodeFunc(decodeDot11DataQosNull)})
-
 type Dot11DataQosNull struct {
 	Dot11DataQos
 }
@@ -657,8 +766,6 @@ func (m *Dot11DataQosNull) NextLayerType() gopacket.LayerType { return LayerType
 func (d *Dot11DataQosNull) String() string {
     return fmt.Sprintf("Dot11DataQosNull %v", d.Dot11DataQos.String())
 }
-
-var LayerTypeDot11DataQosCfPollNoData = gopacket.RegisterLayerType(105013, gopacket.LayerTypeMetadata{"LayerTypeDot11DataQosCfPollNoData", gopacket.DecodeFunc(decodeDot11DataQosCfPollNoData)})
 
 type Dot11DataQosCfPollNoData struct {
 	Dot11DataQos
@@ -676,8 +783,6 @@ func (d *Dot11DataQosCfPollNoData) String() string {
     return fmt.Sprintf("Dot11DataQosCfPollNoData %v", d.Dot11DataQos.String())
 }
 
-var LayerTypeDot11DataQosCfAckPollNoData = gopacket.RegisterLayerType(105014, gopacket.LayerTypeMetadata{"LayerTypeDot11DataQosCfAckPollNoData", gopacket.DecodeFunc(decodeDot11DataQosCfAckPollNoData)})
-
 type Dot11DataQosCfAckPollNoData struct {
 	Dot11DataQos
 }
@@ -694,11 +799,9 @@ func (d *Dot11DataQosCfAckPollNoData) String() string {
     return fmt.Sprintf("Dot11DataQosCfAckPollNoData %v", d.Dot11DataQos.String())
 }
 
-var LayerTypeDot11InformationElement = gopacket.RegisterLayerType(105015, gopacket.LayerTypeMetadata{"LayerTypeDot11InformationElement", gopacket.DecodeFunc(decodeDot11InformationElement)})
-
 type Dot11InformationElement struct {
 	BaseLayer
-        Id uint8 
+        Id Dot11InformationElementId 
         Length uint8
         Oui []byte
         Info []byte
@@ -707,36 +810,36 @@ type Dot11InformationElement struct {
 func (m *Dot11InformationElement) LayerType() gopacket.LayerType { return LayerTypeDot11InformationElement }
 func (m *Dot11InformationElement) CanDecode() gopacket.LayerClass { return LayerTypeDot11InformationElement }
 
-func (m *Dot11InformationElement) NextLayerType() gopacket.LayerType { 
+func (m *Dot11InformationElement) NextLayerType() gopacket.LayerType {
+    // TODO: check for last element?
     /*    
     if (false) {
         Return NIL)
     } 
     */
-    return LayerTypeDot11InformationElement 
+    return LayerTypeDot11InformationElement
 }
 
 func (m *Dot11InformationElement) DecodeFromBytes(data []byte, df gopacket.DecodeFeedback) error {
-    m.Id = data[0]
+    m.Id = Dot11InformationElementId(data[0])
     m.Length = data[1]
     offset := uint8(2)
 
     if (m.Id==221) {
+        // Vendor extension
         m.Oui=data[offset:offset+4]
         m.Info = data[offset+4:offset+m.Length]
     } else {
         m.Info = data[offset:offset+m.Length]
     }
 
-    offset += m.Length 
+    offset += m.Length
 
     m.BaseLayer = BaseLayer{Contents: data[:offset], Payload: data[offset:]}
     return nil
 }
 
 func (d *Dot11InformationElement) String() string {
-    ids:=map[uint8]string{0:"SSID", 1:"Rates", 2: "FHset", 3:"DSset", 4:"CFset", 5:"TIM", 6:"IBSSset", 16:"challenge",
-                                            42:"ERPinfo", 46:"QoS Capability", 47:"ERPinfo", 48:"RSNinfo", 50:"ESRates",221:"vendor",68:"reserved"}
     if (d.Id==0) {
         return fmt.Sprintf("802.11 Information Element (SSID: %v)", string(d.Info))
     } else if (d.Id==1) {
@@ -750,9 +853,9 @@ func (d *Dot11InformationElement) String() string {
         }
         return fmt.Sprintf("802.11 Information Element (Rates: %s Mbit)", rates)
     } else if (d.Id==221) {
-        return fmt.Sprintf("802.11 Information Element (Vendor: ID: %v[%v], Length: %v, OUI: %X, Info: %X)", ids[d.Id], d.Id, d.Length, d.Oui, d.Info)
+        return fmt.Sprintf("802.11 Information Element (Vendor: ID: %v, Length: %v, OUI: %X, Info: %X)", d.Id, d.Length, d.Oui, d.Info)
     } else {
-        return fmt.Sprintf("802.11 Information Element (ID: %v[%v], Length: %v, Info: %X)", ids[d.Id], d.Id, d.Length, d.Info)
+        return fmt.Sprintf("802.11 Information Element (ID: %v, Length: %v, Info: %X)", d.Id, d.Length, d.Info)
     }
 }
 
@@ -761,8 +864,6 @@ func decodeDot11InformationElement(data []byte, p gopacket.PacketBuilder) error 
 	return decodingLayerDecoder(d, data, p)
 }
 
-
-var LayerTypeDot11ControlClearToSend = gopacket.RegisterLayerType(104001, gopacket.LayerTypeMetadata{"LayerTypeDot11ControlClearToSend", gopacket.DecodeFunc(decodeDot11ControlClearToSend)})
 
 type Dot11ControlClearToSend struct {
 	Dot11ControlFrame
@@ -779,8 +880,6 @@ func (m *Dot11ControlClearToSend) DecodeFromBytes(data []byte, df gopacket.Decod
     return nil
 }
 
-var LayerTypeDot11ControlRequestToSend = gopacket.RegisterLayerType(104002, gopacket.LayerTypeMetadata{"LayerTypeDot11ControlRequestToSend", gopacket.DecodeFunc(decodeDot11ControlRequestToSend)})
-
 type Dot11ControlRequestToSend struct {
 	Dot11ControlFrame
 }
@@ -795,8 +894,6 @@ func (m *Dot11ControlRequestToSend) CanDecode() gopacket.LayerClass { return Lay
 func (m *Dot11ControlRequestToSend) DecodeFromBytes(data []byte, df gopacket.DecodeFeedback) error {
     return nil
 }
-
-var LayerTypeDot11ControlBlockAckReq = gopacket.RegisterLayerType(104003, gopacket.LayerTypeMetadata{"LayerTypeDot11ControlBlockAckReq", gopacket.DecodeFunc(decodeDot11ControlBlockAckReq)})
 
 type Dot11ControlBlockAckReq struct {
 	Dot11ControlFrame
@@ -813,8 +910,6 @@ func (m *Dot11ControlBlockAckReq) DecodeFromBytes(data []byte, df gopacket.Decod
     return nil
 }
 
-var LayerTypeDot11ControlBlockAck = gopacket.RegisterLayerType(104004, gopacket.LayerTypeMetadata{"LayerTypeDot11ControlBlockAck", gopacket.DecodeFunc(decodeDot11ControlBlockAck)})
-
 type Dot11ControlBlockAck struct {
 	Dot11ControlFrame
 }
@@ -829,8 +924,6 @@ func (m *Dot11ControlBlockAck) CanDecode() gopacket.LayerClass { return LayerTyp
 func (m *Dot11ControlBlockAck) DecodeFromBytes(data []byte, df gopacket.DecodeFeedback) error {
     return nil
 }
-
-var LayerTypeDot11ControlPowersavePoll = gopacket.RegisterLayerType(104005, gopacket.LayerTypeMetadata{"LayerTypeDot11ControlPowersavePoll", gopacket.DecodeFunc(decodeDot11ControlPowersavePoll)})
 
 type Dot11ControlPowersavePoll struct {
 	Dot11ControlFrame
@@ -847,8 +940,6 @@ func (m *Dot11ControlPowersavePoll) DecodeFromBytes(data []byte, df gopacket.Dec
     return nil
 }
 
-var LayerTypeDot11ControlAcknowledgement = gopacket.RegisterLayerType(104006, gopacket.LayerTypeMetadata{"LayerTypeDot11ControlAcknowledgement", gopacket.DecodeFunc(decodeDot11ControlAcknowledgement)})
-
 type Dot11ControlAcknowledgement struct {
 	Dot11ControlFrame
 }
@@ -863,8 +954,6 @@ func (m *Dot11ControlAcknowledgement) CanDecode() gopacket.LayerClass { return L
 func (m *Dot11ControlAcknowledgement) DecodeFromBytes(data []byte, df gopacket.DecodeFeedback) error {
     return nil
 }
-
-var LayerTypeDot11ControlContentionFreePeriodEnd = gopacket.RegisterLayerType(104007, gopacket.LayerTypeMetadata{"LayerTypeDot11ControlContentionFreePeriodEnd", gopacket.DecodeFunc(decodeDot11ControlContentionFreePeriodEnd)})
 
 type Dot11ControlContentionFreePeriodEnd struct {
 	Dot11ControlFrame
@@ -881,8 +970,6 @@ func (m *Dot11ControlContentionFreePeriodEnd) DecodeFromBytes(data []byte, df go
     return nil
 }
 
-var LayerTypeDot11ControlContentionFreePeriodEndAck = gopacket.RegisterLayerType(104008, gopacket.LayerTypeMetadata{"LayerTypeDot11ControlContentionFreePeriodEndAck", gopacket.DecodeFunc(decodeDot11ControlContentionFreePeriodEndAck)})
-
 type Dot11ControlContentionFreePeriodEndAck struct {
 	Dot11ControlFrame
 }
@@ -897,10 +984,6 @@ func (m *Dot11ControlContentionFreePeriodEndAck) CanDecode() gopacket.LayerClass
 func (m *Dot11ControlContentionFreePeriodEndAck) DecodeFromBytes(data []byte, df gopacket.DecodeFeedback) error {
     return nil
 }
-
-
-
-var LayerTypeDot11MgmtAssocReq = gopacket.RegisterLayerType(DOT11_MGT_ASSOC_REQ_REGISTER_NUM, gopacket.LayerTypeMetadata{"LayerTypeDot11MgmtAssocReq", gopacket.DecodeFunc(decodeDot11MgmtAssocReq)})
 
 type Dot11MgmtAssocReq struct {
 	Dot11MgmtFrame
@@ -922,8 +1005,6 @@ func (m *Dot11MgmtAssocReq) DecodeFromBytes(data []byte, df gopacket.DecodeFeedb
     m.BaseLayer = BaseLayer{Contents: data[:4], Payload: data[4:]}
     return nil
 }
-
-var LayerTypeDot11MgmtAssocResp = gopacket.RegisterLayerType(1059981, gopacket.LayerTypeMetadata{"LayerTypeDot11MgmtAssocResp", gopacket.DecodeFunc(decodeDot11MgmtAssocResp)})
 
 type Dot11MgmtAssocResp struct {
 	Dot11MgmtFrame
@@ -948,8 +1029,6 @@ func (m *Dot11MgmtAssocResp) DecodeFromBytes(data []byte, df gopacket.DecodeFeed
     return nil
 }
 
-var LayerTypeDot11MgmtReassocReq = gopacket.RegisterLayerType(1059999, gopacket.LayerTypeMetadata{"LayerTypeDot11MgmtReassocReq", gopacket.DecodeFunc(decodeDot11MgmtReassocReq)})
-
 type Dot11MgmtReassocReq struct {
 	Dot11MgmtFrame
         CapabilityInfo uint16
@@ -973,9 +1052,6 @@ func (m *Dot11MgmtReassocReq) DecodeFromBytes(data []byte, df gopacket.DecodeFee
     return nil
 }
 
-
-var LayerTypeDot11MgmtReassocResp = gopacket.RegisterLayerType(1059991, gopacket.LayerTypeMetadata{"LayerTypeDot11MgmtReassocResp", gopacket.DecodeFunc(decodeDot11MgmtReassocResp)})
-
 type Dot11MgmtReassocResp struct {
 	Dot11MgmtFrame
 }
@@ -992,8 +1068,6 @@ func (m *Dot11MgmtReassocResp) DecodeFromBytes(data []byte, df gopacket.DecodeFe
     m.BaseLayer = BaseLayer{Contents: data, Payload: data[0:]}
     return nil
 }
-
-var LayerTypeDot11MgmtProbeReq = gopacket.RegisterLayerType(1059992, gopacket.LayerTypeMetadata{"LayerTypeDot11MgmtProbeReq", gopacket.DecodeFunc(decodeDot11MgmtProbeReq)})
 
 type Dot11MgmtProbeReq struct {
 	Dot11MgmtFrame
@@ -1012,8 +1086,6 @@ func (m *Dot11MgmtProbeReq) DecodeFromBytes(data []byte, df gopacket.DecodeFeedb
     return nil
 }
 
-var LayerTypeDot11MgmtProbeResp = gopacket.RegisterLayerType(1059993, gopacket.LayerTypeMetadata{"LayerTypeDot11MgmtProbeResp", gopacket.DecodeFunc(decodeDot11MgmtProbeResp)})
-
 type Dot11MgmtProbeResp struct {
 	Dot11MgmtFrame
 }
@@ -1031,8 +1103,6 @@ func (m *Dot11MgmtProbeResp) DecodeFromBytes(data []byte, df gopacket.DecodeFeed
     return nil
 }
 
-var LayerTypeDot11MgmtMeasurementPilot = gopacket.RegisterLayerType(1059994, gopacket.LayerTypeMetadata{"LayerTypeDot11MgmtMeasurementPilot", gopacket.DecodeFunc(decodeDot11MgmtMeasurementPilot)})
-
 type Dot11MgmtMeasurementPilot struct {
 	Dot11MgmtFrame
 }
@@ -1048,8 +1118,6 @@ func (m *Dot11MgmtMeasurementPilot) DecodeFromBytes(data []byte, df gopacket.Dec
     m.BaseLayer = BaseLayer{Contents: data, Payload: nil}
     return nil
 }
-
-var LayerTypeDot11MgmtBeacon = gopacket.RegisterLayerType(1059995, gopacket.LayerTypeMetadata{"LayerTypeDot11MgmtBeacon", gopacket.DecodeFunc(decodeDot11MgmtBeacon)})
 
 type Dot11MgmtBeacon struct {
 	Dot11MgmtFrame
@@ -1079,8 +1147,6 @@ func (d *Dot11MgmtBeacon) String() string {
 
 func (m *Dot11MgmtBeacon) NextLayerType() gopacket.LayerType { return LayerTypeDot11InformationElement }
 
-var LayerTypeDot11MgmtATIM = gopacket.RegisterLayerType(1059996, gopacket.LayerTypeMetadata{"LayerTypeDot11MgmtATIM", gopacket.DecodeFunc(decodeDot11MgmtATIM)})
-
 type Dot11MgmtATIM struct {
 	Dot11MgmtFrame
 }
@@ -1101,11 +1167,9 @@ func (d *Dot11MgmtATIM) String() string {
     return fmt.Sprintf("802.11 ATIM")
 }
 
-var LayerTypeDot11MgmtDisassociation = gopacket.RegisterLayerType(1059997, gopacket.LayerTypeMetadata{"LayerTypeDot11MgmtDisassociation", gopacket.DecodeFunc(decodeDot11MgmtDisassociation)})
-
 type Dot11MgmtDisassociation struct {
 	Dot11MgmtFrame
-        Reason uint16 
+        Reason Dot11Reason 
 }
 
 func decodeDot11MgmtDisassociation(data []byte, p gopacket.PacketBuilder) error {
@@ -1116,32 +1180,14 @@ func decodeDot11MgmtDisassociation(data []byte, p gopacket.PacketBuilder) error 
 func (m *Dot11MgmtDisassociation) LayerType() gopacket.LayerType { return LayerTypeDot11MgmtDisassociation }
 func (m *Dot11MgmtDisassociation) CanDecode() gopacket.LayerClass { return LayerTypeDot11MgmtDisassociation }
 func (m *Dot11MgmtDisassociation) DecodeFromBytes(data []byte, df gopacket.DecodeFeedback) error {
-    m.Reason=binary.LittleEndian.Uint16(data[0:2])
+    m.Reason=Dot11Reason(binary.LittleEndian.Uint16(data[0:2]))
     m.BaseLayer = BaseLayer{Contents: data, Payload: nil}
     return nil
 }
 
-func (d *Dot11MgmtDisassociation) String() string {
-    reasons:=map[uint16]string{
-        0:"reserved",
-        1:"unspec", 
-        2:"auth-expired",
-        3:"deauth-ST-leaving",
-        4:"inactivity", 
-        5:"AP-full", 
-        6:"class2-from-nonauth",
-        7:"class3-from-nonass", 
-        8:"disas-ST-leaving",
-        9:"ST-not-auth"}
-    return fmt.Sprintf("802.11 Disassociation (Reason: %v[%v])", reasons[d.Reason], d.Reason)
-}
-
-
-var LayerTypeDot11MgmtAuthentication = gopacket.RegisterLayerType(1054327, gopacket.LayerTypeMetadata{"LayerTypeDot11MgmtAuthentication", gopacket.DecodeFunc(decodeDot11MgmtAuthentication)})
-
 type Dot11MgmtAuthentication struct {
 	Dot11MgmtFrame
-        Algorithm uint16
+        Algorithm Dot11Algorithm
         Sequence uint16
         Statuscode uint16
 }
@@ -1155,7 +1201,7 @@ func (m *Dot11MgmtAuthentication) LayerType() gopacket.LayerType { return LayerT
 func (m *Dot11MgmtAuthentication) CanDecode() gopacket.LayerClass { return LayerTypeDot11MgmtAuthentication }
 func (m *Dot11MgmtAuthentication) NextLayerType() gopacket.LayerType { return LayerTypeDot11InformationElement }
 func (m *Dot11MgmtAuthentication) DecodeFromBytes(data []byte, df gopacket.DecodeFeedback) error {
-    m.Algorithm=binary.LittleEndian.Uint16(data[0:2])
+    m.Algorithm=Dot11Algorithm(binary.LittleEndian.Uint16(data[0:2]))
     m.Sequence=binary.LittleEndian.Uint16(data[2:4])
     m.Statuscode=binary.LittleEndian.Uint16(data[4:6])
     m.BaseLayer = BaseLayer{Contents: data, Payload: nil}
@@ -1163,10 +1209,6 @@ func (m *Dot11MgmtAuthentication) DecodeFromBytes(data []byte, df gopacket.Decod
 }
 
 func (d *Dot11MgmtAuthentication) String() string {
-    algorithms:=map[uint16]string{
-        0:"open",
-        1:"shared-key"}
-
     status_code :=map[uint16]string{
       0:"success", 
       1:"failure", 
@@ -1180,14 +1222,12 @@ func (d *Dot11MgmtAuthentication) String() string {
       17:"AP-full",
       18:"rate-unsupported" }
 
-    return fmt.Sprintf("802.11 Authentication (Algorithm: %v[%v], Sequence: %v, Statuscode: %v[%v])", algorithms[d.Algorithm], d.Algorithm, d.Statuscode, status_code[d.Statuscode], d.Statuscode)
+    return fmt.Sprintf("802.11 Authentication (Algorithm: %v, Sequence: %v, Statuscode: %v[%v])", d.Algorithm, d.Statuscode, status_code[d.Statuscode], d.Statuscode)
 }
-
-var LayerTypeDot11MgmtDeauthentication = gopacket.RegisterLayerType(1054328, gopacket.LayerTypeMetadata{"LayerTypeDot11MgmtDeauthentication", gopacket.DecodeFunc(decodeDot11MgmtDeauthentication)})
 
 type Dot11MgmtDeauthentication struct {
 	Dot11MgmtFrame
-        Reason uint16
+        Reason Dot11Reason
 }
 
 func decodeDot11MgmtDeauthentication(data []byte, p gopacket.PacketBuilder) error {
@@ -1198,27 +1238,10 @@ func decodeDot11MgmtDeauthentication(data []byte, p gopacket.PacketBuilder) erro
 func (m *Dot11MgmtDeauthentication) LayerType() gopacket.LayerType { return LayerTypeDot11MgmtDeauthentication }
 func (m *Dot11MgmtDeauthentication) CanDecode() gopacket.LayerClass { return LayerTypeDot11MgmtDeauthentication }
 func (m *Dot11MgmtDeauthentication) DecodeFromBytes(data []byte, df gopacket.DecodeFeedback) error {
-    m.Reason=binary.LittleEndian.Uint16(data[0:2])
+    m.Reason=Dot11Reason(binary.LittleEndian.Uint16(data[0:2]))
     m.BaseLayer = BaseLayer{Contents: data, Payload: nil}
     return nil
 }
-
-func (d *Dot11MgmtDeauthentication) String() string {
-    reasons:=map[uint16]string{
-        0:"reserved",
-        1:"unspec", 
-        2:"auth-expired",
-        3:"deauth-ST-leaving",
-        4:"inactivity", 
-        5:"AP-full", 
-        6:"class2-from-nonauth",
-        7:"class3-from-nonass", 
-        8:"disas-ST-leaving",
-        9:"ST-not-auth"}
-    return fmt.Sprintf("802.11 Deauthentication (Reason: %v[%v])", reasons[d.Reason], d.Reason)
-}
-
-var LayerTypeDot11MgmtAction = gopacket.RegisterLayerType(1054329, gopacket.LayerTypeMetadata{"LayerTypeDot11MgmtAction", gopacket.DecodeFunc(decodeDot11MgmtAction)})
 
 type Dot11MgmtAction struct {
 	Dot11MgmtFrame
@@ -1236,8 +1259,6 @@ func (m *Dot11MgmtAction) DecodeFromBytes(data []byte, df gopacket.DecodeFeedbac
     return nil
 }
 
-var LayerTypeDot11MgmtActionNoAck = gopacket.RegisterLayerType(1054330, gopacket.LayerTypeMetadata{"LayerTypeDot11MgmtActionNoAck", gopacket.DecodeFunc(decodeDot11MgmtActionNoAck)})
-
 type Dot11MgmtActionNoAck struct {
 	Dot11MgmtFrame
 }
@@ -1253,8 +1274,6 @@ func (m *Dot11MgmtActionNoAck) DecodeFromBytes(data []byte, df gopacket.DecodeFe
     m.BaseLayer = BaseLayer{Contents: data, Payload: nil}
     return nil
 }
-
-var LayerTypeDot11MgmtArubaWlan = gopacket.RegisterLayerType(1054331, gopacket.LayerTypeMetadata{"LayerTypeDot11MgmtArubaWlan", gopacket.DecodeFunc(decodeDot11MgmtArubaWlan)})
 
 type Dot11MgmtArubaWlan struct {
 	Dot11MgmtFrame
