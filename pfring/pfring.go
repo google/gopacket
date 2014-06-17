@@ -15,6 +15,10 @@ package pfring
 */
 import "C"
 
+// NOTE:  If you install PF_RING with non-standard options, you may also need
+// to use LDFLAGS -lnuma and/or -lrt.  Both have been reported necessary if
+// PF_RING is configured with --disable-bpf.
+
 import (
 	"code.google.com/p/gopacket"
 	"fmt"
