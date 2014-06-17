@@ -188,6 +188,66 @@ const (
 	ProtocolFamilyIPv6Linux   ProtocolFamily = 10
 )
 
+type Dot11Type uint8
+
+// MainType strips the subtype information from the given type,
+// returning just the overarching type (Mgmt, Ctrl, Data, Reserved).
+func (d Dot11Type) MainType() Dot11Type {
+	return d & 3
+}
+
+const (
+	Dot11TypeMgmt Dot11Type = iota
+	Dot11TypeCtrl
+	Dot11TypeData
+	Dot11TypeReserved
+
+	// The following are type/subtype conglomerations.
+
+	// Management
+	Dot11TypeMgmtAssociationReq    Dot11Type = 0x00
+	Dot11TypeMgmtAssociationResp   Dot11Type = 0x04
+	Dot11TypeMgmtReassociationReq  Dot11Type = 0x08
+	Dot11TypeMgmtReassociationResp Dot11Type = 0x0c
+	Dot11TypeMgmtProbeReq          Dot11Type = 0x10
+	Dot11TypeMgmtProbeResp         Dot11Type = 0x14
+	Dot11TypeMgmtMeasurementPilot  Dot11Type = 0x18
+	Dot11TypeMgmtBeacon            Dot11Type = 0x20
+	Dot11TypeMgmtATIM              Dot11Type = 0x24
+	Dot11TypeMgmtDisassociation    Dot11Type = 0x28
+	Dot11TypeMgmtAuthentication    Dot11Type = 0x2c
+	Dot11TypeMgmtDeauthentication  Dot11Type = 0x30
+	Dot11TypeMgmtAction            Dot11Type = 0x34
+	Dot11TypeMgmtActionNoAck       Dot11Type = 0x38
+
+	// Control
+	Dot11TypeCtrlWrapper       Dot11Type = 0x1d
+	Dot11TypeCtrlBlockAckReq   Dot11Type = 0x21
+	Dot11TypeCtrlBlockAck      Dot11Type = 0x25
+	Dot11TypeCtrlPowersavePoll Dot11Type = 0x29
+	Dot11TypeCtrlRTS           Dot11Type = 0x2d
+	Dot11TypeCtrlCTS           Dot11Type = 0x31
+	Dot11TypeCtrlAck           Dot11Type = 0x35
+	Dot11TypeCtrlCFEnd         Dot11Type = 0x39
+	Dot11TypeCtrlCFEndAck      Dot11Type = 0x3d
+
+	// Data
+	Dot11TypeDataCFAck              Dot11Type = 0x06
+	Dot11TypeDataCFPoll             Dot11Type = 0x0a
+	Dot11TypeDataCFAckPoll          Dot11Type = 0x0e
+	Dot11TypeDataNull               Dot11Type = 0x12
+	Dot11TypeDataCFAckNoData        Dot11Type = 0x16
+	Dot11TypeDataCFPollNoData       Dot11Type = 0x1a
+	Dot11TypeDataCFAckPollNoData    Dot11Type = 0x1e
+	Dot11TypeDataQOSData            Dot11Type = 0x22
+	Dot11TypeDataQOSDataCFAck       Dot11Type = 0x26
+	Dot11TypeDataQOSDataCFPoll      Dot11Type = 0x2a
+	Dot11TypeDataQOSDataCFAckPoll   Dot11Type = 0x2e
+	Dot11TypeDataQOSNull            Dot11Type = 0x32
+	Dot11TypeDataQOSCFPollNoData    Dot11Type = 0x3a
+	Dot11TypeDataQOSCFAckPollNoData Dot11Type = 0x3e
+)
+
 var (
 	// Each of the following arrays contains mappings of how to handle enum
 	// values for various enum types in gopacket/layers.
@@ -209,6 +269,7 @@ var (
 	FDDIFrameControlMetadata [256]EnumMetadata
 	EAPOLTypeMetadata        [256]EnumMetadata
 	ProtocolFamilyMetadata   [256]EnumMetadata
+	Dot11TypeMetadata        [256]EnumMetadata
 )
 
 func (a EthernetType) Decode(data []byte, p gopacket.PacketBuilder) error {
@@ -277,6 +338,15 @@ func (a ProtocolFamily) String() string {
 func (a ProtocolFamily) LayerType() gopacket.LayerType {
 	return ProtocolFamilyMetadata[a].LayerType
 }
+func (a Dot11Type) Decode(data []byte, p gopacket.PacketBuilder) error {
+	return Dot11TypeMetadata[a].DecodeWith.Decode(data, p)
+}
+func (a Dot11Type) String() string {
+	return Dot11TypeMetadata[a].Name
+}
+func (a Dot11Type) LayerType() gopacket.LayerType {
+	return Dot11TypeMetadata[a].LayerType
+}
 
 // Decode a raw v4 or v6 IP packet.
 func decodeIPv4or6(data []byte, p gopacket.PacketBuilder) error {
@@ -330,6 +400,10 @@ func init() {
 		ProtocolFamilyMetadata[i] = EnumMetadata{
 			DecodeWith: errorFunc(fmt.Sprintf("Unable to decode protocol family %d", i)),
 			Name:       fmt.Sprintf("UnknownProtocolFamily(%d)", i),
+		}
+		Dot11TypeMetadata[i] = EnumMetadata{
+			DecodeWith: errorFunc(fmt.Sprintf("Unable to decode Dot11 type %d", i)),
+			Name:       fmt.Sprintf("UnknownDot11Type(%d)", i),
 		}
 	}
 
@@ -406,4 +480,43 @@ func init() {
 	ProtocolFamilyMetadata[ProtocolFamilyIPv6FreeBSD] = EnumMetadata{DecodeWith: gopacket.DecodeFunc(decodeIPv6), Name: "IPv6", LayerType: LayerTypeIPv6}
 	ProtocolFamilyMetadata[ProtocolFamilyIPv6Darwin] = EnumMetadata{DecodeWith: gopacket.DecodeFunc(decodeIPv6), Name: "IPv6", LayerType: LayerTypeIPv6}
 	ProtocolFamilyMetadata[ProtocolFamilyIPv6Linux] = EnumMetadata{DecodeWith: gopacket.DecodeFunc(decodeIPv6), Name: "IPv6", LayerType: LayerTypeIPv6}
+
+	Dot11TypeMetadata[Dot11TypeMgmtAssociationReq] = EnumMetadata{DecodeWith: gopacket.DecodeFunc(decodeDot11MgmtAssociationReq), Name: "MgmtAssociationReq", LayerType: LayerTypeDot11MgmtAssociationReq}
+	Dot11TypeMetadata[Dot11TypeMgmtAssociationResp] = EnumMetadata{DecodeWith: gopacket.DecodeFunc(decodeDot11MgmtAssociationResp), Name: "MgmtAssociationResp", LayerType: LayerTypeDot11MgmtAssociationResp}
+	Dot11TypeMetadata[Dot11TypeMgmtReassociationReq] = EnumMetadata{DecodeWith: gopacket.DecodeFunc(decodeDot11MgmtReassociationReq), Name: "MgmtReassociationReq", LayerType: LayerTypeDot11MgmtReassociationReq}
+	Dot11TypeMetadata[Dot11TypeMgmtReassociationResp] = EnumMetadata{DecodeWith: gopacket.DecodeFunc(decodeDot11MgmtReassociationResp), Name: "MgmtReassociationResp", LayerType: LayerTypeDot11MgmtReassociationResp}
+	Dot11TypeMetadata[Dot11TypeMgmtProbeReq] = EnumMetadata{DecodeWith: gopacket.DecodeFunc(decodeDot11MgmtProbeReq), Name: "MgmtProbeReq", LayerType: LayerTypeDot11MgmtProbeReq}
+	Dot11TypeMetadata[Dot11TypeMgmtProbeResp] = EnumMetadata{DecodeWith: gopacket.DecodeFunc(decodeDot11MgmtProbeResp), Name: "MgmtProbeResp", LayerType: LayerTypeDot11MgmtProbeResp}
+	Dot11TypeMetadata[Dot11TypeMgmtMeasurementPilot] = EnumMetadata{DecodeWith: gopacket.DecodeFunc(decodeDot11MgmtMeasurementPilot), Name: "MgmtMeasurementPilot", LayerType: LayerTypeDot11MgmtMeasurementPilot}
+	Dot11TypeMetadata[Dot11TypeMgmtBeacon] = EnumMetadata{DecodeWith: gopacket.DecodeFunc(decodeDot11MgmtBeacon), Name: "MgmtBeacon", LayerType: LayerTypeDot11MgmtBeacon}
+	Dot11TypeMetadata[Dot11TypeMgmtATIM] = EnumMetadata{DecodeWith: gopacket.DecodeFunc(decodeDot11MgmtATIM), Name: "MgmtATIM", LayerType: LayerTypeDot11MgmtATIM}
+	Dot11TypeMetadata[Dot11TypeMgmtDisassociation] = EnumMetadata{DecodeWith: gopacket.DecodeFunc(decodeDot11MgmtDisassociation), Name: "MgmtDisassociation", LayerType: LayerTypeDot11MgmtDisassociation}
+	Dot11TypeMetadata[Dot11TypeMgmtAuthentication] = EnumMetadata{DecodeWith: gopacket.DecodeFunc(decodeDot11MgmtAuthentication), Name: "MgmtAuthentication", LayerType: LayerTypeDot11MgmtAuthentication}
+	Dot11TypeMetadata[Dot11TypeMgmtDeauthentication] = EnumMetadata{DecodeWith: gopacket.DecodeFunc(decodeDot11MgmtDeauthentication), Name: "MgmtDeauthentication", LayerType: LayerTypeDot11MgmtDeauthentication}
+	Dot11TypeMetadata[Dot11TypeMgmtAction] = EnumMetadata{DecodeWith: gopacket.DecodeFunc(decodeDot11MgmtAction), Name: "MgmtAction", LayerType: LayerTypeDot11MgmtAction}
+	Dot11TypeMetadata[Dot11TypeMgmtActionNoAck] = EnumMetadata{DecodeWith: gopacket.DecodeFunc(decodeDot11MgmtActionNoAck), Name: "MgmtActionNoAck", LayerType: LayerTypeDot11MgmtActionNoAck}
+	Dot11TypeMetadata[Dot11TypeCtrlWrapper] = EnumMetadata{DecodeWith: gopacket.DecodeFunc(decodeDot11Ctrl), Name: "CtrlWrapper", LayerType: LayerTypeDot11Ctrl}
+	Dot11TypeMetadata[Dot11TypeCtrlBlockAckReq] = EnumMetadata{DecodeWith: gopacket.DecodeFunc(decodeDot11CtrlBlockAckReq), Name: "CtrlBlockAckReq", LayerType: LayerTypeDot11CtrlBlockAckReq}
+	Dot11TypeMetadata[Dot11TypeCtrlBlockAck] = EnumMetadata{DecodeWith: gopacket.DecodeFunc(decodeDot11CtrlBlockAck), Name: "CtrlBlockAck", LayerType: LayerTypeDot11CtrlBlockAck}
+	Dot11TypeMetadata[Dot11TypeCtrlPowersavePoll] = EnumMetadata{DecodeWith: gopacket.DecodeFunc(decodeDot11CtrlPowersavePoll), Name: "CtrlPowersavePoll", LayerType: LayerTypeDot11CtrlPowersavePoll}
+	Dot11TypeMetadata[Dot11TypeCtrlRTS] = EnumMetadata{DecodeWith: gopacket.DecodeFunc(decodeDot11CtrlRTS), Name: "CtrlRTS", LayerType: LayerTypeDot11CtrlRTS}
+	Dot11TypeMetadata[Dot11TypeCtrlCTS] = EnumMetadata{DecodeWith: gopacket.DecodeFunc(decodeDot11CtrlCTS), Name: "CtrlCTS", LayerType: LayerTypeDot11CtrlCTS}
+	Dot11TypeMetadata[Dot11TypeCtrlAck] = EnumMetadata{DecodeWith: gopacket.DecodeFunc(decodeDot11CtrlAck), Name: "CtrlAck", LayerType: LayerTypeDot11CtrlAck}
+	Dot11TypeMetadata[Dot11TypeCtrlCFEnd] = EnumMetadata{DecodeWith: gopacket.DecodeFunc(decodeDot11CtrlCFEnd), Name: "CtrlCFEnd", LayerType: LayerTypeDot11CtrlCFEnd}
+	Dot11TypeMetadata[Dot11TypeCtrlCFEndAck] = EnumMetadata{DecodeWith: gopacket.DecodeFunc(decodeDot11CtrlCFEndAck), Name: "CtrlCFEndAck", LayerType: LayerTypeDot11CtrlCFEndAck}
+	Dot11TypeMetadata[Dot11TypeData] = EnumMetadata{DecodeWith: gopacket.DecodeFunc(decodeDot11Data), Name: "Data", LayerType: LayerTypeDot11Data}
+	Dot11TypeMetadata[Dot11TypeDataCFAck] = EnumMetadata{DecodeWith: gopacket.DecodeFunc(decodeDot11DataCFAck), Name: "DataCFAck", LayerType: LayerTypeDot11DataCFAck}
+	Dot11TypeMetadata[Dot11TypeDataCFPoll] = EnumMetadata{DecodeWith: gopacket.DecodeFunc(decodeDot11DataCFPoll), Name: "DataCFPoll", LayerType: LayerTypeDot11DataCFPoll}
+	Dot11TypeMetadata[Dot11TypeDataCFAckPoll] = EnumMetadata{DecodeWith: gopacket.DecodeFunc(decodeDot11DataCFAckPoll), Name: "DataCFAckPoll", LayerType: LayerTypeDot11DataCFAckPoll}
+	Dot11TypeMetadata[Dot11TypeDataNull] = EnumMetadata{DecodeWith: gopacket.DecodeFunc(decodeDot11DataNull), Name: "DataNull", LayerType: LayerTypeDot11DataNull}
+	Dot11TypeMetadata[Dot11TypeDataCFAckNoData] = EnumMetadata{DecodeWith: gopacket.DecodeFunc(decodeDot11DataCFAckNoData), Name: "DataCFAckNoData", LayerType: LayerTypeDot11DataCFAckNoData}
+	Dot11TypeMetadata[Dot11TypeDataCFPollNoData] = EnumMetadata{DecodeWith: gopacket.DecodeFunc(decodeDot11DataCFPollNoData), Name: "DataCFPollNoData", LayerType: LayerTypeDot11DataCFPollNoData}
+	Dot11TypeMetadata[Dot11TypeDataCFAckPollNoData] = EnumMetadata{DecodeWith: gopacket.DecodeFunc(decodeDot11DataCFAckPollNoData), Name: "DataCFAckPollNoData", LayerType: LayerTypeDot11DataCFAckPollNoData}
+	Dot11TypeMetadata[Dot11TypeDataQOSData] = EnumMetadata{DecodeWith: gopacket.DecodeFunc(decodeDot11DataQOSData), Name: "DataQOSData", LayerType: LayerTypeDot11DataQOSData}
+	Dot11TypeMetadata[Dot11TypeDataQOSDataCFAck] = EnumMetadata{DecodeWith: gopacket.DecodeFunc(decodeDot11DataQOSDataCFAck), Name: "DataQOSDataCFAck", LayerType: LayerTypeDot11DataQOSDataCFAck}
+	Dot11TypeMetadata[Dot11TypeDataQOSDataCFPoll] = EnumMetadata{DecodeWith: gopacket.DecodeFunc(decodeDot11DataQOSDataCFPoll), Name: "DataQOSDataCFPoll", LayerType: LayerTypeDot11DataQOSDataCFPoll}
+	Dot11TypeMetadata[Dot11TypeDataQOSDataCFAckPoll] = EnumMetadata{DecodeWith: gopacket.DecodeFunc(decodeDot11DataQOSDataCFAckPoll), Name: "DataQOSDataCFAckPoll", LayerType: LayerTypeDot11DataQOSDataCFAckPoll}
+	Dot11TypeMetadata[Dot11TypeDataQOSNull] = EnumMetadata{DecodeWith: gopacket.DecodeFunc(decodeDot11DataQOSNull), Name: "DataQOSNull", LayerType: LayerTypeDot11DataQOSNull}
+	Dot11TypeMetadata[Dot11TypeDataQOSCFPollNoData] = EnumMetadata{DecodeWith: gopacket.DecodeFunc(decodeDot11DataQOSCFPollNoData), Name: "DataQOSCFPollNoData", LayerType: LayerTypeDot11DataQOSCFPollNoData}
+	Dot11TypeMetadata[Dot11TypeDataQOSCFAckPollNoData] = EnumMetadata{DecodeWith: gopacket.DecodeFunc(decodeDot11DataQOSCFAckPollNoData), Name: "DataQOSCFAckPollNoData", LayerType: LayerTypeDot11DataQOSCFAckPollNoData}
 }
