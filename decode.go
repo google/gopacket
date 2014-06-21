@@ -10,6 +10,7 @@ import (
 	"errors"
 )
 
+// DecodeFeedback is used by DecodingLayer layers to provide decoding metadata.
 type DecodeFeedback interface {
 	// SetTruncated should be called if during decoding you notice that a packet
 	// is shorter than internal layer variables (HeaderLength, or the like) say it

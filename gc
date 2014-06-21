@@ -113,6 +113,9 @@ go fmt ./...
 go test -i ./... 2>/dev/null >/dev/null || true
 go test
 go build -race
+pushd examples/bytediff
+go build
+popd
 if [ -f /usr/include/pcap.h ]; then
   pushd pcap
   go test ./...

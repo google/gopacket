@@ -17,6 +17,9 @@ import (
 // the new state defined by the data passed in.  A returned error leaves the
 // DecodingLayer in an unknown intermediate state, thus its fields should not be
 // trusted.
+//
+// Because the DecodingLayer is resetting its own fields, a call to
+// DecodeFromBytes should normally not require any memory allocation.
 type DecodingLayer interface {
 	// DecodeFromBytes resets the internal state of this layer to the state
 	// defined by the passed-in bytes.  Slices in the DecodingLayer may
