@@ -1,5 +1,4 @@
 // Copyright 2014 Google, Inc. All rights reserved.
-// Copyright 2014 Remco Verhoef. All rights reserved.
 //
 // Use of this source code is governed by a BSD-style license
 // that can be found in the LICENSE file in the root of the source
@@ -251,15 +250,17 @@ func (a Dot11InformationElementID) String() string {
 
 type Dot11 struct {
 	BaseLayer
-	Type       Dot11Type
-	Proto      uint8
-	Flags      Dot11Flags
-	DurationID uint16
-	Address1   net.HardwareAddr
-	Address2   net.HardwareAddr
-	Address3   net.HardwareAddr
-	Address4   net.HardwareAddr
-	Checksum   uint32
+	Type                Dot11Type
+	Proto               uint8
+	Flags               Dot11Flags
+	DurationID          uint16
+	Address1            net.HardwareAddr
+	Address2            net.HardwareAddr
+	Address3            net.HardwareAddr
+	Address4            net.HardwareAddr
+	SequenceNumber      uint16
+	FragmentNumber      uint16
+	Checksum            uint32
 }
 
 func decodeDot11(data []byte, p gopacket.PacketBuilder) error {
@@ -270,11 +271,16 @@ func decodeDot11(data []byte, p gopacket.PacketBuilder) error {
 func (m *Dot11) LayerType() gopacket.LayerType  { return LayerTypeDot11 }
 func (m *Dot11) CanDecode() gopacket.LayerClass { return LayerTypeDot11 }
 func (m *Dot11) NextLayerType() gopacket.LayerType {
+        if (m.Flags & Dot11FlagsWEP) != 0 {
+            return (LayerTypeDot11WEP)
+        }
+
 	return m.Type.LayerType()
 }
 
 func (m *Dot11) DecodeFromBytes(data []byte, df gopacket.DecodeFeedback) error {
 	m.Type = Dot11Type((data[0])&0xFC) >> 2
+
 	m.Proto = uint8(data[0]) & 0x0003
 	m.Flags = Dot11Flags(data[1])
 	m.DurationID = binary.LittleEndian.Uint16(data[2:4])
@@ -282,42 +288,46 @@ func (m *Dot11) DecodeFromBytes(data []byte, df gopacket.DecodeFeedback) error {
 
 	offset := 10
 
-	switch m.Type {
-	case Dot11TypeCtrlBlockAckReq, Dot11TypeCtrlPowersavePoll, Dot11TypeCtrlCFEnd, Dot11TypeCtrlCFEndAck:
-		m.Address2 = net.HardwareAddr(data[offset : offset+6])
-		offset += 6
-	default:
-		m.Address2 = net.HardwareAddr(data[offset : offset+6])
-		offset += 6
-	}
-
 	mainType := m.Type.MainType()
 
 	switch mainType {
-	case Dot11TypeMgmt, Dot11TypeData:
-		m.Address3 = net.HardwareAddr(data[offset : offset+6])
-		offset += 6
-	}
+            case Dot11TypeCtrl:
+                switch m.Type {
+                    case Dot11TypeCtrlRTS, Dot11TypeCtrlPowersavePoll, Dot11TypeCtrlCFEnd, Dot11TypeCtrlCFEndAck:
+                        m.Address2 = net.HardwareAddr(data[offset : offset+6])
+                        offset += 6
+                }
+            case Dot11TypeMgmt, Dot11TypeData:
+                    m.Address2 = net.HardwareAddr(data[offset : offset+6])
+                    offset += 6
+                    m.Address3 = net.HardwareAddr(data[offset : offset+6])
+                    offset += 6
 
-	if mainType != Dot11TypeCtrl {
-		// Sequence
-		offset += 2
-	}
+                    m.SequenceNumber = (binary.LittleEndian.Uint16(data[offset:offset+2]) & 0xFFC0) >> 6
+                    m.FragmentNumber = (binary.LittleEndian.Uint16(data[offset:offset+2]) & 0x003F)
+                    offset += 2
+        }
 
 	if mainType == Dot11TypeData && (m.Flags&Dot11FlagsFromDS) != 0 && (m.Flags&Dot11FlagsToDS) != 0 {
 		m.Address4 = net.HardwareAddr(data[offset : offset+6])
 		offset += 6
 	}
 
-	// 29:31 SequenceControl
-
-	m.BaseLayer = BaseLayer{Contents: data[0:offset], Payload: data[offset : len(data)-4]}
-	m.Checksum = binary.LittleEndian.Uint32(data[offset : offset+4])
+	if mainType == Dot11TypeData {
+            m.BaseLayer = BaseLayer{Contents: data[0:offset], Payload: data[offset : len(data)]}
+        } else {
+            m.BaseLayer = BaseLayer{Contents: data[0:offset], Payload: data[offset : len(data)-4]}
+            m.Checksum = binary.LittleEndian.Uint32(data[len(data) - 4 : len(data)])
+        }
 	return nil
 }
 
 func (m *Dot11) ChecksumValid() bool {
-	return m.Checksum == crc32.ChecksumIEEE(m.Payload)
+        // only for CTRL and MGMT frames
+        h := crc32.NewIEEE()
+        h.Write(m.Contents)
+        h.Write(m.Payload)
+        return m.Checksum == h.Sum32()
 }
 
 type Dot11Mgmt struct {
@@ -348,16 +358,34 @@ func decodeDot11Ctrl(data []byte, p gopacket.PacketBuilder) error {
 	return decodingLayerDecoder(d, data, p)
 }
 
+type Dot11WEP struct {
+	BaseLayer
+}
+
+func (m *Dot11WEP) NextLayerType() gopacket.LayerType { return LayerTypeLLC }
+
+func (m *Dot11WEP) LayerType() gopacket.LayerType  { return LayerTypeDot11WEP }
+func (m *Dot11WEP) CanDecode() gopacket.LayerClass { return LayerTypeDot11WEP }
+func (m *Dot11WEP) DecodeFromBytes(data []byte, df gopacket.DecodeFeedback) error {
+	m.Contents = data
+	return nil
+}
+
+func decodeDot11WEP(data []byte, p gopacket.PacketBuilder) error {
+	d := &Dot11WEP{}
+	return decodingLayerDecoder(d, data, p)
+}
+
 type Dot11Data struct {
 	BaseLayer
 }
 
-func (m *Dot11Data) NextLayerType() gopacket.LayerType { return gopacket.LayerTypePayload }
+func (m *Dot11Data) NextLayerType() gopacket.LayerType { return LayerTypeLLC }
 
 func (m *Dot11Data) LayerType() gopacket.LayerType  { return LayerTypeDot11Data }
 func (m *Dot11Data) CanDecode() gopacket.LayerClass { return LayerTypeDot11Data }
 func (m *Dot11Data) DecodeFromBytes(data []byte, df gopacket.DecodeFeedback) error {
-	m.Contents = data
+	m.Payload = data
 	return nil
 }
 
@@ -488,7 +516,8 @@ func (m *Dot11DataQOS) DecodeFromBytes(data []byte, df gopacket.DecodeFeedback) 
 	m.EOSP = (uint8(data[0]) & 0x10) == 0x10
 	m.AckPolicy = Dot11AckPolicy((uint8(data[0]) & 0x60) >> 5)
 	m.TXOP = uint8(data[1])
-	m.BaseLayer = BaseLayer{Contents: data[0:2], Payload: data[2:]}
+        // TODO: Mesh Control bytes 2:4
+	m.BaseLayer = BaseLayer{Contents: data[0:4], Payload: data[4:]}
 	return nil
 }
 

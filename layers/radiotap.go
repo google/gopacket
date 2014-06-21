@@ -1,5 +1,4 @@
 // Copyright 2014 Google, Inc. All rights reserved.
-// Copyright 2014 Remco Verhoef. All rights reserved.
 //
 // Use of this source code is governed by a BSD-style license
 // that can be found in the LICENSE file in the root of the source
@@ -16,7 +15,7 @@ import (
 // align calculates the number of bytes needed to align with the width
 // on the offset, returning the number of bytes we need to skip to
 // align to the offset (width).
-func align(offset uint, width uint) uint {
+func align(offset uint16, width uint16) uint16 {
 	return ((((offset) + ((width) - 1)) & (^((width) - 1))) - offset)
 }
 
@@ -141,6 +140,7 @@ func (a RadioTapChannelFrequency) String() string {
 
 func decodeRadioTap(data []byte, p gopacket.PacketBuilder) error {
 	d := &RadioTap{}
+        // TODO: Should we set LinkLayer here? And implement LinkFlow
 	return decodingLayerDecoder(d, data, p)
 }
 
@@ -190,14 +190,12 @@ func (m *RadioTap) DecodeFromBytes(data []byte, df gopacket.DecodeFeedback) erro
 	m.Length = binary.LittleEndian.Uint16(data[2:4])
 	m.Present = RadioTapPresent(binary.LittleEndian.Uint32(data[4:8]))
 
-	offset := uint(4)
+	offset := uint16(4)
 
 	for (binary.LittleEndian.Uint32(data[offset:offset+4]) & 0x80000000) != 0 {
 		// Extended bitmap.
 		offset += 4
 	}
-
-	m.BaseLayer = BaseLayer{Contents: data[:(m.Length)], Payload: data[(m.Length):]}
 
 	if (m.Present & RadioTapPresentTSFT) != 0 {
 		offset += align(offset, 8)
@@ -284,6 +282,8 @@ func (m *RadioTap) DecodeFromBytes(data []byte, df gopacket.DecodeFeedback) erro
 		// frame has padding between 802.11 header and payload (to 32-bit boundary)
 		offset += align(offset, 4)
 	}
+
+	m.BaseLayer = BaseLayer{Contents: data[:m.Length], Payload: data[m.Length:]}
 
 	return nil
 }

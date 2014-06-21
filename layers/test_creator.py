@@ -8,6 +8,7 @@ import re
 import string
 import subprocess
 import sys
+import argparse
 
 
 class Packet(object):
@@ -30,7 +31,7 @@ class Packet(object):
         packet_bytes.append(base64.b16decode(hexpart.upper()))
     return ''.join(packet_bytes)
 
-  def Test(self, name):
+  def Test(self, name, linkType="LinkTypeEthernet", layerType="LayerTypeIPv4"):
     """Yields a test using this packet, as a set of lines."""
     yield '// testPacket%s is the packet:' % name
     for line in self.packet_lines:
@@ -42,15 +43,15 @@ class Packet(object):
       yield ''.join(['\t'] + ['0x%02x, ' % ord(c) for c in linebytes])
     yield '}'
     yield 'func TestPacket%s(t *testing.T) {' % name
-    yield '\tp := gopacket.NewPacket(testPacket%s, LinkTypeEthernet, gopacket.Default)' % name
+    yield '\tp := gopacket.NewPacket(testPacket%s, %s, gopacket.Default)' % (name, linkType)
     yield '\tif p.ErrorLayer() != nil {'
     yield '\t\tt.Error("Failed to decode packet:", p.ErrorLayer().Error())'
     yield '\t}'
-    yield '\tcheckLayers(p, []gopacket.LayerType{LayerTypeEthernet, LayerTypeIPv4}, t)'
+    yield '\tcheckLayers(p, []gopacket.LayerType{%s, LayerTypeIPv4}, t)' % layerType
     yield '}'
     yield 'func BenchmarkDecodePacket%s(b *testing.B) {' % name
     yield '\tfor i := 0; i < b.N; i++ {'
-    yield '\t\tgopacket.NewPacket(testPacket%s, LinkTypeEthernet, gopacket.NoCopy)' % name
+    yield '\t\tgopacket.NewPacket(testPacket%s, %s, gopacket.NoCopy)' % (name, linkType)
     yield '\t}'
     yield '}'
 
@@ -75,21 +76,27 @@ def TcpdumpOutputToPackets(output):
 
 
 def main():
-  if len(sys.argv) < 2:
-    print 'TestCreator creates gopacket tests using a pcap file.'
-    print ''
-    print 'Tests are written to standard out... they can then be'
-    print 'copied into the file of your choice and modified as'
-    print 'you see fit.'
-    print ''
-    print 'Usage: %s file1.pcap file2.pcap ...' % sys.argv[0]
-    sys.exit(1)
-  for arg in sys.argv[1:]:
-    for i, packet in enumerate(
-        TcpdumpOutputToPackets(GetTcpdumpOutput(arg))):
-      print '\n'.join(packet.Test('P' + str(i)))
-      print
+    class CustomHelpFormatter(argparse.ArgumentDefaultsHelpFormatter):
+        def _format_usage(self, usage, actions, groups, prefix=None):
+            header =("TestCreator creates gopacket tests using a pcap file.\n\n" 
+                    "Tests are written to standard out... they can then be \n" 
+                    "copied into the file of your choice and modified as \n" 
+                    "you see.\n\n")
+            return (header + argparse.ArgumentDefaultsHelpFormatter._format_usage(self, usage, actions, groups, prefix))
 
+    parser = argparse.ArgumentParser(formatter_class=CustomHelpFormatter)
+    parser.add_argument('--linkType', default='LinkTypeEthernet', help='the link type (default: %(default)s)')
+    parser.add_argument('--layerType', default='LayerTypeIPv4', help='the layer type (default: %(default)s)')
+    parser.add_argument('--name', default='P%s', help='the layer type')
+    parser.add_argument('files', metavar='file.pcap', type=str, nargs='+', help='the files to process')
+
+    args = parser.parse_args()
+
+    import glob
+    for arg in args.files:
+        for path in glob.glob(arg):
+            for i, packet in enumerate( TcpdumpOutputToPackets(GetTcpdumpOutput(path))):
+                print '\n'.join(packet.Test(args.name % str(i), args.linkType, args.layerType))
 
 if __name__ == '__main__':
-  main()
+    main()
