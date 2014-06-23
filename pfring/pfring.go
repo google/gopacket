@@ -15,6 +15,10 @@ package pfring
 */
 import "C"
 
+// NOTE:  If you install PF_RING with non-standard options, you may also need
+// to use LDFLAGS -lnuma and/or -lrt.  Both have been reported necessary if
+// PF_RING is configured with --disable-bpf.
+
 import (
 	"code.google.com/p/gopacket"
 	"fmt"
@@ -123,7 +127,7 @@ func (r *Ring) ReadPacketDataTo(data []byte) (ci gopacket.CaptureInfo, err error
 	return
 }
 
-// NextResult returns the next packet read from the pcap handle, along with an error
+// ReadPacketData returns the next packet read from the pcap handle, along with an error
 // code associated with that packet.  If the packet is read successfully, the
 // returned error is nil.
 func (r *Ring) ReadPacketData() (data []byte, ci gopacket.CaptureInfo, err error) {
@@ -133,7 +137,7 @@ func (r *Ring) ReadPacketData() (data []byte, ci gopacket.CaptureInfo, err error
 		data = nil
 		return
 	}
-	data = data[:ci.Length]
+	data = data[:ci.CaptureLength]
 	return
 }
 

@@ -33,6 +33,9 @@ type layerTypeMetadata struct {
 	LayerTypeMetadata
 }
 
+// DecodersByLayerName maps layer names to decoders for those layers.
+// This allows users to specify decoders by name to a program and have that
+// program pick the correct decoder accordingly.
 var DecodersByLayerName = map[string]Decoder{}
 
 const maxLayerType = 2000

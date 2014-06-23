@@ -18,6 +18,8 @@ import (
 	"time"
 )
 
+// CaptureInfo provides standardized information about a packet captured off
+// the wire or read from a file.
 type CaptureInfo struct {
 	// Timestamp is the time the packet was captured, if that is known.
 	Timestamp time.Time
@@ -668,10 +670,10 @@ func (p *PacketSource) NextPacket() (Packet, error) {
 // to the given channel.  When it receives an error, it ignores it.  When it
 // receives an io.EOF, it closes the channel.
 func (p *PacketSource) packetsToChannel(c chan<- Packet) {
+	defer close(c)
 	for {
 		packet, err := p.NextPacket()
 		if err == io.EOF {
-			close(c)
 			return
 		} else if err == nil {
 			c <- packet
