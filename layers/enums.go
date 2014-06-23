@@ -470,6 +470,7 @@ func init() {
 	LinkTypeMetadata[LinkTypeLoop] = EnumMetadata{DecodeWith: gopacket.DecodeFunc(decodeLoopback), Name: "Loop"}
 	LinkTypeMetadata[LinkTypeRaw] = EnumMetadata{DecodeWith: gopacket.DecodeFunc(decodeIPv4or6), Name: "Raw"}
 	LinkTypeMetadata[LinkTypePFLog] = EnumMetadata{DecodeWith: gopacket.DecodeFunc(decodePFLog), Name: "PFLog"}
+	LinkTypeMetadata[LinkTypeIEEE80211Radio] = EnumMetadata{DecodeWith: gopacket.DecodeFunc(decodeRadioTap), Name: "RadioTap"}
 
 	FDDIFrameControlMetadata[FDDIFrameControlLLC] = EnumMetadata{DecodeWith: gopacket.DecodeFunc(decodeLLC), Name: "LLC"}
 

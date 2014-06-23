@@ -140,7 +140,7 @@ func (a RadioTapChannelFrequency) String() string {
 
 func decodeRadioTap(data []byte, p gopacket.PacketBuilder) error {
 	d := &RadioTap{}
-        // TODO: Should we set LinkLayer here? And implement LinkFlow
+	// TODO: Should we set LinkLayer here? And implement LinkFlow
 	return decodingLayerDecoder(d, data, p)
 }
 
