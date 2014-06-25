@@ -18,6 +18,8 @@ import (
 	"net"
 )
 
+// Dot11Flags contains the set of 8 flags in the IEEE 802.11 frame control
+// header, all in one place.
 type Dot11Flags uint8
 
 const (
@@ -31,33 +33,58 @@ const (
 	Dot11FlagsOrder
 )
 
+func (d Dot11Flags) ToDS() bool {
+	return d&Dot11FlagsToDS != 0
+}
+func (d Dot11Flags) FromDS() bool {
+	return d&Dot11FlagsFromDS != 0
+}
+func (d Dot11Flags) MF() bool {
+	return d&Dot11FlagsMF != 0
+}
+func (d Dot11Flags) Retry() bool {
+	return d&Dot11FlagsRetry != 0
+}
+func (d Dot11Flags) PowerManagement() bool {
+	return d&Dot11FlagsPowerManagement != 0
+}
+func (d Dot11Flags) MD() bool {
+	return d&Dot11FlagsMD != 0
+}
+func (d Dot11Flags) WEP() bool {
+	return d&Dot11FlagsWEP != 0
+}
+func (d Dot11Flags) Order() bool {
+	return d&Dot11FlagsOrder != 0
+}
+
 // String provides a human readable string for Dot11Flags.
 // This string is possibly subject to change over time; if you're storing this
 // persistently, you should probably store the Dot11Flags value, not its string.
 func (a Dot11Flags) String() string {
 	var out bytes.Buffer
-	if (a & Dot11FlagsToDS) == Dot11FlagsToDS {
+	if a.ToDS() {
 		out.WriteString("TO-DS,")
 	}
-	if (a & Dot11FlagsFromDS) == Dot11FlagsFromDS {
+	if a.FromDS() {
 		out.WriteString("FROM-DS,")
 	}
-	if (a & Dot11FlagsMF) == Dot11FlagsMF {
+	if a.MF() {
 		out.WriteString("MF,")
 	}
-	if (a & Dot11FlagsRetry) == Dot11FlagsRetry {
+	if a.Retry() {
 		out.WriteString("Retry,")
 	}
-	if (a & Dot11FlagsPowerManagement) == Dot11FlagsPowerManagement {
+	if a.PowerManagement() {
 		out.WriteString("PowerManagement,")
 	}
-	if (a & Dot11FlagsMD) == Dot11FlagsMD {
+	if a.MD() {
 		out.WriteString("MD,")
 	}
-	if (a & Dot11FlagsWEP) == Dot11FlagsWEP {
+	if a.WEP() {
 		out.WriteString("WEP,")
 	}
-	if (a & Dot11FlagsOrder) == Dot11FlagsOrder {
+	if a.Order() {
 		out.WriteString("Order,")
 	}
 
@@ -299,7 +326,7 @@ func decodeDot11(data []byte, p gopacket.PacketBuilder) error {
 func (m *Dot11) LayerType() gopacket.LayerType  { return LayerTypeDot11 }
 func (m *Dot11) CanDecode() gopacket.LayerClass { return LayerTypeDot11 }
 func (m *Dot11) NextLayerType() gopacket.LayerType {
-	if (m.Flags & Dot11FlagsWEP) != 0 {
+	if m.Flags.WEP() {
 		return (LayerTypeDot11WEP)
 	}
 
@@ -336,7 +363,7 @@ func (m *Dot11) DecodeFromBytes(data []byte, df gopacket.DecodeFeedback) error {
 		offset += 2
 	}
 
-	if mainType == Dot11TypeData && (m.Flags&Dot11FlagsFromDS) != 0 && (m.Flags&Dot11FlagsToDS) != 0 {
+	if mainType == Dot11TypeData && m.Flags.FromDS() && m.Flags.ToDS() {
 		m.Address4 = net.HardwareAddr(data[offset : offset+6])
 		offset += 6
 	}

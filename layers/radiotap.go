@@ -44,46 +44,129 @@ const (
 	RadioTapPresentEXT RadioTapPresent = 1 << 31
 )
 
+func (r RadioTapPresent) TSFT() bool {
+	return r&RadioTapPresentTSFT != 0
+}
+func (r RadioTapPresent) Flags() bool {
+	return r&RadioTapPresentFlags != 0
+}
+func (r RadioTapPresent) Rate() bool {
+	return r&RadioTapPresentRate != 0
+}
+func (r RadioTapPresent) Channel() bool {
+	return r&RadioTapPresentChannel != 0
+}
+func (r RadioTapPresent) FHSS() bool {
+	return r&RadioTapPresentFHSS != 0
+}
+func (r RadioTapPresent) DBMAntennaSignal() bool {
+	return r&RadioTapPresentDBMAntennaSignal != 0
+}
+func (r RadioTapPresent) DBMAntennaNoise() bool {
+	return r&RadioTapPresentDBMAntennaNoise != 0
+}
+func (r RadioTapPresent) LockQuality() bool {
+	return r&RadioTapPresentLockQuality != 0
+}
+func (r RadioTapPresent) TxAttenuation() bool {
+	return r&RadioTapPresentTxAttenuation != 0
+}
+func (r RadioTapPresent) DBTxAttenuation() bool {
+	return r&RadioTapPresentDBTxAttenuation != 0
+}
+func (r RadioTapPresent) DBMTxPower() bool {
+	return r&RadioTapPresentDBMTxPower != 0
+}
+func (r RadioTapPresent) Antenna() bool {
+	return r&RadioTapPresentAntenna != 0
+}
+func (r RadioTapPresent) DBAntennaSignal() bool {
+	return r&RadioTapPresentDBAntennaSignal != 0
+}
+func (r RadioTapPresent) DBAntennaNoise() bool {
+	return r&RadioTapPresentDBAntennaNoise != 0
+}
+func (r RadioTapPresent) RxFlags() bool {
+	return r&RadioTapPresentRxFlags != 0
+}
+func (r RadioTapPresent) TxFlags() bool {
+	return r&RadioTapPresentTxFlags != 0
+}
+func (r RadioTapPresent) RtsRetries() bool {
+	return r&RadioTapPresentRtsRetries != 0
+}
+func (r RadioTapPresent) DataRetries() bool {
+	return r&RadioTapPresentDataRetries != 0
+}
+func (r RadioTapPresent) EXT() bool {
+	return r&RadioTapPresentEXT != 0
+}
+
 type RadioTapChannelFlags uint16
 
 const (
 	RadioTapChannelFlagsTurbo   RadioTapChannelFlags = 0x0010 // Turbo channel
 	RadioTapChannelFlagsCCK     RadioTapChannelFlags = 0x0020 // CCK channel
 	RadioTapChannelFlagsOFDM    RadioTapChannelFlags = 0x0040 // OFDM channel
-	RadioTapChannelFlags2Ghz    RadioTapChannelFlags = 0x0080 // 2 GHz spectrum channel.
-	RadioTapChannelFlags5Ghz    RadioTapChannelFlags = 0x0100 // 5 GHz spectrum channel
+	RadioTapChannelFlagsGhz2    RadioTapChannelFlags = 0x0080 // 2 GHz spectrum channel.
+	RadioTapChannelFlagsGhz5    RadioTapChannelFlags = 0x0100 // 5 GHz spectrum channel
 	RadioTapChannelFlagsPassive RadioTapChannelFlags = 0x0200 // Only passive scan allowed
 	RadioTapChannelFlagsDynamic RadioTapChannelFlags = 0x0400 // Dynamic CCK-OFDM channel
 	RadioTapChannelFlagsGFSK    RadioTapChannelFlags = 0x0800 // GFSK channel (FHSS PHY)
 )
+
+func (r RadioTapChannelFlags) Turbo() bool {
+	return r&RadioTapChannelFlagsTurbo != 0
+}
+func (r RadioTapChannelFlags) CCK() bool {
+	return r&RadioTapChannelFlagsCCK != 0
+}
+func (r RadioTapChannelFlags) OFDM() bool {
+	return r&RadioTapChannelFlagsOFDM != 0
+}
+func (r RadioTapChannelFlags) Ghz2() bool {
+	return r&RadioTapChannelFlagsGhz2 != 0
+}
+func (r RadioTapChannelFlags) Ghz5() bool {
+	return r&RadioTapChannelFlagsGhz5 != 0
+}
+func (r RadioTapChannelFlags) Passive() bool {
+	return r&RadioTapChannelFlagsPassive != 0
+}
+func (r RadioTapChannelFlags) Dynamic() bool {
+	return r&RadioTapChannelFlagsDynamic != 0
+}
+func (r RadioTapChannelFlags) GFSK() bool {
+	return r&RadioTapChannelFlagsGFSK != 0
+}
 
 // String provides a human readable string for RadioTapChannelFlags.
 // This string is possibly subject to change over time; if you're storing this
 // persistently, you should probably store the RadioTapChannelFlags value, not its string.
 func (a RadioTapChannelFlags) String() string {
 	var out bytes.Buffer
-	if (a & RadioTapChannelFlagsTurbo) != 0 {
+	if a.Turbo() {
 		out.WriteString("Turbo,")
 	}
-	if (a & RadioTapChannelFlagsCCK) != 0 {
+	if a.CCK() {
 		out.WriteString("CCK,")
 	}
-	if (a & RadioTapChannelFlagsOFDM) != 0 {
+	if a.OFDM() {
 		out.WriteString("OFDM,")
 	}
-	if (a & RadioTapChannelFlags2Ghz) != 0 {
-		out.WriteString("2Ghz,")
+	if a.Ghz2() {
+		out.WriteString("Ghz2,")
 	}
-	if (a & RadioTapChannelFlags5Ghz) != 0 {
-		out.WriteString("5Ghz,")
+	if a.Ghz5() {
+		out.WriteString("Ghz5,")
 	}
-	if (a & RadioTapChannelFlagsPassive) != 0 {
+	if a.Passive() {
 		out.WriteString("Passive,")
 	}
-	if (a & RadioTapChannelFlagsDynamic) != 0 {
+	if a.Dynamic() {
 		out.WriteString("Dynamic,")
 	}
-	if (a & RadioTapChannelFlagsGFSK) != 0 {
+	if a.GFSK() {
 		out.WriteString("GFSK,")
 	}
 
@@ -106,30 +189,55 @@ const (
 	RadioTapFlagsShortGI                                 // HT short GI
 )
 
+func (r RadioTapFlags) CFP() bool {
+	return r&RadioTapFlagsCFP != 0
+}
+func (r RadioTapFlags) ShortPreamble() bool {
+	return r&RadioTapFlagsShortPreamble != 0
+}
+func (r RadioTapFlags) WEP() bool {
+	return r&RadioTapFlagsWEP != 0
+}
+func (r RadioTapFlags) Frag() bool {
+	return r&RadioTapFlagsFrag != 0
+}
+func (r RadioTapFlags) FCS() bool {
+	return r&RadioTapFlagsFCS != 0
+}
+func (r RadioTapFlags) Datapad() bool {
+	return r&RadioTapFlagsDatapad != 0
+}
+func (r RadioTapFlags) BadFCS() bool {
+	return r&RadioTapFlagsBadFCS != 0
+}
+func (r RadioTapFlags) ShortGI() bool {
+	return r&RadioTapFlagsShortGI != 0
+}
+
 // String provides a human readable string for RadioTapFlags.
 // This string is possibly subject to change over time; if you're storing this
 // persistently, you should probably store the RadioTapFlags value, not its string.
 func (a RadioTapFlags) String() string {
 	var out bytes.Buffer
-	if (a & RadioTapFlagsCFP) != 0 {
+	if a.CFP() {
 		out.WriteString("CFP,")
 	}
-	if (a & RadioTapFlagsShortPreamble) != 0 {
+	if a.ShortPreamble() {
 		out.WriteString("SHORT-PREAMBLE,")
 	}
-	if (a & RadioTapFlagsWEP) != 0 {
+	if a.WEP() {
 		out.WriteString("WEP,")
 	}
-	if (a & RadioTapFlagsFrag) != 0 {
+	if a.Frag() {
 		out.WriteString("FRAG,")
 	}
-	if (a & RadioTapFlagsFCS) != 0 {
+	if a.FCS() {
 		out.WriteString("FCS,")
 	}
-	if (a & RadioTapFlagsDatapad) != 0 {
+	if a.Datapad() {
 		out.WriteString("DATAPAD,")
 	}
-	if (a & RadioTapFlagsShortGI) != 0 {
+	if a.ShortGI() {
 		out.WriteString("SHORT-GI,")
 	}
 
@@ -210,88 +318,88 @@ func (m *RadioTap) DecodeFromBytes(data []byte, df gopacket.DecodeFeedback) erro
 		offset += 4
 	}
 
-	if (m.Present & RadioTapPresentTSFT) != 0 {
+	if m.Present.TSFT() {
 		offset += align(offset, 8)
 		m.TSFT = binary.LittleEndian.Uint64(data[offset : offset+8])
 		offset += 8
 	}
-	if (m.Present & RadioTapPresentFlags) != 0 {
+	if m.Present.Flags() {
 		m.Flags = RadioTapFlags(data[offset])
 		offset++
 	}
-	if (m.Present & RadioTapPresentRate) != 0 {
+	if m.Present.Rate() {
 		m.Rate = RadioTapRate(data[offset])
 		offset++
 	}
-	if (m.Present & RadioTapPresentFHSS) != 0 {
+	if m.Present.FHSS() {
 		m.FHSS = binary.LittleEndian.Uint16(data[offset : offset+2])
 		offset += 2
 	}
-	if (m.Present & RadioTapPresentChannel) != 0 {
+	if m.Present.Channel() {
 		m.ChannelFrequency = RadioTapChannelFrequency(binary.LittleEndian.Uint16(data[offset : offset+2]))
 		offset += 2
 		m.ChannelFlags = RadioTapChannelFlags(data[offset])
 		offset++
 	}
-	if (m.Present & RadioTapPresentDBMAntennaSignal) != 0 {
+	if m.Present.DBMAntennaSignal() {
 		m.DBMAntennaSignal = int8(data[offset])
 		offset++
 	}
-	if (m.Present & RadioTapPresentDBMAntennaNoise) != 0 {
+	if m.Present.DBMAntennaNoise() {
 		m.DBMAntennaNoise = int8(data[offset])
 		offset++
 	}
-	if (m.Present & RadioTapPresentLockQuality) != 0 {
+	if m.Present.LockQuality() {
 		offset += align(offset, 2)
 		m.LockQuality = binary.LittleEndian.Uint16(data[offset : offset+2])
 		offset += 2
 	}
-	if (m.Present & RadioTapPresentTxAttenuation) != 0 {
+	if m.Present.TxAttenuation() {
 		offset += align(offset, 2)
 		m.TxAttenuation = binary.LittleEndian.Uint16(data[offset : offset+2])
 		offset += 2
 	}
-	if (m.Present & RadioTapPresentDBTxAttenuation) != 0 {
+	if m.Present.DBTxAttenuation() {
 		offset += align(offset, 2)
 		m.DBTxAttenuation = binary.LittleEndian.Uint16(data[offset : offset+2])
 		offset += 2
 	}
-	if (m.Present & RadioTapPresentDBMTxPower) != 0 {
+	if m.Present.DBMTxPower() {
 		m.DBMTxPower = int8(data[offset])
 		offset++
 	}
-	if (m.Present & RadioTapPresentAntenna) != 0 {
+	if m.Present.Antenna() {
 		m.Antenna = uint8(data[offset])
 		offset++
 	}
-	if (m.Present & RadioTapPresentDBAntennaSignal) != 0 {
+	if m.Present.DBAntennaSignal() {
 		m.DBAntennaSignal = uint8(data[offset])
 		offset++
 	}
-	if (m.Present & RadioTapPresentDBAntennaNoise) != 0 {
+	if m.Present.DBAntennaNoise() {
 		m.DBAntennaNoise = uint8(data[offset])
 		offset++
 	}
-	if (m.Present & RadioTapPresentRxFlags) != 0 {
+	if m.Present.RxFlags() {
 		// TODO: Implement RxFlags
 	}
-	if (m.Present & RadioTapPresentTxFlags) != 0 {
+	if m.Present.TxFlags() {
 		// TODO: Implement TxFlags
 	}
-	if (m.Present & RadioTapPresentRtsRetries) != 0 {
+	if m.Present.RtsRetries() {
 		// TODO: Implement RtsRetries
 	}
-	if (m.Present & RadioTapPresentDataRetries) != 0 {
+	if m.Present.DataRetries() {
 		// TODO: Implement DataRetries
 	}
-	if (m.Present & RadioTapPresentEXT) != 0 {
+	if m.Present.EXT() {
 		offset += align(offset, 4)
 		// TODO: Implement EXT
 		_ = data[offset : offset+4]
 		offset += 4
 	}
 
-	if (m.Flags & RadioTapFlagsDatapad) != 0 {
+	if m.Flags.Datapad() {
 		// frame has padding between 802.11 header and payload (to 32-bit boundary)
 		offset += align(offset, 4)
 	}
