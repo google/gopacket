@@ -3,11 +3,14 @@ AUTHORS AND MAINTAINERS:
 MAIN DEVELOPERS:
 Graeme Connell   <gconnell@google.com, gsconnell@gmail.com>
 
-CONTRIBUTORS:
+AUTHORS:
 Nigel Tao <nigeltao@google.com>
 Cole Mickens <cole.mickens@gmail.com>
 Ben Daglish <bdaglish@restorepoint.com>
 Luis Martinez <martinezlc99@gmail.com>
+
+CONTRIBUTORS:
+Attila Oláh <attila@attilaolah.eu>
 
 -----------------------------------------------
 FORKED FROM github.com/akrennmair/gopcap

@@ -86,7 +86,7 @@ packetSource.DecodeOptions... see the following sections for more details.
 Lazy Decoding
 
 gopacket optionally decodes packet data lazily, meaning it
-only decodes a packet layer when it needs to to handle a function call.
+only decodes a packet layer when it needs to handle a function call.
 
  // Create a packet, but don't actually decode anything yet
  packet := gopacket.NewPacket(myPacketData, layers.LayerTypeEthernet, gopacket.Lazy)
@@ -123,8 +123,8 @@ gopacket.NewPacket, and it'll use the passed-in slice itself.
  }
 
 The fastest method of decoding is to use both Lazy and NoCopy, but note from
-the many caveats above that for some implementations they may be dangerous
-either or both may be dangerous.
+the many caveats above that for some implementations either or both may be
+dangerous.
 
 
 Pointers To Known Layers
