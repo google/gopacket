@@ -4,10 +4,13 @@
 // that can be found in the LICENSE file in the root of the source
 // tree.
 
+// See http://standards.ieee.org/findstds/standard/802.11-2012.html for info on
+// all of the layers in this file.
+
 package layers
 
 import (
-	_ "bytes"
+	"bytes"
 	"code.google.com/p/gopacket"
 	"encoding/binary"
 	"fmt"
@@ -28,39 +31,45 @@ const (
 	Dot11FlagsOrder
 )
 
+// String provides a human readable string for Dot11Flags.
+// This string is possibly subject to change over time; if you're storing this
+// persistently, you should probably store the Dot11Flags value, not its string.
 func (a Dot11Flags) String() string {
-	outStr := ""
+	var out bytes.Buffer
 	if (a & Dot11FlagsToDS) == Dot11FlagsToDS {
-		outStr += "TO-DS,"
+		out.WriteString("TO-DS,")
 	}
 	if (a & Dot11FlagsFromDS) == Dot11FlagsFromDS {
-		outStr += "FROM-DS,"
+		out.WriteString("FROM-DS,")
 	}
 	if (a & Dot11FlagsMF) == Dot11FlagsMF {
-		outStr += "MF,"
+		out.WriteString("MF,")
 	}
 	if (a & Dot11FlagsRetry) == Dot11FlagsRetry {
-		outStr += "Retry,"
+		out.WriteString("Retry,")
 	}
 	if (a & Dot11FlagsPowerManagement) == Dot11FlagsPowerManagement {
-		outStr += "PowerManagement,"
+		out.WriteString("PowerManagement,")
 	}
 	if (a & Dot11FlagsMD) == Dot11FlagsMD {
-		outStr += "MD,"
+		out.WriteString("MD,")
 	}
 	if (a & Dot11FlagsWEP) == Dot11FlagsWEP {
-		outStr += "WEP,"
+		out.WriteString("WEP,")
 	}
 	if (a & Dot11FlagsOrder) == Dot11FlagsOrder {
-		outStr += "Order,"
+		out.WriteString("Order,")
 	}
 
-	return outStr
+	if length := out.Len(); length > 0 {
+		return string(out.Bytes()[:length-1]) // strip final comma
+	}
+	return ""
 }
 
 type Dot11Reason uint16
 
-// TODO: Verify these reasons, and append more reasons if more.
+// TODO: Verify these reasons, and append more reasons if necessary.
 
 const (
 	Dot11ReasonReserved          Dot11Reason = 1
@@ -75,6 +84,9 @@ const (
 	Dot11ReasonStNotAuth         Dot11Reason = 10
 )
 
+// String provides a human readable string for Dot11Reason.
+// This string is possibly subject to change over time; if you're storing this
+// persistently, you should probably store the Dot11Reason value, not its string.
 func (a Dot11Reason) String() string {
 	switch a {
 	case Dot11ReasonReserved:
@@ -118,6 +130,9 @@ const (
 	Dot11StatusRateUnsupported              Dot11Status = 18 // Association denied due to requesting station not supporting all of the data rates in the BSSBasicRateSet parameter
 )
 
+// String provides a human readable string for Dot11Status.
+// This string is possibly subject to change over time; if you're storing this
+// persistently, you should probably store the Dot11Status value, not its string.
 func (a Dot11Status) String() string {
 	switch a {
 	case Dot11StatusSuccess:
@@ -156,6 +171,9 @@ const (
 	Dot11AckPolicyBlock      Dot11AckPolicy = 3
 )
 
+// String provides a human readable string for Dot11AckPolicy.
+// This string is possibly subject to change over time; if you're storing this
+// persistently, you should probably store the Dot11AckPolicy value, not its string.
 func (a Dot11AckPolicy) String() string {
 	switch a {
 	case Dot11AckPolicyNormal:
@@ -178,6 +196,9 @@ const (
 	Dot11AlgorithmSharedKey Dot11Algorithm = 1
 )
 
+// String provides a human readable string for Dot11Algorithm.
+// This string is possibly subject to change over time; if you're storing this
+// persistently, you should probably store the Dot11Algorithm value, not its string.
 func (a Dot11Algorithm) String() string {
 	switch a {
 	case Dot11AlgorithmOpen:
@@ -211,6 +232,10 @@ const (
 	Dot11InformationElementIDReserved      Dot11InformationElementID = 68
 )
 
+// String provides a human readable string for Dot11InformationElementID.
+// This string is possibly subject to change over time; if you're storing this
+// persistently, you should probably store the Dot11InformationElementID value,
+// not its string.
 func (a Dot11InformationElementID) String() string {
 	switch a {
 	case Dot11InformationElementIDSSID:
@@ -248,6 +273,9 @@ func (a Dot11InformationElementID) String() string {
 	}
 }
 
+// Dot11 provides an IEEE 802.11 base packet header.
+// See http://standards.ieee.org/findstds/standard/802.11-2012.html
+// for excrutiating detail.
 type Dot11 struct {
 	BaseLayer
 	Type           Dot11Type
@@ -330,6 +358,7 @@ func (m *Dot11) ChecksumValid() bool {
 	return m.Checksum == h.Sum32()
 }
 
+// Dot11Mgmt is a base for all IEEE 802.11 management layers.
 type Dot11Mgmt struct {
 	BaseLayer
 }
@@ -340,6 +369,7 @@ func (m *Dot11Mgmt) DecodeFromBytes(data []byte, df gopacket.DecodeFeedback) err
 	return nil
 }
 
+// Dot11Ctrl is a base for all IEEE 802.11 control layers.
 type Dot11Ctrl struct {
 	BaseLayer
 }
@@ -358,6 +388,7 @@ func decodeDot11Ctrl(data []byte, p gopacket.PacketBuilder) error {
 	return decodingLayerDecoder(d, data, p)
 }
 
+// Dot11WEP contains WEP encrpted IEEE 802.11 data.
 type Dot11WEP struct {
 	BaseLayer
 }
@@ -376,6 +407,7 @@ func decodeDot11WEP(data []byte, p gopacket.PacketBuilder) error {
 	return decodingLayerDecoder(d, data, p)
 }
 
+// Dot11Data is a base for all IEEE 802.11 data layers.
 type Dot11Data struct {
 	BaseLayer
 }

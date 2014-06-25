@@ -7,6 +7,7 @@
 package layers
 
 import (
+	"bytes"
 	"code.google.com/p/gopacket"
 	"encoding/binary"
 	"fmt"
@@ -56,34 +57,40 @@ const (
 	RadioTapChannelFlagsGFSK    RadioTapChannelFlags = 0x0800 // GFSK channel (FHSS PHY)
 )
 
+// String provides a human readable string for RadioTapChannelFlags.
+// This string is possibly subject to change over time; if you're storing this
+// persistently, you should probably store the RadioTapChannelFlags value, not its string.
 func (a RadioTapChannelFlags) String() string {
-	outStr := ""
+	var out bytes.Buffer
 	if (a & RadioTapChannelFlagsTurbo) != 0 {
-		outStr += "Turbo,"
+		out.WriteString("Turbo,")
 	}
 	if (a & RadioTapChannelFlagsCCK) != 0 {
-		outStr += "CCK,"
+		out.WriteString("CCK,")
 	}
 	if (a & RadioTapChannelFlagsOFDM) != 0 {
-		outStr += "OFDM,"
+		out.WriteString("OFDM,")
 	}
 	if (a & RadioTapChannelFlags2Ghz) != 0 {
-		outStr += "2Ghz,"
+		out.WriteString("2Ghz,")
 	}
 	if (a & RadioTapChannelFlags5Ghz) != 0 {
-		outStr += "5Ghz,"
+		out.WriteString("5Ghz,")
 	}
 	if (a & RadioTapChannelFlagsPassive) != 0 {
-		outStr += "Passive,"
+		out.WriteString("Passive,")
 	}
 	if (a & RadioTapChannelFlagsDynamic) != 0 {
-		outStr += "Dynamic,"
+		out.WriteString("Dynamic,")
 	}
 	if (a & RadioTapChannelFlagsGFSK) != 0 {
-		outStr += "GFSK,"
+		out.WriteString("GFSK,")
 	}
 
-	return outStr
+	if length := out.Len(); length > 0 {
+		return string(out.Bytes()[:length-1]) // strip final comma
+	}
+	return ""
 }
 
 type RadioTapFlags uint8
@@ -99,31 +106,37 @@ const (
 	RadioTapFlagsShortGI                                 // HT short GI
 )
 
+// String provides a human readable string for RadioTapFlags.
+// This string is possibly subject to change over time; if you're storing this
+// persistently, you should probably store the RadioTapFlags value, not its string.
 func (a RadioTapFlags) String() string {
-	outStr := ""
+	var out bytes.Buffer
 	if (a & RadioTapFlagsCFP) != 0 {
-		outStr += "CFP,"
+		out.WriteString("CFP,")
 	}
 	if (a & RadioTapFlagsShortPreamble) != 0 {
-		outStr += "SHORT-PREAMBLE,"
+		out.WriteString("SHORT-PREAMBLE,")
 	}
 	if (a & RadioTapFlagsWEP) != 0 {
-		outStr += "WEP,"
+		out.WriteString("WEP,")
 	}
 	if (a & RadioTapFlagsFrag) != 0 {
-		outStr += "FRAG,"
+		out.WriteString("FRAG,")
 	}
 	if (a & RadioTapFlagsFCS) != 0 {
-		outStr += "FCS,"
+		out.WriteString("FCS,")
 	}
 	if (a & RadioTapFlagsDatapad) != 0 {
-		outStr += "DATAPAD,"
+		out.WriteString("DATAPAD,")
 	}
 	if (a & RadioTapFlagsShortGI) != 0 {
-		outStr += "SHORT-GI,"
+		out.WriteString("SHORT-GI,")
 	}
 
-	return outStr
+	if length := out.Len(); length > 0 {
+		return string(out.Bytes()[:length-1]) // strip final comma
+	}
+	return ""
 }
 
 type RadioTapRate uint8

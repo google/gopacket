@@ -32,7 +32,7 @@ class Packet(object):
         packet_bytes.append(base64.b16decode(hexpart.upper()))
     return ''.join(packet_bytes)
 
-  def Test(self, name, linkType):
+  def Test(self, name, link_type):
     """Yields a test using this packet, as a set of lines."""
     yield '// testPacket%s is the packet:' % name
     for line in self.packet_lines:
@@ -44,15 +44,15 @@ class Packet(object):
       yield ''.join(['\t'] + ['0x%02x, ' % ord(c) for c in linebytes])
     yield '}'
     yield 'func TestPacket%s(t *testing.T) {' % name
-    yield '\tp := gopacket.NewPacket(testPacket%s, LinkType%s, gopacket.Default)' % (name, linkType)
+    yield '\tp := gopacket.NewPacket(testPacket%s, LinkType%s, gopacket.Default)' % (name, link_type)
     yield '\tif p.ErrorLayer() != nil {'
     yield '\t\tt.Error("Failed to decode packet:", p.ErrorLayer().Error())'
     yield '\t}'
-    yield '\tcheckLayers(p, []gopacket.LayerType{LayerType%s, FILL_ME_IN_WITH_ACTUAL_LAYERS}, t)' % linkType
+    yield '\tcheckLayers(p, []gopacket.LayerType{LayerType%s, FILL_ME_IN_WITH_ACTUAL_LAYERS}, t)' % link_type
     yield '}'
     yield 'func BenchmarkDecodePacket%s(b *testing.B) {' % name
     yield '\tfor i := 0; i < b.N; i++ {'
-    yield '\t\tgopacket.NewPacket(testPacket%s, LinkType%s, gopacket.NoCopy)' % (name, linkType)
+    yield '\t\tgopacket.NewPacket(testPacket%s, LinkType%s, gopacket.NoCopy)' % (name, link_type)
     yield '\t}'
     yield '}'
 
@@ -87,7 +87,7 @@ def main():
         self, usage, actions, groups, prefix)
 
   parser = argparse.ArgumentParser(formatter_class=CustomHelpFormatter)
-  parser.add_argument('--linkType', default='Ethernet', help='the link type (default: %(default)s)')
+  parser.add_argument('--link_type', default='Ethernet', help='the link type (default: %(default)s)')
   parser.add_argument('--name', default='Packet%d', help='the layer type, must have "%d" inside it')
   parser.add_argument('files', metavar='file.pcap', type=str, nargs='+', help='the files to process')
 
@@ -95,9 +95,9 @@ def main():
 
   for arg in args.files:
     for path in glob.glob(arg):
-      for i, packet in enumerate( TcpdumpOutputToPackets(GetTcpdumpOutput(path))):
+      for i, packet in enumerate(TcpdumpOutputToPackets(GetTcpdumpOutput(path))):
         print '\n'.join(packet.Test(
-          args.name % i, args.linkType, args.layerType))
+          args.name % i, args.link_type))
 
 if __name__ == '__main__':
     main()
