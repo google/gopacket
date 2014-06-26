@@ -43,11 +43,16 @@ func main() {
 			}
 		}(iface)
 	}
-	// Wait for all interfaces' scans to complete.
+	// Wait for all interfaces' scans to complete.  They'll try to run
+	// forever, but will stop on an error, so if we get past this Wait
+	// it means all attempts to write have failed.
 	wg.Wait()
 }
 
 // scan scans an individual interface's local network for machines using ARP requests/replies.
+//
+// scan loops forever, sending packets out regularly.  It returns an error if
+// it's ever unable to write a packet.
 func scan(iface *net.Interface) error {
 	// We just look for IPv4 addresses, so try to find if the interface has one.
 	var addr *net.IPNet
@@ -74,7 +79,7 @@ func scan(iface *net.Interface) error {
 	} else if addr.Mask[0] != 0xff || addr.Mask[1] != 0xff {
 		return fmt.Errorf("mask means network is too large")
 	}
-	log.Printf("using address %v for interface %v", addr, iface.Name)
+	log.Printf("Using network range %v for interface %v", addr, iface.Name)
 
 	// Open up a pcap handle for packet reads/writes.
 	handle, err := pcap.OpenLive(iface.Name, 65536, true, pcap.BlockForever)
@@ -84,39 +89,48 @@ func scan(iface *net.Interface) error {
 	defer handle.Close()
 
 	// Start up a goroutine to read in packet data.
-	go readARP(handle, iface)
-	// Write our scan packets out to the handle.
-	if err := writeARP(handle, iface, addr); err != nil {
-		log.Printf("error writing packets on %v: %v", iface.Name, err)
+	stop := make(chan struct{})
+	go readARP(handle, iface, stop)
+	defer close(stop)
+	for {
+		// Write our scan packets out to the handle.
+		if err := writeARP(handle, iface, addr); err != nil {
+			log.Printf("error writing packets on %v: %v", iface.Name, err)
+			return err
+		}
+		// We don't know exactly how long it'll take for packets to be
+		// sent back to us, but 10 seconds should be more than enough
+		// time ;)
+		time.Sleep(10 * time.Second)
 	}
-	// We don't know exactly how long it'll take for packets to be
-	// sent back to us, but 10 seconds should be more than enough
-	// time ;)
-	time.Sleep(10 * time.Second)
-	return nil
 }
 
 // readARP watches a handle for incoming ARP responses we might care about, and prints them.
 //
-// NOTE:  This function blocks forever waiting for packets, meaning we leak
-// goroutines.  This is meant as a simple example of reading/writing packets,
-// NOT as a good example of goroutine handling in Go code.
-func readARP(handle *pcap.Handle, iface *net.Interface) {
+// readARP loops until 'stop' is closed.
+func readARP(handle *pcap.Handle, iface *net.Interface, stop chan struct{}) {
 	src := gopacket.NewPacketSource(handle, layers.LayerTypeEthernet)
-	for packet := range src.Packets() {
-		arpLayer := packet.Layer(layers.LayerTypeARP)
-		if arpLayer == nil {
-			continue
+	in := src.Packets()
+	for {
+		var packet gopacket.Packet
+		select {
+		case <-stop:
+			return
+		case packet = <-in:
+			arpLayer := packet.Layer(layers.LayerTypeARP)
+			if arpLayer == nil {
+				continue
+			}
+			arp := arpLayer.(*layers.ARP)
+			if arp.Operation != layers.ARPReply || bytes.Equal([]byte(iface.HardwareAddr), arp.SourceHwAddress) {
+				// This is a packet I sent.
+				continue
+			}
+			// Note:  we might get some packets here that aren't responses to ones we've sent,
+			// if for example someone else sends US an ARP request.  Doesn't much matter, though...
+			// all information is good information :)
+			log.Printf("IP %v is at %v", net.IP(arp.SourceProtAddress), net.HardwareAddr(arp.SourceHwAddress))
 		}
-		arp := arpLayer.(*layers.ARP)
-		if arp.Operation != layers.ARPReply || bytes.Equal([]byte(iface.HardwareAddr), arp.SourceHwAddress) {
-			// This is a packet I sent.
-			continue
-		}
-		// Note:  we might get some packets here that aren't responses to ones we've sent,
-		// if for example someone else sends US an ARP request.  Doesn't much matter, though...
-		// all information is good information :)
-		log.Printf("IP %v is at %v", net.IP(arp.SourceProtAddress), net.HardwareAddr(arp.SourceHwAddress))
 	}
 }
 
