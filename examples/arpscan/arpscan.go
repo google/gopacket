@@ -146,7 +146,7 @@ func writeARP(handle *pcap.Handle, iface *net.Interface, addr *net.IPNet) error 
 		ComputeChecksums: true,
 	}
 	// Send one packet for every address.
-	for ip := range ips(addr) {
+	for _, ip := range ips(addr) {
 		arp.DstProtAddress = []byte(ip)
 		gopacket.SerializeLayers(buf, opts, &eth, &arp)
 		if err := handle.WritePacketData(buf.Bytes()); err != nil {
@@ -159,20 +159,16 @@ func writeARP(handle *pcap.Handle, iface *net.Interface, addr *net.IPNet) error 
 // ips is a simple and not very good method for getting all IPv4 addresses from a
 // net.IPNet.  It returns all IPs it can over the channel it sends back, closing
 // the channel when done.
-func ips(n *net.IPNet) chan net.IP {
-	c := make(chan net.IP)
-	go func() {
-		num := binary.BigEndian.Uint32([]byte(n.IP))
-		mask := binary.BigEndian.Uint32([]byte(n.Mask))
-		num &= mask
-		for mask < 0xffffffff {
-			var buf [4]byte
-			binary.BigEndian.PutUint32(buf[:], num)
-			c <- buf[:]
-			mask += 1
-			num += 1
-		}
-		close(c)
-	}()
-	return c
+func ips(n *net.IPNet) (out []net.IP) {
+	num := binary.BigEndian.Uint32([]byte(n.IP))
+	mask := binary.BigEndian.Uint32([]byte(n.Mask))
+	num &= mask
+	for mask < 0xffffffff {
+		var buf [4]byte
+		binary.BigEndian.PutUint32(buf[:], num)
+		out = append(out, net.IP(buf[:]))
+		mask += 1
+		num += 1
+	}
+	return
 }
