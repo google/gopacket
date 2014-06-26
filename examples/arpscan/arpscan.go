@@ -97,6 +97,10 @@ func scan(iface *net.Interface) error {
 }
 
 // readARP watches a handle for incoming ARP responses we might care about, and prints them.
+//
+// NOTE:  This function blocks forever waiting for packets, meaning we leak
+// goroutines.  This is meant as a simple example of reading/writing packets,
+// NOT as a good example of goroutine handling in Go code.
 func readARP(handle *pcap.Handle, iface *net.Interface) {
 	src := gopacket.NewPacketSource(handle, layers.LayerTypeEthernet)
 	for packet := range src.Packets() {
