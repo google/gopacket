@@ -104,7 +104,7 @@ type Interface struct {
 // Currently, it's IPv4/6 specific.
 type InterfaceAddress struct {
 	IP      net.IP
-	Netmask net.IPMask
+	Netmask net.IPMask // Netmask may be nil if we were unable to retrieve it.
 	// TODO: add broadcast + PtP dst ?
 }
 
@@ -385,7 +385,9 @@ func findalladdresses(addresses *_Ctype_struct_pcap_addr) (retval []InterfaceAdd
 			continue
 		}
 		if a.Netmask, err = sockaddr_to_IP((*syscall.RawSockaddr)(unsafe.Pointer(curaddr.netmask))); err != nil {
-			continue
+			// If we got an IP address but we can't get a netmask, just return the IP
+			// address.
+			a.Netmask = nil
 		}
 		retval = append(retval, a)
 	}
