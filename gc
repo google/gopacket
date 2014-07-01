@@ -131,6 +131,9 @@ if [ -f /usr/include/pcap.h ]; then
   pushd examples/arpscan
   go build -race
   popd
+  pushd examples/bidirectional
+  go build -race
+  popd
   pushd examples/synscan
   go build -race
   popd

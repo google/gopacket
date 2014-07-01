@@ -279,7 +279,7 @@ func layerString(i interface{}, anonymous bool, writeSpace bool) string {
 		var b bytes.Buffer
 		b.WriteByte('[')
 		if v.Len() > 4 {
-			b.WriteString("...")
+			fmt.Fprintf(&b, "..%d..", v.Len())
 		} else {
 			for j := 0; j < v.Len(); j++ {
 				if j != 0 {
