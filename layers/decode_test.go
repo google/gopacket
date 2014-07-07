@@ -1127,3 +1127,16 @@ func TestPFLog_UDP(t *testing.T) {
 		gopacket.LayerTypePayload,
 	}, t)
 }
+
+func TestRegressionDot1QPriority(t *testing.T) {
+	d := &Dot1Q{
+		Priority: 2,
+	}
+	out := gopacket.NewSerializeBuffer()
+	gopacket.SerializeLayers(out, gopacket.SerializeOptions{}, d)
+	if err := d.DecodeFromBytes(out.Bytes(), gopacket.NilDecodeFeedback); err != nil {
+		t.Errorf("could not decode encoded dot1q")
+	} else if d.Priority != 2 {
+		t.Errorf("priority mismatch, want 2 got %d", d.Priority)
+	}
+}

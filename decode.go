@@ -18,6 +18,13 @@ type DecodeFeedback interface {
 	SetTruncated()
 }
 
+type nilDecodeFeedback struct{}
+
+func (nilDecodeFeedback) SetTruncated() {}
+
+// NilDecodeFeedback implements DecodeFeedback by doing nothing.
+var NilDecodeFeedback DecodeFeedback = nilDecodeFeedback{}
+
 // PacketBuilder is used by layer decoders to store the layers they've decoded,
 // and to defer future decoding via NextDecoder.
 // Typically, the pattern for use is:

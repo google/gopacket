@@ -27,7 +27,7 @@ func (d *Dot1Q) LayerType() gopacket.LayerType { return LayerTypeDot1Q }
 
 // DecodeFromBytes decodes the given bytes into this layer.
 func (d *Dot1Q) DecodeFromBytes(data []byte, df gopacket.DecodeFeedback) error {
-	d.Priority = (data[0] & 0xE0) >> 13
+	d.Priority = (data[0] & 0xE0) >> 5
 	d.DropEligible = data[0]&0x10 != 0
 	d.VLANIdentifier = binary.BigEndian.Uint16(data[:2]) & 0x0FFF
 	d.Type = EthernetType(binary.BigEndian.Uint16(data[2:4]))
@@ -61,7 +61,7 @@ func (d *Dot1Q) SerializeTo(b gopacket.SerializeBuffer, opts gopacket.SerializeO
 	if d.VLANIdentifier > 0xFFF {
 		return fmt.Errorf("vlan identifier %v is too high", d.VLANIdentifier)
 	}
-	firstBytes := uint16(d.Priority<<13) | d.VLANIdentifier
+	firstBytes := uint16(d.Priority)<<13 | d.VLANIdentifier
 	if d.DropEligible {
 		firstBytes |= 0x10
 	}
