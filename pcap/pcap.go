@@ -547,3 +547,29 @@ func (p *InactiveHandle) SetTimestampSource(t TimestampSource) error {
 	}
 	return nil
 }
+
+// CannotSetRFMon is returned by SetRFMon if the handle does not allow
+// setting RFMon because pcap_can_set_rfmon returns 0.
+var CannotSetRFMon = errors.New("Cannot set rfmon for this handle")
+
+// SetRFMon turns on radio monitoring mode, similar to promiscuous mode but for
+// wireless networks.  If this mode is enabled, the interface will not need to
+// associate with an access point before it can receive traffic.
+func (p *InactiveHandle) SetRFMon(monitor bool) error {
+	var mon C.int
+	if monitor {
+		mon = 1
+	}
+	switch canset := C.pcap_can_set_rfmon(p.cptr); canset {
+	case 0:
+		return CannotSetRFMon
+	case 1:
+		// success
+	default:
+		return statusError(canset)
+	}
+	if status := C.pcap_set_rfmon(p.cptr, mon); status != 0 {
+		return statusError(status)
+	}
+	return nil
+}
