@@ -33,13 +33,13 @@ type Layer interface {
 type Payload []byte
 
 // LayerType returns LayerTypePayload
-func (p *Payload) LayerType() LayerType     { return LayerTypePayload }
-func (p *Payload) LayerContents() []byte    { return []byte(*p) }
-func (p *Payload) LayerPayload() []byte     { return nil }
-func (p *Payload) Payload() []byte          { return []byte(*p) }
-func (p *Payload) String() string           { return fmt.Sprintf("%d byte(s)", len(*p)) }
-func (p *Payload) CanDecode() LayerClass    { return LayerTypePayload }
-func (p *Payload) NextLayerType() LayerType { return LayerTypeZero }
+func (p Payload) LayerType() LayerType     { return LayerTypePayload }
+func (p Payload) LayerContents() []byte    { return []byte(p) }
+func (p Payload) LayerPayload() []byte     { return nil }
+func (p Payload) Payload() []byte          { return []byte(p) }
+func (p Payload) String() string           { return fmt.Sprintf("%d byte(s)", len(p)) }
+func (p Payload) CanDecode() LayerClass    { return LayerTypePayload }
+func (p Payload) NextLayerType() LayerType { return LayerTypeZero }
 func (p *Payload) DecodeFromBytes(data []byte, df DecodeFeedback) error {
 	*p = Payload(data)
 	return nil
@@ -48,12 +48,12 @@ func (p *Payload) DecodeFromBytes(data []byte, df DecodeFeedback) error {
 // SerializeTo writes the serialized form of this layer into the
 // SerializationBuffer, implementing gopacket.SerializableLayer.
 // See the docs for gopacket.SerializableLayer for more info.
-func (p *Payload) SerializeTo(b SerializeBuffer, opts SerializeOptions) error {
-	bytes, err := b.PrependBytes(len(*p))
+func (p Payload) SerializeTo(b SerializeBuffer, opts SerializeOptions) error {
+	bytes, err := b.PrependBytes(len(p))
 	if err != nil {
 		return err
 	}
-	copy(bytes, *p)
+	copy(bytes, p)
 	return nil
 }
 
