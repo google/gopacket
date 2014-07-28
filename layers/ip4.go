@@ -18,9 +18,9 @@ import (
 type IPv4Flag uint8
 
 const (
-	IPv4EvilBit       IPv4Flag = 1 << 0 // http://tools.ietf.org/html/rfc3514 ;)
+	IPv4EvilBit       IPv4Flag = 1 << 2 // http://tools.ietf.org/html/rfc3514 ;)
 	IPv4DontFragment  IPv4Flag = 1 << 1
-	IPv4MoreFragments IPv4Flag = 1 << 2
+	IPv4MoreFragments IPv4Flag = 1 << 0
 )
 
 func (f IPv4Flag) String() string {
@@ -195,6 +195,9 @@ func (i *IPv4) CanDecode() gopacket.LayerClass {
 }
 
 func (i *IPv4) NextLayerType() gopacket.LayerType {
+	if i.Flags&IPv4MoreFragments != 0 || i.FragOffset != 0 {
+		return gopacket.LayerTypeFragment
+	}
 	return i.Protocol.LayerType()
 }
 
@@ -206,5 +209,5 @@ func decodeIPv4(data []byte, p gopacket.PacketBuilder) error {
 	if err != nil {
 		return err
 	}
-	return p.NextDecoder(ip.Protocol)
+	return p.NextDecoder(ip.NextLayerType())
 }

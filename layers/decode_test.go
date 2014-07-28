@@ -1183,3 +1183,27 @@ func TestPacketMPLSInMPLS(t *testing.T) {
 		LayerTypeICMPv4,
 		gopacket.LayerTypePayload}, t)
 }
+
+// testPacketIPv4Fragmented is the packet:
+//   22:11:26.616090 IP 10.1.1.1.31915 > 129.111.30.27.20197: UDP, length 28
+//      0x0000:  0000 39cf d9cd 0040 33d9 7cfd 0800 4500  ..9....@3.|...E.
+//      0x0010:  0038 00f2 2000 4011 af37 0a01 0101 816f  .8....@..7.....o
+//      0x0020:  1e1b 7cab 4ee5 0024 0000 0000 0000 0000  ..|.N..$........
+//      0x0030:  0000 0000 0000 0000 0000 0000 0000 0000  ................
+//      0x0040:  0000 0000 0000                           ......
+var testPacketIPv4Fragmented = []byte{
+	0x00, 0x00, 0x39, 0xcf, 0xd9, 0xcd, 0x00, 0x40, 0x33, 0xd9, 0x7c, 0xfd, 0x08, 0x00, 0x45, 0x00,
+	0x00, 0x38, 0x00, 0xf2, 0x20, 0x00, 0x40, 0x11, 0xaf, 0x37, 0x0a, 0x01, 0x01, 0x01, 0x81, 0x6f,
+	0x1e, 0x1b, 0x7c, 0xab, 0x4e, 0xe5, 0x00, 0x24, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+	0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+	0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+}
+
+func TestPacketIPv4Fragmented(t *testing.T) {
+	p := gopacket.NewPacket(testPacketIPv4Fragmented, LinkTypeEthernet, gopacket.Default)
+	if p.ErrorLayer() != nil {
+		t.Error("Failed to decode packet:", p.ErrorLayer().Error())
+	}
+	checkLayers(p, []gopacket.LayerType{LayerTypeEthernet, LayerTypeIPv4, gopacket.LayerTypeFragment}, t)
+	testSerializationWithOpts(t, p, testPacketIPv4Fragmented, gopacket.SerializeOptions{FixLengths: true, ComputeChecksums: true})
+}

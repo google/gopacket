@@ -311,7 +311,7 @@ func decodeIPv6Fragment(data []byte, p gopacket.PacketBuilder) error {
 		Identification: binary.BigEndian.Uint32(data[4:8]),
 	}
 	p.AddLayer(i)
-	return p.NextDecoder(i.NextHeader)
+	return p.NextDecoder(gopacket.DecodeFragment)
 }
 
 // IPv6DestinationOption is a TLV option present in an IPv6 destination options extension.

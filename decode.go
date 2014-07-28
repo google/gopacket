@@ -93,6 +93,10 @@ var DecodePayload Decoder = DecodeFunc(decodePayload)
 // decode yet.  This layer is considered an ErrorLayer.
 var DecodeUnknown Decoder = DecodeFunc(decodeUnknown)
 
+// DecodeFragment is a Decoder that returns a Fragment layer containing all
+// remaining bytes.
+var DecodeFragment Decoder = DecodeFunc(decodeFragment)
+
 // LayerTypeZero is an invalid layer type, but can be used to determine whether
 // layer type has actually been set correctly.
 var LayerTypeZero LayerType = RegisterLayerType(0, LayerTypeMetadata{"Unknown", DecodeUnknown})
@@ -103,6 +107,10 @@ var LayerTypeDecodeFailure LayerType = RegisterLayerType(1, LayerTypeMetadata{"D
 // LayerTypePayload is the layer type for a payload that we don't try to decode
 // but treat as a success, IE: an application-level payload.
 var LayerTypePayload LayerType = RegisterLayerType(2, LayerTypeMetadata{"Payload", DecodePayload})
+
+// LayerTypeFragment is the layer type for a fragment of a layer transported
+// by an underlying layer that supports fragmentation.
+var LayerTypeFragment LayerType = RegisterLayerType(3, LayerTypeMetadata{"Fragment", DecodeFragment})
 
 // DecodeFailure is a packet layer created if decoding of the packet data failed
 // for some reason.  It implements ErrorLayer.  LayerContents will be the entire

@@ -68,6 +68,46 @@ func decodePayload(data []byte, p PacketBuilder) error {
 	return nil
 }
 
+// Fragment is a Layer containing a fragment of a larger frame, used by layers
+// like IPv4 and IPv6 that allow for fragmentation of their payloads.
+type Fragment []byte
+
+// LayerType returns LayerTypeFragment
+func (p *Fragment) LayerType() LayerType     { return LayerTypeFragment }
+func (p *Fragment) LayerContents() []byte    { return []byte(*p) }
+func (p *Fragment) LayerPayload() []byte     { return nil }
+func (p *Fragment) Payload() []byte          { return []byte(*p) }
+func (p *Fragment) String() string           { return fmt.Sprintf("%d byte(s)", len(*p)) }
+func (p *Fragment) CanDecode() LayerClass    { return LayerTypeFragment }
+func (p *Fragment) NextLayerType() LayerType { return LayerTypeZero }
+func (p *Fragment) DecodeFromBytes(data []byte, df DecodeFeedback) error {
+	*p = Fragment(data)
+	return nil
+}
+
+// SerializeTo writes the serialized form of this layer into the
+// SerializationBuffer, implementing gopacket.SerializableLayer.
+// See the docs for gopacket.SerializableLayer for more info.
+func (p *Fragment) SerializeTo(b SerializeBuffer, opts SerializeOptions) error {
+	bytes, err := b.PrependBytes(len(*p))
+	if err != nil {
+		return err
+	}
+	copy(bytes, *p)
+	return nil
+}
+
+// decodeFragment decodes data by returning it all in a Fragment layer.
+func decodeFragment(data []byte, p PacketBuilder) error {
+	payload := &Fragment{}
+	if err := payload.DecodeFromBytes(data, p); err != nil {
+		return nil
+	}
+	p.AddLayer(payload)
+	p.SetApplicationLayer(payload)
+	return nil
+}
+
 // These layers correspond to Internet Protocol Suite (TCP/IP) layers, and their
 // corresponding OSI layers, as best as possible.
 
