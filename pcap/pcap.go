@@ -104,7 +104,7 @@ type Interface struct {
 // Currently, it's IPv4/6 specific.
 type InterfaceAddress struct {
 	IP      net.IP
-	Netmask net.IPMask
+	Netmask net.IPMask // Netmask may be nil if we were unable to retrieve it.
 	// TODO: add broadcast + PtP dst ?
 }
 
@@ -400,8 +400,10 @@ func findalladdresses(addresses *_Ctype_struct_pcap_addr) (retval []InterfaceAdd
 		if a.IP, err = sockaddr_to_IP((*syscall.RawSockaddr)(unsafe.Pointer(curaddr.addr))); err != nil {
 			continue
 		}
-		if a.Netmask, err = sockaddr_to_IP((*syscall.RawSockaddr)(unsafe.Pointer(curaddr.addr))); err != nil {
-			continue
+		if a.Netmask, err = sockaddr_to_IP((*syscall.RawSockaddr)(unsafe.Pointer(curaddr.netmask))); err != nil {
+			// If we got an IP address but we can't get a netmask, just return the IP
+			// address.
+			a.Netmask = nil
 		}
 		retval = append(retval, a)
 	}
@@ -557,6 +559,32 @@ func (p *InactiveHandle) SupportedTimestamps() (out []TimestampSource) {
 // attaching timestamps to packets.
 func (p *InactiveHandle) SetTimestampSource(t TimestampSource) error {
 	if status := C.pcap_set_tstamp_type(p.cptr, C.int(t)); status < 0 {
+		return statusError(status)
+	}
+	return nil
+}
+
+// CannotSetRFMon is returned by SetRFMon if the handle does not allow
+// setting RFMon because pcap_can_set_rfmon returns 0.
+var CannotSetRFMon = errors.New("Cannot set rfmon for this handle")
+
+// SetRFMon turns on radio monitoring mode, similar to promiscuous mode but for
+// wireless networks.  If this mode is enabled, the interface will not need to
+// associate with an access point before it can receive traffic.
+func (p *InactiveHandle) SetRFMon(monitor bool) error {
+	var mon C.int
+	if monitor {
+		mon = 1
+	}
+	switch canset := C.pcap_can_set_rfmon(p.cptr); canset {
+	case 0:
+		return CannotSetRFMon
+	case 1:
+		// success
+	default:
+		return statusError(canset)
+	}
+	if status := C.pcap_set_rfmon(p.cptr, mon); status != 0 {
 		return statusError(status)
 	}
 	return nil

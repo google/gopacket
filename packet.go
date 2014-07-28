@@ -18,6 +18,8 @@ import (
 	"time"
 )
 
+// CaptureInfo provides standardized information about a packet captured off
+// the wire or read from a file.
 type CaptureInfo struct {
 	// Timestamp is the time the packet was captured, if that is known.
 	Timestamp time.Time
@@ -277,7 +279,7 @@ func layerString(i interface{}, anonymous bool, writeSpace bool) string {
 		var b bytes.Buffer
 		b.WriteByte('[')
 		if v.Len() > 4 {
-			b.WriteString("...")
+			fmt.Fprintf(&b, "..%d..", v.Len())
 		} else {
 			for j := 0; j < v.Len(); j++ {
 				if j != 0 {
@@ -640,6 +642,7 @@ type PacketSource struct {
 	// of packet data.  This can/should be changed by the user to reflect the
 	// way packets should be decoded.
 	DecodeOptions
+	c chan Packet
 }
 
 // NewPacketSource creates a packet data source.
@@ -667,19 +670,19 @@ func (p *PacketSource) NextPacket() (Packet, error) {
 // packetsToChannel reads in all packets from the packet source and sends them
 // to the given channel.  When it receives an error, it ignores it.  When it
 // receives an io.EOF, it closes the channel.
-func (p *PacketSource) packetsToChannel(c chan<- Packet) {
+func (p *PacketSource) packetsToChannel() {
+	defer close(p.c)
 	for {
 		packet, err := p.NextPacket()
 		if err == io.EOF {
-			close(c)
 			return
 		} else if err == nil {
-			c <- packet
+			p.c <- packet
 		}
 	}
 }
 
-// Packets returns a blocking channel of packets, allowing easy iterating over
+// Packets returns a channel of packets, allowing easy iterating over
 // packets.  Packets will be asynchronously read in from the underlying
 // PacketDataSource and written to the returned channel.  If the underlying
 // PacketDataSource returns an io.EOF error, the channel will be closed.
@@ -688,8 +691,12 @@ func (p *PacketSource) packetsToChannel(c chan<- Packet) {
 //  for packet := range packetSource.Packets() {
 //    handlePacket(packet)  // Do something with each packet.
 //  }
+//
+// If called more than once, returns the same channel.
 func (p *PacketSource) Packets() chan Packet {
-	c := make(chan Packet, 1000)
-	go p.packetsToChannel(c)
-	return c
+	if p.c == nil {
+		p.c = make(chan Packet, 1000)
+		go p.packetsToChannel()
+	}
+	return p.c
 }

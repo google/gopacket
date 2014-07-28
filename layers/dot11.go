@@ -4,10 +4,13 @@
 // that can be found in the LICENSE file in the root of the source
 // tree.
 
+// See http://standards.ieee.org/findstds/standard/802.11-2012.html for info on
+// all of the layers in this file.
+
 package layers
 
 import (
-	_ "bytes"
+	"bytes"
 	"code.google.com/p/gopacket"
 	"encoding/binary"
 	"fmt"
@@ -15,6 +18,8 @@ import (
 	"net"
 )
 
+// Dot11Flags contains the set of 8 flags in the IEEE 802.11 frame control
+// header, all in one place.
 type Dot11Flags uint8
 
 const (
@@ -28,39 +33,70 @@ const (
 	Dot11FlagsOrder
 )
 
+func (d Dot11Flags) ToDS() bool {
+	return d&Dot11FlagsToDS != 0
+}
+func (d Dot11Flags) FromDS() bool {
+	return d&Dot11FlagsFromDS != 0
+}
+func (d Dot11Flags) MF() bool {
+	return d&Dot11FlagsMF != 0
+}
+func (d Dot11Flags) Retry() bool {
+	return d&Dot11FlagsRetry != 0
+}
+func (d Dot11Flags) PowerManagement() bool {
+	return d&Dot11FlagsPowerManagement != 0
+}
+func (d Dot11Flags) MD() bool {
+	return d&Dot11FlagsMD != 0
+}
+func (d Dot11Flags) WEP() bool {
+	return d&Dot11FlagsWEP != 0
+}
+func (d Dot11Flags) Order() bool {
+	return d&Dot11FlagsOrder != 0
+}
+
+// String provides a human readable string for Dot11Flags.
+// This string is possibly subject to change over time; if you're storing this
+// persistently, you should probably store the Dot11Flags value, not its string.
 func (a Dot11Flags) String() string {
-	outStr := ""
-	if (a & Dot11FlagsToDS) == Dot11FlagsToDS {
-		outStr += "TO-DS,"
+	var out bytes.Buffer
+	if a.ToDS() {
+		out.WriteString("TO-DS,")
 	}
-	if (a & Dot11FlagsFromDS) == Dot11FlagsFromDS {
-		outStr += "FROM-DS,"
+	if a.FromDS() {
+		out.WriteString("FROM-DS,")
 	}
-	if (a & Dot11FlagsMF) == Dot11FlagsMF {
-		outStr += "MF,"
+	if a.MF() {
+		out.WriteString("MF,")
 	}
-	if (a & Dot11FlagsRetry) == Dot11FlagsRetry {
-		outStr += "Retry,"
+	if a.Retry() {
+		out.WriteString("Retry,")
 	}
-	if (a & Dot11FlagsPowerManagement) == Dot11FlagsPowerManagement {
-		outStr += "PowerManagement,"
+	if a.PowerManagement() {
+		out.WriteString("PowerManagement,")
 	}
-	if (a & Dot11FlagsMD) == Dot11FlagsMD {
-		outStr += "MD,"
+	if a.MD() {
+		out.WriteString("MD,")
 	}
-	if (a & Dot11FlagsWEP) == Dot11FlagsWEP {
-		outStr += "WEP,"
+	if a.WEP() {
+		out.WriteString("WEP,")
 	}
-	if (a & Dot11FlagsOrder) == Dot11FlagsOrder {
-		outStr += "Order,"
+	if a.Order() {
+		out.WriteString("Order,")
 	}
 
-	return outStr
+	if length := out.Len(); length > 0 {
+		return string(out.Bytes()[:length-1]) // strip final comma
+	}
+	return ""
 }
 
 type Dot11Reason uint16
 
-// TODO: Verify these reasons, and append more reasons if more.
+// TODO: Verify these reasons, and append more reasons if necessary.
 
 const (
 	Dot11ReasonReserved          Dot11Reason = 1
@@ -75,6 +111,9 @@ const (
 	Dot11ReasonStNotAuth         Dot11Reason = 10
 )
 
+// String provides a human readable string for Dot11Reason.
+// This string is possibly subject to change over time; if you're storing this
+// persistently, you should probably store the Dot11Reason value, not its string.
 func (a Dot11Reason) String() string {
 	switch a {
 	case Dot11ReasonReserved:
@@ -118,6 +157,9 @@ const (
 	Dot11StatusRateUnsupported              Dot11Status = 18 // Association denied due to requesting station not supporting all of the data rates in the BSSBasicRateSet parameter
 )
 
+// String provides a human readable string for Dot11Status.
+// This string is possibly subject to change over time; if you're storing this
+// persistently, you should probably store the Dot11Status value, not its string.
 func (a Dot11Status) String() string {
 	switch a {
 	case Dot11StatusSuccess:
@@ -156,6 +198,9 @@ const (
 	Dot11AckPolicyBlock      Dot11AckPolicy = 3
 )
 
+// String provides a human readable string for Dot11AckPolicy.
+// This string is possibly subject to change over time; if you're storing this
+// persistently, you should probably store the Dot11AckPolicy value, not its string.
 func (a Dot11AckPolicy) String() string {
 	switch a {
 	case Dot11AckPolicyNormal:
@@ -178,6 +223,9 @@ const (
 	Dot11AlgorithmSharedKey Dot11Algorithm = 1
 )
 
+// String provides a human readable string for Dot11Algorithm.
+// This string is possibly subject to change over time; if you're storing this
+// persistently, you should probably store the Dot11Algorithm value, not its string.
 func (a Dot11Algorithm) String() string {
 	switch a {
 	case Dot11AlgorithmOpen:
@@ -211,6 +259,10 @@ const (
 	Dot11InformationElementIDReserved      Dot11InformationElementID = 68
 )
 
+// String provides a human readable string for Dot11InformationElementID.
+// This string is possibly subject to change over time; if you're storing this
+// persistently, you should probably store the Dot11InformationElementID value,
+// not its string.
 func (a Dot11InformationElementID) String() string {
 	switch a {
 	case Dot11InformationElementIDSSID:
@@ -248,19 +300,22 @@ func (a Dot11InformationElementID) String() string {
 	}
 }
 
+// Dot11 provides an IEEE 802.11 base packet header.
+// See http://standards.ieee.org/findstds/standard/802.11-2012.html
+// for excrutiating detail.
 type Dot11 struct {
 	BaseLayer
-	Type                Dot11Type
-	Proto               uint8
-	Flags               Dot11Flags
-	DurationID          uint16
-	Address1            net.HardwareAddr
-	Address2            net.HardwareAddr
-	Address3            net.HardwareAddr
-	Address4            net.HardwareAddr
-	SequenceNumber      uint16
-	FragmentNumber      uint16
-	Checksum            uint32
+	Type           Dot11Type
+	Proto          uint8
+	Flags          Dot11Flags
+	DurationID     uint16
+	Address1       net.HardwareAddr
+	Address2       net.HardwareAddr
+	Address3       net.HardwareAddr
+	Address4       net.HardwareAddr
+	SequenceNumber uint16
+	FragmentNumber uint16
+	Checksum       uint32
 }
 
 func decodeDot11(data []byte, p gopacket.PacketBuilder) error {
@@ -271,9 +326,9 @@ func decodeDot11(data []byte, p gopacket.PacketBuilder) error {
 func (m *Dot11) LayerType() gopacket.LayerType  { return LayerTypeDot11 }
 func (m *Dot11) CanDecode() gopacket.LayerClass { return LayerTypeDot11 }
 func (m *Dot11) NextLayerType() gopacket.LayerType {
-        if (m.Flags & Dot11FlagsWEP) != 0 {
-            return (LayerTypeDot11WEP)
-        }
+	if m.Flags.WEP() {
+		return (LayerTypeDot11WEP)
+	}
 
 	return m.Type.LayerType()
 }
@@ -291,45 +346,46 @@ func (m *Dot11) DecodeFromBytes(data []byte, df gopacket.DecodeFeedback) error {
 	mainType := m.Type.MainType()
 
 	switch mainType {
-            case Dot11TypeCtrl:
-                switch m.Type {
-                    case Dot11TypeCtrlRTS, Dot11TypeCtrlPowersavePoll, Dot11TypeCtrlCFEnd, Dot11TypeCtrlCFEndAck:
-                        m.Address2 = net.HardwareAddr(data[offset : offset+6])
-                        offset += 6
-                }
-            case Dot11TypeMgmt, Dot11TypeData:
-                    m.Address2 = net.HardwareAddr(data[offset : offset+6])
-                    offset += 6
-                    m.Address3 = net.HardwareAddr(data[offset : offset+6])
-                    offset += 6
+	case Dot11TypeCtrl:
+		switch m.Type {
+		case Dot11TypeCtrlRTS, Dot11TypeCtrlPowersavePoll, Dot11TypeCtrlCFEnd, Dot11TypeCtrlCFEndAck:
+			m.Address2 = net.HardwareAddr(data[offset : offset+6])
+			offset += 6
+		}
+	case Dot11TypeMgmt, Dot11TypeData:
+		m.Address2 = net.HardwareAddr(data[offset : offset+6])
+		offset += 6
+		m.Address3 = net.HardwareAddr(data[offset : offset+6])
+		offset += 6
 
-                    m.SequenceNumber = (binary.LittleEndian.Uint16(data[offset:offset+2]) & 0xFFC0) >> 6
-                    m.FragmentNumber = (binary.LittleEndian.Uint16(data[offset:offset+2]) & 0x003F)
-                    offset += 2
-        }
+		m.SequenceNumber = (binary.LittleEndian.Uint16(data[offset:offset+2]) & 0xFFC0) >> 6
+		m.FragmentNumber = (binary.LittleEndian.Uint16(data[offset:offset+2]) & 0x003F)
+		offset += 2
+	}
 
-	if mainType == Dot11TypeData && (m.Flags&Dot11FlagsFromDS) != 0 && (m.Flags&Dot11FlagsToDS) != 0 {
+	if mainType == Dot11TypeData && m.Flags.FromDS() && m.Flags.ToDS() {
 		m.Address4 = net.HardwareAddr(data[offset : offset+6])
 		offset += 6
 	}
 
 	if mainType == Dot11TypeData {
-            m.BaseLayer = BaseLayer{Contents: data[0:offset], Payload: data[offset : len(data)]}
-        } else {
-            m.BaseLayer = BaseLayer{Contents: data[0:offset], Payload: data[offset : len(data)-4]}
-            m.Checksum = binary.LittleEndian.Uint32(data[len(data) - 4 : len(data)])
-        }
+		m.BaseLayer = BaseLayer{Contents: data[0:offset], Payload: data[offset:len(data)]}
+	} else {
+		m.BaseLayer = BaseLayer{Contents: data[0:offset], Payload: data[offset : len(data)-4]}
+		m.Checksum = binary.LittleEndian.Uint32(data[len(data)-4 : len(data)])
+	}
 	return nil
 }
 
 func (m *Dot11) ChecksumValid() bool {
-        // only for CTRL and MGMT frames
-        h := crc32.NewIEEE()
-        h.Write(m.Contents)
-        h.Write(m.Payload)
-        return m.Checksum == h.Sum32()
+	// only for CTRL and MGMT frames
+	h := crc32.NewIEEE()
+	h.Write(m.Contents)
+	h.Write(m.Payload)
+	return m.Checksum == h.Sum32()
 }
 
+// Dot11Mgmt is a base for all IEEE 802.11 management layers.
 type Dot11Mgmt struct {
 	BaseLayer
 }
@@ -340,6 +396,7 @@ func (m *Dot11Mgmt) DecodeFromBytes(data []byte, df gopacket.DecodeFeedback) err
 	return nil
 }
 
+// Dot11Ctrl is a base for all IEEE 802.11 control layers.
 type Dot11Ctrl struct {
 	BaseLayer
 }
@@ -358,6 +415,7 @@ func decodeDot11Ctrl(data []byte, p gopacket.PacketBuilder) error {
 	return decodingLayerDecoder(d, data, p)
 }
 
+// Dot11WEP contains WEP encrpted IEEE 802.11 data.
 type Dot11WEP struct {
 	BaseLayer
 }
@@ -376,6 +434,7 @@ func decodeDot11WEP(data []byte, p gopacket.PacketBuilder) error {
 	return decodingLayerDecoder(d, data, p)
 }
 
+// Dot11Data is a base for all IEEE 802.11 data layers.
 type Dot11Data struct {
 	BaseLayer
 }
@@ -516,7 +575,7 @@ func (m *Dot11DataQOS) DecodeFromBytes(data []byte, df gopacket.DecodeFeedback) 
 	m.EOSP = (uint8(data[0]) & 0x10) == 0x10
 	m.AckPolicy = Dot11AckPolicy((uint8(data[0]) & 0x60) >> 5)
 	m.TXOP = uint8(data[1])
-        // TODO: Mesh Control bytes 2:4
+	// TODO: Mesh Control bytes 2:4
 	m.BaseLayer = BaseLayer{Contents: data[0:4], Payload: data[4:]}
 	return nil
 }

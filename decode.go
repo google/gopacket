@@ -10,12 +10,20 @@ import (
 	"errors"
 )
 
+// DecodeFeedback is used by DecodingLayer layers to provide decoding metadata.
 type DecodeFeedback interface {
 	// SetTruncated should be called if during decoding you notice that a packet
 	// is shorter than internal layer variables (HeaderLength, or the like) say it
 	// should be.  It sets packet.Metadata().Truncated.
 	SetTruncated()
 }
+
+type nilDecodeFeedback struct{}
+
+func (nilDecodeFeedback) SetTruncated() {}
+
+// NilDecodeFeedback implements DecodeFeedback by doing nothing.
+var NilDecodeFeedback DecodeFeedback = nilDecodeFeedback{}
 
 // PacketBuilder is used by layer decoders to store the layers they've decoded,
 // and to defer future decoding via NextDecoder.

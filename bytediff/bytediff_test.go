@@ -1,11 +1,10 @@
 // Copyright 2012 Google, Inc. All rights reserved.
-// Copyright 2009-2011 Andreas Krennmair. All rights reserved.
 //
 // Use of this source code is governed by a BSD-style license
 // that can be found in the LICENSE file in the root of the source
 // tree.
 
-package layers
+package bytediff
 
 import (
 	"reflect"
@@ -33,20 +32,20 @@ func TestLCS(t *testing.T) {
 func TestDiff(t *testing.T) {
 	for i, test := range []struct {
 		a, b []byte
-		d    []difference
+		d    Differences
 	}{
 		{
 			[]byte{0, 1, 2, 3, 4},
 			[]byte{1, 1, 2, 2, 3, 4},
-			[]difference{
-				difference{true, []byte{0}, []byte{}},
-				difference{false, []byte{1}, nil},
-				difference{true, []byte{}, []byte{1, 2}},
-				difference{false, []byte{2, 3, 4}, nil},
+			Differences{
+				Difference{true, []byte{0}, []byte{}},
+				Difference{false, []byte{1}, []byte{1}},
+				Difference{true, []byte{}, []byte{1, 2}},
+				Difference{false, []byte{2, 3, 4}, []byte{2, 3, 4}},
 			},
 		},
 	} {
-		diffs := diffInternal(test.a, test.b)
+		diffs := Diff(test.a, test.b)
 		if !reflect.DeepEqual(diffs, test.d) {
 			t.Errorf("%d want %v got %v", i, test.d, diffs)
 		}

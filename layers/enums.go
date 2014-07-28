@@ -188,19 +188,26 @@ const (
 	ProtocolFamilyIPv6Linux   ProtocolFamily = 10
 )
 
+// Dot11Type is a combination of IEEE 802.11 frame's Type and Subtype fields.
+// By combining these two fields together into a single type, we're able to
+// provide a String function that correctly displays the subtype given the
+// top-level type.
+//
+// If you just care about the top-level type, use the MainType function.
 type Dot11Type uint8
 
 // MainType strips the subtype information from the given type,
 // returning just the overarching type (Mgmt, Ctrl, Data, Reserved).
 func (d Dot11Type) MainType() Dot11Type {
-	return d & 3
+	return d & dot11TypeMask
 }
 
 const (
-	Dot11TypeMgmt Dot11Type = iota
-	Dot11TypeCtrl
-	Dot11TypeData
-	Dot11TypeReserved
+	Dot11TypeMgmt     Dot11Type = 0x00
+	Dot11TypeCtrl     Dot11Type = 0x01
+	Dot11TypeData     Dot11Type = 0x02
+	Dot11TypeReserved Dot11Type = 0x03
+	dot11TypeMask               = 0x03
 
 	// The following are type/subtype conglomerations.
 
@@ -470,6 +477,7 @@ func init() {
 	LinkTypeMetadata[LinkTypeLoop] = EnumMetadata{DecodeWith: gopacket.DecodeFunc(decodeLoopback), Name: "Loop"}
 	LinkTypeMetadata[LinkTypeRaw] = EnumMetadata{DecodeWith: gopacket.DecodeFunc(decodeIPv4or6), Name: "Raw"}
 	LinkTypeMetadata[LinkTypePFLog] = EnumMetadata{DecodeWith: gopacket.DecodeFunc(decodePFLog), Name: "PFLog"}
+	LinkTypeMetadata[LinkTypeIEEE80211Radio] = EnumMetadata{DecodeWith: gopacket.DecodeFunc(decodeRadioTap), Name: "RadioTap"}
 
 	FDDIFrameControlMetadata[FDDIFrameControlLLC] = EnumMetadata{DecodeWith: gopacket.DecodeFunc(decodeLLC), Name: "LLC"}
 

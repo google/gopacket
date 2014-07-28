@@ -10,6 +10,7 @@ package layers
 import (
 	"bytes"
 	"code.google.com/p/gopacket"
+	"code.google.com/p/gopacket/bytediff"
 	"encoding/hex"
 	"fmt"
 	"net"
@@ -452,7 +453,8 @@ func testSerialization(t *testing.T, p gopacket.Packet, data []byte) {
 		if err != nil {
 			t.Errorf("unable to reserialize layers with opts %#v: %v", opts, err)
 		} else if !bytes.Equal(buf.Bytes(), data) {
-			t.Errorf("serialization failure with opts %#v:\n---want---\n%v\n---got---\n%v\nBASH-colorized diff, want->got:\n%v", opts, hex.Dump(data), hex.Dump(buf.Bytes()), diffString(data, buf.Bytes()))
+			t.Errorf("serialization failure with opts %#v:\n---want---\n%v\n---got---\n%v\nBASH-colorized diff, want->got:\n%v",
+				opts, hex.Dump(data), hex.Dump(buf.Bytes()), bytediff.BashOutput.String(bytediff.Diff(data, buf.Bytes())))
 		}
 	}
 }
@@ -1124,4 +1126,17 @@ func TestPFLog_UDP(t *testing.T) {
 		LayerTypeUDP,
 		gopacket.LayerTypePayload,
 	}, t)
+}
+
+func TestRegressionDot1QPriority(t *testing.T) {
+	d := &Dot1Q{
+		Priority: 2,
+	}
+	out := gopacket.NewSerializeBuffer()
+	gopacket.SerializeLayers(out, gopacket.SerializeOptions{}, d)
+	if err := d.DecodeFromBytes(out.Bytes(), gopacket.NilDecodeFeedback); err != nil {
+		t.Errorf("could not decode encoded dot1q")
+	} else if d.Priority != 2 {
+		t.Errorf("priority mismatch, want 2 got %d", d.Priority)
+	}
 }
