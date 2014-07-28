@@ -197,6 +197,21 @@ func decodeIPv6HeaderTLVOption(data []byte) (h ipv6HeaderTLVOption) {
 	return
 }
 
+func (h *ipv6HeaderTLVOption) serializeTo(b gopacket.SerializeBuffer, fixLengths bool) (int, error) {
+	if fixLengths {
+		h.OptionLength = uint8(len(h.OptionData))
+	}
+	length := int(h.OptionLength) + 2
+	data, err := b.PrependBytes(length)
+	if err != nil {
+		return 0, err
+	}
+	data[0] = h.OptionType
+	data[1] = h.OptionLength
+	copy(data[2:], h.OptionData)
+	return length, nil
+}
+
 // IPv6HopByHopOption is a TLV option present in an IPv6 hop-by-hop extension.
 type IPv6HopByHopOption ipv6HeaderTLVOption
 
@@ -317,6 +332,10 @@ func decodeIPv6Fragment(data []byte, p gopacket.PacketBuilder) error {
 // IPv6DestinationOption is a TLV option present in an IPv6 destination options extension.
 type IPv6DestinationOption ipv6HeaderTLVOption
 
+func (o *IPv6DestinationOption) serializeTo(b gopacket.SerializeBuffer, fixLengths bool) (int, error) {
+	return (*ipv6HeaderTLVOption)(o).serializeTo(b, fixLengths)
+}
+
 // IPv6Destination is the IPv6 destination options header.
 type IPv6Destination struct {
 	ipv6ExtensionBase
@@ -340,4 +359,28 @@ func decodeIPv6Destination(data []byte, p gopacket.PacketBuilder) error {
 	}
 	p.AddLayer(i)
 	return p.NextDecoder(i.NextHeader)
+}
+
+// SerializeTo writes the serialized form of this layer into the
+// SerializationBuffer, implementing gopacket.SerializableLayer.
+// See the docs for gopacket.SerializableLayer for more info.
+func (i *IPv6Destination) SerializeTo(b gopacket.SerializeBuffer, opts gopacket.SerializeOptions) error {
+	optionLength := 0
+	for _, opt := range i.Options {
+		l, err := opt.serializeTo(b, opts.FixLengths)
+		if err != nil {
+			return err
+		}
+		optionLength += l
+	}
+	bytes, err := b.PrependBytes(2)
+	if err != nil {
+		return err
+	}
+	bytes[0] = uint8(i.NextHeader)
+	if opts.FixLengths {
+		i.HeaderLength = uint8((optionLength + 2) / 8)
+	}
+	bytes[1] = i.HeaderLength
+	return nil
 }
