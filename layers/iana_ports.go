@@ -3,7 +3,7 @@
 package layers
 
 // Created by gen.go, don't edit manually
-// Generated at 2014-06-25 15:17:49.48698926 -0600 MDT
+// Generated at 2014-07-28 10:58:32.580792402 -0600 MDT
 // Fetched from "http://www.iana.org/assignments/service-names-port-numbers/service-names-port-numbers.xml"
 
 // TCPPortNames contains the port names for all TCP ports.
@@ -2037,6 +2037,8 @@ var tcpPortNames = map[TCPPort]string{
 	2374:  "hydra",
 	2375:  "docker",
 	2376:  "docker-s",
+	2379:  "etcd-client",
+	2380:  "etcd-server",
 	2381:  "compaq-https",
 	2382:  "ms-olap3",
 	2383:  "ms-olap4",
@@ -4634,6 +4636,7 @@ var tcpPortNames = map[TCPPort]string{
 	6703:  "e-design-web",
 	6714:  "ibprotocol",
 	6715:  "fibotrader-com",
+	6716:  "printercare-cc",
 	6767:  "bmc-perf-agent",
 	6768:  "bmc-perf-mgrd",
 	6769:  "adi-gxp-srvprt",
@@ -4785,6 +4788,7 @@ var tcpPortNames = map[TCPPort]string{
 	7566:  "vsi-omega",
 	7569:  "dell-eql-asm",
 	7570:  "aries-kfinder",
+	7574:  "coherence",
 	7588:  "sun-lm",
 	7624:  "indi",
 	7626:  "simco",
@@ -10313,6 +10317,7 @@ var udpPortNames = map[UDPPort]string{
 	7560:  "sncp",
 	7566:  "vsi-omega",
 	7570:  "aries-kfinder",
+	7574:  "coherence-disc",
 	7588:  "sun-lm",
 	7624:  "indi",
 	7627:  "soap-http",
