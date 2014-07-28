@@ -72,16 +72,16 @@ const errorBufferSize = 256
 // Handles are already pcap_activate'd
 type Handle struct {
 	// cptr is the handle for the actual pcap C object.
-	cptr            *C.pcap_t
-	blockForever    bool
-        device          string
-	mu sync.Mutex
+	cptr         *C.pcap_t
+	blockForever bool
+	device       string
+	mu           sync.Mutex
 	// Since pointers to these objects are passed into a C function, if
 	// they're declared locally then the Go compiler thinks they may have
 	// escaped into C-land, so it allocates them on the heap.  This causes a
 	// huge memory hit, so to handle that we store them here instead.
-	pkthdr          *C.struct_pcap_pkthdr
-	buf_ptr         *C.u_char
+	pkthdr  *C.struct_pcap_pkthdr
+	buf_ptr *C.u_char
 }
 
 // Stats contains statistics on how many packets were handled by a pcap handle,
@@ -102,8 +102,8 @@ type Interface struct {
 
 // Datalink describes the datalink
 type Datalink struct {
-        Name string 
-        Description string
+	Name        string
+	Description string
 }
 
 // InterfaceAddress describes an address associated with an Interface.
@@ -146,7 +146,7 @@ func OpenLive(device string, snaplen int32, promisc bool, timeout time.Duration)
 	}
 	p := &Handle{}
 	p.blockForever = timeout < 0
-        p.device = device
+	p.device = device
 
 	dev := C.CString(device)
 	defer C.free(unsafe.Pointer(dev))
@@ -318,28 +318,28 @@ func (p *Handle) Stats() (stat *Stats, err error) {
 
 // Obtains a list of all possible data link types supported for an interface.
 func (p *Handle) ListDataLinks() (datalinks []Datalink, err error) {
-    var dlt_buf *C.int;
+	var dlt_buf *C.int
 
-    n := int(C.pcap_list_datalinks(p.cptr, &dlt_buf))
-    if -1 == n {
-        return nil, p.Error()
-    }
+	n := int(C.pcap_list_datalinks(p.cptr, &dlt_buf))
+	if -1 == n {
+		return nil, p.Error()
+	}
 
-    defer C.pcap_free_datalinks(dlt_buf);
+	defer C.pcap_free_datalinks(dlt_buf)
 
-    datalinks = make([]Datalink, n)
+	datalinks = make([]Datalink, n)
 
-    dltArray := (*[100]C.int)(unsafe.Pointer(dlt_buf))
+	dltArray := (*[100]C.int)(unsafe.Pointer(dlt_buf))
 
-    for i := 0; i < n; i++ {
-        expr :=  C.pcap_datalink_val_to_name((*dltArray)[i])
-        datalinks[i].Name = C.GoString(expr) 
+	for i := 0; i < n; i++ {
+		expr := C.pcap_datalink_val_to_name((*dltArray)[i])
+		datalinks[i].Name = C.GoString(expr)
 
-        expr = C.pcap_datalink_val_to_description((*dltArray)[i])
-        datalinks[i].Description = C.GoString(expr) 
-    }
+		expr = C.pcap_datalink_val_to_description((*dltArray)[i])
+		datalinks[i].Description = C.GoString(expr)
+	}
 
-    return datalinks, nil
+	return datalinks, nil
 }
 
 // SetBPFFilter compiles and sets a BPF filter for the pcap handle.
@@ -350,12 +350,12 @@ func (p *Handle) SetBPFFilter(expr string) (err error) {
 	errorBuf := (*C.char)(C.calloc(errorBufferSize, 1))
 	defer C.free(unsafe.Pointer(errorBuf))
 
-        var netp uint32
-        var maskp uint32
+	var netp uint32
+	var maskp uint32
 
-        if -1 == C.pcap_lookupnet(dev, (*C.bpf_u_int32)(unsafe.Pointer(&netp)), (*C.bpf_u_int32)(unsafe.Pointer(&maskp)), errorBuf)  {
-                return errors.New(C.GoString(errorBuf))
-        }
+	if -1 == C.pcap_lookupnet(dev, (*C.bpf_u_int32)(unsafe.Pointer(&netp)), (*C.bpf_u_int32)(unsafe.Pointer(&maskp)), errorBuf) {
+		return errors.New(C.GoString(errorBuf))
+	}
 
 	var bpf _Ctype_struct_bpf_program
 	cexpr := C.CString(expr)
@@ -501,6 +501,7 @@ func statusError(status C.int) error {
 type InactiveHandle struct {
 	// cptr is the handle for the actual pcap C object.
 	cptr         *C.pcap_t
+	device       string
 	blockForever bool
 }
 
@@ -511,7 +512,7 @@ func (p *InactiveHandle) Activate() (*Handle, error) {
 	if err != aeNoError {
 		return nil, err
 	}
-	h := &Handle{cptr: p.cptr, blockForever: p.blockForever}
+	h := &Handle{cptr: p.cptr, device: p.device, blockForever: p.blockForever}
 	p.cptr = nil
 	return h, nil
 }
@@ -539,7 +540,7 @@ func NewInactiveHandle(device string) (*InactiveHandle, error) {
 	if cptr == nil {
 		return nil, errors.New(C.GoString(buf))
 	}
-	return &InactiveHandle{cptr: cptr}, nil
+	return &InactiveHandle{cptr: cptr, device: device}, nil
 }
 
 // SetSnapLen sets the snap length (max bytes per packet to capture).

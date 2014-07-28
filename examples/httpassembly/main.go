@@ -16,7 +16,6 @@ import (
 	"code.google.com/p/gopacket/pcap"
 	"code.google.com/p/gopacket/tcpassembly"
 	"code.google.com/p/gopacket/tcpassembly/tcpreader"
-        "fmt"
 	"flag"
 	"io"
 	"log"
