@@ -54,14 +54,18 @@ var MPLSPayloadDecoder gopacket.Decoder = ProtocolGuessingDecoder{}
 
 func decodeMPLS(data []byte, p gopacket.PacketBuilder) error {
 	decoded := binary.BigEndian.Uint32(data[:4])
-	p.AddLayer(&MPLS{
+	mpls := &MPLS{
 		Label:        decoded >> 12,
 		TrafficClass: uint8(decoded>>9) & 0x7,
 		StackBottom:  decoded&0x100 != 0,
 		TTL:          uint8(decoded),
 		BaseLayer:    BaseLayer{data[:4], data[4:]},
-	})
-	return p.NextDecoder(MPLSPayloadDecoder)
+	}
+	p.AddLayer(mpls)
+	if mpls.StackBottom {
+		return p.NextDecoder(MPLSPayloadDecoder)
+	}
+	return p.NextDecoder(gopacket.DecodeFunc(decodeMPLS))
 }
 
 // SerializeTo writes the serialized form of this layer into the
