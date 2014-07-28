@@ -432,6 +432,17 @@ type canSetNetLayer interface {
 }
 
 func testSerialization(t *testing.T, p gopacket.Packet, data []byte) {
+	for _, opts := range []gopacket.SerializeOptions{
+		gopacket.SerializeOptions{},
+		gopacket.SerializeOptions{FixLengths: true},
+		gopacket.SerializeOptions{ComputeChecksums: true},
+		gopacket.SerializeOptions{FixLengths: true, ComputeChecksums: true},
+	} {
+		testSerializationWithOpts(t, p, data, opts)
+	}
+}
+
+func testSerializationWithOpts(t *testing.T, p gopacket.Packet, data []byte, opts gopacket.SerializeOptions) {
 	// Test re-serialization.
 	slayers := []gopacket.SerializableLayer{}
 	for _, l := range p.Layers() {
@@ -442,20 +453,13 @@ func testSerialization(t *testing.T, p gopacket.Packet, data []byte) {
 			}
 		}
 	}
-	for _, opts := range []gopacket.SerializeOptions{
-		gopacket.SerializeOptions{},
-		gopacket.SerializeOptions{FixLengths: true},
-		gopacket.SerializeOptions{ComputeChecksums: true},
-		gopacket.SerializeOptions{FixLengths: true, ComputeChecksums: true},
-	} {
-		buf := gopacket.NewSerializeBuffer()
-		err := gopacket.SerializeLayers(buf, opts, slayers...)
-		if err != nil {
-			t.Errorf("unable to reserialize layers with opts %#v: %v", opts, err)
-		} else if !bytes.Equal(buf.Bytes(), data) {
-			t.Errorf("serialization failure with opts %#v:\n---want---\n%v\n---got---\n%v\nBASH-colorized diff, want->got:\n%v",
-				opts, hex.Dump(data), hex.Dump(buf.Bytes()), bytediff.BashOutput.String(bytediff.Diff(data, buf.Bytes())))
-		}
+	buf := gopacket.NewSerializeBuffer()
+	err := gopacket.SerializeLayers(buf, opts, slayers...)
+	if err != nil {
+		t.Errorf("unable to reserialize layers with opts %#v: %v", opts, err)
+	} else if !bytes.Equal(buf.Bytes(), data) {
+		t.Errorf("serialization failure with opts %#v:\n---want---\n%v\n---got---\n%v\nBASH-colorized diff, want->got:\n%v\n\n---PACKET---\n%v",
+			opts, hex.Dump(data), hex.Dump(buf.Bytes()), bytediff.BashOutput.String(bytediff.Diff(data, buf.Bytes())), p)
 	}
 }
 
@@ -574,7 +578,7 @@ func TestDecodeSCTPPackets(t *testing.T) {
 			0x00, 0x00, 0x0c, 0x9f, 0xf0, 0x1f, 0x24, 0xbe, 0x05, 0x27, 0x0b, 0x17, 0x08, 0x00, 0x45, 0x02,
 			0x00, 0x28, 0x00, 0x00, 0x40, 0x00, 0x40, 0x84, 0xc4, 0x3e, 0xac, 0x1d, 0x14, 0x0f, 0xac, 0x19,
 			0x09, 0xcc, 0x27, 0x0f, 0x22, 0xb8, 0x32, 0x80, 0xfb, 0x42, 0x3f, 0x29, 0x59, 0x23, 0x07, 0x00,
-			0x00, 0x08, 0x85, 0x98, 0xb1, 0x25,
+			0x00, 0x08, 0x85, 0x98, 0xb1, 0x25, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
 		}, []byte{ // SHUTDOWN ACK
 			0x24, 0xbe, 0x05, 0x27, 0x0b, 0x17, 0x00, 0x1f, 0xca, 0xb3, 0x76, 0x40, 0x08, 0x00, 0x45, 0x20,
 			0x00, 0x24, 0x00, 0x00, 0x40, 0x00, 0x36, 0x84, 0xce, 0x24, 0xac, 0x19, 0x09, 0xcc, 0xac, 0x1d,
@@ -584,7 +588,7 @@ func TestDecodeSCTPPackets(t *testing.T) {
 			0x00, 0x00, 0x0c, 0x9f, 0xf0, 0x1f, 0x24, 0xbe, 0x05, 0x27, 0x0b, 0x17, 0x08, 0x00, 0x45, 0x02,
 			0x00, 0x24, 0x00, 0x00, 0x40, 0x00, 0x40, 0x84, 0xc4, 0x42, 0xac, 0x1d, 0x14, 0x0f, 0xac, 0x19,
 			0x09, 0xcc, 0x27, 0x0f, 0x22, 0xb8, 0x32, 0x80, 0xfb, 0x42, 0xa8, 0xd1, 0x86, 0x85, 0x0e, 0x00,
-			0x00, 0x04,
+			0x00, 0x04, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
 		}}
 	wantLayers := [][]gopacket.LayerType{
 		[]gopacket.LayerType{LayerTypeSCTPInit},
@@ -610,6 +614,8 @@ func TestDecodeSCTPPackets(t *testing.T) {
 				}
 			}
 		}
+		// Test re-serialization.
+		testSerializationWithOpts(t, p, data, gopacket.SerializeOptions{FixLengths: true, ComputeChecksums: true})
 	}
 }
 
