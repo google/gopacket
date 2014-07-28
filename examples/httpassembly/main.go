@@ -16,6 +16,7 @@ import (
 	"code.google.com/p/gopacket/pcap"
 	"code.google.com/p/gopacket/tcpassembly"
 	"code.google.com/p/gopacket/tcpassembly/tcpreader"
+        "fmt"
 	"flag"
 	"io"
 	"log"
@@ -76,6 +77,7 @@ func main() {
 	if err != nil {
 		panic(err)
 	}
+
 	if err := handle.SetBPFFilter(*filter); err != nil {
 		panic(err)
 	}

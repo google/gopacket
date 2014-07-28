@@ -100,6 +100,12 @@ type Interface struct {
 	// TODO: add more elements
 }
 
+// Datalink describes the datalink
+type Datalink struct {
+        Name string 
+        Description string
+}
+
 // InterfaceAddress describes an address associated with an Interface.
 // Currently, it's IPv4/6 specific.
 type InterfaceAddress struct {
@@ -308,6 +314,32 @@ func (p *Handle) Stats() (stat *Stats, err error) {
 		PacketsDropped:   int(cstats.ps_drop),
 		PacketsIfDropped: int(cstats.ps_ifdrop),
 	}, nil
+}
+
+// Obtains a list of all possible data link types supported for an interface.
+func (p *Handle) ListDataLinks() (datalinks []Datalink, err error) {
+    var dlt_buf *C.int;
+
+    n := int(C.pcap_list_datalinks(p.cptr, &dlt_buf))
+    if -1 == n {
+        return nil, p.Error()
+    }
+
+    defer C.pcap_free_datalinks(dlt_buf);
+
+    datalinks = make([]Datalink, n)
+
+    dltArray := (*[100]C.int)(unsafe.Pointer(dlt_buf))
+
+    for i := 0; i < n; i++ {
+        expr :=  C.pcap_datalink_val_to_name((*dltArray)[i])
+        datalinks[i].Name = C.GoString(expr) 
+
+        expr = C.pcap_datalink_val_to_description((*dltArray)[i])
+        datalinks[i].Description = C.GoString(expr) 
+    }
+
+    return datalinks, nil
 }
 
 // SetBPFFilter compiles and sets a BPF filter for the pcap handle.
