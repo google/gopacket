@@ -72,16 +72,16 @@ const errorBufferSize = 256
 // Handles are already pcap_activate'd
 type Handle struct {
 	// cptr is the handle for the actual pcap C object.
-	cptr         *C.pcap_t
-	blockForever bool
-
+	cptr            *C.pcap_t
+	blockForever    bool
+        device          string
 	mu sync.Mutex
 	// Since pointers to these objects are passed into a C function, if
 	// they're declared locally then the Go compiler thinks they may have
 	// escaped into C-land, so it allocates them on the heap.  This causes a
 	// huge memory hit, so to handle that we store them here instead.
-	pkthdr  *C.struct_pcap_pkthdr
-	buf_ptr *C.u_char
+	pkthdr          *C.struct_pcap_pkthdr
+	buf_ptr         *C.u_char
 }
 
 // Stats contains statistics on how many packets were handled by a pcap handle,
@@ -140,6 +140,8 @@ func OpenLive(device string, snaplen int32, promisc bool, timeout time.Duration)
 	}
 	p := &Handle{}
 	p.blockForever = timeout < 0
+        p.device = device
+
 	dev := C.CString(device)
 	defer C.free(unsafe.Pointer(dev))
 
@@ -310,12 +312,24 @@ func (p *Handle) Stats() (stat *Stats, err error) {
 
 // SetBPFFilter compiles and sets a BPF filter for the pcap handle.
 func (p *Handle) SetBPFFilter(expr string) (err error) {
+	dev := C.CString(p.device)
+	defer C.free(unsafe.Pointer(dev))
+
+	errorBuf := (*C.char)(C.calloc(errorBufferSize, 1))
+	defer C.free(unsafe.Pointer(errorBuf))
+
+        var netp uint32
+        var maskp uint32
+
+        if -1 == C.pcap_lookupnet(dev, (*C.bpf_u_int32)(unsafe.Pointer(&netp)), (*C.bpf_u_int32)(unsafe.Pointer(&maskp)), errorBuf)  {
+                return errors.New(C.GoString(errorBuf))
+        }
+
 	var bpf _Ctype_struct_bpf_program
 	cexpr := C.CString(expr)
 	defer C.free(unsafe.Pointer(cexpr))
 
-	// TODO(gconnell):  Get netmask with pcap_lookupnet.
-	if -1 == C.pcap_compile(p.cptr, &bpf, cexpr, 1, C.PCAP_NETMASK_UNKNOWN) {
+	if -1 == C.pcap_compile(p.cptr, &bpf, cexpr, 1, C.bpf_u_int32(maskp)) {
 		return p.Error()
 	}
 
@@ -323,7 +337,9 @@ func (p *Handle) SetBPFFilter(expr string) (err error) {
 		C.pcap_freecode(&bpf)
 		return p.Error()
 	}
+
 	C.pcap_freecode(&bpf)
+
 	return nil
 }
 
