@@ -61,25 +61,26 @@ const (
 type IPProtocol uint8
 
 const (
-	IPProtocolIPv6HopByHop IPProtocol = 0
-	IPProtocolICMPv4       IPProtocol = 1
-	IPProtocolIGMP         IPProtocol = 2
-	IPProtocolTCP          IPProtocol = 6
-	IPProtocolUDP          IPProtocol = 17
-	IPProtocolRUDP         IPProtocol = 27
-	IPProtocolIPv6         IPProtocol = 41
-	IPProtocolIPv6Routing  IPProtocol = 43
-	IPProtocolIPv6Fragment IPProtocol = 44
-	IPProtocolGRE          IPProtocol = 47
-	IPProtocolESP          IPProtocol = 50
-	IPProtocolAH           IPProtocol = 51
-	IPProtocolICMPv6       IPProtocol = 58
-	IPProtocolNoNextHeader IPProtocol = 59
-	IPProtocolIPIP         IPProtocol = 94
-	IPProtocolEtherIP      IPProtocol = 97
-	IPProtocolSCTP         IPProtocol = 132
-	IPProtocolUDPLite      IPProtocol = 136
-	IPProtocolMPLSInIP     IPProtocol = 137
+	IPProtocolIPv6HopByHop    IPProtocol = 0
+	IPProtocolICMPv4          IPProtocol = 1
+	IPProtocolIGMP            IPProtocol = 2
+	IPProtocolTCP             IPProtocol = 6
+	IPProtocolUDP             IPProtocol = 17
+	IPProtocolRUDP            IPProtocol = 27
+	IPProtocolIPv6            IPProtocol = 41
+	IPProtocolIPv6Routing     IPProtocol = 43
+	IPProtocolIPv6Fragment    IPProtocol = 44
+	IPProtocolGRE             IPProtocol = 47
+	IPProtocolESP             IPProtocol = 50
+	IPProtocolAH              IPProtocol = 51
+	IPProtocolICMPv6          IPProtocol = 58
+	IPProtocolNoNextHeader    IPProtocol = 59
+	IPProtocolIPv6Destination IPProtocol = 60
+	IPProtocolIPIP            IPProtocol = 94
+	IPProtocolEtherIP         IPProtocol = 97
+	IPProtocolSCTP            IPProtocol = 132
+	IPProtocolUDPLite         IPProtocol = 136
+	IPProtocolMPLSInIP        IPProtocol = 137
 )
 
 // LinkType is an enumeration of link types, and acts as a decoder for any
@@ -442,6 +443,7 @@ func init() {
 	IPProtocolMetadata[IPProtocolIPv6HopByHop] = EnumMetadata{DecodeWith: gopacket.DecodeFunc(decodeIPv6HopByHop), Name: "IPv6HopByHop", LayerType: LayerTypeIPv6HopByHop}
 	IPProtocolMetadata[IPProtocolIPv6Routing] = EnumMetadata{DecodeWith: gopacket.DecodeFunc(decodeIPv6Routing), Name: "IPv6Routing", LayerType: LayerTypeIPv6Routing}
 	IPProtocolMetadata[IPProtocolIPv6Fragment] = EnumMetadata{DecodeWith: gopacket.DecodeFunc(decodeIPv6Fragment), Name: "IPv6Fragment", LayerType: LayerTypeIPv6Fragment}
+	IPProtocolMetadata[IPProtocolIPv6Destination] = EnumMetadata{DecodeWith: gopacket.DecodeFunc(decodeIPv6Destination), Name: "IPv6Destination", LayerType: LayerTypeIPv6Fragment}
 	IPProtocolMetadata[IPProtocolAH] = EnumMetadata{DecodeWith: gopacket.DecodeFunc(decodeIPSecAH), Name: "IPSecAH", LayerType: LayerTypeIPSecAH}
 	IPProtocolMetadata[IPProtocolESP] = EnumMetadata{DecodeWith: gopacket.DecodeFunc(decodeIPSecESP), Name: "IPSecESP", LayerType: LayerTypeIPSecESP}
 	IPProtocolMetadata[IPProtocolUDPLite] = EnumMetadata{DecodeWith: gopacket.DecodeFunc(decodeUDPLite), Name: "UDPLite", LayerType: LayerTypeUDPLite}
