@@ -44,6 +44,19 @@ int pcap_tstamp_type_name_to_val(const char* t) {
 // may result is less-specific error messages.
 #ifdef WIN32
 #define pcap_statustostr pcap_strerror
+
+// WinPcap also doesn't export pcap_can_set_rfmon and pcap_set_rfmon,
+// as those are handled by separate libraries (airpcap).
+// https://www.winpcap.org/docs/docs_412/html/group__wpcapfunc.html
+// Stub out those functions here, returning values that indicate rfmon
+// setting is unavailable/unsuccessful.
+int pcap_can_set_rfmon(pcap_t *p) {
+	return 0;
+}
+
+int pcap_set_rfmon(pcap_t *p, int rfmon) {
+	return PCAP_ERROR;
+}
 #endif
 */
 import "C"
