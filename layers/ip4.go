@@ -18,13 +18,14 @@ import (
 type IPv4Flag uint8
 
 const (
-	IPv4EvilBit       IPv4Flag = 1 << 0 // http://tools.ietf.org/html/rfc3514 ;)
+	IPv4MoreFragments IPv4Flag = 1 << 0
 	IPv4DontFragment  IPv4Flag = 1 << 1
-	IPv4MoreFragments IPv4Flag = 1 << 2
+	IPv4EvilBit       IPv4Flag = 1 << 2 // http://tools.ietf.org/html/rfc3514 ;) (As an April Fools' joke, proposed for use in RFC 3514 as the "Evil bit".)
 )
 
 func (f IPv4Flag) String() string {
 	var s []string
+
 	if f&IPv4EvilBit != 0 {
 		s = append(s, "Evil")
 	}
