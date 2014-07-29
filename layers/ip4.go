@@ -25,6 +25,7 @@ const (
 
 func (f IPv4Flag) String() string {
 	var s []string
+
 	if f&IPv4EvilBit != 0 {
 		s = append(s, "Evil")
 	}
