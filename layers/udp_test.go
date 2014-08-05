@@ -130,16 +130,14 @@ var testDNSQueryA = []byte{
 func TestDNSQueryA(t *testing.T) {
 	dns := loadDNS(testDNSQueryA, t)
 	if dns == nil {
-		t.Error("Failed to get a pointer to DNS struct")
-		return
+		t.Fatal("Failed to get a pointer to DNS struct")
 	}
 
-	if uint16(len(dns.Questions)) != dns.Header.QDCount {
-		t.Error("Invalid query decoding, not the right number of questions")
-		return
+	if uint16(len(dns.Questions)) != dns.QDCount {
+		t.Fatal("Invalid query decoding, not the right number of questions")
 	}
 
-	if dns.Questions[0].Name != "www.google.com" {
+	if string(dns.Questions[0].Name) != "www.google.com" {
 		t.Errorf("Invalid query decoding, expecting 'www.google.com', got '%s'",
 			dns.Questions[0].Name)
 	}
@@ -199,32 +197,25 @@ var testDNSRRA = []byte{
 func TestDNSRRA(t *testing.T) {
 	dns := loadDNS(testDNSRRA, t)
 	if dns == nil {
-		t.Error("Failed to get a pointer to DNS struct")
+		t.Fatal("Failed to get a pointer to DNS struct")
 		return
 	}
 
-	if uint16(len(dns.Questions)) != dns.Header.QDCount {
-		t.Error("Invalid query decoding, not the right number of questions")
-		return
-	}
-	if uint16(len(dns.Answers)) != dns.Header.ANCount {
-		t.Error("Invalid query decoding, not the right number of answers")
-		return
-	}
-	if uint16(len(dns.Authorities)) != dns.Header.NSCount {
-		t.Error("Invalid query decoding, not the right number of authorities")
-		return
-	}
-	if uint16(len(dns.Additionals)) != dns.Header.ARCount {
-		t.Error("Invalid query decoding, not the right number of additionals info")
-		return
+	if uint16(len(dns.Questions)) != dns.QDCount {
+		t.Fatal("Invalid query decoding, not the right number of questions")
+	} else if uint16(len(dns.Answers)) != dns.ANCount {
+		t.Fatal("Invalid query decoding, not the right number of answers")
+	} else if uint16(len(dns.Authorities)) != dns.NSCount {
+		t.Fatal("Invalid query decoding, not the right number of authorities")
+	} else if uint16(len(dns.Additionals)) != dns.ARCount {
+		t.Fatal("Invalid query decoding, not the right number of additionals info")
 	}
 
-	if dns.Questions[0].Name != "www.google.com" {
+	if string(dns.Questions[0].Name) != "www.google.com" {
 		t.Errorf("Invalid query decoding, expecting 'www.google.com', got '%s'",
 			dns.Questions[0].Name)
 	}
-	if dns.Answers[0].Name != "www.google.com" {
+	if string(dns.Answers[0].Name) != "www.google.com" {
 		t.Errorf("Invalid query decoding, expecting 'www.google.com', got '%d'",
 			dns.Questions[0].Class)
 	}
