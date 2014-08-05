@@ -62,18 +62,20 @@ int pcap_set_rfmon(pcap_t *p, int rfmon) {
 import "C"
 
 import (
-	"code.google.com/p/gopacket"
-	"code.google.com/p/gopacket/layers"
 	"errors"
 	"fmt"
 	"io"
 	"net"
 	"reflect"
+	"runtime"
 	"strconv"
 	"sync"
 	"syscall"
 	"time"
 	"unsafe"
+
+	"code.google.com/p/gopacket"
+	"code.google.com/p/gopacket/layers"
 )
 
 const errorBufferSize = 256
@@ -119,6 +121,12 @@ type InterfaceAddress struct {
 	IP      net.IP
 	Netmask net.IPMask // Netmask may be nil if we were unable to retrieve it.
 	// TODO: add broadcast + PtP dst ?
+}
+
+// BPF is a compiled filter program, useful for offline packet matching.
+type BPF struct {
+	orig string
+	bpf  _Ctype_struct_bpf_program // takes a finalizer, not overriden by outsiders
 }
 
 // BlockForever, when passed into OpenLive/SetTimeout, causes it to block forever
@@ -338,6 +346,41 @@ func (p *Handle) SetBPFFilter(expr string) (err error) {
 	}
 	C.pcap_freecode(&bpf)
 	return nil
+}
+
+// NewBPF compiles the given string into a new filter program.
+//
+// BPF filters need to be created from activated handles, because they need to
+// know the underlying link type to correctly compile their offsets.
+func (p *Handle) NewBPF(expr string) (*BPF, error) {
+	bpf := &BPF{orig: expr}
+	cexpr := C.CString(expr)
+	defer C.free(unsafe.Pointer(cexpr))
+
+	if C.pcap_compile(p.cptr, &bpf.bpf, cexpr /* optimize */, 1, C.PCAP_NETMASK_UNKNOWN) != 0 {
+		return nil, p.Error()
+	}
+	runtime.SetFinalizer(bpf, destroyBPF)
+	return bpf, nil
+}
+func destroyBPF(bpf *BPF) {
+	C.pcap_freecode(&bpf.bpf)
+}
+
+// String returns the original string this BPF filter was compiled from.
+func (b *BPF) String() string {
+	return b.orig
+}
+
+// Matches returns true if the given packet data matches this filter.
+func (b *BPF) Matches(ci gopacket.CaptureInfo, data []byte) bool {
+	var hdr C.struct_pcap_pkthdr
+	hdr.ts.tv_sec = C.__time_t(ci.Timestamp.Unix())
+	hdr.ts.tv_usec = C.__suseconds_t(ci.Timestamp.Nanosecond() / 1000)
+	hdr.caplen = C.bpf_u_int32(len(data)) // Trust actual length over ci.Length.
+	hdr.len = C.bpf_u_int32(ci.Length)
+	dataptr := (*C.u_char)(unsafe.Pointer(&data[0]))
+	return C.pcap_offline_filter(&b.bpf, &hdr, dataptr) != 0
 }
 
 // Version returns pcap_lib_version.

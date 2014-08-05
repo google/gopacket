@@ -7,9 +7,13 @@
 package pcap
 
 import (
+	"fmt"
+	"io"
+	"log"
+	"testing"
+
 	"code.google.com/p/gopacket"
 	"code.google.com/p/gopacket/layers"
-	"testing"
 )
 
 func TestPcapFileRead(t *testing.T) {
@@ -58,4 +62,84 @@ func TestPcapFileRead(t *testing.T) {
 			}
 		}
 	}
+}
+
+func TestBPF(t *testing.T) {
+	handle, err := OpenOffline("test_ethernet.pcap")
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	for _, expected := range []struct {
+		expr   string
+		Error  bool
+		Result bool
+	}{
+		{"foobar", true, false},
+		{"tcp[tcpflags] & (tcp-syn|tcp-ack) == (tcp-syn|tcp-ack)", false, true},
+		{"tcp[tcpflags] & (tcp-syn|tcp-ack) == tcp-ack", false, true},
+		{"udp", false, false},
+	} {
+		data, ci, err := handle.ReadPacketData()
+		if err != nil {
+			t.Fatal(err)
+		}
+		t.Log("Testing filter", expected.expr)
+		if bpf, err := handle.NewBPF(expected.expr); err != nil {
+			if !expected.Error {
+				t.Error(err, "while compiling filter was unexpected")
+			}
+		} else if expected.Error {
+			t.Error("expected error but didn't see one")
+		} else if matches := bpf.Matches(ci, data); matches != expected.Result {
+			t.Error("Filter result was", matches, "but should be", expected.Result)
+		}
+	}
+}
+
+func ExampleBPF() {
+	handle, err := OpenOffline("test_ethernet.pcap")
+	if err != nil {
+		log.Fatal(err)
+	}
+	synack, err := handle.NewBPF("tcp[tcpflags] & (tcp-syn|tcp-ack) == (tcp-syn|tcp-ack)")
+	if err != nil {
+		log.Fatal(err)
+	}
+	syn, err := handle.NewBPF("tcp[tcpflags] & (tcp-syn|tcp-ack) == tcp-syn")
+	if err != nil {
+		log.Fatal(err)
+	}
+	for {
+		data, ci, err := handle.ReadPacketData()
+		switch {
+		case err == io.EOF:
+			return
+		case err != nil:
+			log.Fatal(err)
+		case synack.Matches(ci, data):
+			fmt.Println("SYN/ACK packet")
+		case syn.Matches(ci, data):
+			fmt.Println("SYN packet")
+		default:
+			fmt.Println("SYN flag not set")
+		}
+	}
+	// Output:
+	// SYN packet
+	// SYN/ACK packet
+	// SYN flag not set
+	// SYN flag not set
+	// SYN flag not set
+	// SYN flag not set
+	// SYN flag not set
+	// SYN flag not set
+	// SYN flag not set
+	// SYN flag not set
+	// SYN flag not set
+	// SYN flag not set
+	// SYN flag not set
+	// SYN flag not set
+	// SYN flag not set
+	// SYN flag not set
 }
