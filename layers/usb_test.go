@@ -30,6 +30,7 @@ var testPacketUsb0 = []byte{
 	0x80, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
 	0x04,
 }
+
 func TestPacketUsb0(t *testing.T) {
 	p := gopacket.NewPacket(testPacketUsb0, LinkTypeLinuxUSBLinuxMapped, gopacket.Default)
 	if p.ErrorLayer() != nil {
@@ -39,30 +40,30 @@ func TestPacketUsb0(t *testing.T) {
 
 	if got, ok := p.Layer(LayerTypeUsb).(*Usb); ok {
 		want := &Usb{
-                    BaseLayer: BaseLayer{
-                        Contents:[]uint8{0x0, 0x38, 0x4a, 0x3b, 0x0, 0x88, 0xff, 0xff, 0x43, 0x1, 0x81, 0x1, 0x2, 0x0, 0x2d, 0x0, 0xc0, 0xd3, 0x5b, 0x50, 0x0, 0x0, 0x0, 0x0, 0x8a, 0x85, 0xa, 0x0, 0x0, 0x0, 0x0, 0x0, 0x1, 0x0, 0x0, 0x0, 0x1, 0x0, 0x0, 0x0}, 
-                        Payload:[]uint8{0x4},
-                    }, 
-                    Id:0xffff88003b4a3800, 
-                    EventType: USBEventTypeComplete, 
-                    TransferType: USBTransportTypeInterrupt, 
-                    Direction:0x1, 
-                    EndpointNumber:0x1, 
-                    DeviceAddress:0x1, 
-                    BusId:0x2, 
-                    TimestampSec:1348195264, 
-                    TimestampUsec:689546, 
-                    SetupFlag:false, 
-                    DataFlag:true, 
-                    Status:0, 
-                    UrbLength:0x1, 
-                    UrbDataLength:0x1, 
+			BaseLayer: BaseLayer{
+				Contents: []uint8{0x0, 0x38, 0x4a, 0x3b, 0x0, 0x88, 0xff, 0xff, 0x43, 0x1, 0x81, 0x1, 0x2, 0x0, 0x2d, 0x0, 0xc0, 0xd3, 0x5b, 0x50, 0x0, 0x0, 0x0, 0x0, 0x8a, 0x85, 0xa, 0x0, 0x0, 0x0, 0x0, 0x0, 0x1, 0x0, 0x0, 0x0, 0x1, 0x0, 0x0, 0x0},
+				Payload:  []uint8{0x4},
+			},
+			Id:             0xffff88003b4a3800,
+			EventType:      USBEventTypeComplete,
+			TransferType:   USBTransportTypeInterrupt,
+			Direction:      0x1,
+			EndpointNumber: 0x1,
+			DeviceAddress:  0x1,
+			BusId:          0x2,
+			TimestampSec:   1348195264,
+			TimestampUsec:  689546,
+			SetupFlag:      false,
+			DataFlag:       true,
+			Status:         0,
+			UrbLength:      0x1,
+			UrbDataLength:  0x1,
 		}
 
 		if !reflect.DeepEqual(got, want) {
 			t.Errorf("Usb packet processing failed:\ngot  :\n%#v\n\nwant :\n%#v\n\n", got, want)
 		}
-        }
+	}
 
 }
 func BenchmarkDecodePacketUsb0(b *testing.B) {

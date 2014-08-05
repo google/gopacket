@@ -89,31 +89,31 @@ type LinkType uint8
 
 const (
 	// According to pcap-linktype(7).
-	LinkTypeNull           LinkType = 0
-	LinkTypeEthernet       LinkType = 1
-	LinkTypeTokenRing      LinkType = 6
-	LinkTypeArcNet         LinkType = 7
-	LinkTypeSLIP           LinkType = 8
-	LinkTypePPP            LinkType = 9
-	LinkTypeFDDI           LinkType = 10
-	LinkTypeATM_RFC1483    LinkType = 100
-	LinkTypeRaw            LinkType = 101
-	LinkTypePPP_HDLC       LinkType = 50
-	LinkTypePPPEthernet    LinkType = 51
-	LinkTypeC_HDLC         LinkType = 104
-	LinkTypeIEEE802_11     LinkType = 105
-	LinkTypeFRelay         LinkType = 107
-	LinkTypeLoop           LinkType = 108
-	LinkTypeLinuxSLL       LinkType = 113
-	LinkTypeLTalk          LinkType = 104
-	LinkTypePFLog          LinkType = 117
-	LinkTypePrismHeader    LinkType = 119
-	LinkTypeIPOverFC       LinkType = 122
-	LinkTypeSunATM         LinkType = 123
-	LinkTypeIEEE80211Radio LinkType = 127
-	LinkTypeARCNetLinux    LinkType = 129
-	LinkTypeLinuxIRDA      LinkType = 144
-	LinkTypeLinuxLAPD      LinkType = 177
+	LinkTypeNull                LinkType = 0
+	LinkTypeEthernet            LinkType = 1
+	LinkTypeTokenRing           LinkType = 6
+	LinkTypeArcNet              LinkType = 7
+	LinkTypeSLIP                LinkType = 8
+	LinkTypePPP                 LinkType = 9
+	LinkTypeFDDI                LinkType = 10
+	LinkTypeATM_RFC1483         LinkType = 100
+	LinkTypeRaw                 LinkType = 101
+	LinkTypePPP_HDLC            LinkType = 50
+	LinkTypePPPEthernet         LinkType = 51
+	LinkTypeC_HDLC              LinkType = 104
+	LinkTypeIEEE802_11          LinkType = 105
+	LinkTypeFRelay              LinkType = 107
+	LinkTypeLoop                LinkType = 108
+	LinkTypeLinuxSLL            LinkType = 113
+	LinkTypeLTalk               LinkType = 104
+	LinkTypePFLog               LinkType = 117
+	LinkTypePrismHeader         LinkType = 119
+	LinkTypeIPOverFC            LinkType = 122
+	LinkTypeSunATM              LinkType = 123
+	LinkTypeIEEE80211Radio      LinkType = 127
+	LinkTypeARCNetLinux         LinkType = 129
+	LinkTypeLinuxIRDA           LinkType = 144
+	LinkTypeLinuxLAPD           LinkType = 177
 	LinkTypeLinuxUSBLinuxMapped LinkType = 220
 )
 
@@ -279,7 +279,7 @@ var (
 	EAPOLTypeMetadata        [256]EnumMetadata
 	ProtocolFamilyMetadata   [256]EnumMetadata
 	Dot11TypeMetadata        [256]EnumMetadata
-	UsbTypeMetadata        	 [256]EnumMetadata
+	UsbTypeMetadata          [256]EnumMetadata
 )
 
 func (a EthernetType) Decode(data []byte, p gopacket.PacketBuilder) error {
@@ -483,7 +483,7 @@ func init() {
 	LinkTypeMetadata[LinkTypePFLog] = EnumMetadata{DecodeWith: gopacket.DecodeFunc(decodePFLog), Name: "PFLog"}
 	LinkTypeMetadata[LinkTypeIEEE80211Radio] = EnumMetadata{DecodeWith: gopacket.DecodeFunc(decodeRadioTap), Name: "RadioTap"}
 	LinkTypeMetadata[LinkTypeLinuxUSBLinuxMapped] = EnumMetadata{DecodeWith: gopacket.DecodeFunc(decodeUsb), Name: "USB"}
- 
+
 	FDDIFrameControlMetadata[FDDIFrameControlLLC] = EnumMetadata{DecodeWith: gopacket.DecodeFunc(decodeLLC), Name: "LLC"}
 
 	EAPOLTypeMetadata[EAPOLTypeEAP] = EnumMetadata{DecodeWith: gopacket.DecodeFunc(decodeEAP), Name: "EAP", LayerType: LayerTypeEAP}
@@ -536,6 +536,5 @@ func init() {
 	UsbTypeMetadata[USBTransportTypeInterrupt] = EnumMetadata{DecodeWith: gopacket.DecodeFunc(decodeUsbInterrupt), Name: "Interrupt", LayerType: LayerTypeUsbInterrupt}
 	UsbTypeMetadata[USBTransportTypeControl] = EnumMetadata{DecodeWith: gopacket.DecodeFunc(decodeUsbControl), Name: "Control", LayerType: LayerTypeUsbControl}
 	UsbTypeMetadata[USBTransportTypeBulk] = EnumMetadata{DecodeWith: gopacket.DecodeFunc(decodeUsbBulk), Name: "Bulk", LayerType: LayerTypeUsbBulk}
-
 
 }
