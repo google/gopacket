@@ -60,7 +60,7 @@ int pcap_set_rfmon(pcap_t *p, int rfmon) {
 #endif
 
 // Windows, Macs, and Linux all use different time types.  Joy.
-#ifdef _WIN32
+#ifdef WIN32
 #define gopacket_time_secs_t long
 #define gopacket_time_usecs_t long
 #elif __APPLE__
@@ -485,10 +485,7 @@ func sockaddr_to_IP(rsa *syscall.RawSockaddr) (IP []byte, err error) {
 
 // WritePacketData calls pcap_sendpacket, injecting the given data into the pcap handle.
 func (p *Handle) WritePacketData(data []byte) (err error) {
-	buf := C.CString(string(data))
-	defer C.free(unsafe.Pointer(buf))
-
-	if -1 == C.pcap_sendpacket(p.cptr, (*C.u_char)(unsafe.Pointer(buf)), (C.int)(len(data))) {
+	if -1 == C.pcap_sendpacket(p.cptr, (*C.u_char)(&data[0]), (C.int)(len(data))) {
 		err = p.Error()
 	}
 	return
