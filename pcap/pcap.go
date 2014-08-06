@@ -58,6 +58,18 @@ int pcap_set_rfmon(pcap_t *p, int rfmon) {
 	return PCAP_ERROR;
 }
 #endif
+
+// Windows, Macs, and Linux all use different time types.  Joy.
+#ifdef _WIN32
+#define gopacket_time_secs_t long
+#define gopacket_time_usecs_t long
+#elif __APPLE__
+#define gopacket_time_secs_t __darwin_time_t
+#define gopacket_time_usecs_t __darwin_suseconds_t
+#else
+#define gopacket_time_secs_t __time_t
+#define gopacket_time_usecs_t __suseconds_t
+#endif
 */
 import "C"
 
@@ -375,8 +387,8 @@ func (b *BPF) String() string {
 // Matches returns true if the given packet data matches this filter.
 func (b *BPF) Matches(ci gopacket.CaptureInfo, data []byte) bool {
 	var hdr C.struct_pcap_pkthdr
-	hdr.ts.tv_sec = C.__time_t(ci.Timestamp.Unix())
-	hdr.ts.tv_usec = C.__suseconds_t(ci.Timestamp.Nanosecond() / 1000)
+	hdr.ts.tv_sec = C.gopacket_time_secs_t(ci.Timestamp.Unix())
+	hdr.ts.tv_usec = C.gopacket_time_usecs_t(ci.Timestamp.Nanosecond() / 1000)
 	hdr.caplen = C.bpf_u_int32(len(data)) // Trust actual length over ci.Length.
 	hdr.len = C.bpf_u_int32(ci.Length)
 	dataptr := (*C.u_char)(unsafe.Pointer(&data[0]))
