@@ -108,11 +108,11 @@ var (
 	LayerTypeDot11MgmtActionNoAck        = gopacket.RegisterLayerType(104, gopacket.LayerTypeMetadata{"Dot11MgmtActionNoAck", gopacket.DecodeFunc(decodeDot11MgmtActionNoAck)})
 	LayerTypeDot11MgmtArubaWLAN          = gopacket.RegisterLayerType(105, gopacket.LayerTypeMetadata{"Dot11MgmtArubaWLAN", gopacket.DecodeFunc(decodeDot11MgmtArubaWLAN)})
 	LayerTypeDot11WEP                    = gopacket.RegisterLayerType(106, gopacket.LayerTypeMetadata{"Dot11WEP", gopacket.DecodeFunc(decodeDot11WEP)})
-	LayerTypeUsb                         = gopacket.RegisterLayerType(107, gopacket.LayerTypeMetadata{"Usb", gopacket.DecodeFunc(decodeUsb)})
-	LayerTypeUsbUrbSetup                 = gopacket.RegisterLayerType(108, gopacket.LayerTypeMetadata{"UsbUrbSetup", gopacket.DecodeFunc(decodeUsbUrbSetup)})
-	LayerTypeUsbControl                  = gopacket.RegisterLayerType(109, gopacket.LayerTypeMetadata{"UsbControl", gopacket.DecodeFunc(decodeUsbControl)})
-	LayerTypeUsbInterrupt                = gopacket.RegisterLayerType(110, gopacket.LayerTypeMetadata{"UsbInterrupt", gopacket.DecodeFunc(decodeUsbInterrupt)})
-	LayerTypeUsbBulk                     = gopacket.RegisterLayerType(111, gopacket.LayerTypeMetadata{"UsbBulk", gopacket.DecodeFunc(decodeUsbBulk)})
+	LayerTypeUSB                         = gopacket.RegisterLayerType(107, gopacket.LayerTypeMetadata{"USB", gopacket.DecodeFunc(decodeUSB)})
+	LayerTypeUSBRequestBlockSetup	     = gopacket.RegisterLayerType(108, gopacket.LayerTypeMetadata{"USBRequestBlockSetup", gopacket.DecodeFunc(decodeUSBRequestBlockSetup)})
+	LayerTypeUSBControl                  = gopacket.RegisterLayerType(109, gopacket.LayerTypeMetadata{"USBControl", gopacket.DecodeFunc(decodeUSBControl)})
+	LayerTypeUSBInterrupt                = gopacket.RegisterLayerType(110, gopacket.LayerTypeMetadata{"USBInterrupt", gopacket.DecodeFunc(decodeUSBInterrupt)})
+	LayerTypeUSBBulk                     = gopacket.RegisterLayerType(111, gopacket.LayerTypeMetadata{"USBBulk", gopacket.DecodeFunc(decodeUSBBulk)})
 )
 
 var (

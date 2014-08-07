@@ -1,4 +1,4 @@
-// Copyright 2009-2011 Andreas Krennmair. All rights reserved.
+// Copyright 2014 Google, Inc. All rights reserved.
 //
 // Use of this source code is governed by a BSD-style license
 // that can be found in the LICENSE file in the root of the source
@@ -11,10 +11,6 @@ import (
 	"encoding/binary"
 	"fmt"
 )
-
-// TODO: dissect_linux_usb_pseudo_header_ext
-// TODO: mmapp
-// URB: USB Request Block
 
 type USBEventType uint8
 
@@ -37,39 +33,39 @@ func (a USBEventType) String() string {
 	}
 }
 
-type UsbUrbSetupRequest uint8
+type USBRequestBlockSetupRequest uint8
 
 const (
-	UsbUrbSetupRequestGetStatus        UsbUrbSetupRequest = 0x00
-	UsbUrbSetupRequestClearFeature     UsbUrbSetupRequest = 0x01
-	UsbUrbSetupRequestSetFeature       UsbUrbSetupRequest = 0x03
-	UsbUrbSetupRequestSetAddress       UsbUrbSetupRequest = 0x05
-	UsbUrbSetupRequestGetDescriptor    UsbUrbSetupRequest = 0x06
-	UsbUrbSetupRequestSetDescriptor    UsbUrbSetupRequest = 0x07
-	UsbUrbSetupRequestGetConfiguration UsbUrbSetupRequest = 0x08
-	UsbUrbSetupRequestSetConfiguration UsbUrbSetupRequest = 0x09
-	UsbUrbSetupRequestSetIdle          UsbUrbSetupRequest = 0x0a
+	USBRequestBlockSetupRequestGetStatus        USBRequestBlockSetupRequest = 0x00
+	USBRequestBlockSetupRequestClearFeature     USBRequestBlockSetupRequest = 0x01
+	USBRequestBlockSetupRequestSetFeature       USBRequestBlockSetupRequest = 0x03
+	USBRequestBlockSetupRequestSetAddress       USBRequestBlockSetupRequest = 0x05
+	USBRequestBlockSetupRequestGetDescriptor    USBRequestBlockSetupRequest = 0x06
+	USBRequestBlockSetupRequestSetDescriptor    USBRequestBlockSetupRequest = 0x07
+	USBRequestBlockSetupRequestGetConfiguration USBRequestBlockSetupRequest = 0x08
+	USBRequestBlockSetupRequestSetConfiguration USBRequestBlockSetupRequest = 0x09
+	USBRequestBlockSetupRequestSetIdle          USBRequestBlockSetupRequest = 0x0a
 )
 
-func (a UsbUrbSetupRequest) String() string {
+func (a USBRequestBlockSetupRequest) String() string {
 	switch a {
-	case UsbUrbSetupRequestGetStatus:
+	case USBRequestBlockSetupRequestGetStatus:
 		return "GET_STATUS"
-	case UsbUrbSetupRequestClearFeature:
+	case USBRequestBlockSetupRequestClearFeature:
 		return "CLEAR_FEATURE"
-	case UsbUrbSetupRequestSetFeature:
+	case USBRequestBlockSetupRequestSetFeature:
 		return "SET_FEATURE"
-	case UsbUrbSetupRequestSetAddress:
+	case USBRequestBlockSetupRequestSetAddress:
 		return "SET_ADDRESS"
-	case UsbUrbSetupRequestGetDescriptor:
+	case USBRequestBlockSetupRequestGetDescriptor:
 		return "GET_DESCRIPTOR"
-	case UsbUrbSetupRequestSetDescriptor:
+	case USBRequestBlockSetupRequestSetDescriptor:
 		return "SET_DESCRIPTOR"
-	case UsbUrbSetupRequestGetConfiguration:
+	case USBRequestBlockSetupRequestGetConfiguration:
 		return "GET_CONFIGURATION"
-	case UsbUrbSetupRequestSetConfiguration:
+	case USBRequestBlockSetupRequestSetConfiguration:
 		return "SET_CONFIGURATION"
-	case UsbUrbSetupRequestSetIdle:
+	case USBRequestBlockSetupRequestSetIdle:
 		return "SET_IDLE"
 	default:
 		return "UNKNOWN"
@@ -79,15 +75,15 @@ func (a UsbUrbSetupRequest) String() string {
 type USBTransportType uint8
 
 const (
-	USBTransportTypeTransferIn  USBTransportType = 0x80
-	USBTransportTypeIsochronous USBTransportType = 0x00
-	USBTransportTypeInterrupt   USBTransportType = 0x01
-	USBTransportTypeControl     USBTransportType = 0x02
-	USBTransportTypeBulk        USBTransportType = 0x03
+	USBTransportTypeTransferIn  USBTransportType = 0x80 // Indicates send or receive
+	USBTransportTypeIsochronous USBTransportType = 0x00 // Isochronous transfers occur continuously and periodically. They typically contain time sensitive information, such as an audio or video stream.
+	USBTransportTypeInterrupt   USBTransportType = 0x01 // Interrupt transfers are typically non-periodic, small device "initiated" communication requiring bounded latency, such as pointing devices or keyboards.
+	USBTransportTypeControl     USBTransportType = 0x02 // Control transfers are typically used for command and status operations.
+	USBTransportTypeBulk        USBTransportType = 0x03 // Bulk transfers can be used for large bursty data, using all remaining available bandwidth, no guarantees on bandwidth or latency, such as file transfers.
 )
 
 func (a USBTransportType) LayerType() gopacket.LayerType {
-	return UsbTypeMetadata[a].LayerType
+	return USBTypeMetadata[a].LayerType
 }
 
 func (a USBTransportType) String() string {
@@ -126,22 +122,23 @@ func (a USBDirectionType) String() string {
 	}
 }
 
-type Usb struct {
+// The reference at http://www.beyondlogic.org/usbnutshell/usb1.shtml contains more information about the protocol.
+type USB struct {
 	BaseLayer
-	Id             uint64
+	ID             uint64
 	EventType      USBEventType
 	TransferType   USBTransportType
 	Direction      USBDirectionType
 	EndpointNumber uint8
 	DeviceAddress  uint8
-	BusId          uint16
+	BusID          uint16
 	TimestampSec   int64
 	TimestampUsec  int32
-	SetupFlag      bool
-	DataFlag       bool
-	Status         int32
-	UrbLength      uint32
-	UrbDataLength  uint32
+	Setupbool
+	Databool
+	Status        int32
+	UrbLength     uint32
+	UrbDataLength uint32
 
 	UrbInterval            uint32
 	UrbStartFrame          uint32
@@ -149,50 +146,44 @@ type Usb struct {
 	IsoNumDesc             uint32
 }
 
-func (u *Usb) LayerType() gopacket.LayerType { return LayerTypeUsb }
+func (u *USB) LayerType() gopacket.LayerType { return LayerTypeUSB }
 
-func (m *Usb) NextLayerType() gopacket.LayerType {
-	if m.SetupFlag {
-		return LayerTypeUsbUrbSetup
-	} else if m.DataFlag {
+func (m *USB) NextLayerType() gopacket.LayerType {
+	if m.Setup {
+		return LayerTypeUSBRequestBlockSetup
+	} else if m.Data {
 	}
 
 	return m.TransferType.LayerType()
 }
 
-func decodeUsb(data []byte, p gopacket.PacketBuilder) error {
-	d := &Usb{}
+func decodeUSB(data []byte, p gopacket.PacketBuilder) error {
+	d := &USB{}
 
 	return decodingLayerDecoder(d, data, p)
 }
 
-func (m *Usb) DecodeFromBytes(data []byte, df gopacket.DecodeFeedback) error {
-	m.Id = binary.LittleEndian.Uint64(data[0:8])
+func (m *USB) DecodeFromBytes(data []byte, df gopacket.DecodeFeedback) error {
+	m.ID = binary.LittleEndian.Uint64(data[0:8])
 	m.EventType = USBEventType(data[8])
 	m.TransferType = USBTransportType(data[9])
 
-	endPointByte := uint8(data[10])
-	m.EndpointNumber = endPointByte & 0x7f
-
-	if endPointByte&uint8(USBTransportTypeTransferIn) > 0 {
+	m.EndpointNumber = data[10] & 0x7f
+	if data[10]&uint8(USBTransportTypeTransferIn) > 0 {
 		m.Direction = USBDirectionTypeIn
 	} else {
 		m.Direction = USBDirectionTypeOut
 	}
 
-	m.DeviceAddress = uint8(data[11])
-	m.BusId = binary.LittleEndian.Uint16(data[12:14])
+	m.DeviceAddress = data[11]
+	m.BusID = binary.LittleEndian.Uint16(data[12:14])
 
 	if uint(data[14]) == 0 {
-		// Setupflag
-		m.SetupFlag = true
-
-		// TODO: Check transfer type for URB_CONTROL
+		m.Setup = true
 	}
 
 	if uint(data[15]) == 0 {
-		// Dataflag
-		m.DataFlag = true
+		m.Data = true
 	}
 
 	m.TimestampSec = int64(binary.LittleEndian.Uint64(data[16:24]))
@@ -202,13 +193,11 @@ func (m *Usb) DecodeFromBytes(data []byte, df gopacket.DecodeFeedback) error {
 	m.UrbDataLength = binary.LittleEndian.Uint32(data[36:40])
 
 	m.Contents = data[:40]
-	// 24 bytes?
-	// data length vs urb length?
 	m.Payload = data[40:]
 
-	if m.SetupFlag {
+	if m.Setup {
 		m.Payload = data[40:]
-	} else if m.DataFlag {
+	} else if m.Data {
 		m.Payload = data[uint32(len(data))-m.UrbDataLength:]
 	}
 
@@ -228,25 +217,24 @@ func (m *Usb) DecodeFromBytes(data []byte, df gopacket.DecodeFeedback) error {
 	return nil
 }
 
-type UsbUrbSetup struct {
+type USBRequestBlockSetup struct {
 	BaseLayer
 	RequestType uint8
-	Request     UsbUrbSetupRequest
+	Request     USBRequestBlockSetupRequest
 	Value       uint16
 	Index       uint16
 	Length      uint16
 }
 
-func (u *UsbUrbSetup) LayerType() gopacket.LayerType { return LayerTypeUsbUrbSetup }
+func (u *USBRequestBlockSetup) LayerType() gopacket.LayerType { return LayerTypeUSBRequestBlockSetup }
 
-func (m *UsbUrbSetup) NextLayerType() gopacket.LayerType {
-	// TODO: if m.Request == UsbUrbSetupRequestGetDescriptor && Response
+func (m *USBRequestBlockSetup) NextLayerType() gopacket.LayerType {
 	return gopacket.LayerTypePayload
 }
 
-func (m *UsbUrbSetup) DecodeFromBytes(data []byte, df gopacket.DecodeFeedback) error {
-	m.RequestType = uint8(data[0])
-	m.Request = UsbUrbSetupRequest(data[1])
+func (m *USBRequestBlockSetup) DecodeFromBytes(data []byte, df gopacket.DecodeFeedback) error {
+	m.RequestType = data[0]
+	m.Request = USBRequestBlockSetupRequest(data[1])
 	m.Value = binary.LittleEndian.Uint16(data[2:4])
 	m.Index = binary.LittleEndian.Uint16(data[4:6])
 	m.Length = binary.LittleEndian.Uint16(data[6:8])
@@ -255,73 +243,67 @@ func (m *UsbUrbSetup) DecodeFromBytes(data []byte, df gopacket.DecodeFeedback) e
 	return nil
 }
 
-func decodeUsbUrbSetup(data []byte, p gopacket.PacketBuilder) error {
-	d := &UsbUrbSetup{}
-
+func decodeUSBRequestBlockSetup(data []byte, p gopacket.PacketBuilder) error {
+	d := &USBRequestBlockSetup{}
 	return decodingLayerDecoder(d, data, p)
 }
 
-type UsbControl struct {
+type USBControl struct {
 	BaseLayer
 }
 
-func (u *UsbControl) LayerType() gopacket.LayerType { return LayerTypeUsbControl }
+func (u *USBControl) LayerType() gopacket.LayerType { return LayerTypeUSBControl }
 
-func (m *UsbControl) NextLayerType() gopacket.LayerType {
+func (m *USBControl) NextLayerType() gopacket.LayerType {
 	return gopacket.LayerTypePayload
 }
 
-func (m *UsbControl) DecodeFromBytes(data []byte, df gopacket.DecodeFeedback) error {
-	m.Contents = data
-	fmt.Println("Control", data)
-	return nil
-}
-
-func decodeUsbControl(data []byte, p gopacket.PacketBuilder) error {
-
-	d := &UsbControl{}
-
-	return decodingLayerDecoder(d, data, p)
-}
-
-type UsbInterrupt struct {
-	BaseLayer
-}
-
-func (u *UsbInterrupt) LayerType() gopacket.LayerType { return LayerTypeUsbInterrupt }
-
-func (m *UsbInterrupt) NextLayerType() gopacket.LayerType {
-	return gopacket.LayerTypePayload
-}
-
-func (m *UsbInterrupt) DecodeFromBytes(data []byte, df gopacket.DecodeFeedback) error {
+func (m *USBControl) DecodeFromBytes(data []byte, df gopacket.DecodeFeedback) error {
 	m.Contents = data
 	return nil
 }
 
-func decodeUsbInterrupt(data []byte, p gopacket.PacketBuilder) error {
-	d := &UsbInterrupt{}
-
+func decodeUSBControl(data []byte, p gopacket.PacketBuilder) error {
+	d := &USBControl{}
 	return decodingLayerDecoder(d, data, p)
 }
 
-type UsbBulk struct {
+type USBInterrupt struct {
 	BaseLayer
 }
 
-func (u *UsbBulk) LayerType() gopacket.LayerType { return LayerTypeUsbBulk }
+func (u *USBInterrupt) LayerType() gopacket.LayerType { return LayerTypeUSBInterrupt }
 
-func (m *UsbBulk) NextLayerType() gopacket.LayerType {
+func (m *USBInterrupt) NextLayerType() gopacket.LayerType {
 	return gopacket.LayerTypePayload
 }
 
-func (m *UsbBulk) DecodeFromBytes(data []byte, df gopacket.DecodeFeedback) error {
+func (m *USBInterrupt) DecodeFromBytes(data []byte, df gopacket.DecodeFeedback) error {
 	m.Contents = data
 	return nil
 }
 
-func decodeUsbBulk(data []byte, p gopacket.PacketBuilder) error {
-	d := &UsbBulk{}
+func decodeUSBInterrupt(data []byte, p gopacket.PacketBuilder) error {
+	d := &USBInterrupt{}
+	return decodingLayerDecoder(d, data, p)
+}
 
+type USBBulk struct {
+	BaseLayer
+}
+
+func (u *USBBulk) LayerType() gopacket.LayerType { return LayerTypeUSBBulk }
+
+func (m *USBBulk) NextLayerType() gopacket.LayerType {
+	return gopacket.LayerTypePayload
+}
+
+func (m *USBBulk) DecodeFromBytes(data []byte, df gopacket.DecodeFeedback) error {
+	m.Contents = data
+	return nil
+}
+
+func decodeUSBBulk(data []byte, p gopacket.PacketBuilder) error {
+	d := &USBBulk{}
 	return decodingLayerDecoder(d, data, p)
 }
