@@ -199,6 +199,7 @@ func (d *DNS) DecodeFromBytes(data []byte, df gopacket.DecodeFeedback) error {
 	//TODO Review Wireshark dissector code, could be
 
 	if len(data) < 12 {
+		df.SetTruncated()
 		return fmt.Errorf("DNS packet too short")
 	}
 	d.ID = binary.BigEndian.Uint16(data[:2])
@@ -402,8 +403,6 @@ type DNSResourceRecord struct {
 	SOA                 DNSSOA
 	SRV                 DNSSRV
 	MX                  DNSMX
-
-	buffer []byte // Reusable buffer for minimizing memory allocation during repeated decodes.
 }
 
 // decode decodes the resource record, returning the total length of the record.
