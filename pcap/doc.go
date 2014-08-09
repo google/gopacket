@@ -91,5 +91,10 @@ To get around this, we've introduced the following behavior:  if a negative
 timeout is passed in, we set the positive timeout in the handle, then loop
 internally in ReadPacketData/ZeroCopyReadPacketData when we see timeout
 errors.
+
+PCAP File Writing
+
+This package does not implement PCAP file writing.  However, gopacket/pcapgo
+does!  Look there if you'd like to write PCAP files.
 */
 package pcap

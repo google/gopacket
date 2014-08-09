@@ -24,16 +24,19 @@ func checkLayers(p gopacket.Packet, want []gopacket.LayerType, t *testing.T) {
 	layers := p.Layers()
 	t.Log("Checking packet layers, want", want)
 	for _, l := range layers {
-		t.Logf("  Got layer %v, %d bytes, payload of %d bytes", l.LayerType(), len(l.LayerContents()), len(l.LayerPayload()))
+		t.Logf("  Got layer %v, %d bytes, payload of %d bytes", l.LayerType(),
+			len(l.LayerContents()), len(l.LayerPayload()))
 	}
 	t.Log(p)
 	if len(layers) != len(want) {
-		t.Errorf("  Number of layers mismatch: got %d want %d", len(want), len(layers))
+		t.Errorf("  Number of layers mismatch: got %d want %d", len(layers),
+			len(want))
 		return
 	}
 	for i, l := range layers {
 		if l.LayerType() != want[i] {
-			t.Errorf("  Layer %d mismatch: got %v want %v", i, l.LayerType(), want[i])
+			t.Errorf("  Layer %d mismatch: got %v want %v", i, l.LayerType(),
+				want[i])
 		}
 	}
 }

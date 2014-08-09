@@ -108,6 +108,7 @@ var (
 	LayerTypeDot11MgmtActionNoAck        = gopacket.RegisterLayerType(104, gopacket.LayerTypeMetadata{"Dot11MgmtActionNoAck", gopacket.DecodeFunc(decodeDot11MgmtActionNoAck)})
 	LayerTypeDot11MgmtArubaWLAN          = gopacket.RegisterLayerType(105, gopacket.LayerTypeMetadata{"Dot11MgmtArubaWLAN", gopacket.DecodeFunc(decodeDot11MgmtArubaWLAN)})
 	LayerTypeDot11WEP                    = gopacket.RegisterLayerType(106, gopacket.LayerTypeMetadata{"Dot11WEP", gopacket.DecodeFunc(decodeDot11WEP)})
+	LayerTypeDNS                         = gopacket.RegisterLayerType(107, gopacket.LayerTypeMetadata{"DNS", gopacket.DecodeFunc(decodeDNS)})
 )
 
 var (

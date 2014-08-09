@@ -164,6 +164,13 @@ features.  In general, this means:
   compiler-specific optimization is very fragile; someone adding a field to an
   entirely different struct elsewhere in the codebase could reverse any gains
   you might achieve by aligning your allocations.
+* Try to minimize memory allocations.  If possible, use []byte to reference
+  pieces of the input, instead of using string, which requires copying the bytes
+  into a new memory allocation.
+* Think hard about what should be evaluated lazily vs. not.  In general, a
+  layer's struct should almost exactly mirror the layer's frame.  Anything
+  that's more interesting should be a function.  This may not always be
+  possible, but it's a good rule of thumb.
 * Don't fear micro-optimizations.  With the above in mind, we welcome
   micro-optimizations that we think will have positive/neutral impacts on the
   majority of workloads.  A prime example of this is pre-allocating certain
@@ -213,3 +220,14 @@ The caller has already agreed, by using this library, that they won't modify the
 set of bytes they pass in to the decoder, or the library has already copied the
 set of bytes to a read-only location.  See DecodeOptions.NoCopy for more
 information.
+
+### Enums/Types
+
+If a protocol has an integer field (uint8, uint16, etc) with a couple of known
+values that mean something special, make it a type.  This allows us to do really
+nice things like adding a String() function to them, so we can more easily
+display those to users.  Check out layers/enums.go for one example, as well as
+layers/icmp.go for layer-specific enums.
+
+When naming things, try for descriptiveness over suscinctness.  For example,
+choose DNSResponseRecord over DNSRR.

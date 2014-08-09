@@ -15,6 +15,9 @@ import (
 	"net"
 )
 
+// EthernetBroadcast is the broadcast MAC address used by Ethernet.
+var EthernetBroadcast = net.HardwareAddr{0xff, 0xff, 0xff, 0xff, 0xff, 0xff}
+
 // Ethernet is the layer for Ethernet frame headers.
 type Ethernet struct {
 	BaseLayer

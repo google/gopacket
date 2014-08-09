@@ -83,8 +83,14 @@ func (u *UDP) CanDecode() gopacket.LayerClass {
 	return LayerTypeUDP
 }
 
+// NextLayerType use the destination port to select the
+// right next decoder. It tries first to decode via the
+// destination port, then the source port.
 func (u *UDP) NextLayerType() gopacket.LayerType {
-	return gopacket.LayerTypePayload
+	if lt := u.DstPort.LayerType(); lt != gopacket.LayerTypePayload {
+		return lt
+	}
+	return u.SrcPort.LayerType()
 }
 
 func decodeUDP(data []byte, p gopacket.PacketBuilder) error {
@@ -95,7 +101,7 @@ func decodeUDP(data []byte, p gopacket.PacketBuilder) error {
 	if err != nil {
 		return err
 	}
-	return p.NextDecoder(gopacket.LayerTypePayload)
+	return p.NextDecoder(udp.NextLayerType())
 }
 
 func (u *UDP) TransportFlow() gopacket.Flow {
