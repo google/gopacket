@@ -3,7 +3,7 @@
 package layers
 
 // Created by gen.go, don't edit manually
-// Generated at 2014-07-28 10:58:32.580792402 -0600 MDT
+// Generated at 2014-08-11 13:04:56.353504297 -0600 MDT
 // Fetched from "http://www.iana.org/assignments/service-names-port-numbers/service-names-port-numbers.xml"
 
 // TCPPortNames contains the port names for all TCP ports.
@@ -5206,6 +5206,7 @@ var tcpPortNames = map[TCPPort]string{
 	10003: "documentum-s",
 	10004: "emcrmirccd",
 	10005: "emcrmird",
+	10006: "netapp-sync",
 	10007: "mvs-capacity",
 	10008: "octopus",
 	10009: "swdtp-sv",
@@ -9961,6 +9962,7 @@ var udpPortNames = map[UDPPort]string{
 	5682:  "brightcore",
 	5683:  "coap",
 	5684:  "coaps",
+	5687:  "gog-multiplayer",
 	5688:  "ggz",
 	5689:  "qmvideo",
 	5713:  "proshareaudio",
@@ -11098,6 +11100,7 @@ var sctpPortNames = map[SCTPPort]string{
 	1021:  "exp1",
 	1022:  "exp2",
 	1167:  "cisco-ipsla",
+	1720:  "h323hostcall",
 	2049:  "nfs",
 	2225:  "rcip-itu",
 	2904:  "m2ua",
@@ -11129,6 +11132,7 @@ var sctpPortNames = map[SCTPPort]string{
 	6704:  "frc-hp",
 	6705:  "frc-mp",
 	6706:  "frc-lp",
+	6970:  "conductor-mpx",
 	7626:  "simco",
 	8471:  "pim-port",
 	9082:  "lcs-ap",
