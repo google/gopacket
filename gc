@@ -20,7 +20,7 @@
 
 function Usage {
   cat <<EOF
-USAGE:  $0 [--benchmark] [--root] [--gen] <git commit flags...>
+USAGE:  $0 [--benchmark regexp] [--root] [--gen] <git commit flags...>
 
 --benchmark:  Run benchmark comparisons against last benchmark'd commit
 --root:  Run tests that require root priviledges
@@ -37,7 +37,8 @@ ROOT=""
 while [ ! -z "$1" ]; do
   case "$1" in
     "--benchmark")
-      BENCH="yes"
+      BENCH="$2"
+      shift
       shift
       ;;
     "--gen")
@@ -221,9 +222,9 @@ Go version $(go version)
 TEST BENCHMARKS
 EOF
 # go seems to have trouble with 'go test --bench=. ./...'
-go test --test.bench=.* 2>&1 | tee -a $COMMIT_FILE
+go test --test.bench="$BENCH" 2>&1 | tee -a $COMMIT_FILE
 pushd layers
-go test --test.bench=.* 2>&1 | tee -a $COMMIT_FILE
+go test --test.bench="$BENCH" 2>&1 | tee -a $COMMIT_FILE
 popd
 cat >> $COMMIT_FILE <<EOF
 
@@ -247,9 +248,9 @@ BENCHMARKING AGAINST COMMIT $PREV
 OLD TEST BENCHMARKS
 EOF
 # go seems to have trouble with 'go test --bench=. ./...'
-go test --test.bench=.* 2>&1 | tee -a $COMMIT_FILE
+go test --test.bench="$BENCH" 2>&1 | tee -a $COMMIT_FILE
 pushd layers
-go test --test.bench=.* 2>&1 | tee -a $COMMIT_FILE
+go test --test.bench="$BENCH" 2>&1 | tee -a $COMMIT_FILE
 popd
 cat >> $COMMIT_FILE <<EOF
 
