@@ -344,3 +344,9 @@ func BenchmarkDecodeDNS(b *testing.B) {
 		gopacket.NewPacket(testDNSQueryA, LinkTypeEthernet, gopacket.NoCopy)
 	}
 }
+func BenchmarkDecodeDNSLayer(b *testing.B) {
+	var dns DNS
+	for i := 0; i < b.N; i++ {
+		dns.DecodeFromBytes(testDNSAAAA[ /*eth*/ 14+ /*ipv4*/ 20+ /*udp*/ 8:], gopacket.NilDecodeFeedback)
+	}
+}

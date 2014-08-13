@@ -112,59 +112,59 @@ fi
 go fmt ./...
 go test -i ./... 2>/dev/null >/dev/null || true
 go test
-go build -race
+go build
 pushd examples/bytediff
 go build
 popd
 if [ -f /usr/include/pcap.h ]; then
   pushd pcap
   go test ./...
-  go build -race ./...
-  go build -race pcap_tester.go
+  go build ./...
+  go build pcap_tester.go
   Root pcap_tester --mode=basic
   Root pcap_tester --mode=filtered
   Root pcap_tester --mode=timestamp || echo "You might not support timestamp sources"
   popd
   pushd examples/pcapdump
-  go build -race
+  go build
   popd
   pushd examples/arpscan
-  go build -race
+  go build
   popd
   pushd examples/bidirectional
-  go build -race
+  go build
   popd
   pushd examples/synscan
-  go build -race
+  go build
   popd
   pushd examples/httpassembly
-  go build -race
+  go build
   popd
   pushd examples/statsassembly
-  go build -race
+  go build
   popd
 fi
 pushd macs
 go test ./...
 gofmt -w gen.go
-go build -race gen.go
+go build gen.go
 popd
 pushd tcpassembly
 go test ./...
 popd
 pushd layers
 gofmt -w gen.go
-go build -race gen.go
+go build gen.go
 go test ./...
 popd
 pushd pcapgo
 go test ./...
-go build -race ./...
+go build ./...
 popd
 if [ -f /usr/include/linux/if_packet.h ]; then
   if grep -q TPACKET_V3 /usr/include/linux/if_packet.h; then
     pushd afpacket
-    go build -race ./...
+    go build ./...
     go test ./...
     popd
   fi
@@ -172,10 +172,10 @@ fi
 if [ -f /usr/include/pfring.h ]; then
   pushd pfring
   go test ./...
-  go build -race ./...
+  go build ./...
   popd
   pushd examples/pfdump
-  go build -race
+  go build
   popd
 fi
 
