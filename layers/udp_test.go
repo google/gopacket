@@ -243,8 +243,18 @@ func TestDNSRRA(t *testing.T) {
 	if len(dns.Additionals) != 4 {
 		t.Errorf("No correct number of answers, expecting 4, go '%d'",
 			len(dns.Answers))
+	} else {
+		for i, want := range []string{
+			"ns1.google.com",
+			"ns2.google.com",
+			"ns3.google.com",
+			"ns4.google.com",
+		} {
+			if got := string(dns.Additionals[i].Name); got != want {
+				t.Errorf("got %q want %q", got, want)
+			}
+		}
 	}
-
 }
 
 var testDNSAAAA = []byte{
@@ -292,7 +302,7 @@ func TestDNSAAAA(t *testing.T) {
 		return
 	}
 	if dns.Questions[0].Type != DNSTypeAAAA {
-		t.Error("Invalid question, Type is not AAAA, found %d",
+		t.Errorf("Invalid question, Type is not AAAA, found %d",
 			dns.Questions[0].Type)
 	}
 
@@ -348,5 +358,15 @@ func BenchmarkDecodeDNSLayer(b *testing.B) {
 	var dns DNS
 	for i := 0; i < b.N; i++ {
 		dns.DecodeFromBytes(testDNSAAAA[ /*eth*/ 14+ /*ipv4*/ 20+ /*udp*/ 8:], gopacket.NilDecodeFeedback)
+	}
+}
+func TestDNSDoesNotMalloc(t *testing.T) {
+	var dns DNS
+	if n := testing.AllocsPerRun(1000, func() {
+		if err := dns.DecodeFromBytes(testDNSAAAA[ /*eth*/ 14+ /*ipv4*/ 20+ /*udp*/ 8:], gopacket.NilDecodeFeedback); err != nil {
+			t.Fatal(err)
+		}
+	}); n > 0 {
+		t.Error(n, "mallocs decoding DNS")
 	}
 }

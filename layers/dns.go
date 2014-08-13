@@ -176,6 +176,11 @@ type DNS struct {
 	Answers     []DNSResourceRecord
 	Authorities []DNSResourceRecord
 	Additionals []DNSResourceRecord
+
+	// buffer for doing name decoding.  We use a single reusable buffer to avoid
+	// name decoding on a single object via multiple DecodeFromBytes calls
+	// requiring constant allocation of small byte slices.
+	buffer []byte
 }
 
 // LayerType returns gopacket.LayerTypeDNS.
@@ -196,7 +201,7 @@ func decodeDNS(data []byte, p gopacket.PacketBuilder) error {
 
 // DecodeFromBytes decodes the slice into the DNS struct.
 func (d *DNS) DecodeFromBytes(data []byte, df gopacket.DecodeFeedback) error {
-	//TODO Review Wireshark dissector code, could be
+	d.buffer = d.buffer[:0]
 
 	if len(data) < 12 {
 		df.SetTruncated()
@@ -224,35 +229,45 @@ func (d *DNS) DecodeFromBytes(data []byte, df gopacket.DecodeFeedback) error {
 	offset := 12
 	var err error
 	for i := 0; i < int(d.QDCount); i++ {
-		q := DNSQuestion{}
-		if offset, err = q.decode(data, offset, df); err != nil {
+		var q DNSQuestion
+		if offset, err = q.decode(data, offset, df, &d.buffer); err != nil {
 			return err
 		}
 		d.Questions = append(d.Questions, q)
 	}
 
+	// For some horrible reason, if we do the obvious thing in this loop:
+	//   var r DNSResourceRecord
+	//   if blah := r.decode(blah); err != nil {
+	//     return err
+	//   }
+	//   d.Foo = append(d.Foo, r)
+	// the Go compiler thinks that 'r' escapes to the heap, causing a malloc for
+	// every Answer, Authority, and Additional.  To get around this, we do
+	// something really silly:  we append an empty resource record to our slice,
+	// then use the last value in the slice to call decode.  Since the value is
+	// already in the slice, there's no WAY it can escape... on the other hand our
+	// code is MUCH uglier :(
 	for i := 0; i < int(d.ANCount); i++ {
-		a := DNSResourceRecord{}
-		if offset, err = a.decode(data, offset, df); err != nil {
+		d.Answers = append(d.Answers, DNSResourceRecord{})
+		if offset, err = d.Answers[i].decode(data, offset, df, &d.buffer); err != nil {
+			d.Answers = d.Answers[:i] // strip off erroneous value
 			return err
 		}
-		d.Answers = append(d.Answers, a)
 	}
-
 	for i := 0; i < int(d.NSCount); i++ {
-		a := DNSResourceRecord{}
-		if offset, err = a.decode(data, offset, df); err != nil {
+		d.Authorities = append(d.Authorities, DNSResourceRecord{})
+		if offset, err = d.Authorities[i].decode(data, offset, df, &d.buffer); err != nil {
+			d.Authorities = d.Authorities[:i] // strip off erroneous value
 			return err
 		}
-		d.Authorities = append(d.Authorities, a)
 	}
-
 	for i := 0; i < int(d.ARCount); i++ {
-		a := DNSResourceRecord{}
-		if offset, err = a.decode(data, offset, df); err != nil {
+		d.Additionals = append(d.Additionals, DNSResourceRecord{})
+		if offset, err = d.Additionals[i].decode(data, offset, df, &d.buffer); err != nil {
+			d.Additionals = d.Additionals[:i] // strip off erroneous value
 			return err
 		}
-		d.Additionals = append(d.Additionals, a)
 	}
 
 	if uint16(len(d.Questions)) != d.QDCount {
@@ -279,10 +294,10 @@ func (d *DNS) Payload() []byte {
 	return nil
 }
 
-func decodeName(data []byte, offset int) ([]byte, int, error) {
-	name := make([]byte, 0, 16)
-
+func decodeName(data []byte, offset int, buffer *[]byte) ([]byte, int, error) {
+	start := len(*buffer)
 	index := offset
+loop:
 	for data[index] != 0x00 {
 		switch data[index] & 0xc0 {
 		default:
@@ -299,8 +314,8 @@ func decodeName(data []byte, offset int) ([]byte, int, error) {
 				return nil, 0,
 					fmt.Errorf("dns name is too long")
 			}
-			name = append(name, '.')
-			name = append(name, data[index+1:index2]...)
+			*buffer = append(*buffer, '.')
+			*buffer = append(*buffer, data[index+1:index2]...)
 			index = index2
 
 		case 0xc0:
@@ -325,14 +340,16 @@ func decodeName(data []byte, offset int) ([]byte, int, error) {
 			*/
 
 			offsetp := int(binary.BigEndian.Uint16(data[index:index+2]) & 0x3fff)
-			namep, _, err := decodeName(data, offsetp)
+			// This looks a little tricky, but actually isn't.  Because of how
+			// decodeName is written, calling it appends the decoded name to the
+			// current buffer.  We already have the start of the buffer, then, so
+			// once this call is done buffer[start:] will contain our full name.
+			_, _, err := decodeName(data, offsetp, buffer)
 			if err != nil {
 				return nil, 0, err
 			}
-			name = append(name, '.')
-			name = append(name, namep...)
-			return name[1:], index + 2, nil
-
+			index++ // pointer is two bytes, so add an extra byte here.
+			break loop
 		/* EDNS, or other DNS option ? */
 		case 0x40: // RFC 2673
 			return nil, 0, fmt.Errorf("qname '0x40' - RFC 2673 unsupported yet (data=%x index=%d)",
@@ -343,7 +360,7 @@ func decodeName(data []byte, offset int) ([]byte, int, error) {
 				data[index], index)
 		}
 	}
-	return name[1:], index + 1, nil
+	return (*buffer)[start+1:], index + 1, nil
 }
 
 type DNSQuestion struct {
@@ -352,8 +369,8 @@ type DNSQuestion struct {
 	Class DNSClass
 }
 
-func (q *DNSQuestion) decode(data []byte, offset int, df gopacket.DecodeFeedback) (int, error) {
-	name, endq, err := decodeName(data, offset)
+func (q *DNSQuestion) decode(data []byte, offset int, df gopacket.DecodeFeedback, buffer *[]byte) (int, error) {
+	name, endq, err := decodeName(data, offset, buffer)
 	if err != nil {
 		return 0, err
 	}
@@ -406,8 +423,8 @@ type DNSResourceRecord struct {
 }
 
 // decode decodes the resource record, returning the total length of the record.
-func (rr *DNSResourceRecord) decode(data []byte, offset int, df gopacket.DecodeFeedback) (int, error) {
-	name, endq, err := decodeName(data, offset)
+func (rr *DNSResourceRecord) decode(data []byte, offset int, df gopacket.DecodeFeedback, buffer *[]byte) (int, error) {
+	name, endq, err := decodeName(data, offset, buffer)
 	if err != nil {
 		return 0, err
 	}
@@ -419,7 +436,7 @@ func (rr *DNSResourceRecord) decode(data []byte, offset int, df gopacket.DecodeF
 	rr.DataLength = binary.BigEndian.Uint16(data[endq+8 : endq+10])
 	rr.Data = data[endq+10 : endq+10+int(rr.DataLength)]
 
-	if err = rr.decodeRData(data, endq+10); err != nil {
+	if err = rr.decodeRData(data, endq+10, buffer); err != nil {
 		return 0, err
 	}
 
@@ -433,7 +450,7 @@ func (rr *DNSResourceRecord) String() string {
 	return "..."
 }
 
-func (rr *DNSResourceRecord) decodeRData(data []byte, offset int) error {
+func (rr *DNSResourceRecord) decodeRData(data []byte, offset int, buffer *[]byte) error {
 	switch rr.Type {
 	case DNSTypeA:
 		rr.IP = rr.Data
@@ -444,30 +461,30 @@ func (rr *DNSResourceRecord) decodeRData(data []byte, offset int) error {
 	case DNSTypeHINFO:
 		rr.TXT = rr.Data
 	case DNSTypeNS:
-		name, _, err := decodeName(data, offset)
+		name, _, err := decodeName(data, offset, buffer)
 		if err != nil {
 			return err
 		}
 		rr.NS = name
 	case DNSTypeCNAME:
-		name, _, err := decodeName(data, offset)
+		name, _, err := decodeName(data, offset, buffer)
 		if err != nil {
 			return err
 		}
 		rr.CNAME = name
 	case DNSTypePTR:
-		name, _, err := decodeName(data, offset)
+		name, _, err := decodeName(data, offset, buffer)
 		if err != nil {
 			return err
 		}
 		rr.PTR = name
 	case DNSTypeSOA:
-		name, endq, err := decodeName(data, offset)
+		name, endq, err := decodeName(data, offset, buffer)
 		if err != nil {
 			return err
 		}
 		rr.SOA.MName = name
-		name, endq, err = decodeName(data, endq)
+		name, endq, err = decodeName(data, endq, buffer)
 		if err != nil {
 			return err
 		}
@@ -479,7 +496,7 @@ func (rr *DNSResourceRecord) decodeRData(data []byte, offset int) error {
 		rr.SOA.Minimum = binary.BigEndian.Uint32(data[endq+16 : endq+20])
 	case DNSTypeMX:
 		rr.MX.Preference = binary.BigEndian.Uint16(data[offset : offset+2])
-		name, _, err := decodeName(data, offset+2)
+		name, _, err := decodeName(data, offset+2, buffer)
 		if err != nil {
 			return err
 		}
@@ -488,7 +505,7 @@ func (rr *DNSResourceRecord) decodeRData(data []byte, offset int) error {
 		rr.SRV.Priority = binary.BigEndian.Uint16(data[offset : offset+2])
 		rr.SRV.Weight = binary.BigEndian.Uint16(data[offset+2 : offset+4])
 		rr.SRV.Port = binary.BigEndian.Uint16(data[offset+4 : offset+6])
-		name, _, err := decodeName(data, offset+6)
+		name, _, err := decodeName(data, offset+6, buffer)
 		if err != nil {
 			return err
 		}

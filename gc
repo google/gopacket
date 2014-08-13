@@ -219,7 +219,7 @@ BENCHMARK_MARKER_DO_NOT_CHANGE
 Go version $(go version)
 
 
-TEST BENCHMARKS
+TEST BENCHMARKS "$BENCH"
 EOF
 # go seems to have trouble with 'go test --bench=. ./...'
 go test --test.bench="$BENCH" 2>&1 | tee -a $COMMIT_FILE
@@ -231,7 +231,9 @@ cat >> $COMMIT_FILE <<EOF
 
 PCAP BENCHMARK
 EOF
-go run pcap/gopacket_benchmark/*.go 2>&1 | tee -a $COMMIT_FILE
+if [ "$BENCH" -eq ".*" ]; then
+  go run pcap/gopacket_benchmark/*.go 2>&1 | tee -a $COMMIT_FILE
+fi
 
 
 
@@ -257,7 +259,9 @@ cat >> $COMMIT_FILE <<EOF
 
 OLD PCAP BENCHMARK
 EOF
-go run pcap/gopacket_benchmark/*.go 2>&1 | tee -a $COMMIT_FILE
+if [ "$BENCH" -eq ".*" ]; then
+  go run pcap/gopacket_benchmark/*.go 2>&1 | tee -a $COMMIT_FILE
+fi
 
 
 
