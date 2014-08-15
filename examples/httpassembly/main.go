@@ -12,6 +12,7 @@ package main
 import (
 	"bufio"
 	"code.google.com/p/gopacket"
+	"code.google.com/p/gopacket/examples/util"
 	"code.google.com/p/gopacket/layers"
 	"code.google.com/p/gopacket/pcap"
 	"code.google.com/p/gopacket/tcpassembly"
@@ -69,7 +70,7 @@ func (h *httpStream) run() {
 }
 
 func main() {
-	flag.Parse()
+	defer util.Run()()
 	log.Printf("starting capture on interface %q", *iface)
 	// Set up pcap packet capture
 	handle, err := pcap.OpenLive(*iface, int32(*snaplen), true, pcap.BlockForever)

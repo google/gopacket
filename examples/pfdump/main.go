@@ -10,6 +10,7 @@ package main
 
 import (
 	"code.google.com/p/gopacket/dumpcommand"
+	"code.google.com/p/gopacket/examples/util"
 	"code.google.com/p/gopacket/pfring"
 	"flag"
 	"fmt"
@@ -24,7 +25,7 @@ var cluster = flag.Int("cluster", -1, "If >= 0, sets the pfring cluster to this 
 var clustertype = flag.Int("clustertype", int(pfring.ClusterPerFlow), "Cluster type")
 
 func main() {
-	flag.Parse()
+	defer util.Run()()
 	var ring *pfring.Ring
 	var err error
 	if ring, err = pfring.NewRing(*iface, uint32(*snaplen), pfring.FlagPromisc); err != nil {

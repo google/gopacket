@@ -10,6 +10,7 @@ package main
 
 import (
 	"code.google.com/p/gopacket/dumpcommand"
+	"code.google.com/p/gopacket/examples/util"
 	"code.google.com/p/gopacket/pcap"
 	"flag"
 	"fmt"
@@ -26,7 +27,7 @@ var tstype = flag.String("timestamp_type", "", "Type of timestamps to use")
 var promisc = flag.Bool("promisc", true, "Set promiscuous mode")
 
 func main() {
-	flag.Parse()
+	defer util.Run()()
 	var handle *pcap.Handle
 	var err error
 	if *fname != "" {

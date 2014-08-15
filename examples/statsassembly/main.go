@@ -15,6 +15,7 @@ package main
 
 import (
 	"code.google.com/p/gopacket"
+	"code.google.com/p/gopacket/examples/util"
 	"code.google.com/p/gopacket/layers"
 	"code.google.com/p/gopacket/pcap"
 	"code.google.com/p/gopacket/tcpassembly"
@@ -97,7 +98,7 @@ func (s *statsStream) ReassemblyComplete() {
 }
 
 func main() {
-	flag.Parse()
+	defer util.Run()()
 
 	flushDuration, err := time.ParseDuration(*flushAfter)
 	if err != nil {
