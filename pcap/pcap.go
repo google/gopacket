@@ -22,9 +22,19 @@ package pcap
 #define PCAP_NETMASK_UNKNOWN 0xffffffff
 #endif
 
-// Currently, there's a ton of old PCAP libs out there (including the default
-// install on ubuntu machines) that don't support timestamps, so handle those.
-#ifndef PCAP_TSTAMP_HOST
+// libpcap doesn't actually export its version in a #define-guardable way,
+// so we have to use other defined things to differentiate versions.
+// We assume at least libpcap v1.1 at the moment.
+// See http://upstream-tracker.org/versions/libpcap.html
+
+#ifndef PCAP_ERROR_TSTAMP_PRECISION_NOTSUP  // < v1.5
+
+int pcap_set_immediate_mode(pcap_t *p, int mode) {
+  return PCAP_ERROR;
+}
+
+#ifndef PCAP_TSTAMP_HOST  // < v1.2
+
 int pcap_set_tstamp_type(pcap_t* p, int t) { return -1; }
 int pcap_list_tstamp_types(pcap_t* p, int** t) { return 0; }
 void pcap_free_tstamp_types(int *tstamp_types) {}
@@ -34,7 +44,10 @@ const char* pcap_tstamp_type_val_to_name(int t) {
 int pcap_tstamp_type_name_to_val(const char* t) {
 	return PCAP_ERROR;
 }
-#endif
+
+#endif  // < v1.2
+#endif  // < v1.5
+
 #ifndef PCAP_ERROR_PROMISC_PERM_DENIED
 #define PCAP_ERROR_PROMISC_PERM_DENIED -11
 #endif
@@ -491,6 +504,26 @@ func (p *Handle) WritePacketData(data []byte) (err error) {
 	return
 }
 
+// Direction is used by Handle.SetDirection.
+type Direction uint8
+
+const (
+	DirectionIn    Direction = C.PCAP_D_IN
+	DirectionOut   Direction = C.PCAP_D_OUT
+	DirectionInOut Direction = C.PCAP_D_INOUT
+)
+
+// SetDirection sets the direction for which packets will be captured.
+func (p *Handle) SetDirection(direction Direction) error {
+	if direction != DirectionIn && direction != DirectionOut && direction != DirectionInOut {
+		return fmt.Errorf("Invalid direction: %v", direction)
+	}
+	if status := C.pcap_setdirection(p.cptr, (C.pcap_direction_t)(direction)); status < 0 {
+		return statusError(status)
+	}
+	return nil
+}
+
 // TimestampSource tells PCAP which type of timestamp to use for packets.
 type TimestampSource C.int
 
@@ -634,6 +667,28 @@ func (p *InactiveHandle) SetRFMon(monitor bool) error {
 		return statusError(canset)
 	}
 	if status := C.pcap_set_rfmon(p.cptr, mon); status != 0 {
+		return statusError(status)
+	}
+	return nil
+}
+
+// SetBufferSize sets the buffer size (in bytes) of the handle.
+func (p *InactiveHandle) SetBufferSize(bufferSize int) error {
+	if status := C.pcap_set_buffer_size(p.cptr, C.int(bufferSize)); status < 0 {
+		return statusError(status)
+	}
+	return nil
+}
+
+// SetImmediateMode sets (or unsets) the immediate mode of the
+// handle. In immediate mode, packets are delivered to the application
+// as soon as they arrive.  In other words, this overrides SetTimeout.
+func (p *InactiveHandle) SetImmediateMode(mode bool) error {
+	var md C.int
+	if mode {
+		md = 1
+	}
+	if status := C.pcap_set_immediate_mode(p.cptr, md); status < 0 {
 		return statusError(status)
 	}
 	return nil
