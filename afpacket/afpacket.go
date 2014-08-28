@@ -343,3 +343,9 @@ func (h *TPacket) SetFanout(t FanoutType, id uint16) error {
 	_, err := C.setsockopt(h.fd, C.SOL_PACKET, C.PACKET_FANOUT, unsafe.Pointer(&arg), C.socklen_t(unsafe.Sizeof(arg)))
 	return err
 }
+
+// WritePacketData transmits a raw packet.
+func (h *TPacket) WritePacketData(pkt []byte) error {
+	_, err := C.write(h.fd, unsafe.Pointer(&pkt[0]), C.size_t(len(pkt)))
+	return err
+}
