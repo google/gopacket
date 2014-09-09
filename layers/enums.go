@@ -114,6 +114,7 @@ const (
 	LinkTypeARCNetLinux    LinkType = 129
 	LinkTypeLinuxIRDA      LinkType = 144
 	LinkTypeLinuxLAPD      LinkType = 177
+	LinkTypeLinuxUSB       LinkType = 220
 )
 
 // PPPoECode is the PPPoE code enum, taken from http://tools.ietf.org/html/rfc2516
@@ -278,6 +279,7 @@ var (
 	EAPOLTypeMetadata        [256]EnumMetadata
 	ProtocolFamilyMetadata   [256]EnumMetadata
 	Dot11TypeMetadata        [256]EnumMetadata
+	USBTypeMetadata          [256]EnumMetadata
 )
 
 func (a EthernetType) Decode(data []byte, p gopacket.PacketBuilder) error {
@@ -480,6 +482,7 @@ func init() {
 	LinkTypeMetadata[LinkTypeRaw] = EnumMetadata{DecodeWith: gopacket.DecodeFunc(decodeIPv4or6), Name: "Raw"}
 	LinkTypeMetadata[LinkTypePFLog] = EnumMetadata{DecodeWith: gopacket.DecodeFunc(decodePFLog), Name: "PFLog"}
 	LinkTypeMetadata[LinkTypeIEEE80211Radio] = EnumMetadata{DecodeWith: gopacket.DecodeFunc(decodeRadioTap), Name: "RadioTap"}
+	LinkTypeMetadata[LinkTypeLinuxUSB] = EnumMetadata{DecodeWith: gopacket.DecodeFunc(decodeUSB), Name: "USB"}
 
 	FDDIFrameControlMetadata[FDDIFrameControlLLC] = EnumMetadata{DecodeWith: gopacket.DecodeFunc(decodeLLC), Name: "LLC"}
 
@@ -529,4 +532,8 @@ func init() {
 	Dot11TypeMetadata[Dot11TypeDataQOSNull] = EnumMetadata{DecodeWith: gopacket.DecodeFunc(decodeDot11DataQOSNull), Name: "DataQOSNull", LayerType: LayerTypeDot11DataQOSNull}
 	Dot11TypeMetadata[Dot11TypeDataQOSCFPollNoData] = EnumMetadata{DecodeWith: gopacket.DecodeFunc(decodeDot11DataQOSCFPollNoData), Name: "DataQOSCFPollNoData", LayerType: LayerTypeDot11DataQOSCFPollNoData}
 	Dot11TypeMetadata[Dot11TypeDataQOSCFAckPollNoData] = EnumMetadata{DecodeWith: gopacket.DecodeFunc(decodeDot11DataQOSCFAckPollNoData), Name: "DataQOSCFAckPollNoData", LayerType: LayerTypeDot11DataQOSCFAckPollNoData}
+
+	USBTypeMetadata[USBTransportTypeInterrupt] = EnumMetadata{DecodeWith: gopacket.DecodeFunc(decodeUSBInterrupt), Name: "Interrupt", LayerType: LayerTypeUSBInterrupt}
+	USBTypeMetadata[USBTransportTypeControl] = EnumMetadata{DecodeWith: gopacket.DecodeFunc(decodeUSBControl), Name: "Control", LayerType: LayerTypeUSBControl}
+	USBTypeMetadata[USBTransportTypeBulk] = EnumMetadata{DecodeWith: gopacket.DecodeFunc(decodeUSBBulk), Name: "Bulk", LayerType: LayerTypeUSBBulk}
 }

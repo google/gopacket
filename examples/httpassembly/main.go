@@ -25,6 +25,7 @@ import (
 )
 
 var iface = flag.String("i", "eth0", "Interface to get packets from")
+var fname = flag.String("r", "", "Filename to read from, overrides -i")
 var snaplen = flag.Int("s", 1600, "SnapLen for pcap packet capture")
 var filter = flag.String("f", "tcp and dst port 80", "BPF filter for pcap")
 var logAllPackets = flag.Bool("v", false, "Logs every packet in great detail")
@@ -72,11 +73,24 @@ func (h *httpStream) run() {
 func main() {
 	defer util.Run()()
 	log.Printf("starting capture on interface %q", *iface)
+
+	var handle *pcap.Handle
+	var err error
+
 	// Set up pcap packet capture
-	handle, err := pcap.OpenLive(*iface, int32(*snaplen), true, pcap.BlockForever)
-	if err != nil {
-		panic(err)
+	if *fname != "" {
+		log.Printf("Reading from pcap dump %q", *fname)
+		if handle, err = pcap.OpenOffline(*fname); err != nil {
+			log.Fatal("PCAP OpenOffline error:", err)
+		}
+	} else {
+		log.Printf("starting capture on interface %q", *iface)
+		if handle, err = pcap.OpenLive(*iface, int32(*snaplen), true, pcap.BlockForever); err != nil {
+			log.Fatal("error:", err)
+		}
+
 	}
+
 	if err := handle.SetBPFFilter(*filter); err != nil {
 		panic(err)
 	}
