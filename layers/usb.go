@@ -9,7 +9,6 @@ package layers
 import (
 	"code.google.com/p/gopacket"
 	"encoding/binary"
-	"fmt"
 )
 
 type USBEventType uint8
@@ -134,11 +133,11 @@ type USB struct {
 	BusID          uint16
 	TimestampSec   int64
 	TimestampUsec  int32
-	Setupbool
-	Databool
-	Status        int32
-	UrbLength     uint32
-	UrbDataLength uint32
+	Setup          bool
+	Data           bool
+	Status         int32
+	UrbLength      uint32
+	UrbDataLength  uint32
 
 	UrbInterval            uint32
 	UrbStartFrame          uint32

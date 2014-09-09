@@ -3,7 +3,7 @@
 package layers
 
 // Created by gen.go, don't edit manually
-// Generated at 2014-07-28 10:58:32.580792402 -0600 MDT
+// Generated at 2014-09-09 09:46:03.976078106 -0600 MDT
 // Fetched from "http://www.iana.org/assignments/service-names-port-numbers/service-names-port-numbers.xml"
 
 // TCPPortNames contains the port names for all TCP ports.
@@ -3473,7 +3473,7 @@ var tcpPortNames = map[TCPPort]string{
 	3838:  "sos",
 	3839:  "amx-rms",
 	3840:  "flirtmitmir",
-	3841:  "zfirm-shiprush3",
+	3841:  "shiprush-db-svr",
 	3842:  "nhci",
 	3843:  "quest-agent",
 	3844:  "rnm",
@@ -4216,6 +4216,9 @@ var tcpPortNames = map[TCPPort]string{
 	5226:  "hp-status",
 	5227:  "perfd",
 	5228:  "hpvroom",
+	5229:  "jaxflow",
+	5230:  "jaxflow-data",
+	5231:  "crusecontrol",
 	5232:  "csedaemon",
 	5233:  "enfs",
 	5234:  "eenet",
@@ -4351,6 +4354,7 @@ var tcpPortNames = map[TCPPort]string{
 	5583:  "tmo-icon-sync",
 	5584:  "bis-web",
 	5585:  "bis-sync",
+	5586:  "att-mt-sms",
 	5597:  "ininmessaging",
 	5598:  "mctfeed",
 	5599:  "esinstall",
@@ -4435,6 +4439,7 @@ var tcpPortNames = map[TCPPort]string{
 	5793:  "xtreamx",
 	5813:  "icmpd",
 	5814:  "spt-automation",
+	5841:  "shiprush-d-ch",
 	5842:  "reversion",
 	5859:  "wherehoo",
 	5863:  "ppsuitemsg",
@@ -5206,6 +5211,7 @@ var tcpPortNames = map[TCPPort]string{
 	10003: "documentum-s",
 	10004: "emcrmirccd",
 	10005: "emcrmird",
+	10006: "netapp-sync",
 	10007: "mvs-capacity",
 	10008: "octopus",
 	10009: "swdtp-sv",
@@ -5506,6 +5512,7 @@ var tcpPortNames = map[TCPPort]string{
 	24386: "intel-rci",
 	24465: "tonidods",
 	24554: "binkp",
+	24577: "bilobit",
 	24676: "canditv",
 	24677: "flashfiler",
 	24678: "proactivate",
@@ -9124,7 +9131,6 @@ var udpPortNames = map[UDPPort]string{
 	3838:  "sos",
 	3839:  "amx-rms",
 	3840:  "flirtmitmir",
-	3841:  "zfirm-shiprush3",
 	3842:  "nhci",
 	3843:  "quest-agent",
 	3844:  "rnm",
@@ -9647,6 +9653,7 @@ var udpPortNames = map[UDPPort]string{
 	4784:  "bfd-multi-ctl",
 	4785:  "cncp",
 	4789:  "vxlan",
+	4790:  "vxlan-gpe",
 	4800:  "iims",
 	4801:  "iwec",
 	4802:  "ilss",
@@ -9961,6 +9968,7 @@ var udpPortNames = map[UDPPort]string{
 	5682:  "brightcore",
 	5683:  "coap",
 	5684:  "coaps",
+	5687:  "gog-multiplayer",
 	5688:  "ggz",
 	5689:  "qmvideo",
 	5713:  "proshareaudio",
@@ -10940,6 +10948,7 @@ var udpPortNames = map[UDPPort]string{
 	24386: "intel-rci",
 	24465: "tonidods",
 	24554: "binkp",
+	24577: "bilobit-update",
 	24676: "canditv",
 	24677: "flashfiler",
 	24678: "proactivate",
@@ -11098,6 +11107,7 @@ var sctpPortNames = map[SCTPPort]string{
 	1021:  "exp1",
 	1022:  "exp2",
 	1167:  "cisco-ipsla",
+	1720:  "h323hostcall",
 	2049:  "nfs",
 	2225:  "rcip-itu",
 	2904:  "m2ua",
@@ -11129,6 +11139,7 @@ var sctpPortNames = map[SCTPPort]string{
 	6704:  "frc-hp",
 	6705:  "frc-mp",
 	6706:  "frc-lp",
+	6970:  "conductor-mpx",
 	7626:  "simco",
 	8471:  "pim-port",
 	9082:  "lcs-ap",

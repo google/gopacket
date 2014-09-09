@@ -89,32 +89,32 @@ type LinkType uint8
 
 const (
 	// According to pcap-linktype(7).
-	LinkTypeNull                LinkType = 0
-	LinkTypeEthernet            LinkType = 1
-	LinkTypeTokenRing           LinkType = 6
-	LinkTypeArcNet              LinkType = 7
-	LinkTypeSLIP                LinkType = 8
-	LinkTypePPP                 LinkType = 9
-	LinkTypeFDDI                LinkType = 10
-	LinkTypeATM_RFC1483         LinkType = 100
-	LinkTypeRaw                 LinkType = 101
-	LinkTypePPP_HDLC            LinkType = 50
-	LinkTypePPPEthernet         LinkType = 51
-	LinkTypeC_HDLC              LinkType = 104
-	LinkTypeIEEE802_11          LinkType = 105
-	LinkTypeFRelay              LinkType = 107
-	LinkTypeLoop                LinkType = 108
-	LinkTypeLinuxSLL            LinkType = 113
-	LinkTypeLTalk               LinkType = 104
-	LinkTypePFLog               LinkType = 117
-	LinkTypePrismHeader         LinkType = 119
-	LinkTypeIPOverFC            LinkType = 122
-	LinkTypeSunATM              LinkType = 123
-	LinkTypeIEEE80211Radio      LinkType = 127
-	LinkTypeARCNetLinux         LinkType = 129
-	LinkTypeLinuxIRDA           LinkType = 144
-	LinkTypeLinuxLAPD           LinkType = 177
-	LinkTypeLinuxUSB            LinkType = 220
+	LinkTypeNull           LinkType = 0
+	LinkTypeEthernet       LinkType = 1
+	LinkTypeTokenRing      LinkType = 6
+	LinkTypeArcNet         LinkType = 7
+	LinkTypeSLIP           LinkType = 8
+	LinkTypePPP            LinkType = 9
+	LinkTypeFDDI           LinkType = 10
+	LinkTypeATM_RFC1483    LinkType = 100
+	LinkTypeRaw            LinkType = 101
+	LinkTypePPP_HDLC       LinkType = 50
+	LinkTypePPPEthernet    LinkType = 51
+	LinkTypeC_HDLC         LinkType = 104
+	LinkTypeIEEE802_11     LinkType = 105
+	LinkTypeFRelay         LinkType = 107
+	LinkTypeLoop           LinkType = 108
+	LinkTypeLinuxSLL       LinkType = 113
+	LinkTypeLTalk          LinkType = 104
+	LinkTypePFLog          LinkType = 117
+	LinkTypePrismHeader    LinkType = 119
+	LinkTypeIPOverFC       LinkType = 122
+	LinkTypeSunATM         LinkType = 123
+	LinkTypeIEEE80211Radio LinkType = 127
+	LinkTypeARCNetLinux    LinkType = 129
+	LinkTypeLinuxIRDA      LinkType = 144
+	LinkTypeLinuxLAPD      LinkType = 177
+	LinkTypeLinuxUSB       LinkType = 220
 )
 
 // PPPoECode is the PPPoE code enum, taken from http://tools.ietf.org/html/rfc2516
@@ -482,7 +482,7 @@ func init() {
 	LinkTypeMetadata[LinkTypeRaw] = EnumMetadata{DecodeWith: gopacket.DecodeFunc(decodeIPv4or6), Name: "Raw"}
 	LinkTypeMetadata[LinkTypePFLog] = EnumMetadata{DecodeWith: gopacket.DecodeFunc(decodePFLog), Name: "PFLog"}
 	LinkTypeMetadata[LinkTypeIEEE80211Radio] = EnumMetadata{DecodeWith: gopacket.DecodeFunc(decodeRadioTap), Name: "RadioTap"}
-	LinkTypeMetadata[LinkTypeLinuxUSBLinuxMapped] = EnumMetadata{DecodeWith: gopacket.DecodeFunc(decodeUSB), Name: "USB"}
+	LinkTypeMetadata[LinkTypeLinuxUSB] = EnumMetadata{DecodeWith: gopacket.DecodeFunc(decodeUSB), Name: "USB"}
 
 	FDDIFrameControlMetadata[FDDIFrameControlLLC] = EnumMetadata{DecodeWith: gopacket.DecodeFunc(decodeLLC), Name: "LLC"}
 
