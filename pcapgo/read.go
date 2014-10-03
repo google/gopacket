@@ -106,7 +106,7 @@ func (r *Reader) readPacketHeader() (ci gopacket.CaptureInfo, err error) {
 		err = io.ErrUnexpectedEOF
 		return
 	}
-	ci.Timestamp = time.Unix(int64(r.byteOrder.Uint32(r.buf[0:4])), int64(r.byteOrder.Uint32(r.buf[4:8]))).UTC()
+	ci.Timestamp = time.Unix(int64(r.byteOrder.Uint32(r.buf[0:4])), int64(r.byteOrder.Uint32(r.buf[4:8])*1000)).UTC()
 	ci.CaptureLength = int(r.byteOrder.Uint32(r.buf[8:12]))
 	ci.Length = int(r.byteOrder.Uint32(r.buf[12:16]))
 	return
