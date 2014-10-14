@@ -7,9 +7,18 @@
 package layers
 
 import (
-	"code.google.com/p/gopacket"
 	"encoding/binary"
 	"errors"
+
+	"code.google.com/p/gopacket"
+)
+
+type PFDirection uint8
+
+const (
+	PFDirectionInOut PFDirection = 0
+	PFDirectionIn    PFDirection = 1
+	PFDirectionOut   PFDirection = 2
 )
 
 // PFLog provides the layer for 'pf' packet-filter logging, as described at
@@ -21,7 +30,12 @@ type PFLog struct {
 	Action, Reason      uint8
 	IFName, Ruleset     []byte
 	RuleNum, SubruleNum uint32
-	// There's some other fields here that we currently don't pull out.
+	UID                 uint32
+	PID                 int32
+	RuleUID             uint32
+	RulePID             int32
+	Direction           PFDirection
+	// The remainder is padding
 }
 
 func (pf *PFLog) DecodeFromBytes(data []byte, df gopacket.DecodeFeedback) error {
@@ -33,6 +47,11 @@ func (pf *PFLog) DecodeFromBytes(data []byte, df gopacket.DecodeFeedback) error 
 	pf.Ruleset = data[20:36]
 	pf.RuleNum = binary.BigEndian.Uint32(data[36:40])
 	pf.SubruleNum = binary.BigEndian.Uint32(data[40:44])
+	pf.UID = binary.BigEndian.Uint32(data[44:48])
+	pf.PID = int32(binary.BigEndian.Uint32(data[48:52]))
+	pf.RuleUID = binary.BigEndian.Uint32(data[52:56])
+	pf.RulePID = int32(binary.BigEndian.Uint32(data[56:60]))
+	pf.Direction = PFDirection(data[60])
 	if pf.Length%4 != 1 {
 		return errors.New("PFLog header length should be 3 less than multiple of 4")
 	}
