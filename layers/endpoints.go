@@ -64,7 +64,7 @@ func NewMACEndpoint(a net.HardwareAddr) gopacket.Endpoint {
 	return gopacket.NewEndpoint(EndpointMAC, []byte(a))
 }
 func newPortEndpoint(t gopacket.EndpointType, p uint16) gopacket.Endpoint {
-	return gopacket.NewEndpoint(t, []byte{byte(p >> 16), byte(p)})
+	return gopacket.NewEndpoint(t, []byte{byte(p >> 8), byte(p)})
 }
 
 // NewTCPPortEndpoint returns an endpoint based on a TCP port.
