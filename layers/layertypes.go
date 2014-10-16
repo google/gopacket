@@ -114,6 +114,7 @@ var (
 	LayerTypeUSBControl                  = gopacket.RegisterLayerType(110, gopacket.LayerTypeMetadata{"USBControl", gopacket.DecodeFunc(decodeUSBControl)})
 	LayerTypeUSBInterrupt                = gopacket.RegisterLayerType(111, gopacket.LayerTypeMetadata{"USBInterrupt", gopacket.DecodeFunc(decodeUSBInterrupt)})
 	LayerTypeUSBBulk                     = gopacket.RegisterLayerType(112, gopacket.LayerTypeMetadata{"USBBulk", gopacket.DecodeFunc(decodeUSBBulk)})
+	LayerTypeLinuxSLL                    = gopacket.RegisterLayerType(113, gopacket.LayerTypeMetadata{"Linux SLL", gopacket.DecodeFunc(decodeLinuxSLL)})
 )
 
 var (
