@@ -407,7 +407,8 @@ func (p *Handle) SetBPFFilter(expr string) (err error) {
 			(*C.bpf_u_int32)(unsafe.Pointer(&maskp)),
 			errorBuf,
 		) {
-			return errors.New(C.GoString(errorBuf))
+			// We can't lookup the network, but that could be because the interface
+			// doesn't have an IPv4.
 		}
 	}
 
