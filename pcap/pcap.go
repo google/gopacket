@@ -390,17 +390,25 @@ func (p *Handle) ListDataLinks() (datalinks []Datalink, err error) {
 
 // SetBPFFilter compiles and sets a BPF filter for the pcap handle.
 func (p *Handle) SetBPFFilter(expr string) (err error) {
-	dev := C.CString(p.device)
-	defer C.free(unsafe.Pointer(dev))
-
 	errorBuf := (*C.char)(C.calloc(errorBufferSize, 1))
 	defer C.free(unsafe.Pointer(errorBuf))
 
 	var netp uint32
 	var maskp uint32
 
-	if -1 == C.pcap_lookupnet(dev, (*C.bpf_u_int32)(unsafe.Pointer(&netp)), (*C.bpf_u_int32)(unsafe.Pointer(&maskp)), errorBuf) {
-		return errors.New(C.GoString(errorBuf))
+	// Only do the lookup on network interfaces.
+	// No device indicates we're handling a pcap file.
+	if len(p.device) > 0 {
+		dev := C.CString(p.device)
+		defer C.free(unsafe.Pointer(dev))
+		if -1 == C.pcap_lookupnet(
+			dev,
+			(*C.bpf_u_int32)(unsafe.Pointer(&netp)),
+			(*C.bpf_u_int32)(unsafe.Pointer(&maskp)),
+			errorBuf,
+		) {
+			return errors.New(C.GoString(errorBuf))
+		}
 	}
 
 	var bpf _Ctype_struct_bpf_program

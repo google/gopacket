@@ -11,17 +11,18 @@ package main
 
 import (
 	"bufio"
+	"flag"
+	"io"
+	"log"
+	"net/http"
+	"time"
+
 	"code.google.com/p/gopacket"
 	"code.google.com/p/gopacket/examples/util"
 	"code.google.com/p/gopacket/layers"
 	"code.google.com/p/gopacket/pcap"
 	"code.google.com/p/gopacket/tcpassembly"
 	"code.google.com/p/gopacket/tcpassembly/tcpreader"
-	"flag"
-	"io"
-	"log"
-	"net/http"
-	"time"
 )
 
 var iface = flag.String("i", "eth0", "Interface to get packets from")
@@ -72,27 +73,23 @@ func (h *httpStream) run() {
 
 func main() {
 	defer util.Run()()
-	log.Printf("starting capture on interface %q", *iface)
-
 	var handle *pcap.Handle
 	var err error
 
 	// Set up pcap packet capture
 	if *fname != "" {
 		log.Printf("Reading from pcap dump %q", *fname)
-		if handle, err = pcap.OpenOffline(*fname); err != nil {
-			log.Fatal("PCAP OpenOffline error:", err)
-		}
+		handle, err = pcap.OpenOffline(*fname)
 	} else {
-		log.Printf("starting capture on interface %q", *iface)
-		if handle, err = pcap.OpenLive(*iface, int32(*snaplen), true, pcap.BlockForever); err != nil {
-			log.Fatal("error:", err)
-		}
-
+		log.Printf("Starting capture on interface %q", *iface)
+		handle, err = pcap.OpenLive(*iface, int32(*snaplen), true, pcap.BlockForever)
+	}
+	if err != nil {
+		log.Fatal(err)
 	}
 
 	if err := handle.SetBPFFilter(*filter); err != nil {
-		panic(err)
+		log.Fatal(err)
 	}
 
 	// Set up assembly
@@ -108,6 +105,10 @@ func main() {
 	for {
 		select {
 		case packet := <-packets:
+			// A nil packet indicates the end of a pcap file.
+			if packet == nil {
+				return
+			}
 			if *logAllPackets {
 				log.Println(packet)
 			}
