@@ -297,6 +297,9 @@ func (d *DNS) Payload() []byte {
 func decodeName(data []byte, offset int, buffer *[]byte) ([]byte, int, error) {
 	start := len(*buffer)
 	index := offset
+	if data[index] == 0x00 {
+		return nil, index + 1, nil
+	}
 loop:
 	for data[index] != 0x00 {
 		switch data[index] & 0xc0 {

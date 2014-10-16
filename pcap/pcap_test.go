@@ -38,8 +38,17 @@ func TestPcapFileRead(t *testing.T) {
 				layers.LayerTypeTCP,
 			},
 		},
+		{"test_dns.pcap",
+			10,
+			[]gopacket.LayerType{
+				layers.LayerTypeEthernet,
+				layers.LayerTypeIPv4,
+				layers.LayerTypeUDP,
+				layers.LayerTypeDNS,
+			},
+		},
 	} {
-		t.Log("Processing file", file.filename)
+		t.Logf("\n\n\n\nProcessing file %s\n\n\n\n", file.filename)
 
 		packets := []gopacket.Packet{}
 		if handle, err := OpenOffline(file.filename); err != nil {
@@ -54,10 +63,10 @@ func TestPcapFileRead(t *testing.T) {
 			t.Fatal("Incorrect number of packets, want", file.num, "got", len(packets))
 		}
 		for i, p := range packets {
-			t.Log("Packet ", i, "\n", p.Dump())
+			t.Log(p.Dump())
 			for _, layertype := range file.expectedLayers {
 				if p.Layer(layertype) == nil {
-					t.Error("Packet", i, "has no layer type", layertype)
+					t.Fatal("Packet", i, "has no layer type\n%s", layertype, p.Dump())
 				}
 			}
 		}

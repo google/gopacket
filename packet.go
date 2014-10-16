@@ -107,6 +107,10 @@ type packet struct {
 	// metadata is the PacketMetadata for this packet
 	metadata PacketMetadata
 
+	// recoverPanics is true if we should recover from panics we see while
+	// decoding and set a DecodeFailure layer.
+	recoverPanics bool
+
 	// Pointers to the various important layers
 	link        LinkLayer
 	network     NetworkLayer
@@ -179,8 +183,10 @@ func (p *packet) addFinalDecodeError(err error, stack []byte) {
 }
 
 func (p *packet) recoverDecodeError() {
-	if r := recover(); r != nil {
-		p.addFinalDecodeError(fmt.Errorf("%v", r), debug.Stack())
+	if p.recoverPanics {
+		if r := recover(); r != nil {
+			p.addFinalDecodeError(fmt.Errorf("%v", r), debug.Stack())
+		}
 	}
 }
 
@@ -514,6 +520,12 @@ type DecodeOptions struct {
 	// there's any chance that those bytes WILL be changed, this will invalidate
 	// your packets.
 	NoCopy bool
+	// SkipDecodeRecovery skips over panic recovery during packet decoding.
+	// Normally, when packets decode, if a panic occurs, that panic is captured
+	// by a recover(), and a DecodeFailure layer is added to the packet detailing
+	// the issue.  If this flag is set, panics are instead allowed to continue up
+	// the stack.
+	SkipDecodeRecovery bool
 }
 
 // Default decoding provides the safest (but slowest) method for decoding
@@ -546,6 +558,7 @@ func NewPacket(data []byte, firstLayerDecoder Decoder, options DecodeOptions) Pa
 			next:   firstLayerDecoder,
 		}
 		p.layers = p.initialLayers[:0]
+		p.recoverPanics = !options.SkipDecodeRecovery
 		// Crazy craziness:
 		// If the following return statemet is REMOVED, and Lazy is FALSE, then
 		// eager packet processing becomes 17% FASTER.  No, there is no logical
@@ -562,6 +575,7 @@ func NewPacket(data []byte, firstLayerDecoder Decoder, options DecodeOptions) Pa
 		packet: packet{data: data},
 	}
 	p.layers = p.initialLayers[:0]
+	p.recoverPanics = !options.SkipDecodeRecovery
 	p.initialDecode(firstLayerDecoder)
 	return p
 }

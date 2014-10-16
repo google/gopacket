@@ -59,6 +59,10 @@ var testSimpleTCPPacket []byte = []byte{
 	0x0d, 0x0a,
 }
 
+var testDecodeOptions = gopacket.DecodeOptions{
+	SkipDecodeRecovery: true,
+}
+
 type nilDecodeFeedback struct{}
 
 func (n *nilDecodeFeedback) SetTruncated() {}
@@ -110,7 +114,7 @@ func BenchmarkDefault(b *testing.B) {
 }
 
 func getSerializeLayers() []gopacket.SerializableLayer {
-	p := gopacket.NewPacket(testSimpleTCPPacket, LinkTypeEthernet, gopacket.Default)
+	p := gopacket.NewPacket(testSimpleTCPPacket, LinkTypeEthernet, testDecodeOptions)
 	slayers := []gopacket.SerializableLayer{}
 	for _, l := range p.Layers() {
 		slayers = append(slayers, l.(gopacket.SerializableLayer))
@@ -228,7 +232,7 @@ func BenchmarkEndpoints(b *testing.B) {
 
 func BenchmarkTCPLayerFromDecodedPacket(b *testing.B) {
 	b.StopTimer()
-	p := gopacket.NewPacket(testSimpleTCPPacket, LinkTypeEthernet, gopacket.Default)
+	p := gopacket.NewPacket(testSimpleTCPPacket, LinkTypeEthernet, testDecodeOptions)
 	b.StartTimer()
 	for i := 0; i < b.N; i++ {
 		_ = p.Layer(LayerTypeTCP)
@@ -237,7 +241,7 @@ func BenchmarkTCPLayerFromDecodedPacket(b *testing.B) {
 
 func BenchmarkTCPLayerClassFromDecodedPacket(b *testing.B) {
 	b.StopTimer()
-	p := gopacket.NewPacket(testSimpleTCPPacket, LinkTypeEthernet, gopacket.Default)
+	p := gopacket.NewPacket(testSimpleTCPPacket, LinkTypeEthernet, testDecodeOptions)
 	lc := gopacket.NewLayerClass([]gopacket.LayerType{LayerTypeTCP})
 	b.StartTimer()
 	for i := 0; i < b.N; i++ {
@@ -247,7 +251,7 @@ func BenchmarkTCPLayerClassFromDecodedPacket(b *testing.B) {
 
 func BenchmarkTCPTransportLayerFromDecodedPacket(b *testing.B) {
 	b.StopTimer()
-	p := gopacket.NewPacket(testSimpleTCPPacket, LinkTypeEthernet, gopacket.Default)
+	p := gopacket.NewPacket(testSimpleTCPPacket, LinkTypeEthernet, testDecodeOptions)
 	b.StartTimer()
 	for i := 0; i < b.N; i++ {
 		_ = p.TransportLayer()
@@ -287,7 +291,7 @@ func BenchmarkDecodeFuncCallOverheadArrayCall(b *testing.B) {
 
 func BenchmarkFmtVerboseString(b *testing.B) {
 	b.StopTimer()
-	p := gopacket.NewPacket(testSimpleTCPPacket, LinkTypeEthernet, gopacket.Default)
+	p := gopacket.NewPacket(testSimpleTCPPacket, LinkTypeEthernet, testDecodeOptions)
 	b.StartTimer()
 	for i := 0; i < b.N; i++ {
 		fmt.Sprintf("%#v", p)
@@ -296,7 +300,7 @@ func BenchmarkFmtVerboseString(b *testing.B) {
 
 func BenchmarkPacketString(b *testing.B) {
 	b.StopTimer()
-	p := gopacket.NewPacket(testSimpleTCPPacket, LinkTypeEthernet, gopacket.Default)
+	p := gopacket.NewPacket(testSimpleTCPPacket, LinkTypeEthernet, testDecodeOptions)
 	b.StartTimer()
 	for i := 0; i < b.N; i++ {
 		p.String()
@@ -305,7 +309,7 @@ func BenchmarkPacketString(b *testing.B) {
 
 func BenchmarkPacketDumpString(b *testing.B) {
 	b.StopTimer()
-	p := gopacket.NewPacket(testSimpleTCPPacket, LinkTypeEthernet, gopacket.Default)
+	p := gopacket.NewPacket(testSimpleTCPPacket, LinkTypeEthernet, testDecodeOptions)
 	b.StartTimer()
 	for i := 0; i < b.N; i++ {
 		p.String()
@@ -473,7 +477,7 @@ func TestDecodeSmallTCPPacketHasEmptyPayload(t *testing.T) {
 		0x9a, 0xef, 0x00, 0x00, 0x00, 0x00, 0x2e, 0xc1, 0x27, 0x83, 0x50, 0x14,
 		0x00, 0x00, 0xc3, 0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
 	}
-	p := gopacket.NewPacket(smallPacket, LinkTypeEthernet, gopacket.Default)
+	p := gopacket.NewPacket(smallPacket, LinkTypeEthernet, testDecodeOptions)
 
 	if payload := p.Layer(gopacket.LayerTypePayload); payload != nil {
 		t.Error("Payload found for empty TCP packet")
@@ -491,7 +495,7 @@ func TestDecodeVLANPacket(t *testing.T) {
 			0x94, 0xe2, 0xd4, 0x0a, 0x00, 0x50, 0xdf, 0xab, 0x9c, 0xc6, 0xcd, 0x1e,
 			0xe5, 0xd1, 0x50, 0x10, 0x01, 0x00, 0x5a, 0x74, 0x00, 0x00, 0x00, 0x00,
 			0x00, 0x00, 0x00, 0x00,
-		}, LinkTypeEthernet, gopacket.Default)
+		}, LinkTypeEthernet, testDecodeOptions)
 	if err := p.ErrorLayer(); err != nil {
 		t.Error("Error while parsing vlan packet:", err)
 	}
@@ -602,7 +606,7 @@ func TestDecodeSCTPPackets(t *testing.T) {
 		[]gopacket.LayerType{LayerTypeSCTPShutdownComplete},
 	}
 	for i, data := range sctpPackets {
-		p := gopacket.NewPacket(data, LinkTypeEthernet, gopacket.Default)
+		p := gopacket.NewPacket(data, LinkTypeEthernet, testDecodeOptions)
 		for _, typ := range wantLayers[i] {
 			if p.Layer(typ) == nil {
 				t.Errorf("Packet %d missing layer type %v, got:", i, typ)
@@ -653,7 +657,7 @@ func TestDecodeCiscoDiscovery(t *testing.T) {
 		0x00, 0x16, 0x00, 0x11, 0x00, 0x00, 0x00, 0x01, 0x01, 0x01, 0xcc, 0x00, 0x04, 0xc0, 0xa8, 0x00,
 		0xfd,
 	}
-	p := gopacket.NewPacket(data, LinkTypeEthernet, gopacket.Default)
+	p := gopacket.NewPacket(data, LinkTypeEthernet, testDecodeOptions)
 	wantLayers := []gopacket.LayerType{LayerTypeEthernet, LayerTypeLLC, LayerTypeSNAP, LayerTypeCiscoDiscovery, LayerTypeCiscoDiscoveryInfo}
 	checkLayers(p, wantLayers, t)
 
@@ -718,7 +722,7 @@ func TestDecodeLinkLayerDiscovery(t *testing.T) {
 		0x35, 0x00, 0xfe, 0x05, 0x00, 0x80, 0xc2, 0x04, 0x00, 0x00, 0x00,
 	}
 
-	p := gopacket.NewPacket(data, LinkTypeEthernet, gopacket.Default)
+	p := gopacket.NewPacket(data, LinkTypeEthernet, testDecodeOptions)
 	wantLayers := []gopacket.LayerType{LayerTypeEthernet, LayerTypeLinkLayerDiscovery, LayerTypeLinkLayerDiscoveryInfo}
 	checkLayers(p, wantLayers, t)
 	lldpL := p.Layer(LayerTypeLinkLayerDiscovery)
@@ -818,7 +822,7 @@ func TestDecodeLinkLayerDiscovery(t *testing.T) {
 		0x00, 0x41, 0x00, 0x00,
 	}
 
-	p = gopacket.NewPacket(data, LinkTypeEthernet, gopacket.Default)
+	p = gopacket.NewPacket(data, LinkTypeEthernet, testDecodeOptions)
 	wantLayers = []gopacket.LayerType{LayerTypeEthernet, LayerTypeLinkLayerDiscovery, LayerTypeLinkLayerDiscoveryInfo}
 	checkLayers(p, wantLayers, t)
 	lldpL = p.Layer(LayerTypeLinkLayerDiscovery)
@@ -905,7 +909,7 @@ func TestDecodeNortelDiscovery(t *testing.T) {
 		0x00, 0x04, 0x38, 0xe0, 0xcc, 0xde, 0x80, 0x6a, 0x00, 0x01, 0x14, 0x00,
 		0x02, 0x00, 0x0f, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
 	}
-	p := gopacket.NewPacket(data, LinkTypeEthernet, gopacket.Default)
+	p := gopacket.NewPacket(data, LinkTypeEthernet, testDecodeOptions)
 	wantLayers := []gopacket.LayerType{LayerTypeEthernet, LayerTypeLLC, LayerTypeSNAP, LayerTypeNortelDiscovery}
 	checkLayers(p, wantLayers, t)
 
@@ -935,7 +939,7 @@ func TestDecodeIPv6Jumbogram(t *testing.T) {
 	dataStr := "\x00\x1f\xca\xb3v@$\xbe\x05'\x0b\x17\x86\xdd`\x00\x00\x00\x00\x00\x00@\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x01\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x02\x06\x00\xc2\x04\x00\x01\x11p\"\xb8\x00P\x00\x00\x00\x00\x00\x00\x00\x00P\x02 \x00l\xd8\x00\x00"
 	payload := strings.Repeat("payload", 9996)
 	data := []byte(dataStr + payload)
-	p := gopacket.NewPacket(data, LinkTypeEthernet, gopacket.Default)
+	p := gopacket.NewPacket(data, LinkTypeEthernet, testDecodeOptions)
 	checkLayers(p, []gopacket.LayerType{LayerTypeEthernet, LayerTypeIPv6, LayerTypeIPv6HopByHop, LayerTypeTCP, gopacket.LayerTypePayload}, t)
 	if p.ApplicationLayer() == nil {
 		t.Error("Packet has no application layer")
@@ -944,7 +948,7 @@ func TestDecodeIPv6Jumbogram(t *testing.T) {
 	}
 	// Check truncated for jumbograms
 	data = data[:len(data)-1]
-	p = gopacket.NewPacket(data, LinkTypeEthernet, gopacket.Default)
+	p = gopacket.NewPacket(data, LinkTypeEthernet, testDecodeOptions)
 	checkLayers(p, []gopacket.LayerType{LayerTypeEthernet, LayerTypeIPv6, LayerTypeIPv6HopByHop, LayerTypeTCP, gopacket.LayerTypePayload}, t)
 	if !p.Metadata().Truncated {
 		t.Error("Jumbogram should be truncated")
@@ -959,7 +963,7 @@ func TestDecodeUDPPacketTooSmall(t *testing.T) {
 		0x00, 0x01, 0x00, 0x72, 0xd5, 0xc7, 0xf1, 0x07, 0x00, 0x00, 0x01, 0x01, 0x00, 0x0d, 0x00, 0x00,
 		0x00, 0x14, 0x00, 0x00, 0x19, 0xba,
 	}
-	p := gopacket.NewPacket(data, LinkTypeEthernet, gopacket.Default)
+	p := gopacket.NewPacket(data, LinkTypeEthernet, testDecodeOptions)
 	checkLayers(p, []gopacket.LayerType{LayerTypeEthernet, LayerTypeDot1Q, LayerTypeIPv4, LayerTypeUDP, gopacket.LayerTypePayload}, t)
 	if !p.Metadata().Truncated {
 		t.Error("UDP short packet should be truncated")
@@ -994,7 +998,7 @@ var testICMP = []byte{
 }
 
 func TestICMP(t *testing.T) {
-	p := gopacket.NewPacket(testICMP, LinkTypeEthernet, gopacket.Default)
+	p := gopacket.NewPacket(testICMP, LinkTypeEthernet, testDecodeOptions)
 	if p.ErrorLayer() != nil {
 		t.Error("Failed to decode packet:", p.ErrorLayer().Error())
 	}
@@ -1025,7 +1029,7 @@ var testICMP6 = []byte{
 }
 
 func TestICMP6(t *testing.T) {
-	p := gopacket.NewPacket(testICMP6, LinkTypeEthernet, gopacket.Default)
+	p := gopacket.NewPacket(testICMP6, LinkTypeEthernet, testDecodeOptions)
 	if p.ErrorLayer() != nil {
 		t.Error("Failed to decode packet:", p.ErrorLayer().Error())
 	}
@@ -1060,7 +1064,7 @@ var testMPLS = []byte{
 }
 
 func TestMPLS(t *testing.T) {
-	p := gopacket.NewPacket(testMPLS, LinkTypeEthernet, gopacket.Default)
+	p := gopacket.NewPacket(testMPLS, LinkTypeEthernet, testDecodeOptions)
 	if p.ErrorLayer() != nil {
 		t.Error("Failed to decode packet:", p.ErrorLayer().Error())
 	}
@@ -1091,7 +1095,7 @@ var testPPPoE_ICMPv6 = []byte{
 }
 
 func TestPPPoE_ICMPv6(t *testing.T) {
-	p := gopacket.NewPacket(testPPPoE_ICMPv6, LinkTypeEthernet, gopacket.Default)
+	p := gopacket.NewPacket(testPPPoE_ICMPv6, LinkTypeEthernet, testDecodeOptions)
 	if p.ErrorLayer() != nil {
 		t.Error("Failed to decode packet:", p.ErrorLayer().Error())
 	}
@@ -1122,7 +1126,7 @@ var testPFLog_UDP = []byte{
 }
 
 func TestPFLog_UDP(t *testing.T) {
-	p := gopacket.NewPacket(testPFLog_UDP, LinkTypePFLog, gopacket.Default)
+	p := gopacket.NewPacket(testPFLog_UDP, LinkTypePFLog, testDecodeOptions)
 	if p.ErrorLayer() != nil {
 		t.Error("Failed to decode packet:", p.ErrorLayer().Error())
 	}
@@ -1171,7 +1175,7 @@ var testPacketMPLSInMPLS = []byte{
 }
 
 func TestPacketMPLSInMPLS(t *testing.T) {
-	p := gopacket.NewPacket(testPacketMPLSInMPLS, LinkTypeEthernet, gopacket.Default)
+	p := gopacket.NewPacket(testPacketMPLSInMPLS, LinkTypeEthernet, testDecodeOptions)
 	if p.ErrorLayer() != nil {
 		t.Error("Failed to decode packet:", p.ErrorLayer().Error())
 	}
@@ -1200,10 +1204,40 @@ var testPacketIPv4Fragmented = []byte{
 }
 
 func TestPacketIPv4Fragmented(t *testing.T) {
-	p := gopacket.NewPacket(testPacketIPv4Fragmented, LinkTypeEthernet, gopacket.Default)
+	p := gopacket.NewPacket(testPacketIPv4Fragmented, LinkTypeEthernet, testDecodeOptions)
 	if p.ErrorLayer() != nil {
 		t.Error("Failed to decode packet:", p.ErrorLayer().Error())
 	}
 	checkLayers(p, []gopacket.LayerType{LayerTypeEthernet, LayerTypeIPv4, gopacket.LayerTypeFragment}, t)
 	testSerializationWithOpts(t, p, testPacketIPv4Fragmented, gopacket.SerializeOptions{FixLengths: true, ComputeChecksums: true})
+}
+
+// testPacketDNSRegression is the packet:
+//   11:08:05.708342 IP 109.194.160.4.57766 > 95.211.92.14.53: 63000% [1au] A? picslife.ru. (40)
+//      0x0000:  0022 19b6 7e22 000f 35bb 0b40 0800 4500  ."..~"..5..@..E.
+//      0x0010:  0044 89c4 0000 3811 2f3d 6dc2 a004 5fd3  .D....8./=m..._.
+//      0x0020:  5c0e e1a6 0035 0030 a597 f618 0010 0001  \....5.0........
+//      0x0030:  0000 0000 0001 0870 6963 736c 6966 6502  .......picslife.
+//      0x0040:  7275 0000 0100 0100 0029 1000 0000 8000  ru.......)......
+//      0x0050:  0000                                     ..
+var testPacketDNSRegression = []byte{
+	0x00, 0x22, 0x19, 0xb6, 0x7e, 0x22, 0x00, 0x0f, 0x35, 0xbb, 0x0b, 0x40, 0x08, 0x00, 0x45, 0x00,
+	0x00, 0x44, 0x89, 0xc4, 0x00, 0x00, 0x38, 0x11, 0x2f, 0x3d, 0x6d, 0xc2, 0xa0, 0x04, 0x5f, 0xd3,
+	0x5c, 0x0e, 0xe1, 0xa6, 0x00, 0x35, 0x00, 0x30, 0xa5, 0x97, 0xf6, 0x18, 0x00, 0x10, 0x00, 0x01,
+	0x00, 0x00, 0x00, 0x00, 0x00, 0x01, 0x08, 0x70, 0x69, 0x63, 0x73, 0x6c, 0x69, 0x66, 0x65, 0x02,
+	0x72, 0x75, 0x00, 0x00, 0x01, 0x00, 0x01, 0x00, 0x00, 0x29, 0x10, 0x00, 0x00, 0x00, 0x80, 0x00,
+	0x00, 0x00,
+}
+
+func TestPacketDNSRegression(t *testing.T) {
+	p := gopacket.NewPacket(testPacketDNSRegression, LinkTypeEthernet, testDecodeOptions)
+	if p.ErrorLayer() != nil {
+		t.Error("Failed to decode packet:", p.ErrorLayer().Error())
+	}
+	checkLayers(p, []gopacket.LayerType{LayerTypeEthernet, LayerTypeIPv4, LayerTypeUDP, LayerTypeDNS}, t)
+}
+func BenchmarkDecodePacketDNSRegression(b *testing.B) {
+	for i := 0; i < b.N; i++ {
+		gopacket.NewPacket(testPacketDNSRegression, LinkTypeEthernet, gopacket.NoCopy)
+	}
 }
