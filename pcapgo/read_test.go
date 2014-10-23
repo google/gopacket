@@ -86,3 +86,34 @@ func TestPacket(t *testing.T) {
 		t.Errorf("buf mismatch:\nwant: %+v\ngot:  %+v", want, data)
 	}
 }
+
+func TestPacketNano(t *testing.T) {
+	test := []byte{
+		0x4d, 0x3c, 0xb2, 0xa1, 0x02, 0x00, 0x04, 0x00, // magic, maj, min
+		0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, // tz, sigfigs
+		0xff, 0xff, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, // snaplen, linkType
+		0x5A, 0xCC, 0x1A, 0x54, 0x01, 0x00, 0x00, 0x00, // sec, usec
+		0x04, 0x00, 0x00, 0x00, 0x08, 0x00, 0x00, 0x00, // cap len, full len
+		0x01, 0x02, 0x03, 0x04, // data
+	}
+
+	buf := bytes.NewBuffer(test)
+	r, err := NewReader(buf)
+
+	data, ci, err := r.ReadPacketData()
+	if err != nil {
+		t.Error(err)
+		t.FailNow()
+	}
+	if !ci.Timestamp.Equal(time.Date(2014, 9, 18, 12, 13, 14, 1, time.UTC)) {
+		t.Error("Invalid time read")
+		t.FailNow()
+	}
+	if ci.CaptureLength != 4 || ci.Length != 8 {
+		t.Error("Invalid CapLen or Len")
+	}
+	want := []byte{1, 2, 3, 4}
+	if !bytes.Equal(data, want) {
+		t.Errorf("buf mismatch:\nwant: %+v\ngot:  %+v", want, data)
+	}
+}

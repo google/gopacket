@@ -7,26 +7,28 @@
 package pcapgo
 
 import (
-	"code.google.com/p/gopacket"
-	"code.google.com/p/gopacket/layers"
 	"encoding/binary"
 	"errors"
 	"fmt"
 	"io"
 	"time"
+
+	"code.google.com/p/gopacket"
+	"code.google.com/p/gopacket/layers"
 )
 
 // Reader wraps an underlying io.Reader to read packet data in PCAP
 // format.  See http://wiki.wireshark.org/Development/LibpcapFileFormat
 // for information on the file format.
 //
-// We currenty read v2.4 file format with nanosecond timestamp resolution
-// in little-endian and big-endian encoding.
+// We currenty read v2.4 file format with nanosecond and microsecdond
+// timestamp resolution in little-endian and big-endian encoding.
 type Reader struct {
-	r            io.Reader
-	byteOrder    binary.ByteOrder
-	versionMajor uint16
-	versionMinor uint16
+	r              io.Reader
+	byteOrder      binary.ByteOrder
+	nanoSecsFactor uint32
+	versionMajor   uint16
+	versionMinor   uint16
 	// timezone
 	// sigfigs
 	snaplen  uint32
@@ -35,7 +37,9 @@ type Reader struct {
 	buf []byte
 }
 
-const magicNanosecondsBigendian = 0xD4C3B2A1
+const magicNanoseconds = 0xA1B23C4D
+const magicMicrosecondsBigendian = 0xD4C3B2A1
+const magicNanosecondsBigendian = 0x4D3CB2A1
 
 // NewReader returns a new reader object, for reading packet data from
 // the given reader. The reader must be open and header data is
@@ -64,8 +68,16 @@ func (r *Reader) readHeader() error {
 	}
 	if magic := binary.LittleEndian.Uint32(buf[0:4]); magic == magicNanoseconds {
 		r.byteOrder = binary.LittleEndian
+		r.nanoSecsFactor = 1
 	} else if magic == magicNanosecondsBigendian {
 		r.byteOrder = binary.BigEndian
+		r.nanoSecsFactor = 1
+	} else if magic == magicMicroseconds {
+		r.byteOrder = binary.LittleEndian
+		r.nanoSecsFactor = 1000
+	} else if magic == magicMicrosecondsBigendian {
+		r.byteOrder = binary.BigEndian
+		r.nanoSecsFactor = 1000
 	} else {
 		return errors.New(fmt.Sprintf("Unknown maigc %x", magic))
 	}
@@ -106,7 +118,7 @@ func (r *Reader) readPacketHeader() (ci gopacket.CaptureInfo, err error) {
 		err = io.ErrUnexpectedEOF
 		return
 	}
-	ci.Timestamp = time.Unix(int64(r.byteOrder.Uint32(r.buf[0:4])), int64(r.byteOrder.Uint32(r.buf[4:8])*1000)).UTC()
+	ci.Timestamp = time.Unix(int64(r.byteOrder.Uint32(r.buf[0:4])), int64(r.byteOrder.Uint32(r.buf[4:8])*r.nanoSecsFactor)).UTC()
 	ci.CaptureLength = int(r.byteOrder.Uint32(r.buf[8:12]))
 	ci.Length = int(r.byteOrder.Uint32(r.buf[12:16]))
 	return
