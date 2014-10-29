@@ -9,11 +9,12 @@
 package pcapgo
 
 import (
-	"code.google.com/p/gopacket"
-	"code.google.com/p/gopacket/layers"
 	"encoding/binary"
 	"fmt"
 	"io"
+
+	"code.google.com/p/gopacket"
+	"code.google.com/p/gopacket/layers"
 )
 
 // Writer wraps an underlying io.Writer to write packet data in PCAP
@@ -26,7 +27,7 @@ type Writer struct {
 	w io.Writer
 }
 
-const magicNanoseconds = 0xA1B2C3D4
+const magicMicroseconds = 0xA1B2C3D4
 const versionMajor = 2
 const versionMinor = 4
 
@@ -54,7 +55,7 @@ func NewWriter(w io.Writer) *Writer {
 // This must be called exactly once per output.
 func (w *Writer) WriteFileHeader(snaplen uint32, linktype layers.LinkType) error {
 	var buf [24]byte
-	binary.LittleEndian.PutUint32(buf[0:4], magicNanoseconds)
+	binary.LittleEndian.PutUint32(buf[0:4], magicMicroseconds)
 	binary.LittleEndian.PutUint16(buf[4:6], versionMajor)
 	binary.LittleEndian.PutUint16(buf[6:8], versionMinor)
 	// bytes 8:12 stay 0 (timezone = UTC)
