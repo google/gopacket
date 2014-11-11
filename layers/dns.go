@@ -294,7 +294,14 @@ func (d *DNS) Payload() []byte {
 	return nil
 }
 
-func decodeName(data []byte, offset int, buffer *[]byte) ([]byte, int, error) {
+var maxRecursion = errors.New("max DNS recursion level hit")
+
+const maxRecursionLevel = 255
+
+func decodeName(data []byte, offset int, buffer *[]byte, level int) ([]byte, int, error) {
+	if level > maxRecursionLevel {
+		return nil, 0, maxRecursion
+	}
 	start := len(*buffer)
 	index := offset
 	if data[index] == 0x00 {
@@ -347,7 +354,7 @@ loop:
 			// decodeName is written, calling it appends the decoded name to the
 			// current buffer.  We already have the start of the buffer, then, so
 			// once this call is done buffer[start:] will contain our full name.
-			_, _, err := decodeName(data, offsetp, buffer)
+			_, _, err := decodeName(data, offsetp, buffer, level+1)
 			if err != nil {
 				return nil, 0, err
 			}
@@ -373,7 +380,7 @@ type DNSQuestion struct {
 }
 
 func (q *DNSQuestion) decode(data []byte, offset int, df gopacket.DecodeFeedback, buffer *[]byte) (int, error) {
-	name, endq, err := decodeName(data, offset, buffer)
+	name, endq, err := decodeName(data, offset, buffer, 1)
 	if err != nil {
 		return 0, err
 	}
@@ -427,7 +434,7 @@ type DNSResourceRecord struct {
 
 // decode decodes the resource record, returning the total length of the record.
 func (rr *DNSResourceRecord) decode(data []byte, offset int, df gopacket.DecodeFeedback, buffer *[]byte) (int, error) {
-	name, endq, err := decodeName(data, offset, buffer)
+	name, endq, err := decodeName(data, offset, buffer, 1)
 	if err != nil {
 		return 0, err
 	}
@@ -464,30 +471,30 @@ func (rr *DNSResourceRecord) decodeRData(data []byte, offset int, buffer *[]byte
 	case DNSTypeHINFO:
 		rr.TXT = rr.Data
 	case DNSTypeNS:
-		name, _, err := decodeName(data, offset, buffer)
+		name, _, err := decodeName(data, offset, buffer, 1)
 		if err != nil {
 			return err
 		}
 		rr.NS = name
 	case DNSTypeCNAME:
-		name, _, err := decodeName(data, offset, buffer)
+		name, _, err := decodeName(data, offset, buffer, 1)
 		if err != nil {
 			return err
 		}
 		rr.CNAME = name
 	case DNSTypePTR:
-		name, _, err := decodeName(data, offset, buffer)
+		name, _, err := decodeName(data, offset, buffer, 1)
 		if err != nil {
 			return err
 		}
 		rr.PTR = name
 	case DNSTypeSOA:
-		name, endq, err := decodeName(data, offset, buffer)
+		name, endq, err := decodeName(data, offset, buffer, 1)
 		if err != nil {
 			return err
 		}
 		rr.SOA.MName = name
-		name, endq, err = decodeName(data, endq, buffer)
+		name, endq, err = decodeName(data, endq, buffer, 1)
 		if err != nil {
 			return err
 		}
@@ -499,7 +506,7 @@ func (rr *DNSResourceRecord) decodeRData(data []byte, offset int, buffer *[]byte
 		rr.SOA.Minimum = binary.BigEndian.Uint32(data[endq+16 : endq+20])
 	case DNSTypeMX:
 		rr.MX.Preference = binary.BigEndian.Uint16(data[offset : offset+2])
-		name, _, err := decodeName(data, offset+2, buffer)
+		name, _, err := decodeName(data, offset+2, buffer, 1)
 		if err != nil {
 			return err
 		}
@@ -508,7 +515,7 @@ func (rr *DNSResourceRecord) decodeRData(data []byte, offset int, buffer *[]byte
 		rr.SRV.Priority = binary.BigEndian.Uint16(data[offset : offset+2])
 		rr.SRV.Weight = binary.BigEndian.Uint16(data[offset+2 : offset+4])
 		rr.SRV.Port = binary.BigEndian.Uint16(data[offset+4 : offset+6])
-		name, _, err := decodeName(data, offset+6, buffer)
+		name, _, err := decodeName(data, offset+6, buffer, 1)
 		if err != nil {
 			return err
 		}
