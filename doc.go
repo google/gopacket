@@ -292,9 +292,9 @@ the packet's information.  A quick example:
      for _, layerType := range decoded {
        switch layerType {
          case layers.LayerTypeIPv6:
-           fmt.Println("    IP4 ", ip4.SrcIP, ip4.DstIP)
-         case layers.LayerTypeIPv4:
            fmt.Println("    IP6 ", ip6.SrcIP, ip6.DstIP)
+         case layers.LayerTypeIPv4:
+           fmt.Println("    IP4 ", ip4.SrcIP, ip4.DstIP)
        }
      }
    }
