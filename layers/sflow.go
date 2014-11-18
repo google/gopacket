@@ -1,3 +1,10 @@
+// Copyright 2014 Google, Inc. All rights reserved.
+//
+// Use of this source code is governed by a BSD-style license
+// that can be found in the LICENSE file in the root of the source
+// tree.
+
+
 /*
 This layer decodes SFlow version 5 datagrams.
 
@@ -62,32 +69,33 @@ in others they use the entire 4-byte value to store a number that
 will never be more than a few bits. In any case, there are a couple
 of types defined to handle the decoding of these bitfields, and
 that's why they're there. */
+
 package layers
 
 import (
 	"bytes"
+	"code.google.com/p/gopacket"
 	"encoding/binary"
 	"fmt"
 	"io"
 	"net"
-	"code.google.com/p/gopacket"
 )
 
-// Sample is a container that holds at least one record, plus metadata
+// SFlowSample is a container that holds at least one record, plus metadata
 // about the sample(s). Samples can be of two general types: flow samples
 // and counter samples. (There are 'extended' versions of both of these
 // but this decoder does not support them because I couldn't get any example
 // data to test with.)
-type Sample interface {
-	GetRecords() []Record
+type SFlowSample interface {
+	GetRecords() []SFlowRecord
 	String() string
-	GetType() SampleType
+	GetType() SFlowSampleType
 }
 
-// Record holds both flow sample records and counter sample records.
+// SFlowRecord holds both flow sample records and counter sample records.
 // A Record is the structure that actually holds the sampled data
 // and / or counters.
-type Record interface {
+type SFlowRecord interface {
 	String() string
 }
 
@@ -108,25 +116,25 @@ type SFlowSourceFormat uint32
 type SFlowSourceValue uint32
 
 const (
-	TypeSingleInterface      SFlowSourceFormat = 0
-	TypePacketDiscarded      SFlowSourceFormat = 1
-	TypeMultipleDestinations SFlowSourceFormat = 2
+	SFlowTypeSingleInterface      SFlowSourceFormat = 0
+	SFlowTypePacketDiscarded      SFlowSourceFormat = 1
+	SFlowTypeMultipleDestinations SFlowSourceFormat = 2
 )
 
 func (sdf SFlowSourceFormat) String() string {
 	switch sdf {
-	case TypeSingleInterface:
+	case SFlowTypeSingleInterface:
 		return "Single Interface"
-	case TypePacketDiscarded:
+	case SFlowTypePacketDiscarded:
 		return "Packet Discarded"
-	case TypeMultipleDestinations:
+	case SFlowTypeMultipleDestinations:
 		return "Multiple Destinations"
 	}
 	return ""
 }
 
 func decodeSFlow(data []byte, p gopacket.PacketBuilder) error {
-	s := &SFlow{}
+	s := &SFlowDatagram{}
 	err := s.DecodeFromBytes(data, p)
 	if err != nil {
 		return err
@@ -136,9 +144,9 @@ func decodeSFlow(data []byte, p gopacket.PacketBuilder) error {
 	return nil
 }
 
-// SFlow is the outermost container which holds some basic information
+// SFlowDatagram is the outermost container which holds some basic information
 // about the reporting agent, and holds at least one sample record
-type SFlow struct {
+type SFlowDatagram struct {
 	BaseLayer
 
 	DatagramVersion uint32
@@ -147,7 +155,7 @@ type SFlow struct {
 	SequenceNumber  uint32
 	AgentUptime     uint32
 	SampleCount     uint32
-	Samples         []Sample
+	Samples         []SFlowSample
 }
 
 // An SFlow  datagram's outer container has the following
@@ -174,90 +182,90 @@ type SFlow struct {
 //  /                                               /
 //  +--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+
 
-// SampleFlowDataFormat encodes the EnterpriseID in the most
+// SFlowDataFormat encodes the EnterpriseID in the most
 // significant 12 bits, and the SampleType in the least significant
 // 20 bits.
-type SampleFlowDataFormat uint32
+type SFlowDataFormat uint32
 
-func (sdf SampleFlowDataFormat) decode() (EnterpriseID, SampleType) {
+func (sdf SFlowDataFormat) decode() (SFlowEnterpriseID, SFlowSampleType) {
 	leftField := sdf >> 12
 	rightField := uint32(0xFFFFF) & uint32(sdf)
-	return EnterpriseID(leftField), SampleType(rightField)
+	return SFlowEnterpriseID(leftField), SFlowSampleType(rightField)
 }
 
-// EnterpriseID is used to differentiate between the
+// SFlowEnterpriseID is used to differentiate between the
 // official SFlow standard, and other, vendor-specific
 // types of flow data. (Similiar to SNMP's enterprise MIB
 // OIDs) Only the office SFlow Enterprise ID is decoded
 // here.
-type EnterpriseID uint32
+type SFlowEnterpriseID uint32
 
 const (
-	TypeSFlowStandard EnterpriseID = 0
+	SFlowStandard SFlowEnterpriseID = 0
 )
 
-func (eid EnterpriseID) String() string {
+func (eid SFlowEnterpriseID) String() string {
 	switch eid {
-	case TypeSFlowStandard:
+	case SFlowStandard:
 		return "Standard SFlow"
 	}
 	return ""
 }
 
-func (eid EnterpriseID) GetType() EnterpriseID {
-	return TypeSFlowStandard
+func (eid SFlowEnterpriseID) GetType() SFlowEnterpriseID {
+	return SFlowStandard
 }
 
-// SampleType specifies the type of sample. Only flow samples
+// SFlowSampleType specifies the type of sample. Only flow samples
 // and counter samples are supported
-type SampleType uint32
+type SFlowSampleType uint32
 
 const (
-	TypeFlowSample            SampleType = 1
-	TypeCounterSample         SampleType = 2
-	TypeExpandedFlowSample    SampleType = 3
-	TypeExpandedCounterSample SampleType = 4
+	SFlowTypeFlowSample            SFlowSampleType = 1
+	SFlowTypeCounterSample         SFlowSampleType = 2
+	SFlowTypeExpandedFlowSample    SFlowSampleType = 3
+	SFlowTypeExpandedCounterSample SFlowSampleType = 4
 )
 
-func (st SampleType) GetType() SampleType {
+func (st SFlowSampleType) GetType() SFlowSampleType {
 	switch st {
-	case TypeFlowSample:
-		return TypeFlowSample
-	case TypeCounterSample:
-		return TypeCounterSample
-	case TypeExpandedFlowSample:
-		return TypeExpandedFlowSample
-	case TypeExpandedCounterSample:
-		return TypeExpandedCounterSample
+	case SFlowTypeFlowSample:
+		return SFlowTypeFlowSample
+	case SFlowTypeCounterSample:
+		return SFlowTypeCounterSample
+	case SFlowTypeExpandedFlowSample:
+		return SFlowTypeExpandedFlowSample
+	case SFlowTypeExpandedCounterSample:
+		return SFlowTypeExpandedCounterSample
 	default:
 		panic("Invalid Sample Type")
 	}
 }
 
-func (st SampleType) String() string {
+func (st SFlowSampleType) String() string {
 	switch st {
-	case TypeFlowSample:
+	case SFlowTypeFlowSample:
 		return "Flow Sample"
-	case TypeCounterSample:
+	case SFlowTypeCounterSample:
 		return "Counter Sample"
-	case TypeExpandedFlowSample:
+	case SFlowTypeExpandedFlowSample:
 		return "Expanded Flow Sample"
-	case TypeExpandedCounterSample:
+	case SFlowTypeExpandedCounterSample:
 		return "Expanded Counter Sample"
 	}
 
 	return ""
 }
 
-func (s *SFlow) LayerType() gopacket.LayerType { return LayerTypeSFlow }
+func (s *SFlowDatagram) LayerType() gopacket.LayerType { return LayerTypeSFlow }
 
-func (d *SFlow) Payload() []byte { return nil }
+func (d *SFlowDatagram) Payload() []byte { return nil }
 
-func (d *SFlow) CanDecode() gopacket.LayerClass { return LayerTypeSFlow }
+func (d *SFlowDatagram) CanDecode() gopacket.LayerClass { return LayerTypeSFlow }
 
-func (d *SFlow) NextLayerType() gopacket.LayerType { return gopacket.LayerTypePayload }
+func (d *SFlowDatagram) NextLayerType() gopacket.LayerType { return gopacket.LayerTypePayload }
 
-func (sf SFlow) String() string {
+func (sf SFlowDatagram) String() string {
 	var out string
 	out = fmt.Sprintf("%16s: %d\n", "Datagram Version", sf.DatagramVersion)
 	out += fmt.Sprintf("%16s: %s\n", "Agent Address", sf.AgentAddress)
@@ -280,15 +288,15 @@ func (sf SFlow) String() string {
 type SFlowIPType uint32
 
 const (
-	TypeIPv4 SFlowIPType = 1
-	TypeIPv6 SFlowIPType = 2
+	SFlowIPv4 SFlowIPType = 1
+	SFlowIPv6 SFlowIPType = 2
 )
 
 func (s SFlowIPType) String() string {
 	switch s {
-	case TypeIPv4:
+	case SFlowIPv4:
 		return "IPv4"
-	case TypeIPv6:
+	case SFlowIPv6:
 		return "IPv6"
 	}
 	return ""
@@ -297,24 +305,22 @@ func (s SFlowIPType) String() string {
 func (s SFlowIPType) decodeIP(r io.Reader) net.IP {
 	var length int
 	switch SFlowIPType(s) {
-	case TypeIPv4:
+	case SFlowIPv4:
 		length = 4
-	case TypeIPv6:
+	case SFlowIPv6:
 		length = 16
 	default:
-		length = 0
+		return nil
 	}
 
 	buff := make([]byte, length)
-	if length != 0 {
-		r.Read(buff)
-	}
+	r.Read(buff)
 
 	return buff
 
 }
 
-func (s *SFlow) DecodeFromBytes(data []byte, df gopacket.DecodeFeedback) error {
+func (s *SFlowDatagram) DecodeFromBytes(data []byte, df gopacket.DecodeFeedback) error {
 
 	r := bytes.NewReader(data)
 	var agentAddressType SFlowIPType
@@ -332,29 +338,29 @@ func (s *SFlow) DecodeFromBytes(data []byte, df gopacket.DecodeFeedback) error {
 	}
 
 	for i := uint32(0); i < s.SampleCount; i++ {
-		var sdf SampleFlowDataFormat
+		var sdf SFlowDataFormat
 		binary.Read(r, binary.BigEndian, &sdf)
 		_, sampleType := sdf.decode()
 		r.Seek(-4, 1)
 
 		switch sampleType {
-		case TypeFlowSample:
+		case SFlowTypeFlowSample:
 			if flowSample, err := decodeFlowSample(r); err == nil {
 				s.Samples = append(s.Samples, flowSample)
 			} else {
 				return err
 			}
-		case TypeCounterSample:
+		case SFlowTypeCounterSample:
 			if counterSample, err := decodeCounterSample(r); err == nil {
 				s.Samples = append(s.Samples, counterSample)
 			} else {
 				return err
 			}
 
-		case TypeExpandedFlowSample:
+		case SFlowTypeExpandedFlowSample:
 			// TODO
 			return fmt.Errorf("Unsupported SFlow sample type TypeExpandedFlowSample")
-		case TypeExpandedCounterSample:
+		case SFlowTypeExpandedCounterSample:
 			// TODO
 			return fmt.Errorf("Unsupported SFlow sample type TypeExpandedCounterSample")
 		default:
@@ -367,11 +373,11 @@ func (s *SFlow) DecodeFromBytes(data []byte, df gopacket.DecodeFeedback) error {
 
 }
 
-// FlowSample represents a sampled packet and contains
+// SFlowFlowSample represents a sampled packet and contains
 // one or more records describing the packet
-type FlowSample struct {
-	EnterpriseID    EnterpriseID
-	Format          SampleType
+type SFlowFlowSample struct {
+	EnterpriseID    SFlowEnterpriseID
+	Format          SFlowSampleType
 	SampleLength    uint32
 	SequenceNumber  uint32
 	SourceIDClass   SFlowSourceFormat
@@ -382,7 +388,7 @@ type FlowSample struct {
 	InputInterface  uint32
 	OutputInterface uint32
 	RecordCount     uint32
-	Records         []Record
+	Records         []SFlowRecord
 }
 
 // Flow samples have the following structure. Note
@@ -415,23 +421,23 @@ type FlowSample struct {
 //  /                                               /
 //  +--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+
 
-type FlowDataFormat uint32
+type SFlowFlowDataFormat uint32
 
-func (fdf FlowDataFormat) decode() (EnterpriseID, FlowRecordType) {
+func (fdf SFlowFlowDataFormat) decode() (SFlowEnterpriseID, SFlowFlowRecordType) {
 	leftField := fdf >> 12
 	rightField := uint32(0xFFFFF) & uint32(fdf)
-	return EnterpriseID(leftField), FlowRecordType(rightField)
+	return SFlowEnterpriseID(leftField), SFlowFlowRecordType(rightField)
 }
 
-func (fs FlowSample) GetRecords() []Record {
+func (fs SFlowFlowSample) GetRecords() []SFlowRecord {
 	return fs.Records
 }
 
-func (fs FlowSample) GetType() SampleType {
-	return TypeFlowSample
+func (fs SFlowFlowSample) GetType() SFlowSampleType {
+	return SFlowTypeFlowSample
 }
 
-func (fs FlowSample) String() string {
+func (fs SFlowFlowSample) String() string {
 	var out string
 	//out = fmt.Sprintf("%24s\n\n", fs.GetType())
 	out += fmt.Sprintf("%24s: %s\n", "Enterprise ID", fs.EnterpriseID)
@@ -457,16 +463,16 @@ func (fs FlowSample) String() string {
 }
 
 func skipFlowRecord(r *bytes.Reader) {
-	var rdf FlowDataFormat
+	var rdf SFlowFlowDataFormat
 	binary.Read(r, binary.BigEndian, &rdf)
 	var recordLength uint32
 	binary.Read(r, binary.BigEndian, &recordLength)
 	r.Seek(int64(recordLength+((4-recordLength)%4)), 1)
 }
 
-func decodeFlowSample(r *bytes.Reader) (FlowSample, error) {
-	s := FlowSample{}
-	var sdf SampleFlowDataFormat
+func decodeFlowSample(r *bytes.Reader) (SFlowFlowSample, error) {
+	s := SFlowFlowSample{}
+	var sdf SFlowDataFormat
 	var sampleDataSource SFlowDataSource
 	binary.Read(r, binary.BigEndian, &sdf)
 	s.EnterpriseID, s.Format = sdf.decode()
@@ -482,89 +488,89 @@ func decodeFlowSample(r *bytes.Reader) (FlowSample, error) {
 	binary.Read(r, binary.BigEndian, &s.RecordCount)
 
 	for i := uint32(0); i < s.RecordCount; i++ {
-		var rdf FlowDataFormat
+		var rdf SFlowFlowDataFormat
 		binary.Read(r, binary.BigEndian, &rdf)
-		_, FlowRecordType := rdf.decode()
+		_, flowRecordType := rdf.decode()
 		r.Seek(-4, 1)
-		switch FlowRecordType {
-		case TypeRawPacketFlow:
+		switch flowRecordType {
+		case SFlowTypeRawPacketFlow:
 			if record, err := decodeRawPacketFlowRecord(r); err == nil {
 				s.Records = append(s.Records, record)
 			} else {
 				return s, err
 			}
-		case TypeExtendedUserFlow:
+		case SFlowTypeExtendedUserFlow:
 			if record, err := decodeExtendedUserFlow(r); err == nil {
 				s.Records = append(s.Records, record)
 			} else {
 				return s, err
 			}
-		case TypeExtendedUrlFlow:
+		case SFlowTypeExtendedUrlFlow:
 			if record, err := decodeExtendedURLRecord(r); err == nil {
 				s.Records = append(s.Records, record)
 			} else {
 				return s, err
 			}
-		case TypeExtendedSwitchFlow:
+		case SFlowTypeExtendedSwitchFlow:
 			if record, err := decodeExtendedSwitchFlowRecord(r); err == nil {
 				s.Records = append(s.Records, record)
 			} else {
 				return s, err
 			}
-		case TypeExtendedRouterFlow:
+		case SFlowTypeExtendedRouterFlow:
 			if record, err := decodeExtendedRouterFlowRecord(r); err == nil {
 				s.Records = append(s.Records, record)
 			} else {
 				return s, err
 			}
-		case TypeExtendedGatewayFlow:
+		case SFlowTypeExtendedGatewayFlow:
 			if record, err := decodeExtendedGatewayFlowRecord(r); err == nil {
 				s.Records = append(s.Records, record)
 			} else {
 				return s, err
 			}
-		case TypeEthernetFrameFlow:
+		case SFlowTypeEthernetFrameFlow:
 			// TODO
 			skipFlowRecord(r)
 			return s, fmt.Errorf("skipping TypeEthernetFrameFlow")
-		case TypeIpv4Flow:
+		case SFlowTypeIpv4Flow:
 			// TODO
 			skipFlowRecord(r)
 			return s, fmt.Errorf("skipping TypeIpv4Flow")
-		case TypeIpv6Flow:
+		case SFlowTypeIpv6Flow:
 			// TODO
 			skipFlowRecord(r)
 			return s, fmt.Errorf("skipping TypeIpv6Flow")
-		case TypeExtendedMlpsFlow:
+		case SFlowTypeExtendedMlpsFlow:
 			// TODO
 			skipFlowRecord(r)
 			return s, fmt.Errorf("skipping TypeExtendedMlpsFlow")
-		case TypeExtendedNatFlow:
+		case SFlowTypeExtendedNatFlow:
 			// TODO
 			skipFlowRecord(r)
 			return s, fmt.Errorf("skipping TypeExtendedNatFlow")
-		case TypeExtendedMlpsTunnelFlow:
+		case SFlowTypeExtendedMlpsTunnelFlow:
 			// TODO
 			skipFlowRecord(r)
 			return s, fmt.Errorf("skipping TypeExtendedMlpsTunnelFlow")
-		case TypeExtendedMlpsVcFlow:
+		case SFlowTypeExtendedMlpsVcFlow:
 			// TODO
 			skipFlowRecord(r)
 			return s, fmt.Errorf("skipping TypeExtendedMlpsVcFlow")
-		case TypeExtendedMlpsFecFlow:
+		case SFlowTypeExtendedMlpsFecFlow:
 			// TODO
 			skipFlowRecord(r)
 			return s, fmt.Errorf("skipping TypeExtendedMlpsFecFlow")
-		case TypeExtendedMlpsLvpFecFlow:
+		case SFlowTypeExtendedMlpsLvpFecFlow:
 			// TODO
 			skipFlowRecord(r)
 			return s, fmt.Errorf("skipping TypeExtendedMlpsLvpFecFlow")
-		case TypeExtendedVlanFlow:
+		case SFlowTypeExtendedVlanFlow:
 			// TODO
 			skipFlowRecord(r)
 			return s, fmt.Errorf("skipping TypeExtendedVlanFlow")
 		default:
-			return s, fmt.Errorf("Unsupported flow record type: %d", FlowRecordType)
+			return s, fmt.Errorf("Unsupported flow record type: %d", flowRecordType)
 
 		}
 
@@ -580,15 +586,15 @@ func decodeFlowSample(r *bytes.Reader) (FlowSample, error) {
 // intervals as configured on the agent. If one were sufficiently
 // industrious, this could be used to replace the typical
 // SNMP polling used for such things.
-type CounterSample struct {
-	EnterpriseID   EnterpriseID
-	Format         SampleType
+type SFlowCounterSample struct {
+	EnterpriseID   SFlowEnterpriseID
+	Format         SFlowSampleType
 	SampleLength   uint32
 	SequenceNumber uint32
 	SourceIDClass  SFlowSourceFormat
 	SourceIDIndex  SFlowSourceValue
 	RecordCount    uint32
-	Records        []Record
+	Records        []SFlowRecord
 }
 
 // Counter samples have the following structure:
@@ -605,15 +611,15 @@ type CounterSample struct {
 //  /                                               /
 //  +--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+
 
-type CounterDataFormat uint32
+type SFlowCounterDataFormat uint32
 
-func (cdf CounterDataFormat) decode() (EnterpriseID, CounterRecordType) {
+func (cdf SFlowCounterDataFormat) decode() (SFlowEnterpriseID, SFlowCounterRecordType) {
 	leftField := cdf >> 12
 	rightField := uint32(0xFFFFF) & uint32(cdf)
-	return EnterpriseID(leftField), CounterRecordType(rightField)
+	return SFlowEnterpriseID(leftField), SFlowCounterRecordType(rightField)
 }
 
-func (cs CounterSample) String() string {
+func (cs SFlowCounterSample) String() string {
 	var out string
 	out = fmt.Sprintf("%24s\n\n", cs.GetType())
 	out += fmt.Sprintf("%24s: %s\n", "Enterprise ID", cs.EnterpriseID)
@@ -635,41 +641,41 @@ func (cs CounterSample) String() string {
 
 // GetRecords will return a slice of interface types
 // representing records. A type switch can be used to
-// get at the underlying CounterRecordType.
-func (cs CounterSample) GetRecords() []Record {
+// get at the underlying SFlowCounterRecordType.
+func (cs SFlowCounterSample) GetRecords() []SFlowRecord {
 	return cs.Records
 }
 
 // GetType will report the type of sample. Only the
 // compact form of counter samples is supported
-func (cs CounterSample) GetType() SampleType {
-	return TypeCounterSample
+func (cs SFlowCounterSample) GetType() SFlowSampleType {
+	return SFlowTypeCounterSample
 }
 
-type CounterRecordType uint32
+type SFlowCounterRecordType uint32
 
 const (
-	TypeGenericInterfaceCounters   CounterRecordType = 1
-	TypeEthernetInterfaceCounters  CounterRecordType = 2
-	TypeTokenRingInterfaceCounters CounterRecordType = 3
-	Type100BaseVGInterfaceCounters CounterRecordType = 4
-	TypeVLANCounters               CounterRecordType = 5
-	TypeProcessorCounters          CounterRecordType = 1001
+	SFlowTypeGenericInterfaceCounters   SFlowCounterRecordType = 1
+	SFlowTypeEthernetInterfaceCounters  SFlowCounterRecordType = 2
+	SFlowTypeTokenRingInterfaceCounters SFlowCounterRecordType = 3
+	SFlowType100BaseVGInterfaceCounters SFlowCounterRecordType = 4
+	SFlowTypeVLANCounters               SFlowCounterRecordType = 5
+	SFlowTypeProcessorCounters          SFlowCounterRecordType = 1001
 )
 
-func (cr CounterRecordType) String() string {
+func (cr SFlowCounterRecordType) String() string {
 	switch cr {
-	case TypeGenericInterfaceCounters:
+	case SFlowTypeGenericInterfaceCounters:
 		return "Generic Interface Counters"
-	case TypeEthernetInterfaceCounters:
+	case SFlowTypeEthernetInterfaceCounters:
 		return "Ethernet Interface Counters"
-	case TypeTokenRingInterfaceCounters:
+	case SFlowTypeTokenRingInterfaceCounters:
 		return "Token Ring Interface Counters"
-	case Type100BaseVGInterfaceCounters:
+	case SFlowType100BaseVGInterfaceCounters:
 		return "100BaseVG Interface Counters"
-	case TypeVLANCounters:
+	case SFlowTypeVLANCounters:
 		return "VLAN Counters"
-	case TypeProcessorCounters:
+	case SFlowTypeProcessorCounters:
 		return "Processor Counters"
 
 	}
@@ -684,9 +690,9 @@ func skipCounterRecord(r *bytes.Reader) {
 	r.Seek(int64(rl+((4-rl)%4)), 1)
 }
 
-func decodeCounterSample(r *bytes.Reader) (CounterSample, error) {
-	s := CounterSample{}
-	var sdf SampleFlowDataFormat
+func decodeCounterSample(r *bytes.Reader) (SFlowCounterSample, error) {
+	s := SFlowCounterSample{}
+	var sdf SFlowDataFormat
 	var sampleDataSource SFlowDataSource
 	binary.Read(r, binary.BigEndian, &sdf)
 	s.EnterpriseID, s.Format = sdf.decode()
@@ -697,37 +703,37 @@ func decodeCounterSample(r *bytes.Reader) (CounterSample, error) {
 	binary.Read(r, binary.BigEndian, &s.RecordCount)
 
 	for i := uint32(0); i < s.RecordCount; i++ {
-		var cdf CounterDataFormat
+		var cdf SFlowCounterDataFormat
 		binary.Read(r, binary.BigEndian, &cdf)
-		_, CounterRecordType := cdf.decode()
+		_, counterRecordType := cdf.decode()
 		r.Seek(-4, 1)
-		switch CounterRecordType {
-		case TypeGenericInterfaceCounters:
+		switch counterRecordType {
+		case SFlowTypeGenericInterfaceCounters:
 			if record, err := decodeGenericInterfaceCounters(r); err == nil {
 				s.Records = append(s.Records, record)
 			} else {
 				return s, err
 			}
-		case TypeEthernetInterfaceCounters:
+		case SFlowTypeEthernetInterfaceCounters:
 			if record, err := decodeEthernetCounters(r); err == nil {
 				s.Records = append(s.Records, record)
 			} else {
 				return s, err
 			}
-		case TypeTokenRingInterfaceCounters:
+		case SFlowTypeTokenRingInterfaceCounters:
 			skipCounterRecord(r)
 			return s, fmt.Errorf("skipping TypeTokenRingInterfaceCounters")
-		case Type100BaseVGInterfaceCounters:
+		case SFlowType100BaseVGInterfaceCounters:
 			skipCounterRecord(r)
 			return s, fmt.Errorf("skipping Type100BaseVGInterfaceCounters")
-		case TypeVLANCounters:
+		case SFlowTypeVLANCounters:
 			skipCounterRecord(r)
 			return s, fmt.Errorf("skipping TypeVLANCounters")
-		case TypeProcessorCounters:
+		case SFlowTypeProcessorCounters:
 			skipCounterRecord(r)
 			return s, fmt.Errorf("skipping TypeProcessorCounters")
 		default:
-			return s, fmt.Errorf("Invalid counter record type: %d", CounterRecordType)
+			return s, fmt.Errorf("Invalid counter record type: %d", counterRecordType)
 		}
 	}
 
@@ -735,115 +741,115 @@ func decodeCounterSample(r *bytes.Reader) (CounterSample, error) {
 
 }
 
-// BaseFlowRecord holds the fields common to all records
-// of type FlowReordType
-type BaseFlowRecord struct {
-	EnterpriseID   EnterpriseID
-	Format         FlowRecordType
+// SFlowBaseFlowRecord holds the fields common to all records
+// of type SFlowFlowRecordType
+type SFlowBaseFlowRecord struct {
+	EnterpriseID   SFlowEnterpriseID
+	Format         SFlowFlowRecordType
 	FlowDataLength uint32
 }
 
-func (bfr BaseFlowRecord) GetType() FlowRecordType {
+func (bfr SFlowBaseFlowRecord) GetType() SFlowFlowRecordType {
 	switch bfr.Format {
-	case TypeRawPacketFlow:
-		return TypeRawPacketFlow
-	case TypeEthernetFrameFlow:
-		return TypeEthernetFrameFlow
-	case TypeIpv4Flow:
-		return TypeIpv4Flow
-	case TypeIpv6Flow:
-		return TypeIpv6Flow
-	case TypeExtendedSwitchFlow:
-		return TypeExtendedSwitchFlow
-	case TypeExtendedRouterFlow:
-		return TypeExtendedRouterFlow
-	case TypeExtendedGatewayFlow:
-		return TypeExtendedGatewayFlow
-	case TypeExtendedUserFlow:
-		return TypeExtendedUserFlow
-	case TypeExtendedUrlFlow:
-		return TypeExtendedUrlFlow
-	case TypeExtendedMlpsFlow:
-		return TypeExtendedMlpsFlow
-	case TypeExtendedNatFlow:
-		return TypeExtendedNatFlow
-	case TypeExtendedMlpsTunnelFlow:
-		return TypeExtendedMlpsTunnelFlow
-	case TypeExtendedMlpsVcFlow:
-		return TypeExtendedMlpsVcFlow
-	case TypeExtendedMlpsFecFlow:
-		return TypeExtendedMlpsFecFlow
-	case TypeExtendedMlpsLvpFecFlow:
-		return TypeExtendedMlpsLvpFecFlow
-	case TypeExtendedVlanFlow:
-		return TypeExtendedVlanFlow
+	case SFlowTypeRawPacketFlow:
+		return SFlowTypeRawPacketFlow
+	case SFlowTypeEthernetFrameFlow:
+		return SFlowTypeEthernetFrameFlow
+	case SFlowTypeIpv4Flow:
+		return SFlowTypeIpv4Flow
+	case SFlowTypeIpv6Flow:
+		return SFlowTypeIpv6Flow
+	case SFlowTypeExtendedSwitchFlow:
+		return SFlowTypeExtendedSwitchFlow
+	case SFlowTypeExtendedRouterFlow:
+		return SFlowTypeExtendedRouterFlow
+	case SFlowTypeExtendedGatewayFlow:
+		return SFlowTypeExtendedGatewayFlow
+	case SFlowTypeExtendedUserFlow:
+		return SFlowTypeExtendedUserFlow
+	case SFlowTypeExtendedUrlFlow:
+		return SFlowTypeExtendedUrlFlow
+	case SFlowTypeExtendedMlpsFlow:
+		return SFlowTypeExtendedMlpsFlow
+	case SFlowTypeExtendedNatFlow:
+		return SFlowTypeExtendedNatFlow
+	case SFlowTypeExtendedMlpsTunnelFlow:
+		return SFlowTypeExtendedMlpsTunnelFlow
+	case SFlowTypeExtendedMlpsVcFlow:
+		return SFlowTypeExtendedMlpsVcFlow
+	case SFlowTypeExtendedMlpsFecFlow:
+		return SFlowTypeExtendedMlpsFecFlow
+	case SFlowTypeExtendedMlpsLvpFecFlow:
+		return SFlowTypeExtendedMlpsLvpFecFlow
+	case SFlowTypeExtendedVlanFlow:
+		return SFlowTypeExtendedVlanFlow
 	}
 	unrecognized := fmt.Sprintln("Unrecognized flow record type:", bfr.Format)
 	panic(unrecognized)
 }
 
-// FlowRecordType denotes what kind of Flow Record is
+// SFlowFlowRecordType denotes what kind of Flow Record is
 // represented. See RFC 3176
-type FlowRecordType uint32
+type SFlowFlowRecordType uint32
 
 const (
-	TypeRawPacketFlow          FlowRecordType = 1
-	TypeEthernetFrameFlow      FlowRecordType = 2
-	TypeIpv4Flow               FlowRecordType = 3
-	TypeIpv6Flow               FlowRecordType = 4
-	TypeExtendedSwitchFlow     FlowRecordType = 1001
-	TypeExtendedRouterFlow     FlowRecordType = 1002
-	TypeExtendedGatewayFlow    FlowRecordType = 1003
-	TypeExtendedUserFlow       FlowRecordType = 1004
-	TypeExtendedUrlFlow        FlowRecordType = 1005
-	TypeExtendedMlpsFlow       FlowRecordType = 1006
-	TypeExtendedNatFlow        FlowRecordType = 1007
-	TypeExtendedMlpsTunnelFlow FlowRecordType = 1008
-	TypeExtendedMlpsVcFlow     FlowRecordType = 1009
-	TypeExtendedMlpsFecFlow    FlowRecordType = 1010
-	TypeExtendedMlpsLvpFecFlow FlowRecordType = 1011
-	TypeExtendedVlanFlow       FlowRecordType = 1012
+	SFlowTypeRawPacketFlow          SFlowFlowRecordType = 1
+	SFlowTypeEthernetFrameFlow      SFlowFlowRecordType = 2
+	SFlowTypeIpv4Flow               SFlowFlowRecordType = 3
+	SFlowTypeIpv6Flow               SFlowFlowRecordType = 4
+	SFlowTypeExtendedSwitchFlow     SFlowFlowRecordType = 1001
+	SFlowTypeExtendedRouterFlow     SFlowFlowRecordType = 1002
+	SFlowTypeExtendedGatewayFlow    SFlowFlowRecordType = 1003
+	SFlowTypeExtendedUserFlow       SFlowFlowRecordType = 1004
+	SFlowTypeExtendedUrlFlow        SFlowFlowRecordType = 1005
+	SFlowTypeExtendedMlpsFlow       SFlowFlowRecordType = 1006
+	SFlowTypeExtendedNatFlow        SFlowFlowRecordType = 1007
+	SFlowTypeExtendedMlpsTunnelFlow SFlowFlowRecordType = 1008
+	SFlowTypeExtendedMlpsVcFlow     SFlowFlowRecordType = 1009
+	SFlowTypeExtendedMlpsFecFlow    SFlowFlowRecordType = 1010
+	SFlowTypeExtendedMlpsLvpFecFlow SFlowFlowRecordType = 1011
+	SFlowTypeExtendedVlanFlow       SFlowFlowRecordType = 1012
 )
 
-func (rt FlowRecordType) String() string {
+func (rt SFlowFlowRecordType) String() string {
 	switch rt {
-	case TypeRawPacketFlow:
+	case SFlowTypeRawPacketFlow:
 		return "Raw Packet Flow Record"
-	case TypeEthernetFrameFlow:
+	case SFlowTypeEthernetFrameFlow:
 		return "Ethernet Frame Flow Record"
-	case TypeIpv4Flow:
+	case SFlowTypeIpv4Flow:
 		return "IPv4 Flow Record"
-	case TypeIpv6Flow:
+	case SFlowTypeIpv6Flow:
 		return "IPv6 Flow Record"
-	case TypeExtendedSwitchFlow:
+	case SFlowTypeExtendedSwitchFlow:
 		return "Extended Switch Flow Record"
-	case TypeExtendedRouterFlow:
+	case SFlowTypeExtendedRouterFlow:
 		return "Extended Router Flow Record"
-	case TypeExtendedGatewayFlow:
+	case SFlowTypeExtendedGatewayFlow:
 		return "Extended Gateway Flow Record"
-	case TypeExtendedUserFlow:
+	case SFlowTypeExtendedUserFlow:
 		return "Extended User Flow Record"
-	case TypeExtendedUrlFlow:
+	case SFlowTypeExtendedUrlFlow:
 		return "Extended URL Flow Record"
-	case TypeExtendedMlpsFlow:
+	case SFlowTypeExtendedMlpsFlow:
 		return "Extended MPLS Flow Record"
-	case TypeExtendedNatFlow:
+	case SFlowTypeExtendedNatFlow:
 		return "Extended NAT Flow Record"
-	case TypeExtendedMlpsTunnelFlow:
+	case SFlowTypeExtendedMlpsTunnelFlow:
 		return "Extended MPLS Tunnel Flow Record"
-	case TypeExtendedMlpsVcFlow:
+	case SFlowTypeExtendedMlpsVcFlow:
 		return "Extended MPLS VC Flow Record"
-	case TypeExtendedMlpsFecFlow:
+	case SFlowTypeExtendedMlpsFecFlow:
 		return "Extended MPLS FEC Flow Record"
-	case TypeExtendedMlpsLvpFecFlow:
+	case SFlowTypeExtendedMlpsLvpFecFlow:
 		return "Extended MPLS LVP FEC Flow Record"
-	case TypeExtendedVlanFlow:
+	case SFlowTypeExtendedVlanFlow:
 		return "Extended VLAN Flow Record"
 	}
 	return ""
 }
 
-// RawPacketFlowRecords hold information about a sampled
+// SFlowRawPacketFlowRecords hold information about a sampled
 // packet grabbed as it transited the agent. This is
 // perhaps the most useful and interesting record type,
 // as it holds the headers of the sampled packet and
@@ -853,8 +859,8 @@ func (rt FlowRecordType) String() string {
 // The raw packet header is sent back into gopacket for
 // decoding, and the resulting gopackt.Packet is stored
 // in the Header member
-type RawPacketFlowRecord struct {
-	BaseFlowRecord
+type SFlowRawPacketFlowRecord struct {
+	SFlowBaseFlowRecord
 	HeaderProtocol uint32
 	FrameLength    uint32
 	PayloadRemoved uint32
@@ -883,7 +889,7 @@ type RawPacketFlowRecord struct {
 //  \                                               \
 //  +--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+
 
-func (fr RawPacketFlowRecord) String() string {
+func (fr SFlowRawPacketFlowRecord) String() string {
 	var out string
 	out = fmt.Sprintf("%32s\n\n", fr.GetType())
 	out += fmt.Sprintf("%32s: %s\n", "Enterprise ID", fr.EnterpriseID)
@@ -904,10 +910,10 @@ func (fr RawPacketFlowRecord) String() string {
 
 }
 
-func decodeRawPacketFlowRecord(r *bytes.Reader) (RawPacketFlowRecord, error) {
-	rec := RawPacketFlowRecord{}
+func decodeRawPacketFlowRecord(r *bytes.Reader) (SFlowRawPacketFlowRecord, error) {
+	rec := SFlowRawPacketFlowRecord{}
 
-	var fdf FlowDataFormat
+	var fdf SFlowFlowDataFormat
 	binary.Read(r, binary.BigEndian, &fdf)
 	rec.EnterpriseID, rec.Format = fdf.decode()
 	binary.Read(r, binary.BigEndian, &rec.FlowDataLength)
@@ -924,12 +930,12 @@ func decodeRawPacketFlowRecord(r *bytes.Reader) (RawPacketFlowRecord, error) {
 
 }
 
-// ExtendedSwitchFlowRecord give additional information
+// SFlowExtendedSwitchFlowRecord give additional information
 // about the sampled packet if it's available. It's mainly
 // useful for getting at the incoming and outgoing VLANs
 // An agent may or may not provide this information.
-type ExtendedSwitchFlowRecord struct {
-	BaseFlowRecord
+type SFlowExtendedSwitchFlowRecord struct {
+	SFlowBaseFlowRecord
 	IncomingVLAN         uint32
 	IncomingVLANPriority uint32
 	OutgoingVLAN         uint32
@@ -953,7 +959,7 @@ type ExtendedSwitchFlowRecord struct {
 //  |                Outgoing VLAN Priority         |
 //  +--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+
 
-func (es ExtendedSwitchFlowRecord) String() string {
+func (es SFlowExtendedSwitchFlowRecord) String() string {
 	var out string
 	out = fmt.Sprintf("%32s\n\n", es.GetType())
 	out += fmt.Sprintf("%32s: %s\n", "Enterprise ID", es.EnterpriseID)
@@ -968,9 +974,9 @@ func (es ExtendedSwitchFlowRecord) String() string {
 	return out
 }
 
-func decodeExtendedSwitchFlowRecord(r *bytes.Reader) (ExtendedSwitchFlowRecord, error) {
-	es := ExtendedSwitchFlowRecord{}
-	var fdf FlowDataFormat
+func decodeExtendedSwitchFlowRecord(r *bytes.Reader) (SFlowExtendedSwitchFlowRecord, error) {
+	es := SFlowExtendedSwitchFlowRecord{}
+	var fdf SFlowFlowDataFormat
 	binary.Read(r, binary.BigEndian, &fdf)
 	es.EnterpriseID, es.Format = fdf.decode()
 	binary.Read(r, binary.BigEndian, &es.FlowDataLength)
@@ -982,11 +988,11 @@ func decodeExtendedSwitchFlowRecord(r *bytes.Reader) (ExtendedSwitchFlowRecord, 
 	return es, nil
 }
 
-// ExtendedRouterFlowRecord gives additional information
+// SFlowExtendedRouterFlowRecord gives additional information
 // about the layer 3 routing information used to forward
 // the packet
-type ExtendedRouterFlowRecord struct {
-	BaseFlowRecord
+type SFlowExtendedRouterFlowRecord struct {
+	SFlowBaseFlowRecord
 	NextHop                net.IP
 	NextHopSourceMask      uint32
 	NextHopDestinationMask uint32
@@ -1007,7 +1013,7 @@ type ExtendedRouterFlowRecord struct {
 //  |              Next Hop Destination Mask        |
 //  +--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+
 
-func (er ExtendedRouterFlowRecord) String() string {
+func (er SFlowExtendedRouterFlowRecord) String() string {
 	var out string
 	out = fmt.Sprintf("%32s\n\n", er.GetType())
 	out += fmt.Sprintf("%32s: %s\n", "Enterprise ID", er.EnterpriseID)
@@ -1021,10 +1027,10 @@ func (er ExtendedRouterFlowRecord) String() string {
 	return out
 }
 
-func decodeExtendedRouterFlowRecord(r *bytes.Reader) (ExtendedRouterFlowRecord, error) {
-	er := ExtendedRouterFlowRecord{}
+func decodeExtendedRouterFlowRecord(r *bytes.Reader) (SFlowExtendedRouterFlowRecord, error) {
+	er := SFlowExtendedRouterFlowRecord{}
 	var extendedRouterAddressType SFlowIPType
-	var fdf FlowDataFormat
+	var fdf SFlowFlowDataFormat
 
 	binary.Read(r, binary.BigEndian, &fdf)
 	er.EnterpriseID, er.Format = fdf.decode()
@@ -1038,7 +1044,7 @@ func decodeExtendedRouterFlowRecord(r *bytes.Reader) (ExtendedRouterFlowRecord, 
 
 }
 
-// ExtendedGatewayFlowRecord describes information treasured by
+// SFlowExtendedGatewayFlowRecord describes information treasured by
 // nework engineers everywhere: AS path information listing which
 // BGP peer sent the packet, and various other BGP related info.
 // This information is vital because it gives a picture of how much
@@ -1093,53 +1099,53 @@ func decodeExtendedRouterFlowRecord(r *bytes.Reader) (ExtendedRouterFlowRecord, 
 //  /                                               /
 //  +--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+
 
-type ExtendedGatewayFlowRecord struct {
-	BaseFlowRecord
+type SFlowExtendedGatewayFlowRecord struct {
+	SFlowBaseFlowRecord
 	NextHop     net.IP
 	AS          uint32
 	SourceAS    uint32
 	PeerAS      uint32
 	ASPathCount uint32
-	ASPath      []ASDestination
+	ASPath      []SFlowASDestination
 	Communities []uint32
 	LocalPref   uint32
 }
 
-type ASPathType uint32
+type SFlowASPathType uint32
 
 const (
-	ASSet      ASPathType = 1
-	ASSequence ASPathType = 2
+	SFlowASSet      SFlowASPathType = 1
+	SFlowASSequence SFlowASPathType = 2
 )
 
-func (apt ASPathType) String() string {
+func (apt SFlowASPathType) String() string {
 	switch apt {
-	case ASSet:
+	case SFlowASSet:
 		return "AS Set"
-	case ASSequence:
+	case SFlowASSequence:
 		return "AS Sequence"
 	}
 
 	return ""
 }
 
-type ASDestination struct {
-	Type    ASPathType
+type SFlowASDestination struct {
+	Type    SFlowASPathType
 	Count   uint32
 	Members []uint32
 }
 
-func (asd ASDestination) String() string {
+func (asd SFlowASDestination) String() string {
 	switch asd.Type {
-	case ASSet:
+	case SFlowASSet:
 		return fmt.Sprint("AS Set:", asd.Members)
-	case ASSequence:
+	case SFlowASSequence:
 		return fmt.Sprint("AS Sequence:", asd.Members)
 	}
 	return ""
 }
 
-func (ad *ASDestination) decodePath(r *bytes.Reader) {
+func (ad *SFlowASDestination) decodePath(r *bytes.Reader) {
 
 	binary.Read(r, binary.BigEndian, &ad.Type)
 	binary.Read(r, binary.BigEndian, &ad.Count)
@@ -1148,10 +1154,10 @@ func (ad *ASDestination) decodePath(r *bytes.Reader) {
 
 }
 
-func decodeExtendedGatewayFlowRecord(r *bytes.Reader) (ExtendedGatewayFlowRecord, error) {
-	eg := ExtendedGatewayFlowRecord{}
+func decodeExtendedGatewayFlowRecord(r *bytes.Reader) (SFlowExtendedGatewayFlowRecord, error) {
+	eg := SFlowExtendedGatewayFlowRecord{}
 	var extendedGatewayAddressType SFlowIPType
-	var fdf FlowDataFormat
+	var fdf SFlowFlowDataFormat
 	var communitiesLength uint32
 
 	binary.Read(r, binary.BigEndian, &fdf)
@@ -1166,7 +1172,7 @@ func decodeExtendedGatewayFlowRecord(r *bytes.Reader) (ExtendedGatewayFlowRecord
 	binary.Read(r, binary.BigEndian, &eg.ASPathCount)
 
 	for i := uint32(0); i < eg.ASPathCount; i++ {
-		asPath := ASDestination{}
+		asPath := SFlowASDestination{}
 		asPath.decodePath(r)
 		eg.ASPath = append(eg.ASPath, asPath)
 	}
@@ -1180,7 +1186,7 @@ func decodeExtendedGatewayFlowRecord(r *bytes.Reader) (ExtendedGatewayFlowRecord
 	return eg, nil
 }
 
-func (eg ExtendedGatewayFlowRecord) String() string {
+func (eg SFlowExtendedGatewayFlowRecord) String() string {
 	var out string
 	out = fmt.Sprintf("%32s\n\n", eg.GetType())
 	out += fmt.Sprintf("%32s: %s\n", "Enterprise ID", eg.EnterpriseID)
@@ -1192,9 +1198,9 @@ func (eg ExtendedGatewayFlowRecord) String() string {
 	out += fmt.Sprintf("%32s: %d\n", "Peer AS", eg.PeerAS)
 	for _, path := range eg.ASPath {
 		switch path.Type {
-		case ASSet:
+		case SFlowASSet:
 			out += fmt.Sprintf("%32s: %d\n", "AS Set", path.Members)
-		case ASSequence:
+		case SFlowASSequence:
 			out += fmt.Sprintf("%32s: %d\n", "AS Sequence", path.Members)
 		}
 	}
@@ -1224,33 +1230,33 @@ func (eg ExtendedGatewayFlowRecord) String() string {
 //  |                      Host                     |
 //  +--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+
 
-type URLDirection uint32
+type SFlowURLDirection uint32
 
 const (
-	URLsrc URLDirection = 1
-	URLdst URLDirection = 2
+	SFlowURLsrc SFlowURLDirection = 1
+	SFlowURLdst SFlowURLDirection = 2
 )
 
-func (urld URLDirection) String() string {
+func (urld SFlowURLDirection) String() string {
 	switch urld {
-	case URLsrc:
+	case SFlowURLsrc:
 		return "Source address is the server"
-	case URLdst:
+	case SFlowURLdst:
 		return "Destination address is the server"
 	}
 	return ""
 }
 
-type ExtendedURLRecord struct {
-	BaseFlowRecord
-	Direction URLDirection
+type SFlowExtendedURLRecord struct {
+	SFlowBaseFlowRecord
+	Direction SFlowURLDirection
 	URL       string
 	Host      string
 }
 
-func decodeExtendedURLRecord(r *bytes.Reader) (ExtendedURLRecord, error) {
-	eur := ExtendedURLRecord{}
-	var fdf FlowDataFormat
+func decodeExtendedURLRecord(r *bytes.Reader) (SFlowExtendedURLRecord, error) {
+	eur := SFlowExtendedURLRecord{}
+	var fdf SFlowFlowDataFormat
 	var urlLen uint32
 	var hostLen uint32
 
@@ -1272,7 +1278,7 @@ func decodeExtendedURLRecord(r *bytes.Reader) (ExtendedURLRecord, error) {
 	return eur, nil
 }
 
-func (eur ExtendedURLRecord) String() string {
+func (eur SFlowExtendedURLRecord) String() string {
 	var out string
 	out = fmt.Sprintf("%32s\n\n", eur.GetType())
 	out += fmt.Sprintf("%32s: %s\n", "Enterprise ID", eur.EnterpriseID)
@@ -1304,281 +1310,281 @@ func (eur ExtendedURLRecord) String() string {
 //  |               Destination User ID             |
 //  +--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+
 
-type ExtendedUserFlow struct {
-	BaseFlowRecord
-	SourceCharSet      CharSet
+type SFlowExtendedUserFlow struct {
+	SFlowBaseFlowRecord
+	SourceCharSet      SFlowCharSet
 	SourceUserID       string
-	DestinationCharSet CharSet
+	DestinationCharSet SFlowCharSet
 	DestinationUserID  string
 }
 
-type CharSet uint32
+type SFlowCharSet uint32
 
 const (
-	unknown                   CharSet = 2
-	csASCII                   CharSet = 3
-	csISOLatin1               CharSet = 4
-	csISOLatin2               CharSet = 5
-	csISOLatin3               CharSet = 6
-	csISOLatin4               CharSet = 7
-	csISOLatinCyrillic        CharSet = 8
-	csISOLatinArabic          CharSet = 9
-	csISOLatinGreek           CharSet = 10
-	csISOLatinHebrew          CharSet = 11
-	csISOLatin5               CharSet = 12
-	csISOLatin6               CharSet = 13
-	csISOTextComm             CharSet = 14
-	csHalfWidthKatakana       CharSet = 15
-	csJISEncoding             CharSet = 16
-	csShiftJIS                CharSet = 17
-	csEUCPkdFmtJapanese       CharSet = 18
-	csEUCFixWidJapanese       CharSet = 19
-	csISO4UnitedKingdom       CharSet = 20
-	csISO11SwedishForNames    CharSet = 21
-	csISO15Italian            CharSet = 22
-	csISO17Spanish            CharSet = 23
-	csISO21German             CharSet = 24
-	csISO60DanishNorwegian    CharSet = 25
-	csISO69French             CharSet = 26
-	csISO10646UTF1            CharSet = 27
-	csISO646basic1983         CharSet = 28
-	csINVARIANT               CharSet = 29
-	csISO2IntlRefVersion      CharSet = 30
-	csNATSSEFI                CharSet = 31
-	csNATSSEFIADD             CharSet = 32
-	csNATSDANO                CharSet = 33
-	csNATSDANOADD             CharSet = 34
-	csISO10Swedish            CharSet = 35
-	csKSC56011987             CharSet = 36
-	csISO2022KR               CharSet = 37
-	csEUCKR                   CharSet = 38
-	csISO2022JP               CharSet = 39
-	csISO2022JP2              CharSet = 40
-	csISO13JISC6220jp         CharSet = 41
-	csISO14JISC6220ro         CharSet = 42
-	csISO16Portuguese         CharSet = 43
-	csISO18Greek7Old          CharSet = 44
-	csISO19LatinGreek         CharSet = 45
-	csISO25French             CharSet = 46
-	csISO27LatinGreek1        CharSet = 47
-	csISO5427Cyrillic         CharSet = 48
-	csISO42JISC62261978       CharSet = 49
-	csISO47BSViewdata         CharSet = 50
-	csISO49INIS               CharSet = 51
-	csISO50INIS8              CharSet = 52
-	csISO51INISCyrillic       CharSet = 53
-	csISO54271981             CharSet = 54
-	csISO5428Greek            CharSet = 55
-	csISO57GB1988             CharSet = 56
-	csISO58GB231280           CharSet = 57
-	csISO61Norwegian2         CharSet = 58
-	csISO70VideotexSupp1      CharSet = 59
-	csISO84Portuguese2        CharSet = 60
-	csISO85Spanish2           CharSet = 61
-	csISO86Hungarian          CharSet = 62
-	csISO87JISX0208           CharSet = 63
-	csISO88Greek7             CharSet = 64
-	csISO89ASMO449            CharSet = 65
-	csISO90                   CharSet = 66
-	csISO91JISC62291984a      CharSet = 67
-	csISO92JISC62991984b      CharSet = 68
-	csISO93JIS62291984badd    CharSet = 69
-	csISO94JIS62291984hand    CharSet = 70
-	csISO95JIS62291984handadd CharSet = 71
-	csISO96JISC62291984kana   CharSet = 72
-	csISO2033                 CharSet = 73
-	csISO99NAPLPS             CharSet = 74
-	csISO102T617bit           CharSet = 75
-	csISO103T618bit           CharSet = 76
-	csISO111ECMACyrillic      CharSet = 77
-	csa71                     CharSet = 78
-	csa72                     CharSet = 79
-	csISO123CSAZ24341985gr    CharSet = 80
-	csISO88596E               CharSet = 81
-	csISO88596I               CharSet = 82
-	csISO128T101G2            CharSet = 83
-	csISO88598E               CharSet = 84
-	csISO88598I               CharSet = 85
-	csISO139CSN369103         CharSet = 86
-	csISO141JUSIB1002         CharSet = 87
-	csISO143IECP271           CharSet = 88
-	csISO146Serbian           CharSet = 89
-	csISO147Macedonian        CharSet = 90
-	csISO150                  CharSet = 91
-	csISO151Cuba              CharSet = 92
-	csISO6937Add              CharSet = 93
-	csISO153GOST1976874       CharSet = 94
-	csISO8859Supp             CharSet = 95
-	csISO10367Box             CharSet = 96
-	csISO158Lap               CharSet = 97
-	csISO159JISX02121990      CharSet = 98
-	csISO646Danish            CharSet = 99
-	csUSDK                    CharSet = 100
-	csDKUS                    CharSet = 101
-	csKSC5636                 CharSet = 102
-	csUnicode11UTF7           CharSet = 103
-	csISO2022CN               CharSet = 104
-	csISO2022CNEXT            CharSet = 105
-	csUTF8                    CharSet = 106
-	csISO885913               CharSet = 109
-	csISO885914               CharSet = 110
-	csISO885915               CharSet = 111
-	csISO885916               CharSet = 112
-	csGBK                     CharSet = 113
-	csGB18030                 CharSet = 114
-	csOSDEBCDICDF0415         CharSet = 115
-	csOSDEBCDICDF03IRV        CharSet = 116
-	csOSDEBCDICDF041          CharSet = 117
-	csISO115481               CharSet = 118
-	csKZ1048                  CharSet = 119
-	csUnicode                 CharSet = 1000
-	csUCS4                    CharSet = 1001
-	csUnicodeASCII            CharSet = 1002
-	csUnicodeLatin1           CharSet = 1003
-	csUnicodeJapanese         CharSet = 1004
-	csUnicodeIBM1261          CharSet = 1005
-	csUnicodeIBM1268          CharSet = 1006
-	csUnicodeIBM1276          CharSet = 1007
-	csUnicodeIBM1264          CharSet = 1008
-	csUnicodeIBM1265          CharSet = 1009
-	csUnicode11               CharSet = 1010
-	csSCSU                    CharSet = 1011
-	csUTF7                    CharSet = 1012
-	csUTF16BE                 CharSet = 1013
-	csUTF16LE                 CharSet = 1014
-	csUTF16                   CharSet = 1015
-	csCESU8                   CharSet = 1016
-	csUTF32                   CharSet = 1017
-	csUTF32BE                 CharSet = 1018
-	csUTF32LE                 CharSet = 1019
-	csBOCU1                   CharSet = 1020
-	csWindows30Latin1         CharSet = 2000
-	csWindows31Latin1         CharSet = 2001
-	csWindows31Latin2         CharSet = 2002
-	csWindows31Latin5         CharSet = 2003
-	csHPRoman8                CharSet = 2004
-	csAdobeStandardEncoding   CharSet = 2005
-	csVenturaUS               CharSet = 2006
-	csVenturaInternational    CharSet = 2007
-	csDECMCS                  CharSet = 2008
-	csPC850Multilingual       CharSet = 2009
-	csPCp852                  CharSet = 2010
-	csPC8CodePage437          CharSet = 2011
-	csPC8DanishNorwegian      CharSet = 2012
-	csPC862LatinHebrew        CharSet = 2013
-	csPC8Turkish              CharSet = 2014
-	csIBMSymbols              CharSet = 2015
-	csIBMThai                 CharSet = 2016
-	csHPLegal                 CharSet = 2017
-	csHPPiFont                CharSet = 2018
-	csHPMath8                 CharSet = 2019
-	csHPPSMath                CharSet = 2020
-	csHPDesktop               CharSet = 2021
-	csVenturaMath             CharSet = 2022
-	csMicrosoftPublishing     CharSet = 2023
-	csWindows31J              CharSet = 2024
-	csGB2312                  CharSet = 2025
-	csBig5                    CharSet = 2026
-	csMacintosh               CharSet = 2027
-	csIBM037                  CharSet = 2028
-	csIBM038                  CharSet = 2029
-	csIBM273                  CharSet = 2030
-	csIBM274                  CharSet = 2031
-	csIBM275                  CharSet = 2032
-	csIBM277                  CharSet = 2033
-	csIBM278                  CharSet = 2034
-	csIBM280                  CharSet = 2035
-	csIBM281                  CharSet = 2036
-	csIBM284                  CharSet = 2037
-	csIBM285                  CharSet = 2038
-	csIBM290                  CharSet = 2039
-	csIBM297                  CharSet = 2040
-	csIBM420                  CharSet = 2041
-	csIBM423                  CharSet = 2042
-	csIBM424                  CharSet = 2043
-	csIBM500                  CharSet = 2044
-	csIBM851                  CharSet = 2045
-	csIBM855                  CharSet = 2046
-	csIBM857                  CharSet = 2047
-	csIBM860                  CharSet = 2048
-	csIBM861                  CharSet = 2049
-	csIBM863                  CharSet = 2050
-	csIBM864                  CharSet = 2051
-	csIBM865                  CharSet = 2052
-	csIBM868                  CharSet = 2053
-	csIBM869                  CharSet = 2054
-	csIBM870                  CharSet = 2055
-	csIBM871                  CharSet = 2056
-	csIBM880                  CharSet = 2057
-	csIBM891                  CharSet = 2058
-	csIBM903                  CharSet = 2059
-	csIBBM904                 CharSet = 2060
-	csIBM905                  CharSet = 2061
-	csIBM918                  CharSet = 2062
-	csIBM1026                 CharSet = 2063
-	csIBMEBCDICATDE           CharSet = 2064
-	csEBCDICATDEA             CharSet = 2065
-	csEBCDICCAFR              CharSet = 2066
-	csEBCDICDKNO              CharSet = 2067
-	csEBCDICDKNOA             CharSet = 2068
-	csEBCDICFISE              CharSet = 2069
-	csEBCDICFISEA             CharSet = 2070
-	csEBCDICFR                CharSet = 2071
-	csEBCDICIT                CharSet = 2072
-	csEBCDICPT                CharSet = 2073
-	csEBCDICES                CharSet = 2074
-	csEBCDICESA               CharSet = 2075
-	csEBCDICESS               CharSet = 2076
-	csEBCDICUK                CharSet = 2077
-	csEBCDICUS                CharSet = 2078
-	csUnknown8BiT             CharSet = 2079
-	csMnemonic                CharSet = 2080
-	csMnem                    CharSet = 2081
-	csVISCII                  CharSet = 2082
-	csVIQR                    CharSet = 2083
-	csKOI8R                   CharSet = 2084
-	csHZGB2312                CharSet = 2085
-	csIBM866                  CharSet = 2086
-	csPC775Baltic             CharSet = 2087
-	csKOI8U                   CharSet = 2088
-	csIBM00858                CharSet = 2089
-	csIBM00924                CharSet = 2090
-	csIBM01140                CharSet = 2091
-	csIBM01141                CharSet = 2092
-	csIBM01142                CharSet = 2093
-	csIBM01143                CharSet = 2094
-	csIBM01144                CharSet = 2095
-	csIBM01145                CharSet = 2096
-	csIBM01146                CharSet = 2097
-	csIBM01147                CharSet = 2098
-	csIBM01148                CharSet = 2099
-	csIBM01149                CharSet = 2100
-	csBig5HKSCS               CharSet = 2101
-	csIBM1047                 CharSet = 2102
-	csPTCP154                 CharSet = 2103
-	csAmiga1251               CharSet = 2104
-	csKOI7switched            CharSet = 2105
-	csBRF                     CharSet = 2106
-	csTSCII                   CharSet = 2107
-	csCP51932                 CharSet = 2108
-	cswindows874              CharSet = 2109
-	cswindows1250             CharSet = 2250
-	cswindows1251             CharSet = 2251
-	cswindows1252             CharSet = 2252
-	cswindows1253             CharSet = 2253
-	cswindows1254             CharSet = 2254
-	cswindows1255             CharSet = 2255
-	cswindows1256             CharSet = 2256
-	cswindows1257             CharSet = 2257
-	cswindows1258             CharSet = 2258
-	csTIS620                  CharSet = 2259
-	cs50220                   CharSet = 2260
-	reserved                  CharSet = 3000
+	SFlowCSunknown                 SFlowCharSet = 2
+	SFlowCSASCII                   SFlowCharSet = 3
+	SFlowCSISOLatin1               SFlowCharSet = 4
+	SFlowCSISOLatin2               SFlowCharSet = 5
+	SFlowCSISOLatin3               SFlowCharSet = 6
+	SFlowCSISOLatin4               SFlowCharSet = 7
+	SFlowCSISOLatinCyrillic        SFlowCharSet = 8
+	SFlowCSISOLatinArabic          SFlowCharSet = 9
+	SFlowCSISOLatinGreek           SFlowCharSet = 10
+	SFlowCSISOLatinHebrew          SFlowCharSet = 11
+	SFlowCSISOLatin5               SFlowCharSet = 12
+	SFlowCSISOLatin6               SFlowCharSet = 13
+	SFlowCSISOTextComm             SFlowCharSet = 14
+	SFlowCSHalfWidthKatakana       SFlowCharSet = 15
+	SFlowCSJISEncoding             SFlowCharSet = 16
+	SFlowCSShiftJIS                SFlowCharSet = 17
+	SFlowCSEUCPkdFmtJapanese       SFlowCharSet = 18
+	SFlowCSEUCFixWidJapanese       SFlowCharSet = 19
+	SFlowCSISO4UnitedKingdom       SFlowCharSet = 20
+	SFlowCSISO11SwedishForNames    SFlowCharSet = 21
+	SFlowCSISO15Italian            SFlowCharSet = 22
+	SFlowCSISO17Spanish            SFlowCharSet = 23
+	SFlowCSISO21German             SFlowCharSet = 24
+	SFlowCSISO60DanishNorwegian    SFlowCharSet = 25
+	SFlowCSISO69French             SFlowCharSet = 26
+	SFlowCSISO10646UTF1            SFlowCharSet = 27
+	SFlowCSISO646basic1983         SFlowCharSet = 28
+	SFlowCSINVARIANT               SFlowCharSet = 29
+	SFlowCSISO2IntlRefVersion      SFlowCharSet = 30
+	SFlowCSNATSSEFI                SFlowCharSet = 31
+	SFlowCSNATSSEFIADD             SFlowCharSet = 32
+	SFlowCSNATSDANO                SFlowCharSet = 33
+	SFlowCSNATSDANOADD             SFlowCharSet = 34
+	SFlowCSISO10Swedish            SFlowCharSet = 35
+	SFlowCSKSC56011987             SFlowCharSet = 36
+	SFlowCSISO2022KR               SFlowCharSet = 37
+	SFlowCSEUCKR                   SFlowCharSet = 38
+	SFlowCSISO2022JP               SFlowCharSet = 39
+	SFlowCSISO2022JP2              SFlowCharSet = 40
+	SFlowCSISO13JISC6220jp         SFlowCharSet = 41
+	SFlowCSISO14JISC6220ro         SFlowCharSet = 42
+	SFlowCSISO16Portuguese         SFlowCharSet = 43
+	SFlowCSISO18Greek7Old          SFlowCharSet = 44
+	SFlowCSISO19LatinGreek         SFlowCharSet = 45
+	SFlowCSISO25French             SFlowCharSet = 46
+	SFlowCSISO27LatinGreek1        SFlowCharSet = 47
+	SFlowCSISO5427Cyrillic         SFlowCharSet = 48
+	SFlowCSISO42JISC62261978       SFlowCharSet = 49
+	SFlowCSISO47BSViewdata         SFlowCharSet = 50
+	SFlowCSISO49INIS               SFlowCharSet = 51
+	SFlowCSISO50INIS8              SFlowCharSet = 52
+	SFlowCSISO51INISCyrillic       SFlowCharSet = 53
+	SFlowCSISO54271981             SFlowCharSet = 54
+	SFlowCSISO5428Greek            SFlowCharSet = 55
+	SFlowCSISO57GB1988             SFlowCharSet = 56
+	SFlowCSISO58GB231280           SFlowCharSet = 57
+	SFlowCSISO61Norwegian2         SFlowCharSet = 58
+	SFlowCSISO70VideotexSupp1      SFlowCharSet = 59
+	SFlowCSISO84Portuguese2        SFlowCharSet = 60
+	SFlowCSISO85Spanish2           SFlowCharSet = 61
+	SFlowCSISO86Hungarian          SFlowCharSet = 62
+	SFlowCSISO87JISX0208           SFlowCharSet = 63
+	SFlowCSISO88Greek7             SFlowCharSet = 64
+	SFlowCSISO89ASMO449            SFlowCharSet = 65
+	SFlowCSISO90                   SFlowCharSet = 66
+	SFlowCSISO91JISC62291984a      SFlowCharSet = 67
+	SFlowCSISO92JISC62991984b      SFlowCharSet = 68
+	SFlowCSISO93JIS62291984badd    SFlowCharSet = 69
+	SFlowCSISO94JIS62291984hand    SFlowCharSet = 70
+	SFlowCSISO95JIS62291984handadd SFlowCharSet = 71
+	SFlowCSISO96JISC62291984kana   SFlowCharSet = 72
+	SFlowCSISO2033                 SFlowCharSet = 73
+	SFlowCSISO99NAPLPS             SFlowCharSet = 74
+	SFlowCSISO102T617bit           SFlowCharSet = 75
+	SFlowCSISO103T618bit           SFlowCharSet = 76
+	SFlowCSISO111ECMACyrillic      SFlowCharSet = 77
+	SFlowCSa71                     SFlowCharSet = 78
+	SFlowCSa72                     SFlowCharSet = 79
+	SFlowCSISO123CSAZ24341985gr    SFlowCharSet = 80
+	SFlowCSISO88596E               SFlowCharSet = 81
+	SFlowCSISO88596I               SFlowCharSet = 82
+	SFlowCSISO128T101G2            SFlowCharSet = 83
+	SFlowCSISO88598E               SFlowCharSet = 84
+	SFlowCSISO88598I               SFlowCharSet = 85
+	SFlowCSISO139CSN369103         SFlowCharSet = 86
+	SFlowCSISO141JUSIB1002         SFlowCharSet = 87
+	SFlowCSISO143IECP271           SFlowCharSet = 88
+	SFlowCSISO146Serbian           SFlowCharSet = 89
+	SFlowCSISO147Macedonian        SFlowCharSet = 90
+	SFlowCSISO150                  SFlowCharSet = 91
+	SFlowCSISO151Cuba              SFlowCharSet = 92
+	SFlowCSISO6937Add              SFlowCharSet = 93
+	SFlowCSISO153GOST1976874       SFlowCharSet = 94
+	SFlowCSISO8859Supp             SFlowCharSet = 95
+	SFlowCSISO10367Box             SFlowCharSet = 96
+	SFlowCSISO158Lap               SFlowCharSet = 97
+	SFlowCSISO159JISX02121990      SFlowCharSet = 98
+	SFlowCSISO646Danish            SFlowCharSet = 99
+	SFlowCSUSDK                    SFlowCharSet = 100
+	SFlowCSDKUS                    SFlowCharSet = 101
+	SFlowCSKSC5636                 SFlowCharSet = 102
+	SFlowCSUnicode11UTF7           SFlowCharSet = 103
+	SFlowCSISO2022CN               SFlowCharSet = 104
+	SFlowCSISO2022CNEXT            SFlowCharSet = 105
+	SFlowCSUTF8                    SFlowCharSet = 106
+	SFlowCSISO885913               SFlowCharSet = 109
+	SFlowCSISO885914               SFlowCharSet = 110
+	SFlowCSISO885915               SFlowCharSet = 111
+	SFlowCSISO885916               SFlowCharSet = 112
+	SFlowCSGBK                     SFlowCharSet = 113
+	SFlowCSGB18030                 SFlowCharSet = 114
+	SFlowCSOSDEBCDICDF0415         SFlowCharSet = 115
+	SFlowCSOSDEBCDICDF03IRV        SFlowCharSet = 116
+	SFlowCSOSDEBCDICDF041          SFlowCharSet = 117
+	SFlowCSISO115481               SFlowCharSet = 118
+	SFlowCSKZ1048                  SFlowCharSet = 119
+	SFlowCSUnicode                 SFlowCharSet = 1000
+	SFlowCSUCS4                    SFlowCharSet = 1001
+	SFlowCSUnicodeASCII            SFlowCharSet = 1002
+	SFlowCSUnicodeLatin1           SFlowCharSet = 1003
+	SFlowCSUnicodeJapanese         SFlowCharSet = 1004
+	SFlowCSUnicodeIBM1261          SFlowCharSet = 1005
+	SFlowCSUnicodeIBM1268          SFlowCharSet = 1006
+	SFlowCSUnicodeIBM1276          SFlowCharSet = 1007
+	SFlowCSUnicodeIBM1264          SFlowCharSet = 1008
+	SFlowCSUnicodeIBM1265          SFlowCharSet = 1009
+	SFlowCSUnicode11               SFlowCharSet = 1010
+	SFlowCSSCSU                    SFlowCharSet = 1011
+	SFlowCSUTF7                    SFlowCharSet = 1012
+	SFlowCSUTF16BE                 SFlowCharSet = 1013
+	SFlowCSUTF16LE                 SFlowCharSet = 1014
+	SFlowCSUTF16                   SFlowCharSet = 1015
+	SFlowCSCESU8                   SFlowCharSet = 1016
+	SFlowCSUTF32                   SFlowCharSet = 1017
+	SFlowCSUTF32BE                 SFlowCharSet = 1018
+	SFlowCSUTF32LE                 SFlowCharSet = 1019
+	SFlowCSBOCU1                   SFlowCharSet = 1020
+	SFlowCSWindows30Latin1         SFlowCharSet = 2000
+	SFlowCSWindows31Latin1         SFlowCharSet = 2001
+	SFlowCSWindows31Latin2         SFlowCharSet = 2002
+	SFlowCSWindows31Latin5         SFlowCharSet = 2003
+	SFlowCSHPRoman8                SFlowCharSet = 2004
+	SFlowCSAdobeStandardEncoding   SFlowCharSet = 2005
+	SFlowCSVenturaUS               SFlowCharSet = 2006
+	SFlowCSVenturaInternational    SFlowCharSet = 2007
+	SFlowCSDECMCS                  SFlowCharSet = 2008
+	SFlowCSPC850Multilingual       SFlowCharSet = 2009
+	SFlowCSPCp852                  SFlowCharSet = 2010
+	SFlowCSPC8CodePage437          SFlowCharSet = 2011
+	SFlowCSPC8DanishNorwegian      SFlowCharSet = 2012
+	SFlowCSPC862LatinHebrew        SFlowCharSet = 2013
+	SFlowCSPC8Turkish              SFlowCharSet = 2014
+	SFlowCSIBMSymbols              SFlowCharSet = 2015
+	SFlowCSIBMThai                 SFlowCharSet = 2016
+	SFlowCSHPLegal                 SFlowCharSet = 2017
+	SFlowCSHPPiFont                SFlowCharSet = 2018
+	SFlowCSHPMath8                 SFlowCharSet = 2019
+	SFlowCSHPPSMath                SFlowCharSet = 2020
+	SFlowCSHPDesktop               SFlowCharSet = 2021
+	SFlowCSVenturaMath             SFlowCharSet = 2022
+	SFlowCSMicrosoftPublishing     SFlowCharSet = 2023
+	SFlowCSWindows31J              SFlowCharSet = 2024
+	SFlowCSGB2312                  SFlowCharSet = 2025
+	SFlowCSBig5                    SFlowCharSet = 2026
+	SFlowCSMacintosh               SFlowCharSet = 2027
+	SFlowCSIBM037                  SFlowCharSet = 2028
+	SFlowCSIBM038                  SFlowCharSet = 2029
+	SFlowCSIBM273                  SFlowCharSet = 2030
+	SFlowCSIBM274                  SFlowCharSet = 2031
+	SFlowCSIBM275                  SFlowCharSet = 2032
+	SFlowCSIBM277                  SFlowCharSet = 2033
+	SFlowCSIBM278                  SFlowCharSet = 2034
+	SFlowCSIBM280                  SFlowCharSet = 2035
+	SFlowCSIBM281                  SFlowCharSet = 2036
+	SFlowCSIBM284                  SFlowCharSet = 2037
+	SFlowCSIBM285                  SFlowCharSet = 2038
+	SFlowCSIBM290                  SFlowCharSet = 2039
+	SFlowCSIBM297                  SFlowCharSet = 2040
+	SFlowCSIBM420                  SFlowCharSet = 2041
+	SFlowCSIBM423                  SFlowCharSet = 2042
+	SFlowCSIBM424                  SFlowCharSet = 2043
+	SFlowCSIBM500                  SFlowCharSet = 2044
+	SFlowCSIBM851                  SFlowCharSet = 2045
+	SFlowCSIBM855                  SFlowCharSet = 2046
+	SFlowCSIBM857                  SFlowCharSet = 2047
+	SFlowCSIBM860                  SFlowCharSet = 2048
+	SFlowCSIBM861                  SFlowCharSet = 2049
+	SFlowCSIBM863                  SFlowCharSet = 2050
+	SFlowCSIBM864                  SFlowCharSet = 2051
+	SFlowCSIBM865                  SFlowCharSet = 2052
+	SFlowCSIBM868                  SFlowCharSet = 2053
+	SFlowCSIBM869                  SFlowCharSet = 2054
+	SFlowCSIBM870                  SFlowCharSet = 2055
+	SFlowCSIBM871                  SFlowCharSet = 2056
+	SFlowCSIBM880                  SFlowCharSet = 2057
+	SFlowCSIBM891                  SFlowCharSet = 2058
+	SFlowCSIBM903                  SFlowCharSet = 2059
+	SFlowCSIBBM904                 SFlowCharSet = 2060
+	SFlowCSIBM905                  SFlowCharSet = 2061
+	SFlowCSIBM918                  SFlowCharSet = 2062
+	SFlowCSIBM1026                 SFlowCharSet = 2063
+	SFlowCSIBMEBCDICATDE           SFlowCharSet = 2064
+	SFlowCSEBCDICATDEA             SFlowCharSet = 2065
+	SFlowCSEBCDICCAFR              SFlowCharSet = 2066
+	SFlowCSEBCDICDKNO              SFlowCharSet = 2067
+	SFlowCSEBCDICDKNOA             SFlowCharSet = 2068
+	SFlowCSEBCDICFISE              SFlowCharSet = 2069
+	SFlowCSEBCDICFISEA             SFlowCharSet = 2070
+	SFlowCSEBCDICFR                SFlowCharSet = 2071
+	SFlowCSEBCDICIT                SFlowCharSet = 2072
+	SFlowCSEBCDICPT                SFlowCharSet = 2073
+	SFlowCSEBCDICES                SFlowCharSet = 2074
+	SFlowCSEBCDICESA               SFlowCharSet = 2075
+	SFlowCSEBCDICESS               SFlowCharSet = 2076
+	SFlowCSEBCDICUK                SFlowCharSet = 2077
+	SFlowCSEBCDICUS                SFlowCharSet = 2078
+	SFlowCSUnknown8BiT             SFlowCharSet = 2079
+	SFlowCSMnemonic                SFlowCharSet = 2080
+	SFlowCSMnem                    SFlowCharSet = 2081
+	SFlowCSVISCII                  SFlowCharSet = 2082
+	SFlowCSVIQR                    SFlowCharSet = 2083
+	SFlowCSKOI8R                   SFlowCharSet = 2084
+	SFlowCSHZGB2312                SFlowCharSet = 2085
+	SFlowCSIBM866                  SFlowCharSet = 2086
+	SFlowCSPC775Baltic             SFlowCharSet = 2087
+	SFlowCSKOI8U                   SFlowCharSet = 2088
+	SFlowCSIBM00858                SFlowCharSet = 2089
+	SFlowCSIBM00924                SFlowCharSet = 2090
+	SFlowCSIBM01140                SFlowCharSet = 2091
+	SFlowCSIBM01141                SFlowCharSet = 2092
+	SFlowCSIBM01142                SFlowCharSet = 2093
+	SFlowCSIBM01143                SFlowCharSet = 2094
+	SFlowCSIBM01144                SFlowCharSet = 2095
+	SFlowCSIBM01145                SFlowCharSet = 2096
+	SFlowCSIBM01146                SFlowCharSet = 2097
+	SFlowCSIBM01147                SFlowCharSet = 2098
+	SFlowCSIBM01148                SFlowCharSet = 2099
+	SFlowCSIBM01149                SFlowCharSet = 2100
+	SFlowCSBig5HKSCS               SFlowCharSet = 2101
+	SFlowCSIBM1047                 SFlowCharSet = 2102
+	SFlowCSPTCP154                 SFlowCharSet = 2103
+	SFlowCSAmiga1251               SFlowCharSet = 2104
+	SFlowCSKOI7switched            SFlowCharSet = 2105
+	SFlowCSBRF                     SFlowCharSet = 2106
+	SFlowCSTSCII                   SFlowCharSet = 2107
+	SFlowCSCP51932                 SFlowCharSet = 2108
+	SFlowCSwindows874              SFlowCharSet = 2109
+	SFlowCSwindows1250             SFlowCharSet = 2250
+	SFlowCSwindows1251             SFlowCharSet = 2251
+	SFlowCSwindows1252             SFlowCharSet = 2252
+	SFlowCSwindows1253             SFlowCharSet = 2253
+	SFlowCSwindows1254             SFlowCharSet = 2254
+	SFlowCSwindows1255             SFlowCharSet = 2255
+	SFlowCSwindows1256             SFlowCharSet = 2256
+	SFlowCSwindows1257             SFlowCharSet = 2257
+	SFlowCSwindows1258             SFlowCharSet = 2258
+	SFlowCSTIS620                  SFlowCharSet = 2259
+	SFlowCS50220                   SFlowCharSet = 2260
+	SFlowCSreserved                SFlowCharSet = 3000
 )
 
-func decodeExtendedUserFlow(r *bytes.Reader) (ExtendedUserFlow, error) {
-	eu := ExtendedUserFlow{}
-	var fdf FlowDataFormat
+func decodeExtendedUserFlow(r *bytes.Reader) (SFlowExtendedUserFlow, error) {
+	eu := SFlowExtendedUserFlow{}
+	var fdf SFlowFlowDataFormat
 	var srcUserLen uint32
 	var dstUserLen uint32
 
@@ -1604,7 +1610,7 @@ func decodeExtendedUserFlow(r *bytes.Reader) (ExtendedUserFlow, error) {
 
 }
 
-func (eu ExtendedUserFlow) String() string {
+func (eu SFlowExtendedUserFlow) String() string {
 	var out string
 	out = fmt.Sprintf("%32s\n\n", eu.GetType())
 	out += fmt.Sprintf("%32s: %s\n", "Enterprise ID", eu.EnterpriseID)
@@ -1632,26 +1638,26 @@ func (eu ExtendedUserFlow) String() string {
 //  /                                               /
 //  +--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+
 
-type BaseCounterRecord struct {
-	EnterpriseID   EnterpriseID
-	Format         CounterRecordType
+type SFlowBaseCounterRecord struct {
+	EnterpriseID   SFlowEnterpriseID
+	Format         SFlowCounterRecordType
 	FlowDataLength uint32
 }
 
-func (bcr BaseCounterRecord) GetType() CounterRecordType {
+func (bcr SFlowBaseCounterRecord) GetType() SFlowCounterRecordType {
 	switch bcr.Format {
-	case TypeGenericInterfaceCounters:
-		return TypeGenericInterfaceCounters
-	case TypeEthernetInterfaceCounters:
-		return TypeEthernetInterfaceCounters
-	case TypeTokenRingInterfaceCounters:
-		return TypeTokenRingInterfaceCounters
-	case Type100BaseVGInterfaceCounters:
-		return Type100BaseVGInterfaceCounters
-	case TypeVLANCounters:
-		return TypeVLANCounters
-	case TypeProcessorCounters:
-		return TypeProcessorCounters
+	case SFlowTypeGenericInterfaceCounters:
+		return SFlowTypeGenericInterfaceCounters
+	case SFlowTypeEthernetInterfaceCounters:
+		return SFlowTypeEthernetInterfaceCounters
+	case SFlowTypeTokenRingInterfaceCounters:
+		return SFlowTypeTokenRingInterfaceCounters
+	case SFlowType100BaseVGInterfaceCounters:
+		return SFlowType100BaseVGInterfaceCounters
+	case SFlowTypeVLANCounters:
+		return SFlowTypeVLANCounters
+	case SFlowTypeProcessorCounters:
+		return SFlowTypeProcessorCounters
 
 	}
 	unrecognized := fmt.Sprint("Unrecognized counter record type:", bcr.Format)
@@ -1709,8 +1715,8 @@ func (bcr BaseCounterRecord) GetType() CounterRecordType {
 //  |                 IfPromiscouousMode            |
 //  +--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+
 
-type GenericInterfaceCounters struct {
-	BaseCounterRecord
+type SFlowGenericInterfaceCounters struct {
+	SFlowBaseCounterRecord
 	IfIndex     uint32
 	IfType      uint32
 	IfSpeed     uint64
@@ -1734,7 +1740,7 @@ type GenericInterfaceCounters struct {
 	IfPromiscuousMode  uint32
 }
 
-func (gic GenericInterfaceCounters) String() string {
+func (gic SFlowGenericInterfaceCounters) String() string {
 	var out string
 	//out = fmt.Sprintf("%32s\n\n", gic.GetType())
 	out += fmt.Sprintf("%32s: %s\n", "Enterprise ID", gic.EnterpriseID)
@@ -1763,9 +1769,9 @@ func (gic GenericInterfaceCounters) String() string {
 	return out
 }
 
-func decodeGenericInterfaceCounters(r *bytes.Reader) (GenericInterfaceCounters, error) {
-	gic := GenericInterfaceCounters{}
-	var cdf CounterDataFormat
+func decodeGenericInterfaceCounters(r *bytes.Reader) (SFlowGenericInterfaceCounters, error) {
+	gic := SFlowGenericInterfaceCounters{}
+	var cdf SFlowCounterDataFormat
 
 	binary.Read(r, binary.BigEndian, &cdf)
 	gic.EnterpriseID, gic.Format = cdf.decode()
@@ -1810,8 +1816,8 @@ func decodeGenericInterfaceCounters(r *bytes.Reader) (GenericInterfaceCounters, 
 //  /                                               /
 //  +--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+
 
-type EthernetCounters struct {
-	BaseCounterRecord
+type SFlowEthernetCounters struct {
+	SFlowBaseCounterRecord
 
 	Dot3StatsAlignmentErrors           uint32
 	Dot3StatsFCSErrors                 uint32
@@ -1828,7 +1834,7 @@ type EthernetCounters struct {
 	Dot3StatsSymbolErrors              uint32
 }
 
-func (ec EthernetCounters) String() string {
+func (ec SFlowEthernetCounters) String() string {
 	var out string
 	out += fmt.Sprintf("%32s: %s\n", "Enterprise ID", ec.EnterpriseID)
 	out += fmt.Sprintf("%32s: %s\n", "Record Type", ec.Format)
@@ -1850,9 +1856,9 @@ func (ec EthernetCounters) String() string {
 	return out
 }
 
-func decodeEthernetCounters(r *bytes.Reader) (EthernetCounters, error) {
-	ec := EthernetCounters{}
-	var cdf CounterDataFormat
+func decodeEthernetCounters(r *bytes.Reader) (SFlowEthernetCounters, error) {
+	ec := SFlowEthernetCounters{}
+	var cdf SFlowCounterDataFormat
 
 	binary.Read(r, binary.BigEndian, &cdf)
 	ec.EnterpriseID, ec.Format = cdf.decode()
