@@ -4,7 +4,6 @@
 // that can be found in the LICENSE file in the root of the source
 // tree.
 
-
 /*
 This layer decodes SFlow version 5 datagrams.
 
@@ -88,7 +87,6 @@ import (
 // data to test with.)
 type SFlowSample interface {
 	GetRecords() []SFlowRecord
-	String() string
 	GetType() SFlowSampleType
 }
 
@@ -96,7 +94,6 @@ type SFlowSample interface {
 // A Record is the structure that actually holds the sampled data
 // and / or counters.
 type SFlowRecord interface {
-	String() string
 }
 
 // SFlowDataSource encodes a 2-bit SFlowSourceFormat in its most significant
@@ -129,8 +126,9 @@ func (sdf SFlowSourceFormat) String() string {
 		return "Packet Discarded"
 	case SFlowTypeMultipleDestinations:
 		return "Multiple Destinations"
+	default:
+		return ""
 	}
-	return ""
 }
 
 func decodeSFlow(data []byte, p gopacket.PacketBuilder) error {
@@ -208,8 +206,9 @@ func (eid SFlowEnterpriseID) String() string {
 	switch eid {
 	case SFlowStandard:
 		return "Standard SFlow"
+	default:
+		return ""
 	}
-	return ""
 }
 
 func (eid SFlowEnterpriseID) GetType() SFlowEnterpriseID {
@@ -252,9 +251,10 @@ func (st SFlowSampleType) String() string {
 		return "Expanded Flow Sample"
 	case SFlowTypeExpandedCounterSample:
 		return "Expanded Counter Sample"
+	default:
+		return ""
 	}
 
-	return ""
 }
 
 func (s *SFlowDatagram) LayerType() gopacket.LayerType { return LayerTypeSFlow }
@@ -264,24 +264,6 @@ func (d *SFlowDatagram) Payload() []byte { return nil }
 func (d *SFlowDatagram) CanDecode() gopacket.LayerClass { return LayerTypeSFlow }
 
 func (d *SFlowDatagram) NextLayerType() gopacket.LayerType { return gopacket.LayerTypePayload }
-
-func (sf SFlowDatagram) String() string {
-	var out string
-	out = fmt.Sprintf("%16s: %d\n", "Datagram Version", sf.DatagramVersion)
-	out += fmt.Sprintf("%16s: %s\n", "Agent Address", sf.AgentAddress)
-	out += fmt.Sprintf("%16s: %d\n", "Sub-Agnet ID", sf.SubAgentID)
-	out += fmt.Sprintf("%16s: %d\n", "Sequence Number", sf.SequenceNumber)
-	out += fmt.Sprintf("%16s: %d\n", "Agent Uptime", sf.AgentUptime)
-	out += fmt.Sprintf("%16s: %d\n", "Sample Count", sf.SampleCount)
-	out += fmt.Sprint("\n")
-
-	for i, sample := range sf.Samples {
-		out += fmt.Sprintf("%16s #%d:\n\n", "Sample", (i + 1))
-		out += sample.String()
-	}
-
-	return out
-}
 
 // SFlowIPType determines what form the IP address being decoded will
 // take. This is an XDR union type allowing for both IPv4 and IPv6
@@ -298,8 +280,9 @@ func (s SFlowIPType) String() string {
 		return "IPv4"
 	case SFlowIPv6:
 		return "IPv6"
+	default:
+		return ""
 	}
-	return ""
 }
 
 func (s SFlowIPType) decodeIP(r io.Reader) net.IP {
@@ -435,31 +418,6 @@ func (fs SFlowFlowSample) GetRecords() []SFlowRecord {
 
 func (fs SFlowFlowSample) GetType() SFlowSampleType {
 	return SFlowTypeFlowSample
-}
-
-func (fs SFlowFlowSample) String() string {
-	var out string
-	//out = fmt.Sprintf("%24s\n\n", fs.GetType())
-	out += fmt.Sprintf("%24s: %s\n", "Enterprise ID", fs.EnterpriseID)
-	out += fmt.Sprintf("%24s: %s\n", "Format", fs.Format)
-	out += fmt.Sprintf("%24s: %d\n", "Sample Length", fs.SampleLength)
-	out += fmt.Sprintf("%24s: %d\n", "Sequence Number", fs.SequenceNumber)
-	out += fmt.Sprintf("%24s: %d\n", "Source ID Class", fs.SourceIDClass)
-	out += fmt.Sprintf("%24s: %d\n", "Source ID Index", fs.SourceIDIndex)
-	out += fmt.Sprintf("%24s: %d\n", "Sampling Rate", fs.SamplingRate)
-	out += fmt.Sprintf("%24s: %d\n", "Sample Pool", fs.SamplePool)
-	out += fmt.Sprintf("%24s: %d\n", "Dropped", fs.Dropped)
-	out += fmt.Sprintf("%24s: %d\n", "Input Interface", fs.InputInterface)
-	out += fmt.Sprintf("%24s: %d\n", "Output Interface", fs.OutputInterface)
-	out += fmt.Sprintf("%24s: %d\n", "Record Count", fs.RecordCount)
-	out += fmt.Sprint("\n")
-
-	for i, record := range fs.Records {
-		out += fmt.Sprintf("%24s #%d:\n\n", "Record", (i + 1))
-		out += record.String()
-	}
-
-	return out
 }
 
 func skipFlowRecord(r *bytes.Reader) {
@@ -619,26 +577,6 @@ func (cdf SFlowCounterDataFormat) decode() (SFlowEnterpriseID, SFlowCounterRecor
 	return SFlowEnterpriseID(leftField), SFlowCounterRecordType(rightField)
 }
 
-func (cs SFlowCounterSample) String() string {
-	var out string
-	out = fmt.Sprintf("%24s\n\n", cs.GetType())
-	out += fmt.Sprintf("%24s: %s\n", "Enterprise ID", cs.EnterpriseID)
-	out += fmt.Sprintf("%24s: %s\n", "Format", cs.Format)
-	out += fmt.Sprintf("%24s: %d\n", "Sample Length", cs.SampleLength)
-	out += fmt.Sprintf("%24s: %d\n", "Sequence Number", cs.SequenceNumber)
-	out += fmt.Sprintf("%24s: %d\n", "Source ID Class", cs.SourceIDClass)
-	out += fmt.Sprintf("%24s: %d\n", "Source ID Index", cs.SourceIDIndex)
-	out += fmt.Sprintf("%24s: %d\n", "Record Count", cs.RecordCount)
-	out += fmt.Sprint("\n")
-
-	for i, record := range cs.Records {
-		out += fmt.Sprintf("%24s #%d:\n\n", "Record", (i + 1))
-		out += record.String()
-	}
-
-	return out
-}
-
 // GetRecords will return a slice of interface types
 // representing records. A type switch can be used to
 // get at the underlying SFlowCounterRecordType.
@@ -677,9 +615,10 @@ func (cr SFlowCounterRecordType) String() string {
 		return "VLAN Counters"
 	case SFlowTypeProcessorCounters:
 		return "Processor Counters"
+	default:
+		return ""
 
 	}
-	return ""
 }
 
 func skipCounterRecord(r *bytes.Reader) {
@@ -845,8 +784,9 @@ func (rt SFlowFlowRecordType) String() string {
 		return "Extended MPLS LVP FEC Flow Record"
 	case SFlowTypeExtendedVlanFlow:
 		return "Extended VLAN Flow Record"
+	default:
+		return ""
 	}
-	return ""
 }
 
 // SFlowRawPacketFlowRecords hold information about a sampled
@@ -888,27 +828,6 @@ type SFlowRawPacketFlowRecord struct {
 //  \                                               \
 //  \                                               \
 //  +--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+
-
-func (fr SFlowRawPacketFlowRecord) String() string {
-	var out string
-	out = fmt.Sprintf("%32s\n\n", fr.GetType())
-	out += fmt.Sprintf("%32s: %s\n", "Enterprise ID", fr.EnterpriseID)
-	out += fmt.Sprintf("%32s: %s\n", "Format", fr.Format)
-	out += fmt.Sprintf("%32s: %d\n", "Flow Data Length", fr.FlowDataLength)
-	out += fmt.Sprintf("%32s: %d\n", "Header Protocol", fr.HeaderProtocol)
-	out += fmt.Sprintf("%32s: %d\n", "Frame Length:", fr.FrameLength)
-	out += fmt.Sprintf("%32s: %d\n", "Payload Removed", fr.PayloadRemoved)
-	out += fmt.Sprintf("%32s: %d\n", "Header Length", fr.HeaderLength)
-	out += fmt.Sprintf("%32s:\n\n", "Sampled Packet Flow Summary")
-	out += fmt.Sprintf("%32s%-64s\n", "", fr.Header.LinkLayer().LinkFlow())
-	out += fmt.Sprintf("%32s%-64s\n", "", fr.Header.NetworkLayer().NetworkFlow())
-	out += fmt.Sprintf("%32s%-64s\n", "", fr.Header.TransportLayer().TransportFlow())
-
-	out += fmt.Sprint("\n")
-
-	return out
-
-}
 
 func decodeRawPacketFlowRecord(r *bytes.Reader) (SFlowRawPacketFlowRecord, error) {
 	rec := SFlowRawPacketFlowRecord{}
@@ -959,21 +878,6 @@ type SFlowExtendedSwitchFlowRecord struct {
 //  |                Outgoing VLAN Priority         |
 //  +--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+
 
-func (es SFlowExtendedSwitchFlowRecord) String() string {
-	var out string
-	out = fmt.Sprintf("%32s\n\n", es.GetType())
-	out += fmt.Sprintf("%32s: %s\n", "Enterprise ID", es.EnterpriseID)
-	out += fmt.Sprintf("%32s: %s\n", "Format", es.Format)
-	out += fmt.Sprintf("%32s: %d\n", "Flow Data Length", es.FlowDataLength)
-	out += fmt.Sprintf("%32s: %d\n", "Incoming VLAN", es.IncomingVLAN)
-	out += fmt.Sprintf("%32s: %d\n", "Incoming VLAN Priority", es.IncomingVLANPriority)
-	out += fmt.Sprintf("%32s: %d\n", "Outgoing VLAN", es.OutgoingVLAN)
-	out += fmt.Sprintf("%32s: %d\n", "Outgoing VLAN Priority", es.OutgoingVLANPriority)
-	out += fmt.Sprint("\n")
-
-	return out
-}
-
 func decodeExtendedSwitchFlowRecord(r *bytes.Reader) (SFlowExtendedSwitchFlowRecord, error) {
 	es := SFlowExtendedSwitchFlowRecord{}
 	var fdf SFlowFlowDataFormat
@@ -1012,20 +916,6 @@ type SFlowExtendedRouterFlowRecord struct {
 //  +--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+
 //  |              Next Hop Destination Mask        |
 //  +--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+
-
-func (er SFlowExtendedRouterFlowRecord) String() string {
-	var out string
-	out = fmt.Sprintf("%32s\n\n", er.GetType())
-	out += fmt.Sprintf("%32s: %s\n", "Enterprise ID", er.EnterpriseID)
-	out += fmt.Sprintf("%32s: %s\n", "Format", er.Format)
-	out += fmt.Sprintf("%32s: %d\n", "Flow Data Length", er.FlowDataLength)
-	out += fmt.Sprintf("%32s: %s\n", "Next Hop", er.NextHop)
-	out += fmt.Sprintf("%32s: %d\n", "Next Hop Source Mask", er.NextHopSourceMask)
-	out += fmt.Sprintf("%32s: %d\n", "Next Hop Destination Mask", er.NextHopDestinationMask)
-	out += fmt.Sprint("\n")
-
-	return out
-}
 
 func decodeExtendedRouterFlowRecord(r *bytes.Reader) (SFlowExtendedRouterFlowRecord, error) {
 	er := SFlowExtendedRouterFlowRecord{}
@@ -1124,9 +1014,9 @@ func (apt SFlowASPathType) String() string {
 		return "AS Set"
 	case SFlowASSequence:
 		return "AS Sequence"
+	default:
+		return ""
 	}
-
-	return ""
 }
 
 type SFlowASDestination struct {
@@ -1141,8 +1031,9 @@ func (asd SFlowASDestination) String() string {
 		return fmt.Sprint("AS Set:", asd.Members)
 	case SFlowASSequence:
 		return fmt.Sprint("AS Sequence:", asd.Members)
+	default:
+		return ""
 	}
-	return ""
 }
 
 func (ad *SFlowASDestination) decodePath(r *bytes.Reader) {
@@ -1186,33 +1077,6 @@ func decodeExtendedGatewayFlowRecord(r *bytes.Reader) (SFlowExtendedGatewayFlowR
 	return eg, nil
 }
 
-func (eg SFlowExtendedGatewayFlowRecord) String() string {
-	var out string
-	out = fmt.Sprintf("%32s\n\n", eg.GetType())
-	out += fmt.Sprintf("%32s: %s\n", "Enterprise ID", eg.EnterpriseID)
-	out += fmt.Sprintf("%32s: %s\n", "Format", eg.Format)
-	out += fmt.Sprintf("%32s: %d\n", "Flow Data Length", eg.FlowDataLength)
-	out += fmt.Sprintf("%32s: %s\n", "Next Hop", eg.NextHop)
-	out += fmt.Sprintf("%32s: %d\n", "AS", eg.AS)
-	out += fmt.Sprintf("%32s: %d\n", "Source AS", eg.SourceAS)
-	out += fmt.Sprintf("%32s: %d\n", "Peer AS", eg.PeerAS)
-	for _, path := range eg.ASPath {
-		switch path.Type {
-		case SFlowASSet:
-			out += fmt.Sprintf("%32s: %d\n", "AS Set", path.Members)
-		case SFlowASSequence:
-			out += fmt.Sprintf("%32s: %d\n", "AS Sequence", path.Members)
-		}
-	}
-
-	out += fmt.Sprintf("%32s: %d\n", "Communities", eg.Communities)
-
-	out += fmt.Sprintf("%32s: %d\n", "LocalPref", eg.LocalPref)
-	out += fmt.Sprint("\n")
-
-	return out
-}
-
 // **************************************************
 //  Extended URL Flow Record
 // **************************************************
@@ -1243,8 +1107,9 @@ func (urld SFlowURLDirection) String() string {
 		return "Source address is the server"
 	case SFlowURLdst:
 		return "Destination address is the server"
+	default:
+		return ""
 	}
-	return ""
 }
 
 type SFlowExtendedURLRecord struct {
@@ -1276,19 +1141,6 @@ func decodeExtendedURLRecord(r *bytes.Reader) (SFlowExtendedURLRecord, error) {
 	eur.Host = string(hostBytes[:hostLen])
 
 	return eur, nil
-}
-
-func (eur SFlowExtendedURLRecord) String() string {
-	var out string
-	out = fmt.Sprintf("%32s\n\n", eur.GetType())
-	out += fmt.Sprintf("%32s: %s\n", "Enterprise ID", eur.EnterpriseID)
-	out += fmt.Sprintf("%32s: %s\n", "Format", eur.Format)
-	out += fmt.Sprintf("%32s: %d\n", "Flow Data Length", eur.FlowDataLength)
-	out += fmt.Sprintf("%32s: %s\n", "Direction", eur.Direction)
-	out += fmt.Sprintf("%32s: %s\n", "URL", eur.URL)
-	out += fmt.Sprintf("%32s: %s\n", "Host", eur.Host)
-
-	return out
 }
 
 // **************************************************
@@ -1610,20 +1462,6 @@ func decodeExtendedUserFlow(r *bytes.Reader) (SFlowExtendedUserFlow, error) {
 
 }
 
-func (eu SFlowExtendedUserFlow) String() string {
-	var out string
-	out = fmt.Sprintf("%32s\n\n", eu.GetType())
-	out += fmt.Sprintf("%32s: %s\n", "Enterprise ID", eu.EnterpriseID)
-	out += fmt.Sprintf("%32s: %s\n", "Format", eu.Format)
-	out += fmt.Sprintf("%32s: %d\n", "Flow Data Length", eu.FlowDataLength)
-	out += fmt.Sprintf("%32s: %d\n", "Source Character Set", eu.SourceCharSet)
-	out += fmt.Sprintf("%32s: %s\n", "Source User ID", eu.SourceUserID)
-	out += fmt.Sprintf("%32s: %d\n", "Destination Character Set", eu.DestinationCharSet)
-	out += fmt.Sprintf("%32s: %s\n", "Destination User ID", eu.DestinationUserID)
-
-	return out
-}
-
 // **************************************************
 //  Counter Record
 // **************************************************
@@ -1740,35 +1578,6 @@ type SFlowGenericInterfaceCounters struct {
 	IfPromiscuousMode  uint32
 }
 
-func (gic SFlowGenericInterfaceCounters) String() string {
-	var out string
-	//out = fmt.Sprintf("%32s\n\n", gic.GetType())
-	out += fmt.Sprintf("%32s: %s\n", "Enterprise ID", gic.EnterpriseID)
-	out += fmt.Sprintf("%32s: %s\n", "Record Type", gic.Format)
-	out += fmt.Sprintf("%32s: %d\n", "Flow Data Length", gic.FlowDataLength)
-
-	out += fmt.Sprintf("%32s: %d\n", "ifIndex", gic.IfIndex)
-	out += fmt.Sprintf("%32s: %d\n", "ifType", gic.IfType)
-	out += fmt.Sprintf("%32s: %d\n", "ifSpeed", gic.IfSpeed)
-	out += fmt.Sprintf("%32s: %d\n", "ifDirection", gic.IfDirection)
-	out += fmt.Sprintf("%32s: %d\n", "ifStatus", gic.IfStatus)
-	out += fmt.Sprintf("%32s: %d\n", "ifInOctets", gic.IfInOctets)
-	out += fmt.Sprintf("%32s: %d\n", "ifInUcastPkts", gic.IfInUcastPkts)
-	out += fmt.Sprintf("%32s: %d\n", "ifInMulticastPkts", gic.IfInMulticastPkts)
-	out += fmt.Sprintf("%32s: %d\n", "ifInBroadcastPkts", gic.IfInBroadcastPkts)
-	out += fmt.Sprintf("%32s: %d\n", "ifInDiscards", gic.IfInDiscards)
-	out += fmt.Sprintf("%32s: %d\n", "ifInErrors", gic.IfInErrors)
-	out += fmt.Sprintf("%32s: %d\n", "ifInUnknownProtos", gic.IfInUnknownProtos)
-	out += fmt.Sprintf("%32s: %d\n", "ifOutOctets", gic.IfOutOctets)
-	out += fmt.Sprintf("%32s: %d\n", "ifOutUcastPkts", gic.IfOutUcastPkts)
-	out += fmt.Sprintf("%32s: %d\n", "ifOutMulticastPkts", gic.IfOutMulticastPkts)
-	out += fmt.Sprintf("%32s: %d\n", "ifOUtBroadcastPkts", gic.IfOutBroadcastPkts)
-	out += fmt.Sprintf("%32s: %d\n", "ifOUtDiscards", gic.IfOutDiscards)
-	out += fmt.Sprintf("%32s: %d\n", "ifOutErrors", gic.IfOutErrors)
-	out += fmt.Sprintf("%32s: %d\n", "ifPromiscuousMode", gic.IfPromiscuousMode)
-	return out
-}
-
 func decodeGenericInterfaceCounters(r *bytes.Reader) (SFlowGenericInterfaceCounters, error) {
 	gic := SFlowGenericInterfaceCounters{}
 	var cdf SFlowCounterDataFormat
@@ -1832,28 +1641,6 @@ type SFlowEthernetCounters struct {
 	Dot3StatsFrameTooLongs             uint32
 	Dot3StatsInternalMacReceiveErrors  uint32
 	Dot3StatsSymbolErrors              uint32
-}
-
-func (ec SFlowEthernetCounters) String() string {
-	var out string
-	out += fmt.Sprintf("%32s: %s\n", "Enterprise ID", ec.EnterpriseID)
-	out += fmt.Sprintf("%32s: %s\n", "Record Type", ec.Format)
-	out += fmt.Sprintf("%32s: %d\n", "Flow Data Length", ec.FlowDataLength)
-
-	out += fmt.Sprintf("%32s: %d\n", "Dot3StatsAlignmentErrors", ec.Dot3StatsAlignmentErrors)
-	out += fmt.Sprintf("%32s: %d\n", "Dot3StatsFCSErrors", ec.Dot3StatsFCSErrors)
-	out += fmt.Sprintf("%32s: %d\n", "Dot3StatsSingleCollisionFrames", ec.Dot3StatsSingleCollisionFrames)
-	out += fmt.Sprintf("%32s: %d\n", "Dot3StatsMultipleCollisionFrames", ec.Dot3StatsMultipleCollisionFrames)
-	out += fmt.Sprintf("%32s: %d\n", "Dot3StatsSQETestErrors", ec.Dot3StatsSQETestErrors)
-	out += fmt.Sprintf("%32s: %d\n", "Dot3StatsDeferredTransmissions", ec.Dot3StatsDeferredTransmissions)
-	out += fmt.Sprintf("%32s: %d\n", "Dot3StatsLateCollisions", ec.Dot3StatsLateCollisions)
-	out += fmt.Sprintf("%32s: %d\n", "Dot3StatsExcessiveCollisions", ec.Dot3StatsExcessiveCollisions)
-	out += fmt.Sprintf("%32s: %d\n", "Dot3StatsInternalMacTransmitErrors", ec.Dot3StatsInternalMacTransmitErrors)
-	out += fmt.Sprintf("%32s: %d\n", "Dot3StatsCarrierSenseErrors", ec.Dot3StatsCarrierSenseErrors)
-	out += fmt.Sprintf("%32s: %d\n", "Dot3StatsFrameTooLongs", ec.Dot3StatsFrameTooLongs)
-	out += fmt.Sprintf("%32s: %d\n", "Dot3StatsInternalMacReceiveErrors", ec.Dot3StatsInternalMacReceiveErrors)
-	out += fmt.Sprintf("%32s: %d\n", "Dot3StatsSymbolErrors", ec.Dot3StatsSymbolErrors)
-	return out
 }
 
 func decodeEthernetCounters(r *bytes.Reader) (SFlowEthernetCounters, error) {
