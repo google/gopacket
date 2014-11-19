@@ -153,7 +153,8 @@ type SFlowDatagram struct {
 	SequenceNumber  uint32
 	AgentUptime     uint32
 	SampleCount     uint32
-	Samples         []SFlowSample
+	FlowSamples     []SFlowFlowSample
+	CounterSamples  []SFlowCounterSample
 }
 
 // An SFlow  datagram's outer container has the following
@@ -329,13 +330,13 @@ func (s *SFlowDatagram) DecodeFromBytes(data []byte, df gopacket.DecodeFeedback)
 		switch sampleType {
 		case SFlowTypeFlowSample:
 			if flowSample, err := decodeFlowSample(r); err == nil {
-				s.Samples = append(s.Samples, flowSample)
+				s.FlowSamples = append(s.FlowSamples, flowSample)
 			} else {
 				return err
 			}
 		case SFlowTypeCounterSample:
 			if counterSample, err := decodeCounterSample(r); err == nil {
-				s.Samples = append(s.Samples, counterSample)
+				s.CounterSamples = append(s.CounterSamples, counterSample)
 			} else {
 				return err
 			}
