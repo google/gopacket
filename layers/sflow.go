@@ -286,6 +286,17 @@ func (s SFlowIPType) String() string {
 	}
 }
 
+func (s SFlowIPType) Length() int {
+	switch s {
+	case SFlowIPv4:
+		return 4
+	case SFlowIPv6:
+		return 16
+	default:
+		return 0
+	}
+}
+
 func (s SFlowIPType) decodeIP(r io.Reader) net.IP {
 	var length int
 	switch SFlowIPType(s) {
@@ -305,37 +316,34 @@ func (s SFlowIPType) decodeIP(r io.Reader) net.IP {
 }
 
 func (s *SFlowDatagram) DecodeFromBytes(data []byte, df gopacket.DecodeFeedback) error {
-
-	r := bytes.NewReader(data)
+	buf := bytes.NewBuffer(data)
 	var agentAddressType SFlowIPType
 
-	binary.Read(r, binary.BigEndian, &s.DatagramVersion)
-	binary.Read(r, binary.BigEndian, &agentAddressType)
-	s.AgentAddress = agentAddressType.decodeIP(r)
-	binary.Read(r, binary.BigEndian, &s.SubAgentID)
-	binary.Read(r, binary.BigEndian, &s.SequenceNumber)
-	binary.Read(r, binary.BigEndian, &s.AgentUptime)
-	binary.Read(r, binary.BigEndian, &s.SampleCount)
+	s.DatagramVersion = binary.BigEndian.Uint32(buf.Next(4))
+	agentAddressType = SFlowIPType(binary.BigEndian.Uint32(buf.Next(4)))
+	s.AgentAddress = buf.Next(agentAddressType.Length())
+	s.SubAgentID = binary.BigEndian.Uint32(buf.Next(4))
+	s.SequenceNumber = binary.BigEndian.Uint32(buf.Next(4))
+	s.AgentUptime = binary.BigEndian.Uint32(buf.Next(4))
+	s.SampleCount = binary.BigEndian.Uint32(buf.Next(4))
 
 	if s.SampleCount < 1 {
 		return fmt.Errorf("SFlow Datagram has invalid sample length: %d", s.SampleCount)
 	}
 
 	for i := uint32(0); i < s.SampleCount; i++ {
-		var sdf SFlowDataFormat
-		binary.Read(r, binary.BigEndian, &sdf)
+		sdf := SFlowDataFormat(binary.BigEndian.Uint32(buf.Bytes()[:4]))
 		_, sampleType := sdf.decode()
-		r.Seek(-4, 1)
 
 		switch sampleType {
 		case SFlowTypeFlowSample:
-			if flowSample, err := decodeFlowSample(r); err == nil {
+			if flowSample, err := decodeFlowSample(buf); err == nil {
 				s.FlowSamples = append(s.FlowSamples, flowSample)
 			} else {
 				return err
 			}
 		case SFlowTypeCounterSample:
-			if counterSample, err := decodeCounterSample(r); err == nil {
+			if counterSample, err := decodeCounterSample(buf); err == nil {
 				s.CounterSamples = append(s.CounterSamples, counterSample)
 			} else {
 				return err
@@ -421,112 +429,108 @@ func (fs SFlowFlowSample) GetType() SFlowSampleType {
 	return SFlowTypeFlowSample
 }
 
-func skipFlowRecord(r *bytes.Reader) {
-	var rdf SFlowFlowDataFormat
-	binary.Read(r, binary.BigEndian, &rdf)
-	var recordLength uint32
-	binary.Read(r, binary.BigEndian, &recordLength)
-	r.Seek(int64(recordLength+((4-recordLength)%4)), 1)
+func skipRecord(buf *bytes.Buffer) {
+	recordLength := int(binary.BigEndian.Uint32(buf.Bytes()[4:7]))
+	buf.Next(recordLength + ((4 - recordLength) % 4))
 }
 
-func decodeFlowSample(r *bytes.Reader) (SFlowFlowSample, error) {
+func decodeFlowSample(buf *bytes.Buffer) (SFlowFlowSample, error) {
 	s := SFlowFlowSample{}
-	var sdf SFlowDataFormat
-	var sampleDataSource SFlowDataSource
-	binary.Read(r, binary.BigEndian, &sdf)
+
+	sdf := SFlowDataFormat(binary.BigEndian.Uint32(buf.Next(4)))
+
 	s.EnterpriseID, s.Format = sdf.decode()
-	binary.Read(r, binary.BigEndian, &s.SampleLength)
-	binary.Read(r, binary.BigEndian, &s.SequenceNumber)
-	binary.Read(r, binary.BigEndian, &sampleDataSource)
-	s.SourceIDClass, s.SourceIDIndex = sampleDataSource.decode()
-	binary.Read(r, binary.BigEndian, &s.SamplingRate)
-	binary.Read(r, binary.BigEndian, &s.SamplePool)
-	binary.Read(r, binary.BigEndian, &s.Dropped)
-	binary.Read(r, binary.BigEndian, &s.InputInterface)
-	binary.Read(r, binary.BigEndian, &s.OutputInterface)
-	binary.Read(r, binary.BigEndian, &s.RecordCount)
+	s.SampleLength = binary.BigEndian.Uint32(buf.Next(4))
+	s.SequenceNumber = binary.BigEndian.Uint32(buf.Next(4))
+	sdc := SFlowDataSource(binary.BigEndian.Uint32(buf.Next(4)))
+	s.SourceIDClass, s.SourceIDIndex = sdc.decode()
+	s.SamplingRate = binary.BigEndian.Uint32(buf.Next(4))
+	s.SamplePool = binary.BigEndian.Uint32(buf.Next(4))
+	s.Dropped = binary.BigEndian.Uint32(buf.Next(4))
+	s.InputInterface = binary.BigEndian.Uint32(buf.Next(4))
+	s.OutputInterface = binary.BigEndian.Uint32(buf.Next(4))
+	s.RecordCount = binary.BigEndian.Uint32(buf.Next(4))
 
 	for i := uint32(0); i < s.RecordCount; i++ {
-		var rdf SFlowFlowDataFormat
-		binary.Read(r, binary.BigEndian, &rdf)
+		rdf := SFlowFlowDataFormat(binary.BigEndian.Uint32(buf.Bytes()[:4]))
 		_, flowRecordType := rdf.decode()
-		r.Seek(-4, 1)
+
 		switch flowRecordType {
 		case SFlowTypeRawPacketFlow:
-			if record, err := decodeRawPacketFlowRecord(r); err == nil {
+			if record, err := decodeRawPacketFlowRecord(buf); err == nil {
 				s.Records = append(s.Records, record)
 			} else {
 				return s, err
 			}
 		case SFlowTypeExtendedUserFlow:
-			if record, err := decodeExtendedUserFlow(r); err == nil {
+			if record, err := decodeExtendedUserFlow(buf); err == nil {
 				s.Records = append(s.Records, record)
 			} else {
 				return s, err
 			}
 		case SFlowTypeExtendedUrlFlow:
-			if record, err := decodeExtendedURLRecord(r); err == nil {
+			if record, err := decodeExtendedURLRecord(buf); err == nil {
 				s.Records = append(s.Records, record)
 			} else {
 				return s, err
 			}
 		case SFlowTypeExtendedSwitchFlow:
-			if record, err := decodeExtendedSwitchFlowRecord(r); err == nil {
+			if record, err := decodeExtendedSwitchFlowRecord(buf); err == nil {
 				s.Records = append(s.Records, record)
 			} else {
 				return s, err
 			}
 		case SFlowTypeExtendedRouterFlow:
-			if record, err := decodeExtendedRouterFlowRecord(r); err == nil {
+			if record, err := decodeExtendedRouterFlowRecord(buf); err == nil {
 				s.Records = append(s.Records, record)
 			} else {
 				return s, err
 			}
 		case SFlowTypeExtendedGatewayFlow:
-			if record, err := decodeExtendedGatewayFlowRecord(r); err == nil {
+			if record, err := decodeExtendedGatewayFlowRecord(buf); err == nil {
 				s.Records = append(s.Records, record)
 			} else {
 				return s, err
 			}
 		case SFlowTypeEthernetFrameFlow:
 			// TODO
-			skipFlowRecord(r)
+			skipRecord(buf)
 			return s, fmt.Errorf("skipping TypeEthernetFrameFlow")
 		case SFlowTypeIpv4Flow:
 			// TODO
-			skipFlowRecord(r)
+			skipRecord(buf)
 			return s, fmt.Errorf("skipping TypeIpv4Flow")
 		case SFlowTypeIpv6Flow:
 			// TODO
-			skipFlowRecord(r)
+			skipRecord(buf)
 			return s, fmt.Errorf("skipping TypeIpv6Flow")
 		case SFlowTypeExtendedMlpsFlow:
 			// TODO
-			skipFlowRecord(r)
+			skipRecord(buf)
 			return s, fmt.Errorf("skipping TypeExtendedMlpsFlow")
 		case SFlowTypeExtendedNatFlow:
 			// TODO
-			skipFlowRecord(r)
+			skipRecord(buf)
 			return s, fmt.Errorf("skipping TypeExtendedNatFlow")
 		case SFlowTypeExtendedMlpsTunnelFlow:
 			// TODO
-			skipFlowRecord(r)
+			skipRecord(buf)
 			return s, fmt.Errorf("skipping TypeExtendedMlpsTunnelFlow")
 		case SFlowTypeExtendedMlpsVcFlow:
 			// TODO
-			skipFlowRecord(r)
+			skipRecord(buf)
 			return s, fmt.Errorf("skipping TypeExtendedMlpsVcFlow")
 		case SFlowTypeExtendedMlpsFecFlow:
 			// TODO
-			skipFlowRecord(r)
+			skipRecord(buf)
 			return s, fmt.Errorf("skipping TypeExtendedMlpsFecFlow")
 		case SFlowTypeExtendedMlpsLvpFecFlow:
 			// TODO
-			skipFlowRecord(r)
+			skipRecord(buf)
 			return s, fmt.Errorf("skipping TypeExtendedMlpsLvpFecFlow")
 		case SFlowTypeExtendedVlanFlow:
 			// TODO
-			skipFlowRecord(r)
+			skipRecord(buf)
 			return s, fmt.Errorf("skipping TypeExtendedVlanFlow")
 		default:
 			return s, fmt.Errorf("Unsupported flow record type: %d", flowRecordType)
@@ -622,55 +626,43 @@ func (cr SFlowCounterRecordType) String() string {
 	}
 }
 
-func skipCounterRecord(r *bytes.Reader) {
-	var cdt uint32
-	binary.Read(r, binary.BigEndian, &cdt)
-	var rl uint32
-	binary.Read(r, binary.BigEndian, &rl)
-	r.Seek(int64(rl+((4-rl)%4)), 1)
-}
-
-func decodeCounterSample(r *bytes.Reader) (SFlowCounterSample, error) {
+func decodeCounterSample(buf *bytes.Buffer) (SFlowCounterSample, error) {
 	s := SFlowCounterSample{}
-	var sdf SFlowDataFormat
-	var sampleDataSource SFlowDataSource
-	binary.Read(r, binary.BigEndian, &sdf)
+	sdf := SFlowDataFormat(binary.BigEndian.Uint32(buf.Next(4)))
 	s.EnterpriseID, s.Format = sdf.decode()
-	binary.Read(r, binary.BigEndian, &s.SampleLength)
-	binary.Read(r, binary.BigEndian, &s.SequenceNumber)
-	binary.Read(r, binary.BigEndian, &sampleDataSource)
-	s.SourceIDClass, s.SourceIDIndex = sampleDataSource.decode()
-	binary.Read(r, binary.BigEndian, &s.RecordCount)
+	s.SampleLength = binary.BigEndian.Uint32(buf.Next(4))
+	s.SequenceNumber = binary.BigEndian.Uint32(buf.Next(4))
+	sdc := SFlowDataSource(binary.BigEndian.Uint32(buf.Next(4)))
+	s.SourceIDClass, s.SourceIDIndex = sdc.decode()
+	s.RecordCount = binary.BigEndian.Uint32(buf.Next(4))
 
 	for i := uint32(0); i < s.RecordCount; i++ {
-		var cdf SFlowCounterDataFormat
-		binary.Read(r, binary.BigEndian, &cdf)
+		cdf := SFlowCounterDataFormat(binary.BigEndian.Uint32(buf.Bytes()[:4]))
 		_, counterRecordType := cdf.decode()
-		r.Seek(-4, 1)
 		switch counterRecordType {
 		case SFlowTypeGenericInterfaceCounters:
-			if record, err := decodeGenericInterfaceCounters(r); err == nil {
+			if record, err := decodeGenericInterfaceCounters(buf); err == nil {
 				s.Records = append(s.Records, record)
 			} else {
 				return s, err
 			}
 		case SFlowTypeEthernetInterfaceCounters:
-			if record, err := decodeEthernetCounters(r); err == nil {
+			if record, err := decodeEthernetCounters(buf); err == nil {
 				s.Records = append(s.Records, record)
 			} else {
 				return s, err
 			}
 		case SFlowTypeTokenRingInterfaceCounters:
-			skipCounterRecord(r)
+			skipRecord(buf)
 			return s, fmt.Errorf("skipping TypeTokenRingInterfaceCounters")
 		case SFlowType100BaseVGInterfaceCounters:
-			skipCounterRecord(r)
+			skipRecord(buf)
 			return s, fmt.Errorf("skipping Type100BaseVGInterfaceCounters")
 		case SFlowTypeVLANCounters:
-			skipCounterRecord(r)
+			skipRecord(buf)
 			return s, fmt.Errorf("skipping TypeVLANCounters")
 		case SFlowTypeProcessorCounters:
-			skipCounterRecord(r)
+			skipRecord(buf)
 			return s, fmt.Errorf("skipping TypeProcessorCounters")
 		default:
 			return s, fmt.Errorf("Invalid counter record type: %d", counterRecordType)
@@ -830,20 +822,18 @@ type SFlowRawPacketFlowRecord struct {
 //  \                                               \
 //  +--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+
 
-func decodeRawPacketFlowRecord(r *bytes.Reader) (SFlowRawPacketFlowRecord, error) {
+func decodeRawPacketFlowRecord(buf *bytes.Buffer) (SFlowRawPacketFlowRecord, error) {
 	rec := SFlowRawPacketFlowRecord{}
+	fdf := SFlowFlowDataFormat(binary.BigEndian.Uint32(buf.Next(4)))
 
-	var fdf SFlowFlowDataFormat
-	binary.Read(r, binary.BigEndian, &fdf)
 	rec.EnterpriseID, rec.Format = fdf.decode()
-	binary.Read(r, binary.BigEndian, &rec.FlowDataLength)
+	rec.FlowDataLength = binary.BigEndian.Uint32(buf.Next(4))
+	rec.HeaderProtocol = binary.BigEndian.Uint32(buf.Next(4))
+	rec.FrameLength = binary.BigEndian.Uint32(buf.Next(4))
+	rec.PayloadRemoved = binary.BigEndian.Uint32(buf.Next(4))
+	rec.HeaderLength = binary.BigEndian.Uint32(buf.Next(4))
 
-	binary.Read(r, binary.BigEndian, &rec.HeaderProtocol)
-	binary.Read(r, binary.BigEndian, &rec.FrameLength)
-	binary.Read(r, binary.BigEndian, &rec.PayloadRemoved)
-	binary.Read(r, binary.BigEndian, &rec.HeaderLength)
-	header := make([]byte, rec.HeaderLength+((4-rec.HeaderLength)%4))
-	binary.Read(r, binary.BigEndian, &header)
+	header := buf.Next(int(rec.HeaderLength + ((4 - rec.HeaderLength) % 4)))
 	rec.Header = gopacket.NewPacket(header, LayerTypeEthernet, gopacket.Default)
 
 	return rec, nil
@@ -879,16 +869,16 @@ type SFlowExtendedSwitchFlowRecord struct {
 //  |                Outgoing VLAN Priority         |
 //  +--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+
 
-func decodeExtendedSwitchFlowRecord(r *bytes.Reader) (SFlowExtendedSwitchFlowRecord, error) {
+func decodeExtendedSwitchFlowRecord(buf *bytes.Buffer) (SFlowExtendedSwitchFlowRecord, error) {
 	es := SFlowExtendedSwitchFlowRecord{}
-	var fdf SFlowFlowDataFormat
-	binary.Read(r, binary.BigEndian, &fdf)
+	fdf := SFlowFlowDataFormat(binary.BigEndian.Uint32(buf.Next(4)))
 	es.EnterpriseID, es.Format = fdf.decode()
-	binary.Read(r, binary.BigEndian, &es.FlowDataLength)
-	binary.Read(r, binary.BigEndian, &es.IncomingVLAN)
-	binary.Read(r, binary.BigEndian, &es.IncomingVLANPriority)
-	binary.Read(r, binary.BigEndian, &es.OutgoingVLAN)
-	binary.Read(r, binary.BigEndian, &es.OutgoingVLANPriority)
+
+	es.FlowDataLength = binary.BigEndian.Uint32(buf.Next(4))
+	es.IncomingVLAN = binary.BigEndian.Uint32(buf.Next(4))
+	es.IncomingVLANPriority = binary.BigEndian.Uint32(buf.Next(4))
+	es.OutgoingVLAN = binary.BigEndian.Uint32(buf.Next(4))
+	es.OutgoingVLANPriority = binary.BigEndian.Uint32(buf.Next(4))
 
 	return es, nil
 }
@@ -918,18 +908,16 @@ type SFlowExtendedRouterFlowRecord struct {
 //  |              Next Hop Destination Mask        |
 //  +--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+
 
-func decodeExtendedRouterFlowRecord(r *bytes.Reader) (SFlowExtendedRouterFlowRecord, error) {
+func decodeExtendedRouterFlowRecord(buf *bytes.Buffer) (SFlowExtendedRouterFlowRecord, error) {
 	er := SFlowExtendedRouterFlowRecord{}
-	var extendedRouterAddressType SFlowIPType
-	var fdf SFlowFlowDataFormat
-
-	binary.Read(r, binary.BigEndian, &fdf)
+	fdf := SFlowFlowDataFormat(binary.BigEndian.Uint32(buf.Next(4)))
 	er.EnterpriseID, er.Format = fdf.decode()
-	binary.Read(r, binary.BigEndian, &er.FlowDataLength)
-	binary.Read(r, binary.BigEndian, &extendedRouterAddressType)
-	er.NextHop = extendedRouterAddressType.decodeIP(r)
-	binary.Read(r, binary.BigEndian, &er.NextHopSourceMask)
-	binary.Read(r, binary.BigEndian, &er.NextHopDestinationMask)
+
+	er.FlowDataLength = binary.BigEndian.Uint32(buf.Next(4))
+	erat := SFlowIPType(binary.BigEndian.Uint32(buf.Next(4)))
+	er.NextHop = buf.Next(erat.Length())
+	er.NextHopSourceMask = binary.BigEndian.Uint32(buf.Next(4))
+	er.NextHopDestinationMask = binary.BigEndian.Uint32(buf.Next(4))
 
 	return er, nil
 
@@ -1037,43 +1025,45 @@ func (asd SFlowASDestination) String() string {
 	}
 }
 
-func (ad *SFlowASDestination) decodePath(r *bytes.Reader) {
+func (ad *SFlowASDestination) decodePath(buf *bytes.Buffer) {
 
-	binary.Read(r, binary.BigEndian, &ad.Type)
-	binary.Read(r, binary.BigEndian, &ad.Count)
+	ad.Type = SFlowASPathType(binary.BigEndian.Uint32(buf.Next(4)))
+	ad.Count = binary.BigEndian.Uint32(buf.Next(4))
 	ad.Members = make([]uint32, ad.Count)
-	binary.Read(r, binary.BigEndian, &ad.Members)
+	for i := uint32(0); i < ad.Count; i++ {
+		ad.Members = append(ad.Members, binary.BigEndian.Uint32(buf.Next(4)))
+	}
 
 }
 
-func decodeExtendedGatewayFlowRecord(r *bytes.Reader) (SFlowExtendedGatewayFlowRecord, error) {
+func decodeExtendedGatewayFlowRecord(buf *bytes.Buffer) (SFlowExtendedGatewayFlowRecord, error) {
 	eg := SFlowExtendedGatewayFlowRecord{}
-	var extendedGatewayAddressType SFlowIPType
-	var fdf SFlowFlowDataFormat
-	var communitiesLength uint32
 
-	binary.Read(r, binary.BigEndian, &fdf)
+	fdf := SFlowFlowDataFormat(binary.BigEndian.Uint32(buf.Next(4)))
 	eg.EnterpriseID, eg.Format = fdf.decode()
-	binary.Read(r, binary.BigEndian, &eg.FlowDataLength)
-	binary.Read(r, binary.BigEndian, &extendedGatewayAddressType)
-	eg.NextHop = extendedGatewayAddressType.decodeIP(r)
-	binary.Read(r, binary.BigEndian, &eg.AS)
-	binary.Read(r, binary.BigEndian, &eg.SourceAS)
-	binary.Read(r, binary.BigEndian, &eg.PeerAS)
+	eg.FlowDataLength = binary.BigEndian.Uint32(buf.Next(4))
+	extendedGatewayAddressType := SFlowIPType(binary.BigEndian.Uint32(buf.Next(4)))
+	eg.NextHop = buf.Next(extendedGatewayAddressType.Length())
+	eg.AS = binary.BigEndian.Uint32(buf.Next(4))
+	eg.SourceAS = binary.BigEndian.Uint32(buf.Next(4))
+	eg.PeerAS = binary.BigEndian.Uint32(buf.Next(4))
 
-	binary.Read(r, binary.BigEndian, &eg.ASPathCount)
+	eg.ASPathCount = binary.BigEndian.Uint32(buf.Next(4))
 
 	for i := uint32(0); i < eg.ASPathCount; i++ {
 		asPath := SFlowASDestination{}
-		asPath.decodePath(r)
+		asPath.decodePath(buf)
 		eg.ASPath = append(eg.ASPath, asPath)
 	}
 
-	binary.Read(r, binary.BigEndian, &communitiesLength)
+	communitiesLength := binary.BigEndian.Uint32(buf.Next(4))
 	eg.Communities = make([]uint32, communitiesLength)
 
-	binary.Read(r, binary.BigEndian, &eg.Communities)
-	binary.Read(r, binary.BigEndian, &eg.LocalPref)
+	for j := uint32(0); j < communitiesLength; j++ {
+		eg.Communities = append(eg.Communities, binary.BigEndian.Uint32(buf.Next(4)))
+	}
+
+	eg.LocalPref = binary.BigEndian.Uint32(buf.Next(4))
 
 	return eg, nil
 }
@@ -1120,25 +1110,29 @@ type SFlowExtendedURLRecord struct {
 	Host      string
 }
 
-func decodeExtendedURLRecord(r *bytes.Reader) (SFlowExtendedURLRecord, error) {
+func decodeExtendedURLRecord(buf *bytes.Buffer) (SFlowExtendedURLRecord, error) {
 	eur := SFlowExtendedURLRecord{}
-	var fdf SFlowFlowDataFormat
-	var urlLen uint32
-	var hostLen uint32
 
-	binary.Read(r, binary.BigEndian, &fdf)
+	// binary.Read(r, binary.BigEndian, &fdf)
+	fdf := SFlowFlowDataFormat(binary.BigEndian.Uint32(buf.Next(4)))
 	eur.EnterpriseID, eur.Format = fdf.decode()
-	binary.Read(r, binary.BigEndian, &eur.FlowDataLength)
-	binary.Read(r, binary.BigEndian, &eur.Direction)
+	// binary.Read(r, binary.BigEndian, &eur.FlowDataLength)
+	eur.FlowDataLength = binary.BigEndian.Uint32(buf.Next(4))
+	// binary.Read(r, binary.BigEndian, &eur.Direction)
+	eur.Direction = SFlowURLDirection(binary.BigEndian.Uint32(buf.Next(4)))
 
-	binary.Read(r, binary.BigEndian, &urlLen)
-	urlBytes := make([]byte, urlLen+((4-urlLen)%4)) // XDR padding to nearest 4-byte
-	binary.Read(r, binary.BigEndian, &urlBytes)
+	// binary.Read(r, binary.BigEndian, &urlLen)
+	urlLen := binary.BigEndian.Uint32(buf.Next(4))
+	// urlBytes := make([]byte, urlLen+((4-urlLen)%4)) // XDR padding to nearest 4-byte
+	urlBytes := buf.Next(int(urlLen + ((4 - urlLen) % 4)))
+	// binary.Read(r, binary.BigEndian, &urlBytes)
 	eur.URL = string(urlBytes[:urlLen])
+	hostLen := binary.BigEndian.Uint32(buf.Next(4))
+	// binary.Read(r, binary.BigEndian, &hostLen)
 
-	binary.Read(r, binary.BigEndian, &hostLen)
-	hostBytes := make([]byte, hostLen+((4-hostLen)%4)) // XDR padding to nearest 4-byte
-	binary.Read(r, binary.BigEndian, &hostBytes)
+	// hostBytes := make([]byte, hostLen+((4-hostLen)%4)) // XDR padding to nearest 4-byte
+	hostBytes := buf.Next(int(hostLen + ((4 - hostLen) % 4)))
+	// binary.Read(r, binary.BigEndian, &hostBytes)
 	eur.Host = string(hostBytes[:hostLen])
 
 	return eur, nil
@@ -1435,28 +1429,23 @@ const (
 	SFlowCSreserved                SFlowCharSet = 3000
 )
 
-func decodeExtendedUserFlow(r *bytes.Reader) (SFlowExtendedUserFlow, error) {
+func decodeExtendedUserFlow(buf *bytes.Buffer) (SFlowExtendedUserFlow, error) {
 	eu := SFlowExtendedUserFlow{}
-	var fdf SFlowFlowDataFormat
-	var srcUserLen uint32
-	var dstUserLen uint32
-
-	binary.Read(r, binary.BigEndian, &fdf)
+	fdf := SFlowFlowDataFormat(binary.BigEndian.Uint32(buf.Next(4)))
 	eu.EnterpriseID, eu.Format = fdf.decode()
-	binary.Read(r, binary.BigEndian, &eu.FlowDataLength)
 
-	binary.Read(r, binary.BigEndian, &eu.SourceCharSet)
+	eu.FlowDataLength = binary.BigEndian.Uint32(buf.Next(4))
 
-	binary.Read(r, binary.BigEndian, &srcUserLen)
-	srcUserBytes := make([]byte, srcUserLen+((4-srcUserLen)%4)) // XDR padding to nearest 4-byte
-	binary.Read(r, binary.BigEndian, &srcUserBytes)
+	eu.SourceCharSet = SFlowCharSet(binary.BigEndian.Uint32(buf.Next(4)))
+
+	srcUserLen := binary.BigEndian.Uint32(buf.Next(4))
+	srcUserBytes := buf.Next(int(srcUserLen + ((4 - srcUserLen) % 4)))
 	eu.SourceUserID = string(srcUserBytes[:srcUserLen])
 
-	binary.Read(r, binary.BigEndian, &eu.DestinationCharSet)
+	eu.DestinationCharSet = SFlowCharSet(binary.BigEndian.Uint32(buf.Next(4)))
 
-	binary.Read(r, binary.BigEndian, &dstUserLen)
-	dstUserBytes := make([]byte, dstUserLen+((4-dstUserLen)%4)) // XDR padding to nearest 4-byte
-	binary.Read(r, binary.BigEndian, &dstUserBytes)
+	dstUserLen := binary.BigEndian.Uint32(buf.Next(4))
+	dstUserBytes := buf.Next(int(dstUserLen + ((4 - dstUserLen) % 4)))
 	eu.DestinationUserID = string(dstUserBytes[:dstUserLen])
 
 	return eu, nil
@@ -1579,36 +1568,36 @@ type SFlowGenericInterfaceCounters struct {
 	IfPromiscuousMode  uint32
 }
 
-func decodeGenericInterfaceCounters(r *bytes.Reader) (SFlowGenericInterfaceCounters, error) {
+func decodeGenericInterfaceCounters(buf *bytes.Buffer) (SFlowGenericInterfaceCounters, error) {
 	gic := SFlowGenericInterfaceCounters{}
-	var cdf SFlowCounterDataFormat
+	cdf := SFlowCounterDataFormat(binary.BigEndian.Uint32(buf.Next(4)))
 
-	binary.Read(r, binary.BigEndian, &cdf)
 	gic.EnterpriseID, gic.Format = cdf.decode()
-	binary.Read(r, binary.BigEndian, &gic.FlowDataLength)
+	gic.FlowDataLength = binary.BigEndian.Uint32(buf.Next(4))
 
-	binary.Read(r, binary.BigEndian, &gic.IfIndex)
-	binary.Read(r, binary.BigEndian, &gic.IfType)
-	binary.Read(r, binary.BigEndian, &gic.IfSpeed)
-	binary.Read(r, binary.BigEndian, &gic.IfDirection)
-	binary.Read(r, binary.BigEndian, &gic.IfStatus)
+	gic.IfIndex = binary.BigEndian.Uint32(buf.Next(4))
+	gic.IfType = binary.BigEndian.Uint32(buf.Next(4))
+	gic.IfSpeed = binary.BigEndian.Uint64(buf.Next(8))
+	gic.IfDirection = binary.BigEndian.Uint32(buf.Next(4))
+	gic.IfStatus = binary.BigEndian.Uint32(buf.Next(4))
 
-	binary.Read(r, binary.BigEndian, &gic.IfInOctets)
-	binary.Read(r, binary.BigEndian, &gic.IfInUcastPkts)
-	binary.Read(r, binary.BigEndian, &gic.IfInMulticastPkts)
-	binary.Read(r, binary.BigEndian, &gic.IfInBroadcastPkts)
-	binary.Read(r, binary.BigEndian, &gic.IfInDiscards)
-	binary.Read(r, binary.BigEndian, &gic.IfInErrors)
-	binary.Read(r, binary.BigEndian, &gic.IfInUnknownProtos)
+	gic.IfInOctets = binary.BigEndian.Uint64(buf.Next(8))
+	gic.IfInUcastPkts = binary.BigEndian.Uint32(buf.Next(4))
+	gic.IfInMulticastPkts = binary.BigEndian.Uint32(buf.Next(4))
+	gic.IfInBroadcastPkts = binary.BigEndian.Uint32(buf.Next(4))
+	gic.IfInDiscards = binary.BigEndian.Uint32(buf.Next(4))
+	gic.IfInErrors = binary.BigEndian.Uint32(buf.Next(4))
+	gic.IfInUnknownProtos = binary.BigEndian.Uint32(buf.Next(4))
 
-	binary.Read(r, binary.BigEndian, &gic.IfOutOctets)
-	binary.Read(r, binary.BigEndian, &gic.IfOutUcastPkts)
-	binary.Read(r, binary.BigEndian, &gic.IfOutMulticastPkts)
-	binary.Read(r, binary.BigEndian, &gic.IfOutBroadcastPkts)
-	binary.Read(r, binary.BigEndian, &gic.IfOutDiscards)
-	binary.Read(r, binary.BigEndian, &gic.IfOutErrors)
+	gic.IfOutOctets = binary.BigEndian.Uint64(buf.Next(8))
+	gic.IfOutUcastPkts = binary.BigEndian.Uint32(buf.Next(4))
+	gic.IfOutMulticastPkts = binary.BigEndian.Uint32(buf.Next(4))
+	gic.IfOutBroadcastPkts = binary.BigEndian.Uint32(buf.Next(4))
+	gic.IfOutDiscards = binary.BigEndian.Uint32(buf.Next(4))
+	gic.IfOutErrors = binary.BigEndian.Uint32(buf.Next(4))
 
-	binary.Read(r, binary.BigEndian, &gic.IfPromiscuousMode)
+	gic.IfPromiscuousMode = binary.BigEndian.Uint32(buf.Next(4))
+
 	return gic, nil
 }
 
@@ -1644,27 +1633,26 @@ type SFlowEthernetCounters struct {
 	Dot3StatsSymbolErrors              uint32
 }
 
-func decodeEthernetCounters(r *bytes.Reader) (SFlowEthernetCounters, error) {
+func decodeEthernetCounters(buf *bytes.Buffer) (SFlowEthernetCounters, error) {
 	ec := SFlowEthernetCounters{}
-	var cdf SFlowCounterDataFormat
+	cdf := SFlowCounterDataFormat(binary.BigEndian.Uint32(buf.Next(4)))
 
-	binary.Read(r, binary.BigEndian, &cdf)
 	ec.EnterpriseID, ec.Format = cdf.decode()
-	binary.Read(r, binary.BigEndian, &ec.FlowDataLength)
+	ec.FlowDataLength = binary.BigEndian.Uint32(buf.Next(4))
 
-	binary.Read(r, binary.BigEndian, &ec.Dot3StatsAlignmentErrors)
-	binary.Read(r, binary.BigEndian, &ec.Dot3StatsFCSErrors)
-	binary.Read(r, binary.BigEndian, &ec.Dot3StatsSingleCollisionFrames)
-	binary.Read(r, binary.BigEndian, &ec.Dot3StatsMultipleCollisionFrames)
-	binary.Read(r, binary.BigEndian, &ec.Dot3StatsSQETestErrors)
-	binary.Read(r, binary.BigEndian, &ec.Dot3StatsDeferredTransmissions)
-	binary.Read(r, binary.BigEndian, &ec.Dot3StatsLateCollisions)
-	binary.Read(r, binary.BigEndian, &ec.Dot3StatsExcessiveCollisions)
-	binary.Read(r, binary.BigEndian, &ec.Dot3StatsInternalMacTransmitErrors)
-	binary.Read(r, binary.BigEndian, &ec.Dot3StatsCarrierSenseErrors)
-	binary.Read(r, binary.BigEndian, &ec.Dot3StatsFrameTooLongs)
-	binary.Read(r, binary.BigEndian, &ec.Dot3StatsInternalMacReceiveErrors)
-	binary.Read(r, binary.BigEndian, &ec.Dot3StatsSymbolErrors)
+	ec.Dot3StatsAlignmentErrors = binary.BigEndian.Uint32(buf.Next(4))
+	ec.Dot3StatsFCSErrors = binary.BigEndian.Uint32(buf.Next(4))
+	ec.Dot3StatsSingleCollisionFrames = binary.BigEndian.Uint32(buf.Next(4))
+	ec.Dot3StatsMultipleCollisionFrames = binary.BigEndian.Uint32(buf.Next(4))
+	ec.Dot3StatsSQETestErrors = binary.BigEndian.Uint32(buf.Next(4))
+	ec.Dot3StatsDeferredTransmissions = binary.BigEndian.Uint32(buf.Next(4))
+	ec.Dot3StatsLateCollisions = binary.BigEndian.Uint32(buf.Next(4))
+	ec.Dot3StatsExcessiveCollisions = binary.BigEndian.Uint32(buf.Next(4))
+	ec.Dot3StatsInternalMacTransmitErrors = binary.BigEndian.Uint32(buf.Next(4))
+	ec.Dot3StatsCarrierSenseErrors = binary.BigEndian.Uint32(buf.Next(4))
+	ec.Dot3StatsFrameTooLongs = binary.BigEndian.Uint32(buf.Next(4))
+	ec.Dot3StatsInternalMacReceiveErrors = binary.BigEndian.Uint32(buf.Next(4))
+	ec.Dot3StatsSymbolErrors = binary.BigEndian.Uint32(buf.Next(4))
 
 	return ec, nil
 

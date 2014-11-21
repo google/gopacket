@@ -2,6 +2,7 @@ package layers
 
 import (
 	"code.google.com/p/gopacket"
+	"fmt"
 	"testing"
 )
 
@@ -95,6 +96,21 @@ func BenchmarkDecodeSFlow(b *testing.B) {
 		decoded := []gopacket.LayerType{}
 		parser.DecodeLayers(SFlowTestPacket, &decoded)
 
+	}
+
+}
+
+func TestDecodeSFlow(t *testing.T) {
+
+	var sflow SFlowDatagram
+	parser := gopacket.NewDecodingLayerParser(LayerTypeSFlow, &sflow)
+	decoded := []gopacket.LayerType{}
+	err := parser.DecodeLayers(SFlowTestPacket, &decoded)
+
+	if err != nil {
+		fmt.Println(err)
+	} else {
+		fmt.Println(sflow)
 	}
 
 }
