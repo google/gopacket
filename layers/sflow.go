@@ -1113,26 +1113,17 @@ type SFlowExtendedURLRecord struct {
 func decodeExtendedURLRecord(buf *bytes.Buffer) (SFlowExtendedURLRecord, error) {
 	eur := SFlowExtendedURLRecord{}
 
-	// binary.Read(r, binary.BigEndian, &fdf)
 	fdf := SFlowFlowDataFormat(binary.BigEndian.Uint32(buf.Next(4)))
 	eur.EnterpriseID, eur.Format = fdf.decode()
-	// binary.Read(r, binary.BigEndian, &eur.FlowDataLength)
 	eur.FlowDataLength = binary.BigEndian.Uint32(buf.Next(4))
-	// binary.Read(r, binary.BigEndian, &eur.Direction)
 	eur.Direction = SFlowURLDirection(binary.BigEndian.Uint32(buf.Next(4)))
 
-	// binary.Read(r, binary.BigEndian, &urlLen)
 	urlLen := binary.BigEndian.Uint32(buf.Next(4))
-	// urlBytes := make([]byte, urlLen+((4-urlLen)%4)) // XDR padding to nearest 4-byte
 	urlBytes := buf.Next(int(urlLen + ((4 - urlLen) % 4)))
-	// binary.Read(r, binary.BigEndian, &urlBytes)
 	eur.URL = string(urlBytes[:urlLen])
 	hostLen := binary.BigEndian.Uint32(buf.Next(4))
-	// binary.Read(r, binary.BigEndian, &hostLen)
 
-	// hostBytes := make([]byte, hostLen+((4-hostLen)%4)) // XDR padding to nearest 4-byte
 	hostBytes := buf.Next(int(hostLen + ((4 - hostLen) % 4)))
-	// binary.Read(r, binary.BigEndian, &hostBytes)
 	eur.Host = string(hostBytes[:hostLen])
 
 	return eur, nil
@@ -1432,18 +1423,14 @@ const (
 func decodeExtendedUserFlow(buf *bytes.Buffer) (SFlowExtendedUserFlow, error) {
 	eu := SFlowExtendedUserFlow{}
 	fdf := SFlowFlowDataFormat(binary.BigEndian.Uint32(buf.Next(4)))
+
 	eu.EnterpriseID, eu.Format = fdf.decode()
-
 	eu.FlowDataLength = binary.BigEndian.Uint32(buf.Next(4))
-
 	eu.SourceCharSet = SFlowCharSet(binary.BigEndian.Uint32(buf.Next(4)))
-
 	srcUserLen := binary.BigEndian.Uint32(buf.Next(4))
 	srcUserBytes := buf.Next(int(srcUserLen + ((4 - srcUserLen) % 4)))
 	eu.SourceUserID = string(srcUserBytes[:srcUserLen])
-
 	eu.DestinationCharSet = SFlowCharSet(binary.BigEndian.Uint32(buf.Next(4)))
-
 	dstUserLen := binary.BigEndian.Uint32(buf.Next(4))
 	dstUserBytes := buf.Next(int(dstUserLen + ((4 - dstUserLen) % 4)))
 	eu.DestinationUserID = string(dstUserBytes[:dstUserLen])
@@ -1580,7 +1567,6 @@ func decodeGenericInterfaceCounters(buf *bytes.Buffer) (SFlowGenericInterfaceCou
 	gic.IfSpeed = binary.BigEndian.Uint64(buf.Next(8))
 	gic.IfDirection = binary.BigEndian.Uint32(buf.Next(4))
 	gic.IfStatus = binary.BigEndian.Uint32(buf.Next(4))
-
 	gic.IfInOctets = binary.BigEndian.Uint64(buf.Next(8))
 	gic.IfInUcastPkts = binary.BigEndian.Uint32(buf.Next(4))
 	gic.IfInMulticastPkts = binary.BigEndian.Uint32(buf.Next(4))
@@ -1588,7 +1574,6 @@ func decodeGenericInterfaceCounters(buf *bytes.Buffer) (SFlowGenericInterfaceCou
 	gic.IfInDiscards = binary.BigEndian.Uint32(buf.Next(4))
 	gic.IfInErrors = binary.BigEndian.Uint32(buf.Next(4))
 	gic.IfInUnknownProtos = binary.BigEndian.Uint32(buf.Next(4))
-
 	gic.IfOutOctets = binary.BigEndian.Uint64(buf.Next(8))
 	gic.IfOutUcastPkts = binary.BigEndian.Uint32(buf.Next(4))
 	gic.IfOutMulticastPkts = binary.BigEndian.Uint32(buf.Next(4))
