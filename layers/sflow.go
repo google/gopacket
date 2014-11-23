@@ -297,24 +297,6 @@ func (s SFlowIPType) Length() int {
 	}
 }
 
-func (s SFlowIPType) decodeIP(r io.Reader) net.IP {
-	var length int
-	switch SFlowIPType(s) {
-	case SFlowIPv4:
-		length = 4
-	case SFlowIPv6:
-		length = 16
-	default:
-		return nil
-	}
-
-	buff := make([]byte, length)
-	r.Read(buff)
-
-	return buff
-
-}
-
 func (s *SFlowDatagram) DecodeFromBytes(data []byte, df gopacket.DecodeFeedback) error {
 	buf := bytes.NewBuffer(data)
 	var agentAddressType SFlowIPType
