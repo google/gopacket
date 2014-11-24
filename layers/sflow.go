@@ -76,7 +76,6 @@ import (
 	"code.google.com/p/gopacket"
 	"encoding/binary"
 	"fmt"
-	"io"
 	"net"
 )
 
