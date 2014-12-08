@@ -52,6 +52,7 @@ const (
 	EthernetTypeMPLSUnicast        EthernetType = 0x8847
 	EthernetTypeMPLSMulticast      EthernetType = 0x8848
 	EthernetTypeEAPOL              EthernetType = 0x888e
+	EthernetTypeQinQ               EthernetType = 0x88a8
 	EthernetTypeLinkLayerDiscovery EthernetType = 0x88cc
 	EthernetTypeEthernetCTP        EthernetType = 0x9000
 )
@@ -431,6 +432,7 @@ func init() {
 	EthernetTypeMetadata[EthernetTypeMPLSUnicast] = EnumMetadata{DecodeWith: gopacket.DecodeFunc(decodeMPLS), Name: "MPLSUnicast", LayerType: LayerTypeMPLS}
 	EthernetTypeMetadata[EthernetTypeMPLSMulticast] = EnumMetadata{DecodeWith: gopacket.DecodeFunc(decodeMPLS), Name: "MPLSMulticast", LayerType: LayerTypeMPLS}
 	EthernetTypeMetadata[EthernetTypeEAPOL] = EnumMetadata{DecodeWith: gopacket.DecodeFunc(decodeEAPOL), Name: "EAPOL", LayerType: LayerTypeEAPOL}
+	EthernetTypeMetadata[EthernetTypeQinQ] = EnumMetadata{DecodeWith: gopacket.DecodeFunc(decodeDot1Q), Name: "Dot1Q", LayerType: LayerTypeDot1Q}
 
 	IPProtocolMetadata[IPProtocolTCP] = EnumMetadata{DecodeWith: gopacket.DecodeFunc(decodeTCP), Name: "TCP", LayerType: LayerTypeTCP}
 	IPProtocolMetadata[IPProtocolUDP] = EnumMetadata{DecodeWith: gopacket.DecodeFunc(decodeUDP), Name: "UDP", LayerType: LayerTypeUDP}
