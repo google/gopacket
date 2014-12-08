@@ -40,7 +40,7 @@ func (e Endpoint) EndpointType() EndpointType { return e.typ }
 
 // Raw returns the raw bytes of this endpoint.  These aren't human-readable
 // most of the time, but they are faster than calling String.
-func (e Endpoint) Raw() []byte { return e.raw[:] }
+func (e Endpoint) Raw() []byte { return e.raw[:e.len] }
 
 // LessThan provides a stable ordering for all endpoints.  It sorts first based
 // on the EndpointType of an endpoint, then based on the raw bytes of that
