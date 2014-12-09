@@ -79,16 +79,6 @@ import (
 	"net"
 )
 
-// SFlowSample is a container that holds at least one record, plus metadata
-// about the sample(s). Samples can be of two general types: flow samples
-// and counter samples. (There are 'extended' versions of both of these
-// but this decoder does not support them because I couldn't get any example
-// data to test with.)
-type SFlowSample interface {
-	GetRecords() []SFlowRecord
-	GetType() SFlowSampleType
-}
-
 // SFlowRecord holds both flow sample records and counter sample records.
 // A Record is the structure that actually holds the sampled data
 // and / or counters.
@@ -126,7 +116,7 @@ func (sdf SFlowSourceFormat) String() string {
 	case SFlowTypeMultipleDestinations:
 		return "Multiple Destinations"
 	default:
-		return ""
+		return "UNKNOWN"
 	}
 }
 
@@ -663,42 +653,7 @@ type SFlowBaseFlowRecord struct {
 }
 
 func (bfr SFlowBaseFlowRecord) GetType() SFlowFlowRecordType {
-	switch bfr.Format {
-	case SFlowTypeRawPacketFlow:
-		return SFlowTypeRawPacketFlow
-	case SFlowTypeEthernetFrameFlow:
-		return SFlowTypeEthernetFrameFlow
-	case SFlowTypeIpv4Flow:
-		return SFlowTypeIpv4Flow
-	case SFlowTypeIpv6Flow:
-		return SFlowTypeIpv6Flow
-	case SFlowTypeExtendedSwitchFlow:
-		return SFlowTypeExtendedSwitchFlow
-	case SFlowTypeExtendedRouterFlow:
-		return SFlowTypeExtendedRouterFlow
-	case SFlowTypeExtendedGatewayFlow:
-		return SFlowTypeExtendedGatewayFlow
-	case SFlowTypeExtendedUserFlow:
-		return SFlowTypeExtendedUserFlow
-	case SFlowTypeExtendedUrlFlow:
-		return SFlowTypeExtendedUrlFlow
-	case SFlowTypeExtendedMlpsFlow:
-		return SFlowTypeExtendedMlpsFlow
-	case SFlowTypeExtendedNatFlow:
-		return SFlowTypeExtendedNatFlow
-	case SFlowTypeExtendedMlpsTunnelFlow:
-		return SFlowTypeExtendedMlpsTunnelFlow
-	case SFlowTypeExtendedMlpsVcFlow:
-		return SFlowTypeExtendedMlpsVcFlow
-	case SFlowTypeExtendedMlpsFecFlow:
-		return SFlowTypeExtendedMlpsFecFlow
-	case SFlowTypeExtendedMlpsLvpFecFlow:
-		return SFlowTypeExtendedMlpsLvpFecFlow
-	case SFlowTypeExtendedVlanFlow:
-		return SFlowTypeExtendedVlanFlow
-	}
-	unrecognized := fmt.Sprintln("Unrecognized flow record type:", bfr.Format)
-	panic(unrecognized)
+	return bfr.Format
 }
 
 // SFlowFlowRecordType denotes what kind of Flow Record is
@@ -775,7 +730,7 @@ func (rt SFlowFlowRecordType) String() string {
 // in the Header member
 type SFlowRawPacketFlowRecord struct {
 	SFlowBaseFlowRecord
-	HeaderProtocol uint32
+	HeaderProtocol SFlowRawHeaderProtocol
 	FrameLength    uint32
 	PayloadRemoved uint32
 	HeaderLength   uint32
@@ -803,13 +758,66 @@ type SFlowRawPacketFlowRecord struct {
 //  \                                               \
 //  +--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+
 
+type SFlowRawHeaderProtocol uint32
+
+const (
+	SFlowProtoEthernet   SFlowRawHeaderProtocol = 1
+	SFlowProtoISO88024   SFlowRawHeaderProtocol = 2
+	SFlowProtoISO88025   SFlowRawHeaderProtocol = 3
+	SFlowProtoFDDI       SFlowRawHeaderProtocol = 4
+	SFlowProtoFrameRelay SFlowRawHeaderProtocol = 5
+	SFlowProtoX25        SFlowRawHeaderProtocol = 6
+	SFlowProtoPPP        SFlowRawHeaderProtocol = 7
+	SFlowProtoSMDS       SFlowRawHeaderProtocol = 8
+	SFlowProtoAAL5       SFlowRawHeaderProtocol = 9
+	SFlowProtoAAL5_IP    SFlowRawHeaderProtocol = 10 /* e.g. Cisco AAL5 mux */
+	SFlowProtoIPv4       SFlowRawHeaderProtocol = 11
+	SFlowProtoIPv6       SFlowRawHeaderProtocol = 12
+	SFlowProtoMPLS       SFlowRawHeaderProtocol = 13
+	SFlowProtoPOS        SFlowRawHeaderProtocol = 14 /* RFC 1662, 2615 */
+)
+
+func (sfhp SFlowRawHeaderProtocol) String() string {
+	switch sfhp {
+	case SFlowProtoEthernet:
+		return "ETHERNET-ISO88023"
+	case SFlowProtoISO88024:
+		return "ISO88024-TOKENBUS"
+	case SFlowProtoISO88025:
+		return "ISO88025-TOKENRING"
+	case SFlowProtoFDDI:
+		return "FDDI"
+	case SFlowProtoFrameRelay:
+		return "FRAME-RELAY"
+	case SFlowProtoX25:
+		return "X25"
+	case SFlowProtoPPP:
+		return "PPP"
+	case SFlowProtoSMDS:
+		return "SMDS"
+	case SFlowProtoAAL5:
+		return "AAL5"
+	case SFlowProtoAAL5_IP:
+		return "AAL5-IP"
+	case SFlowProtoIPv4:
+		return "IPv4"
+	case SFlowProtoIPv6:
+		return "IPv6"
+	case SFlowProtoMPLS:
+		return "MPLS"
+	case SFlowProtoPOS:
+		return "POS"
+	}
+	return "UNKNOWN"
+}
+
 func decodeRawPacketFlowRecord(buf *bytes.Buffer) (SFlowRawPacketFlowRecord, error) {
 	rec := SFlowRawPacketFlowRecord{}
 	fdf := SFlowFlowDataFormat(binary.BigEndian.Uint32(buf.Next(4)))
 
 	rec.EnterpriseID, rec.Format = fdf.decode()
 	rec.FlowDataLength = binary.BigEndian.Uint32(buf.Next(4))
-	rec.HeaderProtocol = binary.BigEndian.Uint32(buf.Next(4))
+	rec.HeaderProtocol = SFlowRawHeaderProtocol(binary.BigEndian.Uint32(buf.Next(4)))
 	rec.FrameLength = binary.BigEndian.Uint32(buf.Next(4))
 	rec.PayloadRemoved = binary.BigEndian.Uint32(buf.Next(4))
 	rec.HeaderLength = binary.BigEndian.Uint32(buf.Next(4))
@@ -1386,16 +1394,16 @@ const (
 	SFlowCSBRF                     SFlowCharSet = 2106
 	SFlowCSTSCII                   SFlowCharSet = 2107
 	SFlowCSCP51932                 SFlowCharSet = 2108
-	SFlowCSwindows874              SFlowCharSet = 2109
-	SFlowCSwindows1250             SFlowCharSet = 2250
-	SFlowCSwindows1251             SFlowCharSet = 2251
-	SFlowCSwindows1252             SFlowCharSet = 2252
-	SFlowCSwindows1253             SFlowCharSet = 2253
-	SFlowCSwindows1254             SFlowCharSet = 2254
-	SFlowCSwindows1255             SFlowCharSet = 2255
-	SFlowCSwindows1256             SFlowCharSet = 2256
-	SFlowCSwindows1257             SFlowCharSet = 2257
-	SFlowCSwindows1258             SFlowCharSet = 2258
+	SFlowCSWindows874              SFlowCharSet = 2109
+	SFlowCSWindows1250             SFlowCharSet = 2250
+	SFlowCSWindows1251             SFlowCharSet = 2251
+	SFlowCSWindows1252             SFlowCharSet = 2252
+	SFlowCSWindows1253             SFlowCharSet = 2253
+	SFlowCSWindows1254             SFlowCharSet = 2254
+	SFlowCSWindows1255             SFlowCharSet = 2255
+	SFlowCSWindows1256             SFlowCharSet = 2256
+	SFlowCSWindows1257             SFlowCharSet = 2257
+	SFlowCSWindows1258             SFlowCharSet = 2258
 	SFlowCSTIS620                  SFlowCharSet = 2259
 	SFlowCS50220                   SFlowCharSet = 2260
 	SFlowCSreserved                SFlowCharSet = 3000
@@ -1584,19 +1592,19 @@ func decodeGenericInterfaceCounters(buf *bytes.Buffer) (SFlowGenericInterfaceCou
 type SFlowEthernetCounters struct {
 	SFlowBaseCounterRecord
 
-	Dot3StatsAlignmentErrors           uint32
-	Dot3StatsFCSErrors                 uint32
-	Dot3StatsSingleCollisionFrames     uint32
-	Dot3StatsMultipleCollisionFrames   uint32
-	Dot3StatsSQETestErrors             uint32
-	Dot3StatsDeferredTransmissions     uint32
-	Dot3StatsLateCollisions            uint32
-	Dot3StatsExcessiveCollisions       uint32
-	Dot3StatsInternalMacTransmitErrors uint32
-	Dot3StatsCarrierSenseErrors        uint32
-	Dot3StatsFrameTooLongs             uint32
-	Dot3StatsInternalMacReceiveErrors  uint32
-	Dot3StatsSymbolErrors              uint32
+	AlignmentErrors           uint32
+	FCSErrors                 uint32
+	SingleCollisionFrames     uint32
+	MultipleCollisionFrames   uint32
+	SQETestErrors             uint32
+	DeferredTransmissions     uint32
+	LateCollisions            uint32
+	ExcessiveCollisions       uint32
+	InternalMacTransmitErrors uint32
+	CarrierSenseErrors        uint32
+	FrameTooLongs             uint32
+	InternalMacReceiveErrors  uint32
+	SymbolErrors              uint32
 }
 
 func decodeEthernetCounters(buf *bytes.Buffer) (SFlowEthernetCounters, error) {
@@ -1606,19 +1614,19 @@ func decodeEthernetCounters(buf *bytes.Buffer) (SFlowEthernetCounters, error) {
 	ec.EnterpriseID, ec.Format = cdf.decode()
 	ec.FlowDataLength = binary.BigEndian.Uint32(buf.Next(4))
 
-	ec.Dot3StatsAlignmentErrors = binary.BigEndian.Uint32(buf.Next(4))
-	ec.Dot3StatsFCSErrors = binary.BigEndian.Uint32(buf.Next(4))
-	ec.Dot3StatsSingleCollisionFrames = binary.BigEndian.Uint32(buf.Next(4))
-	ec.Dot3StatsMultipleCollisionFrames = binary.BigEndian.Uint32(buf.Next(4))
-	ec.Dot3StatsSQETestErrors = binary.BigEndian.Uint32(buf.Next(4))
-	ec.Dot3StatsDeferredTransmissions = binary.BigEndian.Uint32(buf.Next(4))
-	ec.Dot3StatsLateCollisions = binary.BigEndian.Uint32(buf.Next(4))
-	ec.Dot3StatsExcessiveCollisions = binary.BigEndian.Uint32(buf.Next(4))
-	ec.Dot3StatsInternalMacTransmitErrors = binary.BigEndian.Uint32(buf.Next(4))
-	ec.Dot3StatsCarrierSenseErrors = binary.BigEndian.Uint32(buf.Next(4))
-	ec.Dot3StatsFrameTooLongs = binary.BigEndian.Uint32(buf.Next(4))
-	ec.Dot3StatsInternalMacReceiveErrors = binary.BigEndian.Uint32(buf.Next(4))
-	ec.Dot3StatsSymbolErrors = binary.BigEndian.Uint32(buf.Next(4))
+	ec.AlignmentErrors = binary.BigEndian.Uint32(buf.Next(4))
+	ec.FCSErrors = binary.BigEndian.Uint32(buf.Next(4))
+	ec.SingleCollisionFrames = binary.BigEndian.Uint32(buf.Next(4))
+	ec.MultipleCollisionFrames = binary.BigEndian.Uint32(buf.Next(4))
+	ec.SQETestErrors = binary.BigEndian.Uint32(buf.Next(4))
+	ec.DeferredTransmissions = binary.BigEndian.Uint32(buf.Next(4))
+	ec.LateCollisions = binary.BigEndian.Uint32(buf.Next(4))
+	ec.ExcessiveCollisions = binary.BigEndian.Uint32(buf.Next(4))
+	ec.InternalMacTransmitErrors = binary.BigEndian.Uint32(buf.Next(4))
+	ec.CarrierSenseErrors = binary.BigEndian.Uint32(buf.Next(4))
+	ec.FrameTooLongs = binary.BigEndian.Uint32(buf.Next(4))
+	ec.InternalMacReceiveErrors = binary.BigEndian.Uint32(buf.Next(4))
+	ec.SymbolErrors = binary.BigEndian.Uint32(buf.Next(4))
 
 	return ec, nil
 
