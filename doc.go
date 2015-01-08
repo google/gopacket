@@ -340,7 +340,7 @@ reverse order (Payload, then TCP, then IP, then Ethernet, for example).  The
 SerializeBuffer's SerializeLayers function is a helper that does exactly that.
 
 To generate a (empty and useless, because no fields are set)
-Ethernet(IPv4(TCP(Payload))) packet, for exmaple, you can run:
+Ethernet(IPv4(TCP(Payload))) packet, for example, you can run:
 
   buf := gopacket.NewSerializeBuffer()
   opts := gopacket.SerializeOptions{}
