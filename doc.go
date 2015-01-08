@@ -39,7 +39,7 @@ can be requested from the packet.
    fmt.Printf("From src port %d to dst port %d\n", tcp.SrcPort, tcp.DstPort)
  }
  // Iterate over all layers, printing out each layer type
- for layer := range packet.Layers() {
+ for _, layer := range packet.Layers() {
    fmt.Println("PACKET LAYER:", layer.LayerType())
  }
 
