@@ -13,8 +13,8 @@ import (
 	"fmt"
 	"io"
 
-	"code.google.com/p/gopacket"
-	"code.google.com/p/gopacket/layers"
+	"github.com/google/gopacket"
+	"github.com/google/gopacket/layers"
 )
 
 // Writer wraps an underlying io.Writer to write packet data in PCAP

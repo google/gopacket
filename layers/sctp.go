@@ -7,9 +7,9 @@
 package layers
 
 import (
-	"code.google.com/p/gopacket"
 	"encoding/binary"
 	"fmt"
+	"github.com/google/gopacket"
 	"hash/crc32"
 )
 

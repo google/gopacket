@@ -9,11 +9,11 @@
 package main
 
 import (
-	"code.google.com/p/gopacket/dumpcommand"
-	"code.google.com/p/gopacket/examples/util"
-	"code.google.com/p/gopacket/pfring"
 	"flag"
 	"fmt"
+	"github.com/google/gopacket/dumpcommand"
+	"github.com/google/gopacket/examples/util"
+	"github.com/google/gopacket/pfring"
 	"log"
 	"os"
 	"strings"

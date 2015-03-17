@@ -7,9 +7,9 @@
 package layers
 
 import (
-	"code.google.com/p/gopacket"
 	"encoding/binary"
 	"fmt"
+	"github.com/google/gopacket"
 )
 
 // LLDPTLVType is the type of each TLV value in a LinkLayerDiscovery packet.

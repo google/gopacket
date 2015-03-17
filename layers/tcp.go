@@ -8,10 +8,10 @@
 package layers
 
 import (
-	"code.google.com/p/gopacket"
 	"encoding/binary"
 	"errors"
 	"fmt"
+	"github.com/google/gopacket"
 )
 
 // TCP is the layer for TCP headers.

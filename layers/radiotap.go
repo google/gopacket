@@ -8,9 +8,9 @@ package layers
 
 import (
 	"bytes"
-	"code.google.com/p/gopacket"
 	"encoding/binary"
 	"fmt"
+	"github.com/google/gopacket"
 )
 
 // align calculates the number of bytes needed to align with the width

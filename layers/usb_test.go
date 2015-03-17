@@ -7,8 +7,8 @@
 package layers
 
 import (
-	"code.google.com/p/gopacket"
 	_ "fmt"
+	"github.com/google/gopacket"
 	"reflect"
 	"testing"
 )

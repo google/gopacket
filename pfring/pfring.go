@@ -20,8 +20,8 @@ import "C"
 // PF_RING is configured with --disable-bpf.
 
 import (
-	"code.google.com/p/gopacket"
 	"fmt"
+	"github.com/google/gopacket"
 	"os"
 	"strconv"
 	"sync"

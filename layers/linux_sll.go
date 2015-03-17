@@ -12,7 +12,7 @@ import (
 	"fmt"
 	"net"
 
-	"code.google.com/p/gopacket"
+	"github.com/google/gopacket"
 )
 
 type LinuxSLLPacketType uint16

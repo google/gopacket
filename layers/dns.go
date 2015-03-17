@@ -7,10 +7,10 @@
 package layers
 
 import (
-	"code.google.com/p/gopacket"
 	"encoding/binary"
 	"errors"
 	"fmt"
+	"github.com/google/gopacket"
 	"net"
 )
 

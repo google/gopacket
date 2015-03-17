@@ -10,10 +10,10 @@
 package dumpcommand
 
 import (
-	"code.google.com/p/gopacket"
-	_ "code.google.com/p/gopacket/layers" // pulls in all layers decoders
 	"flag"
 	"fmt"
+	"github.com/google/gopacket"
+	_ "github.com/google/gopacket/layers" // pulls in all layers decoders
 	"log"
 	"os"
 	"time"

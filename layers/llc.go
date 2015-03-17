@@ -7,8 +7,8 @@
 package layers
 
 import (
-	"code.google.com/p/gopacket"
 	"encoding/binary"
+	"github.com/google/gopacket"
 )
 
 // LLC is the layer used for 802.2 Logical Link Control headers.

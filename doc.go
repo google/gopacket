@@ -359,7 +359,7 @@ in a lot of interesting variables/maps (DecodersByLayerName, etc).  Therefore,
 it's recommended that even if you don't use any layers functions directly, you still import with:
 
   import (
-    _ "code.google.com/p/gopacket/layers"
+    _ "github.com/google/gopacket/layers"
   )
 */
 package gopacket

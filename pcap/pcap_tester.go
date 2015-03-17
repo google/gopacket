@@ -11,9 +11,9 @@
 package main
 
 import (
-	"code.google.com/p/gopacket/pcap"
 	"flag"
 	"fmt"
+	"github.com/google/gopacket/pcap"
 	"log"
 	"net"
 	"net/http"

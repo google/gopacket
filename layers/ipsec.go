@@ -7,8 +7,8 @@
 package layers
 
 import (
-	"code.google.com/p/gopacket"
 	"encoding/binary"
+	"github.com/google/gopacket"
 )
 
 // IPSecAH is the authentication header for IPv4/6 defined in
