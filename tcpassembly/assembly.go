@@ -699,10 +699,10 @@ func (a *Assembler) insertIntoConn(t *layers.TCP, conn *connection, ts time.Time
 	if conn.first != nil && conn.first.seq == conn.nextSeq {
 		panic("wtf")
 	}
-	p, p2 := a.pagesFromTcp(t, ts)
+	p, p2, numPages := a.pagesFromTcp(t, ts)
 	prev, current := conn.traverseConn(Sequence(t.Seq))
 	conn.pushBetween(prev, current, p, p2)
-	conn.pages++
+	conn.pages += numPages
 	if (a.MaxBufferedPagesPerConnection > 0 && conn.pages >= a.MaxBufferedPagesPerConnection) ||
 		(a.MaxBufferedPagesTotal > 0 && a.pc.used >= a.MaxBufferedPagesTotal) {
 		if *debugLog {
@@ -717,9 +717,10 @@ func (a *Assembler) insertIntoConn(t *layers.TCP, conn *connection, ts time.Time
 // correctly.
 //
 // It returns the first and last page in its doubly-linked list of new pages.
-func (a *Assembler) pagesFromTcp(t *layers.TCP, ts time.Time) (p, p2 *page) {
+func (a *Assembler) pagesFromTcp(t *layers.TCP, ts time.Time) (p, p2 *page, numPages int) {
 	first := a.pc.next(ts)
 	current := first
+	numPages++
 	seq, bytes := Sequence(t.Seq), t.Payload
 	for {
 		length := min(len(bytes), pageBytes)
@@ -734,9 +735,10 @@ func (a *Assembler) pagesFromTcp(t *layers.TCP, ts time.Time) (p, p2 *page) {
 		current.next = a.pc.next(ts)
 		current.next.prev = current
 		current = current.next
+		numPages++
 	}
 	current.End = t.RST || t.FIN
-	return first, current
+	return first, current, numPages
 }
 
 // addNextFromConn pops the first page from a connection off and adds it to the
