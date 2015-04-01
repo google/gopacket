@@ -207,6 +207,10 @@ func (d *DNS) DecodeFromBytes(data []byte, df gopacket.DecodeFeedback) error {
 		df.SetTruncated()
 		return fmt.Errorf("DNS packet too short")
 	}
+
+	// since there are no further layers, the baselayer's content is
+	// pointing to this layer
+	d.BaseLayer = BaseLayer{Contents: data[:len(data)]}
 	d.ID = binary.BigEndian.Uint16(data[:2])
 	d.QR = data[2]&0x80 != 0
 	d.OpCode = DNSOpCode(data[2]>>3) & 0x0F
