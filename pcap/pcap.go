@@ -10,6 +10,7 @@ package pcap
 /*
 #cgo linux LDFLAGS: -lpcap
 #cgo freebsd LDFLAGS: -lpcap
+#cgo openbsd LDFLAGS: -lpcap
 #cgo darwin LDFLAGS: -lpcap
 #cgo windows CFLAGS: -I C:/WpdPack/Include
 #cgo windows,386 LDFLAGS: -L C:/WpdPack/Lib -lwpcap
