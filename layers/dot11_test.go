@@ -11,6 +11,7 @@ import (
 	"github.com/google/gopacket"
 	"net"
 	"reflect"
+	"bytes"
 	"testing"
 )
 
@@ -494,5 +495,26 @@ func TestPacketP6196(t *testing.T) {
 func BenchmarkDecodePacketP6196(b *testing.B) {
 	for i := 0; i < b.N; i++ {
 		gopacket.NewPacket(testPacketP6196, LinkTypeIEEE80211Radio, gopacket.NoCopy)
+	}
+}
+
+func TestInformationElement(t *testing.T) {
+	bin := []byte{
+		0, 0,
+		0, 2, 1, 3,
+		221, 5, 1, 2, 3, 4, 5,
+	}
+	pkt := gopacket.NewPacket(bin, LayerTypeDot11InformationElement, gopacket.NoCopy)
+	
+	buf := gopacket.NewSerializeBuffer()
+	var sLayers []gopacket.SerializableLayer
+	for _,l := range pkt.Layers() {
+		sLayers = append(sLayers, l.(*Dot11InformationElement))
+	}
+	if err := gopacket.SerializeLayers(buf, gopacket.SerializeOptions{}, sLayers...); err!=nil {
+		t.Error(err.Error())
+	}
+	if !bytes.Equal(bin, buf.Bytes()) {
+		t.Error("build failed")
 	}
 }

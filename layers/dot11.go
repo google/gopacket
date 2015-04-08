@@ -754,6 +754,19 @@ func (d *Dot11InformationElement) String() string {
 	}
 }
 
+func (m Dot11InformationElement) SerializeTo(b gopacket.SerializeBuffer, opts gopacket.SerializeOptions) error {
+	length := len(m.Info) + len(m.OUI)
+	if buf, err := b.PrependBytes(2 + length); err != nil {
+		return err
+	} else {
+		buf[0] = uint8(m.ID)
+		buf[1] = uint8(length)
+		copy(buf[2:], m.OUI)
+		copy(buf[2+len(m.OUI):], m.Info)
+	}
+	return nil
+}
+
 func decodeDot11InformationElement(data []byte, p gopacket.PacketBuilder) error {
 	d := &Dot11InformationElement{}
 	return decodingLayerDecoder(d, data, p)
