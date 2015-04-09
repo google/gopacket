@@ -10,25 +10,41 @@ package layers
 
 import (
 	"encoding/binary"
+	"errors"
 
 	"github.com/google/gopacket"
 )
 
-const ()
-
 func decodePrismValue(data []byte, pv *PrismValue) {
-	pv.Did = binary.LittleEndian.Uint32(data[0:4])
+	pv.DID = PrismDID(binary.LittleEndian.Uint32(data[0:4]))
 	pv.Status = binary.LittleEndian.Uint16(data[4:6])
 	pv.Length = binary.LittleEndian.Uint16(data[6:8])
 	pv.Data = binary.LittleEndian.Uint32(data[8:12])
 }
 
+type PrismDID uint32
+
+const (
+	PrismHostTime                  PrismDID = 0x1041
+	PrismMACTime                   PrismDID = 0x2041
+	PrismChannel                   PrismDID = 0x3041
+	PrismRSSI                      PrismDID = 0x4041
+	PrismSignalQuality             PrismDID = 0x5041
+	PrismSignal                    PrismDID = 0x6041
+	PrismNoise                     PrismDID = 0x7041
+	PrismRate                      PrismDID = 0x8041
+	PrismTransmittedFrameIndicator PrismDID = 0x9041
+	PrismFrameLength               PrismDID = 0xA041
+)
+
 type PrismValue struct {
-	Did    uint32
+	DID    PrismDID
 	Status uint16
 	Length uint16
 	Data   uint32
 }
+
+var ErrPrismExpectedMoreData = errors.New("Expected more data.")
 
 func decodePrismHeader(data []byte, p gopacket.PacketBuilder) error {
 	d := &PrismHeader{}
@@ -58,6 +74,11 @@ func (m *PrismHeader) DecodeFromBytes(data []byte, df gopacket.DecodeFeedback) e
 		decodePrismValue(data[offset:offset+12], &m.Values[i])
 		offset += 12
 	}
+
+	if offset != m.Length {
+		return ErrPrismExpectedMoreData
+	}
+
 	return nil
 }
 

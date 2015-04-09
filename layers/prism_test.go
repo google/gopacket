@@ -7,7 +7,6 @@
 package layers
 
 import (
-	_ "fmt"
 	"net"
 	"reflect"
 	"testing"
@@ -75,16 +74,16 @@ func TestPacketPrism(t *testing.T) {
 			Length:     0x90,
 			DeviceName: "ra0\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00",
 			Values: []PrismValue{
-				PrismValue{Did: 0x10044, Status: 0x0, Length: 0x4, Data: 0x29c1f9},
-				PrismValue{Did: 0x20044, Status: 0x0, Length: 0x0, Data: 0x0},
-				PrismValue{Did: 0x30044, Status: 0x0, Length: 0x4, Data: 0xa},
-				PrismValue{Did: 0x40044, Status: 0x0, Length: 0x4, Data: 0xffffffe1},
-				PrismValue{Did: 0x0, Status: 0x0, Length: 0x0, Data: 0x0},
-				PrismValue{Did: 0x60044, Status: 0x0, Length: 0x4, Data: 0x0},
-				PrismValue{Did: 0x70044, Status: 0x0, Length: 0x4, Data: 0x0},
-				PrismValue{Did: 0x80044, Status: 0x0, Length: 0x4, Data: 0x2},
-				PrismValue{Did: 0x90044, Status: 0x0, Length: 0x0, Data: 0x0},
-				PrismValue{Did: 0xa0044, Status: 0x0, Length: 0x4, Data: 0x7e},
+				PrismValue{DID: 0x10044, Status: 0x0, Length: 0x4, Data: 0x29c1f9},
+				PrismValue{DID: 0x20044, Status: 0x0, Length: 0x0, Data: 0x0},
+				PrismValue{DID: 0x30044, Status: 0x0, Length: 0x4, Data: 0xa},
+				PrismValue{DID: 0x40044, Status: 0x0, Length: 0x4, Data: 0xffffffe1},
+				PrismValue{DID: 0x0, Status: 0x0, Length: 0x0, Data: 0x0},
+				PrismValue{DID: 0x60044, Status: 0x0, Length: 0x4, Data: 0x0},
+				PrismValue{DID: 0x70044, Status: 0x0, Length: 0x4, Data: 0x0},
+				PrismValue{DID: 0x80044, Status: 0x0, Length: 0x4, Data: 0x2},
+				PrismValue{DID: 0x90044, Status: 0x0, Length: 0x0, Data: 0x0},
+				PrismValue{DID: 0xa0044, Status: 0x0, Length: 0x4, Data: 0x7e},
 			},
 		}
 
