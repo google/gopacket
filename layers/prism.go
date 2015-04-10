@@ -19,32 +19,83 @@ func decodePrismValue(data []byte, pv *PrismValue) {
 	pv.DID = PrismDID(binary.LittleEndian.Uint32(data[0:4]))
 	pv.Status = binary.LittleEndian.Uint16(data[4:6])
 	pv.Length = binary.LittleEndian.Uint16(data[6:8])
-	pv.Data = binary.LittleEndian.Uint32(data[8:12])
+	pv.Data = data[8 : 8+pv.Length]
 }
 
 type PrismDID uint32
 
 const (
-	PrismHostTime                  PrismDID = 0x1041
-	PrismMACTime                   PrismDID = 0x2041
-	PrismChannel                   PrismDID = 0x3041
-	PrismRSSI                      PrismDID = 0x4041
-	PrismSignalQuality             PrismDID = 0x5041
-	PrismSignal                    PrismDID = 0x6041
-	PrismNoise                     PrismDID = 0x7041
-	PrismRate                      PrismDID = 0x8041
-	PrismTransmittedFrameIndicator PrismDID = 0x9041
-	PrismFrameLength               PrismDID = 0xA041
+	PrismDIDType1HostTime                  PrismDID = 0x10044
+	PrismDIDType2HostTime                  PrismDID = 0x01041
+	PrismDIDType1MACTime                   PrismDID = 0x20044
+	PrismDIDType2MACTime                   PrismDID = 0x02041
+	PrismDIDType1Channel                   PrismDID = 0x30044
+	PrismDIDType2Channel                   PrismDID = 0x03041
+	PrismDIDType1RSSI                      PrismDID = 0x40044
+	PrismDIDType2RSSI                      PrismDID = 0x04041
+	PrismDIDType1SignalQuality             PrismDID = 0x50044
+	PrismDIDType2SignalQuality             PrismDID = 0x05041
+	PrismDIDType1Signal                    PrismDID = 0x60044
+	PrismDIDType2Signal                    PrismDID = 0x06041
+	PrismDIDType1Noise                     PrismDID = 0x70044
+	PrismDIDType2Noise                     PrismDID = 0x07041
+	PrismDIDType1Rate                      PrismDID = 0x80044
+	PrismDIDType2Rate                      PrismDID = 0x08041
+	PrismDIDType1TransmittedFrameIndicator PrismDID = 0x90044
+	PrismDIDType2TransmittedFrameIndicator PrismDID = 0x09041
+	PrismDIDType1FrameLength               PrismDID = 0xA0044
+	PrismDIDType2FrameLength               PrismDID = 0x0A041
 )
+
+const (
+	PrismType1MessageCode uint16 = 0x00000044
+	PrismType2MessageCode uint16 = 0x00000041
+)
+
+func (p PrismDID) String() string {
+	dids := map[PrismDID]string{
+		PrismDIDType1HostTime:                  "Host Time",
+		PrismDIDType2HostTime:                  "Host Time",
+		PrismDIDType1MACTime:                   "MAC Time",
+		PrismDIDType2MACTime:                   "MAC Time",
+		PrismDIDType1Channel:                   "Channel",
+		PrismDIDType2Channel:                   "Channel",
+		PrismDIDType1RSSI:                      "RSSI",
+		PrismDIDType2RSSI:                      "RSSI",
+		PrismDIDType1SignalQuality:             "Signal Quality",
+		PrismDIDType2SignalQuality:             "Signal Quality",
+		PrismDIDType1Signal:                    "Signal",
+		PrismDIDType2Signal:                    "Signal",
+		PrismDIDType1Noise:                     "Noise",
+		PrismDIDType2Noise:                     "Noise",
+		PrismDIDType1Rate:                      "Rate",
+		PrismDIDType2Rate:                      "Rate",
+		PrismDIDType1TransmittedFrameIndicator: "Transmitted Frame Indicator",
+		PrismDIDType2TransmittedFrameIndicator: "Transmitted Frame Indicator",
+		PrismDIDType1FrameLength:               "Frame Length",
+		PrismDIDType2FrameLength:               "Frame Length",
+	}
+
+	if str, ok := dids[p]; ok {
+		return str
+	}
+
+	return "Unknown DID"
+}
 
 type PrismValue struct {
 	DID    PrismDID
 	Status uint16
 	Length uint16
-	Data   uint32
+	Data   []byte
+}
+
+func (pv *PrismValue) IsSupplied() bool {
+	return pv.Status == 1
 }
 
 var ErrPrismExpectedMoreData = errors.New("Expected more data.")
+var ErrPrismInvalidCode = errors.New("Invalid header code.")
 
 func decodePrismHeader(data []byte, p gopacket.PacketBuilder) error {
 	d := &PrismHeader{}
@@ -66,6 +117,15 @@ func (m *PrismHeader) DecodeFromBytes(data []byte, df gopacket.DecodeFeedback) e
 	m.Length = binary.LittleEndian.Uint16(data[4:8])
 	m.DeviceName = string(data[8:24])
 	m.BaseLayer = BaseLayer{Contents: data[:m.Length], Payload: data[m.Length:len(data)]}
+
+	switch m.Code {
+	case PrismType1MessageCode:
+		fallthrough
+	case PrismType2MessageCode:
+		// valid message code
+	default:
+		return ErrPrismInvalidCode
+	}
 
 	offset := uint16(24)
 
