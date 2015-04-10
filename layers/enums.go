@@ -10,6 +10,7 @@ package layers
 import (
 	"errors"
 	"fmt"
+
 	"github.com/google/gopacket"
 )
 
@@ -486,6 +487,7 @@ func init() {
 	LinkTypeMetadata[LinkTypeIEEE80211Radio] = EnumMetadata{DecodeWith: gopacket.DecodeFunc(decodeRadioTap), Name: "RadioTap"}
 	LinkTypeMetadata[LinkTypeLinuxUSB] = EnumMetadata{DecodeWith: gopacket.DecodeFunc(decodeUSB), Name: "USB"}
 	LinkTypeMetadata[LinkTypeLinuxSLL] = EnumMetadata{DecodeWith: gopacket.DecodeFunc(decodeLinuxSLL), Name: "Linux SLL"}
+	LinkTypeMetadata[LinkTypePrismHeader] = EnumMetadata{DecodeWith: gopacket.DecodeFunc(decodePrismHeader), Name: "Prism"}
 
 	FDDIFrameControlMetadata[FDDIFrameControlLLC] = EnumMetadata{DecodeWith: gopacket.DecodeFunc(decodeLLC), Name: "LLC"}
 
