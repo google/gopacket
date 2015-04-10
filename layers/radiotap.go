@@ -317,6 +317,7 @@ func (m *RadioTap) DecodeFromBytes(data []byte, df gopacket.DecodeFeedback) erro
 		// Extended bitmap.
 		offset += 4
 	}
+	offset += 4 // skip the bitmap
 
 	if m.Present.TSFT() {
 		offset += align(offset, 8)
@@ -331,15 +332,15 @@ func (m *RadioTap) DecodeFromBytes(data []byte, df gopacket.DecodeFeedback) erro
 		m.Rate = RadioTapRate(data[offset])
 		offset++
 	}
-	if m.Present.FHSS() {
-		m.FHSS = binary.LittleEndian.Uint16(data[offset : offset+2])
-		offset += 2
-	}
 	if m.Present.Channel() {
 		m.ChannelFrequency = RadioTapChannelFrequency(binary.LittleEndian.Uint16(data[offset : offset+2]))
 		offset += 2
-		m.ChannelFlags = RadioTapChannelFlags(data[offset])
-		offset++
+		m.ChannelFlags = RadioTapChannelFlags(binary.LittleEndian.Uint16(data[offset : offset+2]))
+		offset += 2
+	}
+	if m.Present.FHSS() {
+		m.FHSS = binary.LittleEndian.Uint16(data[offset : offset+2])
+		offset += 2
 	}
 	if m.Present.DBMAntennaSignal() {
 		m.DBMAntennaSignal = int8(data[offset])
