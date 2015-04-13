@@ -939,6 +939,7 @@ func (m *Dot11MgmtAssociationReq) NextLayerType() gopacket.LayerType {
 func (m *Dot11MgmtAssociationReq) DecodeFromBytes(data []byte, df gopacket.DecodeFeedback) error {
 	m.CapabilityInfo = binary.LittleEndian.Uint16(data[0:2])
 	m.ListenInterval = binary.LittleEndian.Uint16(data[2:4])
+	m.Payload = data[4:]
 	return m.Dot11Mgmt.DecodeFromBytes(data, df)
 }
 
@@ -967,6 +968,7 @@ func (m *Dot11MgmtAssociationResp) DecodeFromBytes(data []byte, df gopacket.Deco
 	m.CapabilityInfo = binary.LittleEndian.Uint16(data[0:2])
 	m.Status = Dot11Status(binary.LittleEndian.Uint16(data[2:4]))
 	m.AID = binary.LittleEndian.Uint16(data[4:6])
+	m.Payload = data[6:]
 	return m.Dot11Mgmt.DecodeFromBytes(data, df)
 }
 
@@ -995,6 +997,7 @@ func (m *Dot11MgmtReassociationReq) DecodeFromBytes(data []byte, df gopacket.Dec
 	m.CapabilityInfo = binary.LittleEndian.Uint16(data[0:2])
 	m.ListenInterval = binary.LittleEndian.Uint16(data[2:4])
 	m.CurrentApAddress = net.HardwareAddr(data[4:10])
+	m.Payload = data[10:]
 	return m.Dot11Mgmt.DecodeFromBytes(data, df)
 }
 
@@ -1081,6 +1084,7 @@ func (m *Dot11MgmtBeacon) DecodeFromBytes(data []byte, df gopacket.DecodeFeedbac
 	m.Timestamp = binary.LittleEndian.Uint64(data[0:8])
 	m.Interval = binary.LittleEndian.Uint16(data[8:10])
 	m.Flags = binary.LittleEndian.Uint16(data[10:12])
+	m.Payload = data[12:]
 	return m.Dot11Mgmt.DecodeFromBytes(data, df)
 }
 
@@ -1144,6 +1148,7 @@ func (m *Dot11MgmtAuthentication) DecodeFromBytes(data []byte, df gopacket.Decod
 	m.Algorithm = Dot11Algorithm(binary.LittleEndian.Uint16(data[0:2]))
 	m.Sequence = binary.LittleEndian.Uint16(data[2:4])
 	m.Status = Dot11Status(binary.LittleEndian.Uint16(data[4:6]))
+	m.Payload = data[6:]
 	return m.Dot11Mgmt.DecodeFromBytes(data, df)
 }
 
