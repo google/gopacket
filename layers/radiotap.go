@@ -11,6 +11,7 @@ import (
 	"encoding/binary"
 	"fmt"
 	"github.com/google/gopacket"
+	"hash/crc32"
 )
 
 // align calculates the number of bytes needed to align with the width
@@ -405,7 +406,15 @@ func (m *RadioTap) DecodeFromBytes(data []byte, df gopacket.DecodeFeedback) erro
 		offset += align(offset, 4)
 	}
 
-	m.BaseLayer = BaseLayer{Contents: data[:m.Length], Payload: data[m.Length:]}
+	payload := data[m.Length:]
+	if !m.Flags.FCS() { // Dot11.DecodeFromBytes() expects FCS present
+		fcs := make([]byte, 4)
+		h := crc32.NewIEEE()
+		h.Write(payload)
+		binary.LittleEndian.PutUint32(fcs, h.Sum32())
+		payload = append(payload, fcs...)
+	}
+	m.BaseLayer = BaseLayer{Contents: data[:m.Length], Payload: payload}
 
 	return nil
 }
