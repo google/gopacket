@@ -21,8 +21,8 @@ func TestNotFrag(t *testing.T) {
 	}
 	defrag := NewIPv4Defragmenter()
 
-	status, err := defrag.DefragIPv4(&ip)
-	if status == false || err != nil {
+	out, err := defrag.DefragIPv4(&ip)
+	if out == nil || err != nil {
 		t.Errorf("defrag: this packet do not need to be defrag ['%s']", err)
 	}
 }
@@ -127,16 +127,20 @@ func gentestDefrag(t *testing.T, defrag *IPv4Defragmenter, buf []byte, expect bo
 		t.Error("Failed to decode packet:", p.ErrorLayer().Error())
 	}
 	ipL := p.Layer(layers.LayerTypeIPv4)
-	ip, _ := ipL.(*layers.IPv4)
+	in, _ := ipL.(*layers.IPv4)
 
-	status, err := defrag.DefragIPv4(ip)
+	out, err := defrag.DefragIPv4(in)
 	if err != nil {
 		t.Fatalf("defrag: %s", err)
+	}
+	status := false
+	if out != nil {
+		status = true
 	}
 	if status != expect {
 		t.Fatalf("defrag: a fragment was not detected (%s)", label)
 	}
-	return ip
+	return out
 }
 
 /* Frame 1-1 (1514 bytes) */
