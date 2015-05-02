@@ -1,3 +1,4 @@
+// Package ip4defrag implements a IPv4 defragmenter
 package ip4defrag
 
 import (
@@ -137,7 +138,7 @@ func (d *IPv4Defragmenter) dontDefrag(ip *layers.IPv4) bool {
 		return true
 	}
 	// don't defrag not fragmented ones
-	if ip.Flags == 0 && ip.Id == 0 {
+	if ip.Flags&layers.IPv4MoreFragments == 0 && ip.FragOffset == 0 {
 		return true
 	}
 	return false
