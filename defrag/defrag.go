@@ -79,7 +79,7 @@ func (d *IPv4Defragmenter) DefragIPv4(in *layers.IPv4) (*layers.IPv4, error) {
 		in.Id, in.FragOffset*8, in.Flags)
 
 	// do we already has seen a flow between src/dst with that Id
-	ipf := newIPv4Flow(in)
+	ipf := newIPv4(in)
 	var fl *fragmentList
 	var exist bool
 	d.Lock()
@@ -263,15 +263,15 @@ func (f *fragmentList) build(in *layers.IPv4) (*layers.IPv4, error) {
 	return out, nil
 }
 
-// ipv4Flow is a struct to be used as a key.
-type ipv4Flow struct {
+// ipv4 is a struct to be used as a key.
+type ipv4 struct {
 	ip4 gopacket.Flow
 	id  uint16
 }
 
-// newIPv4Flow returns a new initialized IPv4Flow
-func newIPv4Flow(ip *layers.IPv4) ipv4Flow {
-	return ipv4Flow{
+// newIPv4 returns a new initialized IPv4 Flow
+func newIPv4(ip *layers.IPv4) ipv4 {
+	return ipv4{
 		ip4: ip.NetworkFlow(),
 		id:  ip.Id,
 	}
@@ -281,13 +281,13 @@ func newIPv4Flow(ip *layers.IPv4) ipv4Flow {
 // all fragment/packet.
 type IPv4Defragmenter struct {
 	sync.RWMutex
-	ipFlows map[ipv4Flow]*fragmentList
+	ipFlows map[ipv4]*fragmentList
 }
 
 // NewIPv4Defragmenter returns a new IPv4Defragmenter
 // with an initialized map.
 func NewIPv4Defragmenter() *IPv4Defragmenter {
 	return &IPv4Defragmenter{
-		ipFlows: make(map[ipv4Flow]*fragmentList),
+		ipFlows: make(map[ipv4]*fragmentList),
 	}
 }
