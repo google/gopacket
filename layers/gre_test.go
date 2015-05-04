@@ -2,6 +2,7 @@ package layers
 
 import (
 	"github.com/google/gopacket"
+	"reflect"
 	"testing"
 )
 
@@ -32,6 +33,15 @@ func TestPacketGRE(t *testing.T) {
 		t.Error("Failed to decode packet:", p.ErrorLayer().Error())
 	}
 	checkLayers(p, []gopacket.LayerType{LayerTypeEthernet, LayerTypeIPv4, LayerTypeGRE, LayerTypeIPv4, LayerTypeICMPv4, gopacket.LayerTypePayload}, t)
+	if got, ok := p.Layer(LayerTypeGRE).(*GRE); ok {
+		want := &GRE{
+			BaseLayer: BaseLayer{testPacketGRE[34:38], testPacketGRE[38:]},
+			Protocol:  EthernetTypeIPv4,
+		}
+		if !reflect.DeepEqual(want, got) {
+			t.Errorf("GRE layer mismatch, \nwant %#v\ngot  %#v\n", want, got)
+		}
+	}
 }
 
 func BenchmarkDecodePacketGRE(b *testing.B) {
