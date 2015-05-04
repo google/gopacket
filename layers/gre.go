@@ -19,18 +19,16 @@ type GRE struct {
 	Protocol                                                                   EthernetType
 	Checksum, Offset                                                           uint16
 	Key, Seq                                                                   uint32
-	GRERouting                                                                 GRERouting
+	*GRERouting
 }
 
 // GRERouting is GRE routing information, present if the RoutingPresent flag is
 // set.
-type GRERouting []*GRESourceRouteEntry
-
-// GRESourceRouteEntry is GRE routing information entry.
-type GRESourceRouteEntry struct {
+type GRERouting struct {
 	AddressFamily        uint16
 	SREOffset, SRELength uint8
 	RoutingInformation   []byte
+	Next                 *GRERouting
 }
 
 // LayerType returns gopacket.LayerTypeGRE.
@@ -62,8 +60,9 @@ func (g *GRE) DecodeFromBytes(data []byte, df gopacket.DecodeFeedback) error {
 		offset += 4
 	}
 	if g.RoutingPresent {
+		tail := &g.GRERouting
 		for {
-			sre := &GRESourceRouteEntry{
+			sre := &GRERouting{
 				AddressFamily: binary.BigEndian.Uint16(data[offset : offset+2]),
 				SREOffset:     data[offset+2],
 				SRELength:     data[offset+3],
@@ -73,7 +72,8 @@ func (g *GRE) DecodeFromBytes(data []byte, df gopacket.DecodeFeedback) error {
 			if sre.AddressFamily == 0 && sre.SRELength == 0 {
 				break
 			}
-			g.GRERouting = append(g.GRERouting, sre)
+			(*tail) = sre
+			tail = &sre.Next
 		}
 	}
 	g.BaseLayer = BaseLayer{data[:offset], data[offset:]}
