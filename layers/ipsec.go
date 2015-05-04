@@ -14,10 +14,10 @@ import (
 // IPSecAH is the authentication header for IPv4/6 defined in
 // http://tools.ietf.org/html/rfc2402
 type IPSecAH struct {
-	// While the auth header can be used for both IPv4 and v6, its format is that of
-	// an IPv6 extension (NextHeader, PayloadLength, etc...), so we use ipv6ExtensionBase
-	// to build it.
-	ipv6ExtensionBase
+	BaseLayer
+	NextHeader         IPProtocol
+	HeaderLength       uint8
+	ActualLength       int
 	Reserved           uint16
 	SPI, Seq           uint32
 	AuthenticationData []byte
@@ -28,12 +28,16 @@ func (i *IPSecAH) LayerType() gopacket.LayerType { return LayerTypeIPSecAH }
 
 func decodeIPSecAH(data []byte, p gopacket.PacketBuilder) error {
 	i := &IPSecAH{
-		ipv6ExtensionBase: decodeIPv6ExtensionBase(data),
-		Reserved:          binary.BigEndian.Uint16(data[2:4]),
-		SPI:               binary.BigEndian.Uint32(data[4:8]),
-		Seq:               binary.BigEndian.Uint32(data[8:12]),
+		NextHeader:   IPProtocol(data[0]),
+		HeaderLength: data[1],
+		Reserved:     binary.BigEndian.Uint16(data[2:4]),
+		SPI:          binary.BigEndian.Uint32(data[4:8]),
+		Seq:          binary.BigEndian.Uint32(data[8:12]),
 	}
-	i.AuthenticationData = i.Contents[12:]
+	i.ActualLength = (int(i.HeaderLength) + 2) * 4
+	i.AuthenticationData = data[12:i.ActualLength]
+	i.Contents = data[:i.ActualLength]
+	i.Payload = data[i.ActualLength:]
 	p.AddLayer(i)
 	return p.NextDecoder(i.NextHeader)
 }
