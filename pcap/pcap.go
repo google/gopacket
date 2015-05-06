@@ -521,9 +521,19 @@ func findalladdresses(addresses *_Ctype_struct_pcap_addr) (retval []InterfaceAdd
 	// TODO - make it support more than IPv4 and IPv6?
 	retval = make([]InterfaceAddress, 0, 1)
 	for curaddr := addresses; curaddr != nil; curaddr = (*_Ctype_struct_pcap_addr)(curaddr.next) {
+		// Strangely, it appears that in some cases, we get a pcap address back from
+		// pcap_findalldevs with a nil .addr.  It appears that we can skip over
+		// these.
+		if curaddr.addr == nil {
+			continue
+		}
 		var a InterfaceAddress
 		var err error
 		if a.IP, err = sockaddr_to_IP((*syscall.RawSockaddr)(unsafe.Pointer(curaddr.addr))); err != nil {
+			continue
+		}
+		// To be safe, we'll also check for netmask.
+		if curaddr.netmask == nil {
 			continue
 		}
 		if a.Netmask, err = sockaddr_to_IP((*syscall.RawSockaddr)(unsafe.Pointer(curaddr.netmask))); err != nil {
