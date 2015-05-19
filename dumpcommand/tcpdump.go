@@ -13,7 +13,8 @@ import (
 	"flag"
 	"fmt"
 	"github.com/google/gopacket"
-	_ "github.com/google/gopacket/layers" // pulls in all layers decoders
+	"github.com/google/gopacket/ip4defrag"
+	"github.com/google/gopacket/layers" // pulls in all layers decoders
 	"log"
 	"os"
 	"time"
@@ -26,6 +27,7 @@ var dump = flag.Bool("X", false, "If true, dump very verbose info on each packet
 var statsevery = flag.Int("stats", 1000, "Output statistics every N packets")
 var printErrors = flag.Bool("errors", false, "Print out packet dumps of decode errors, useful for checking decoders against live traffic")
 var lazy = flag.Bool("lazy", false, "If true, do lazy decoding")
+var defrag = flag.Bool("defrag", false, "If true, do IPv4 defrag")
 
 func Run(src gopacket.PacketDataSource) {
 	if !flag.Parsed() {
@@ -46,9 +48,28 @@ func Run(src gopacket.PacketDataSource) {
 	errors := 0
 	truncated := 0
 	layertypes := map[gopacket.LayerType]int{}
+	defragger := ip4defrag.NewIPv4Defragmenter()
+
 	for packet := range source.Packets() {
 		count++
 		bytes += int64(len(packet.Data()))
+
+		// defrag the IPv4 packet if required
+		if *defrag {
+			ip4Layer := packet.Layer(layers.LayerTypeIPv4)
+			if ip4Layer == nil {
+				continue
+			}
+			ip4 := ip4Layer.(*layers.IPv4)
+
+			packet, err := defragger.DefragIPv4(ip4)
+			if err != nil {
+				log.Fatalln("Error while de-fragmenting", err)
+			} else if packet == nil {
+				continue // packet fragment, we don't have whole packet yet.
+			}
+		}
+
 		if *dump {
 			fmt.Println(packet.Dump())
 		} else if *print {
