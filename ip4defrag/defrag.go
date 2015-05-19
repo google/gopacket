@@ -51,7 +51,7 @@ const (
 // Usage example:
 //
 // func HandlePacket(in *layers.IPv4) err {
-//     defragger := ip4defrag.NewIPv4Defrag()
+//     defragger := ip4defrag.NewIPv4Defragmenter()
 //     in, err := defragger.DefragIPv4(in)
 //     if err != nil {
 //         return err
