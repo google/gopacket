@@ -8,8 +8,8 @@ import (
 	"sync"
 	"time"
 
-	"code.google.com/p/gopacket"
-	"code.google.com/p/gopacket/layers"
+	"github.com/google/gopacket"
+	"github.com/google/gopacket/layers"
 )
 
 // Quick and Easy to use debug code to trace
