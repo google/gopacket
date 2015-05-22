@@ -38,3 +38,42 @@ func BenchmarkDecodePacketRadiotap0(b *testing.B) {
 		gopacket.NewPacket(testPacketRadiotap0, LayerTypeRadioTap, gopacket.NoCopy)
 	}
 }
+
+// testPacketRadiotap1 is the packet:
+//   05:24:21.380948 2412 MHz 11g -36dB signal antenna 5 65.0 Mb/s MCS 7 20 MHz lon GI
+//   	0x0000:  0000 1500 2a48 0800 1000 6c09 8004 dc05  ....*H....l.....
+//   	0x0010:  0000 0700 0748 112c 0000 3a9d aaf0 191c  .....H.,..:.....
+//   	0x0020:  aba7 f213 9d00 3a9d aaf0 1970 b2ee a9f1  ......:....p....
+//   	0x0030:  16                                       .
+var testPacketRadiotap1 = []byte{
+	0x00, 0x00, 0x15, 0x00, 0x2a, 0x48, 0x08, 0x00, 0x10, 0x00, 0x6c, 0x09, 0x80, 0x04, 0xdc, 0x05,
+	0x00, 0x00, 0x07, 0x00, 0x07, 0x48, 0x11, 0x2c, 0x00, 0x00, 0x3a, 0x9d, 0xaa, 0xf0, 0x19, 0x1c,
+	0xab, 0xa7, 0xf2, 0x13, 0x9d, 0x00, 0x3a, 0x9d, 0xaa, 0xf0, 0x19, 0x70, 0xb2, 0xee, 0xa9, 0xf1,
+	0x16,
+}
+
+func TestPacketRadiotap1(t *testing.T) {
+	p := gopacket.NewPacket(testPacketRadiotap1, LayerTypeRadioTap, gopacket.Default)
+	if p.ErrorLayer() != nil {
+		t.Error("Failed to decode packet:", p.ErrorLayer().Error())
+	}
+	checkLayers(p, []gopacket.LayerType{LayerTypeRadioTap, LayerTypeDot11}, t)
+	rt := p.Layer(LayerTypeRadioTap).(*RadioTap)
+	if rt.ChannelFrequency != 2412 || rt.DBMAntennaSignal != -36 || rt.Antenna != 5 {
+		t.Error("Radiotap decode error")
+	}
+	if !rt.Mcs.Known.McsIndex() || rt.Mcs.Mcs != 7 {
+		t.Error("Radiotap MCS error")
+	}
+	if !rt.Mcs.Known.Bandwidth() || rt.Mcs.Flags.Bandwidth() != 0 {
+		t.Error("Radiotap bandwidth error")
+	}
+	if !rt.Mcs.Known.GuardInterval() || rt.Mcs.Flags.ShortGI() {
+		t.Error("Radiotap GI error")
+	}
+}
+func BenchmarkDecodePacketRadiotap1(b *testing.B) {
+	for i := 0; i < b.N; i++ {
+		gopacket.NewPacket(testPacketRadiotap1, LayerTypeRadioTap, gopacket.NoCopy)
+	}
+}
