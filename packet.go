@@ -321,9 +321,11 @@ func (p *packet) packetString() string {
 
 func (p *packet) packetDump() string {
 	var b bytes.Buffer
-	fmt.Fprintf(&b, "-- FULL PACKET DATA (%d bytes) ------------------------------------\n%s", len(p.data), hex.Dump(p.data))
+	fmt.Fprintf(&b, "-- FULL PACKET DATA (%d bytes) ------------------------------------\n", len(p.data))
+	fmt.Fprint(&b, hex.Dump(p.data))
 	for i, l := range p.layers {
-		fmt.Fprintf(&b, "--- Layer %d ---\n%s", i+1, LayerDump(l))
+		fmt.Fprintf(&b, "--- Layer %d ---\n", i+1)
+		fmt.Fprint(&b, LayerDump(l))
 	}
 	return b.String()
 }
