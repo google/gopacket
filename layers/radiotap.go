@@ -331,9 +331,18 @@ type RadioTapMcs struct {
 func (self RadioTapMcs) String() string {
 	var tokens []string
 	if self.Known.Bandwidth() {
-		tokens = append(tokens, []string{
-			"20", "40", "40(20L)", "40(20U)",
-		}[self.Flags.Bandwidth()])
+		token := "?"
+		switch self.Flags.Bandwidth() {
+		case 0:
+			token = "20"
+		case 1:
+			token = "40"
+		case 2:
+			token = "40(20L)"
+		case 3:
+			token = "40(20U)"
+		}
+		tokens = append(tokens, token)
 	}
 	if self.Known.McsIndex() {
 		tokens = append(tokens, fmt.Sprintf("mcsIndex#%d", self.Mcs))
@@ -519,21 +528,73 @@ func (self RadioTapVht) String() string {
 		}
 	}
 	if self.Known.Bandwidth() {
-		tokens = append(tokens, []string{
-			"20",
-			"40", "40(20L)", "40(20U)",
-			"80", "80(40L)", "80(40U)",
-			"80(20LL)", "80(20LU)", "80(20UL)", "80(20UU)",
-			"160", "160(80L)", "160(80U)",
-			"160(40LL)", "160(40LU)", "160(40UL)", "160(40UU)",
-			"160(20LLL)", "160(20LLU)", "160(20LUL)", "160(20LUU)",
-			"160(20ULL)", "160(20ULU)", "160(20UUL)", "160(20UUU)",
-		}[self.Bandwidth&0x1f])
+		token := "?"
+		switch self.Bandwidth & 0x1f {
+		case 0:
+			token = "20"
+		case 1:
+			token = "40"
+		case 2:
+			token = "40(20L)"
+		case 3:
+			token = "40(20U)"
+		case 4:
+			token = "80"
+		case 5:
+			token = "80(40L)"
+		case 6:
+			token = "80(40U)"
+		case 7:
+			token = "80(20LL)"
+		case 8:
+			token = "80(20LU)"
+		case 9:
+			token = "80(20UL)"
+		case 10:
+			token = "80(20UU)"
+		case 11:
+			token = "160"
+		case 12:
+			token = "160(80L)"
+		case 13:
+			token = "160(80U)"
+		case 14:
+			token = "160(40LL)"
+		case 15:
+			token = "160(40LU)"
+		case 16:
+			token = "160(40UL)"
+		case 17:
+			token = "160(40UU)"
+		case 18:
+			token = "160(20LLL)"
+		case 19:
+			token = "160(20LLU)"
+		case 20:
+			token = "160(20LUL)"
+		case 21:
+			token = "160(20LUU)"
+		case 22:
+			token = "160(20ULL)"
+		case 23:
+			token = "160(20ULU)"
+		case 24:
+			token = "160(20UUL)"
+		case 25:
+			token = "160(20UUU)"
+		}
+		tokens = append(tokens, token)
 	}
 	for i, mcsNss := range self.McsNss {
 		if mcsNss.Present() {
-			tokens = append(tokens, fmt.Sprintf("user%d(%s,%s)",
-				i, mcsNss.String(), []string{"BCC", "LDPC"}[self.Coding&(1<<uint8(i))]))
+			fec := "?"
+			switch self.Coding & (1 << uint8(i)) {
+			case 0:
+				fec = "BCC"
+			case 1:
+				fec = "LDPC"
+			}
+			tokens = append(tokens, fmt.Sprintf("user%d(%s,%s)", i, mcsNss.String(), fec))
 		}
 	}
 	if self.Known.GroupId() {
