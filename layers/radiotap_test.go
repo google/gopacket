@@ -62,13 +62,13 @@ func TestPacketRadiotap1(t *testing.T) {
 	if rt.ChannelFrequency != 2412 || rt.DBMAntennaSignal != -36 || rt.Antenna != 5 {
 		t.Error("Radiotap decode error")
 	}
-	if !rt.Mcs.Known.McsIndex() || rt.Mcs.Mcs != 7 {
+	if !rt.MCS.Known.MCSIndex() || rt.MCS.MCS != 7 {
 		t.Error("Radiotap MCS error")
 	}
-	if !rt.Mcs.Known.Bandwidth() || rt.Mcs.Flags.Bandwidth() != 0 {
+	if !rt.MCS.Known.Bandwidth() || rt.MCS.Flags.Bandwidth() != 0 {
 		t.Error("Radiotap bandwidth error")
 	}
-	if !rt.Mcs.Known.GuardInterval() || rt.Mcs.Flags.ShortGI() {
+	if !rt.MCS.Known.GuardInterval() || rt.MCS.Flags.ShortGI() {
 		t.Error("Radiotap GI error")
 	}
 }

@@ -44,9 +44,9 @@ const (
 	RadioTapPresentRtsRetries
 	RadioTapPresentDataRetries
 	_
-	RadioTapPresentMcs
-	RadioTapPresentAmpduStatus
-	RadioTapPresentVht
+	RadioTapPresentMCS
+	RadioTapPresentAMPDUStatus
+	RadioTapPresentVHT
 	RadioTapPresentEXT RadioTapPresent = 1 << 31
 )
 
@@ -104,14 +104,14 @@ func (r RadioTapPresent) RtsRetries() bool {
 func (r RadioTapPresent) DataRetries() bool {
 	return r&RadioTapPresentDataRetries != 0
 }
-func (r RadioTapPresent) Mcs() bool {
-	return r&RadioTapPresentMcs != 0
+func (r RadioTapPresent) MCS() bool {
+	return r&RadioTapPresentMCS != 0
 }
-func (r RadioTapPresent) AmpduStatus() bool {
-	return r&RadioTapPresentAmpduStatus != 0
+func (r RadioTapPresent) AMPDUStatus() bool {
+	return r&RadioTapPresentAMPDUStatus != 0
 }
-func (r RadioTapPresent) Vht() bool {
-	return r&RadioTapPresentVht != 0
+func (r RadioTapPresent) VHT() bool {
+	return r&RadioTapPresentVHT != 0
 }
 func (r RadioTapPresent) EXT() bool {
 	return r&RadioTapPresentEXT != 0
@@ -295,40 +295,40 @@ type RadioTapTxFlags uint16
 
 const (
 	RadioTapTxFlagsFail RadioTapTxFlags = 1 << iota
-	RadioTapTxFlagsCts
-	RadioTapTxFlagsRts
-	RadioTapTxFlagsNoack
+	RadioTapTxFlagsCTS
+	RadioTapTxFlagsRTS
+	RadioTapTxFlagsNoACK
 )
 
 func (self RadioTapTxFlags) Fail() bool  { return self&RadioTapTxFlagsFail != 0 }
-func (self RadioTapTxFlags) Cts() bool   { return self&RadioTapTxFlagsCts != 0 }
-func (self RadioTapTxFlags) Rts() bool   { return self&RadioTapTxFlagsRts != 0 }
-func (self RadioTapTxFlags) Noack() bool { return self&RadioTapTxFlagsNoack != 0 }
+func (self RadioTapTxFlags) CTS() bool   { return self&RadioTapTxFlagsCTS != 0 }
+func (self RadioTapTxFlags) RTS() bool   { return self&RadioTapTxFlagsRTS != 0 }
+func (self RadioTapTxFlags) NoACK() bool { return self&RadioTapTxFlagsNoACK != 0 }
 
 func (self RadioTapTxFlags) String() string {
 	var tokens []string
 	if self.Fail() {
 		tokens = append(tokens, "Fail")
 	}
-	if self.Cts() {
-		tokens = append(tokens, "Cts")
+	if self.CTS() {
+		tokens = append(tokens, "CTS")
 	}
-	if self.Rts() {
-		tokens = append(tokens, "Rts")
+	if self.RTS() {
+		tokens = append(tokens, "RTS")
 	}
-	if self.Noack() {
-		tokens = append(tokens, "Noack")
+	if self.NoACK() {
+		tokens = append(tokens, "NoACK")
 	}
 	return strings.Join(tokens, ",")
 }
 
-type RadioTapMcs struct {
-	Known RadioTapMcsKnown
-	Flags RadioTapMcsFlags
-	Mcs   uint8
+type RadioTapMCS struct {
+	Known RadioTapMCSKnown
+	Flags RadioTapMCSFlags
+	MCS   uint8
 }
 
-func (self RadioTapMcs) String() string {
+func (self RadioTapMCS) String() string {
 	var tokens []string
 	if self.Known.Bandwidth() {
 		token := "?"
@@ -344,8 +344,8 @@ func (self RadioTapMcs) String() string {
 		}
 		tokens = append(tokens, token)
 	}
-	if self.Known.McsIndex() {
-		tokens = append(tokens, fmt.Sprintf("mcsIndex#%d", self.Mcs))
+	if self.Known.MCSIndex() {
+		tokens = append(tokens, fmt.Sprintf("MCSIndex#%d", self.MCS))
 	}
 	if self.Known.GuardInterval() {
 		if self.Flags.ShortGI() {
@@ -354,29 +354,29 @@ func (self RadioTapMcs) String() string {
 			tokens = append(tokens, fmt.Sprintf("longGI"))
 		}
 	}
-	if self.Known.HtFormat() {
+	if self.Known.HTFormat() {
 		if self.Flags.Greenfield() {
 			tokens = append(tokens, fmt.Sprintf("HT-greenfield"))
 		} else {
 			tokens = append(tokens, fmt.Sprintf("HT-mixed"))
 		}
 	}
-	if self.Known.FecType() {
-		if self.Flags.FecLdpc() {
+	if self.Known.FECType() {
+		if self.Flags.FECLDPC() {
 			tokens = append(tokens, fmt.Sprintf("LDPC"))
 		} else {
 			tokens = append(tokens, fmt.Sprintf("BCC"))
 		}
 	}
-	if self.Known.Stbc() {
-		tokens = append(tokens, fmt.Sprintf("STBC#%d", self.Flags.Stbc()))
+	if self.Known.STBC() {
+		tokens = append(tokens, fmt.Sprintf("STBC#%d", self.Flags.STBC()))
 	}
-	if self.Known.Ness() {
+	if self.Known.NESS() {
 		num := 0
-		if self.Known.Ness1() {
+		if self.Known.NESS1() {
 			num |= 0x02
 		}
-		if self.Flags.Ness0() {
+		if self.Flags.NESS0() {
 			num |= 0x01
 		}
 		tokens = append(tokens, fmt.Sprintf("num-of-ESS#%d", num))
@@ -384,57 +384,57 @@ func (self RadioTapMcs) String() string {
 	return strings.Join(tokens, ",")
 }
 
-type RadioTapMcsKnown uint8
+type RadioTapMCSKnown uint8
 
 const (
-	RadioTapMcsKnownBandwidth RadioTapMcsKnown = 1 << iota
-	RadioTapMcsKnownMcsIndex
-	RadioTapMcsKnownGuardInterval
-	RadioTapMcsKnownHtFormat
-	RadioTapMcsKnownFecType
-	RadioTapMcsKnownStbc
-	RadioTapMcsKnownNess
-	RadioTapMcsKnownNess1
+	RadioTapMCSKnownBandwidth RadioTapMCSKnown = 1 << iota
+	RadioTapMCSKnownMCSIndex
+	RadioTapMCSKnownGuardInterval
+	RadioTapMCSKnownHTFormat
+	RadioTapMCSKnownFECType
+	RadioTapMCSKnownSTBC
+	RadioTapMCSKnownNESS
+	RadioTapMCSKnownNESS1
 )
 
-func (self RadioTapMcsKnown) Bandwidth() bool     { return self&RadioTapMcsKnownBandwidth != 0 }
-func (self RadioTapMcsKnown) McsIndex() bool      { return self&RadioTapMcsKnownMcsIndex != 0 }
-func (self RadioTapMcsKnown) GuardInterval() bool { return self&RadioTapMcsKnownGuardInterval != 0 }
-func (self RadioTapMcsKnown) HtFormat() bool      { return self&RadioTapMcsKnownHtFormat != 0 }
-func (self RadioTapMcsKnown) FecType() bool       { return self&RadioTapMcsKnownFecType != 0 }
-func (self RadioTapMcsKnown) Stbc() bool          { return self&RadioTapMcsKnownStbc != 0 }
-func (self RadioTapMcsKnown) Ness() bool          { return self&RadioTapMcsKnownNess != 0 }
-func (self RadioTapMcsKnown) Ness1() bool         { return self&RadioTapMcsKnownNess1 != 0 }
+func (self RadioTapMCSKnown) Bandwidth() bool     { return self&RadioTapMCSKnownBandwidth != 0 }
+func (self RadioTapMCSKnown) MCSIndex() bool      { return self&RadioTapMCSKnownMCSIndex != 0 }
+func (self RadioTapMCSKnown) GuardInterval() bool { return self&RadioTapMCSKnownGuardInterval != 0 }
+func (self RadioTapMCSKnown) HTFormat() bool      { return self&RadioTapMCSKnownHTFormat != 0 }
+func (self RadioTapMCSKnown) FECType() bool       { return self&RadioTapMCSKnownFECType != 0 }
+func (self RadioTapMCSKnown) STBC() bool          { return self&RadioTapMCSKnownSTBC != 0 }
+func (self RadioTapMCSKnown) NESS() bool          { return self&RadioTapMCSKnownNESS != 0 }
+func (self RadioTapMCSKnown) NESS1() bool         { return self&RadioTapMCSKnownNESS1 != 0 }
 
-type RadioTapMcsFlags uint8
+type RadioTapMCSFlags uint8
 
 const (
-	RadioTapMcsFlagsBandwidthMask RadioTapMcsFlags = 0x03
-	RadioTapMcsFlagsShortGI                        = 0x04
-	RadioTapMcsFlagsGreenfield                     = 0x08
-	RadioTapMcsFlagsFecLdpc                        = 0x10
-	RadioTapMcsFlagsStbcMask                       = 0x60
-	RadioTapMcsFlagsNess0                          = 0x80
+	RadioTapMCSFlagsBandwidthMask RadioTapMCSFlags = 0x03
+	RadioTapMCSFlagsShortGI                        = 0x04
+	RadioTapMCSFlagsGreenfield                     = 0x08
+	RadioTapMCSFlagsFECLDPC                        = 0x10
+	RadioTapMCSFlagsSTBCMask                       = 0x60
+	RadioTapMCSFlagsNESS0                          = 0x80
 )
 
-func (self RadioTapMcsFlags) Bandwidth() int {
-	return int(self & RadioTapMcsFlagsBandwidthMask)
+func (self RadioTapMCSFlags) Bandwidth() int {
+	return int(self & RadioTapMCSFlagsBandwidthMask)
 }
-func (self RadioTapMcsFlags) ShortGI() bool    { return self&RadioTapMcsFlagsShortGI != 0 }
-func (self RadioTapMcsFlags) Greenfield() bool { return self&RadioTapMcsFlagsGreenfield != 0 }
-func (self RadioTapMcsFlags) FecLdpc() bool    { return self&RadioTapMcsFlagsFecLdpc != 0 }
-func (self RadioTapMcsFlags) Stbc() int {
-	return int(self&RadioTapMcsFlagsStbcMask) >> 5
+func (self RadioTapMCSFlags) ShortGI() bool    { return self&RadioTapMCSFlagsShortGI != 0 }
+func (self RadioTapMCSFlags) Greenfield() bool { return self&RadioTapMCSFlagsGreenfield != 0 }
+func (self RadioTapMCSFlags) FECLDPC() bool    { return self&RadioTapMCSFlagsFECLDPC != 0 }
+func (self RadioTapMCSFlags) STBC() int {
+	return int(self&RadioTapMCSFlagsSTBCMask) >> 5
 }
-func (self RadioTapMcsFlags) Ness0() bool { return self&RadioTapMcsFlagsNess0 != 0 }
+func (self RadioTapMCSFlags) NESS0() bool { return self&RadioTapMCSFlagsNESS0 != 0 }
 
-type RadioTapAmpduStatus struct {
+type RadioTapAMPDUStatus struct {
 	Reference uint32
-	Flags     RadioTapAmpduStatusFlags
-	Crc       uint8
+	Flags     RadioTapAMPDUStatusFlags
+	CRC       uint8
 }
 
-func (self RadioTapAmpduStatus) String() string {
+func (self RadioTapAMPDUStatus) String() string {
 	tokens := []string{
 		fmt.Sprintf("ref#%x", self.Reference),
 	}
@@ -444,77 +444,77 @@ func (self RadioTapAmpduStatus) String() string {
 	if self.Flags.LastKnown() && self.Flags.IsLast() {
 		tokens = append(tokens, "last")
 	}
-	if self.Flags.DelimCrcErr() {
+	if self.Flags.DelimCRCErr() {
 		tokens = append(tokens, "delimiter CRC error")
 	}
-	if self.Flags.DelimCrcKnown() {
-		tokens = append(tokens, fmt.Sprintf("delimiter-CRC=%02x", self.Crc))
+	if self.Flags.DelimCRCKnown() {
+		tokens = append(tokens, fmt.Sprintf("delimiter-CRC=%02x", self.CRC))
 	}
 	return strings.Join(tokens, ",")
 }
 
-type RadioTapAmpduStatusFlags uint16
+type RadioTapAMPDUStatusFlags uint16
 
 const (
-	RadioTapAmpduStatusFlagsReportZerolen RadioTapAmpduStatusFlags = 1 << iota
-	RadioTapAmpduIsZerolen
-	RadioTapAmpduLastKnown
-	RadioTapAmpduIsLast
-	RadioTapAmpduDelimCrcErr
-	RadioTapAmpduDelimCrcKnown
+	RadioTapAMPDUStatusFlagsReportZerolen RadioTapAMPDUStatusFlags = 1 << iota
+	RadioTapAMPDUIsZerolen
+	RadioTapAMPDULastKnown
+	RadioTapAMPDUIsLast
+	RadioTapAMPDUDelimCRCErr
+	RadioTapAMPDUDelimCRCKnown
 )
 
-func (self RadioTapAmpduStatusFlags) ReportZerolen() bool {
-	return self&RadioTapAmpduStatusFlagsReportZerolen != 0
+func (self RadioTapAMPDUStatusFlags) ReportZerolen() bool {
+	return self&RadioTapAMPDUStatusFlagsReportZerolen != 0
 }
-func (self RadioTapAmpduStatusFlags) IsZerolen() bool     { return self&RadioTapAmpduIsZerolen != 0 }
-func (self RadioTapAmpduStatusFlags) LastKnown() bool     { return self&RadioTapAmpduLastKnown != 0 }
-func (self RadioTapAmpduStatusFlags) IsLast() bool        { return self&RadioTapAmpduIsLast != 0 }
-func (self RadioTapAmpduStatusFlags) DelimCrcErr() bool   { return self&RadioTapAmpduDelimCrcErr != 0 }
-func (self RadioTapAmpduStatusFlags) DelimCrcKnown() bool { return self&RadioTapAmpduDelimCrcKnown != 0 }
+func (self RadioTapAMPDUStatusFlags) IsZerolen() bool     { return self&RadioTapAMPDUIsZerolen != 0 }
+func (self RadioTapAMPDUStatusFlags) LastKnown() bool     { return self&RadioTapAMPDULastKnown != 0 }
+func (self RadioTapAMPDUStatusFlags) IsLast() bool        { return self&RadioTapAMPDUIsLast != 0 }
+func (self RadioTapAMPDUStatusFlags) DelimCRCErr() bool   { return self&RadioTapAMPDUDelimCRCErr != 0 }
+func (self RadioTapAMPDUStatusFlags) DelimCRCKnown() bool { return self&RadioTapAMPDUDelimCRCKnown != 0 }
 
-type RadioTapVht struct {
-	Known      RadioTapVhtKnown
-	Flags      RadioTapVhtFlags
+type RadioTapVHT struct {
+	Known      RadioTapVHTKnown
+	Flags      RadioTapVHTFlags
 	Bandwidth  uint8
-	McsNss     [4]RadioTapVhtMcsNss
+	MCSNSS     [4]RadioTapVHTMCSNSS
 	Coding     uint8
 	GroupId    uint8
-	PartialAid uint16
+	PartialAID uint16
 }
 
-func (self RadioTapVht) String() string {
+func (self RadioTapVHT) String() string {
 	var tokens []string
-	if self.Known.Stbc() {
-		if self.Flags.Stbc() {
+	if self.Known.STBC() {
+		if self.Flags.STBC() {
 			tokens = append(tokens, "STBC")
 		} else {
 			tokens = append(tokens, "no STBC")
 		}
 	}
-	if self.Known.TxopPsNa() {
-		if self.Flags.TxopPsNa() {
+	if self.Known.TXOPPSNotAllowed() {
+		if self.Flags.TXOPPSNotAllowed() {
 			tokens = append(tokens, "TXOP doze not allowed")
 		} else {
 			tokens = append(tokens, "TXOP doze allowed")
 		}
 	}
-	if self.Known.Gi() {
-		if self.Flags.Sgi() {
+	if self.Known.GI() {
+		if self.Flags.SGI() {
 			tokens = append(tokens, "short GI")
 		} else {
 			tokens = append(tokens, "long GI")
 		}
 	}
-	if self.Known.SgiNsymDis() {
-		if self.Flags.SgiNsymMod() {
+	if self.Known.SGINSYMDisambiguation() {
+		if self.Flags.SGINSYMMod() {
 			tokens = append(tokens, "NSYM mod 10=9")
 		} else {
 			tokens = append(tokens, "NSYM mod 10!=9 or no short GI")
 		}
 	}
-	if self.Known.LdpcExtraOfdmSym() {
-		if self.Flags.LdpcExtraOfdmSym() {
+	if self.Known.LDPCExtraOFDMSymbol() {
+		if self.Flags.LDPCExtraOFDMSymbol() {
 			tokens = append(tokens, "LDPC extra OFDM symbols")
 		} else {
 			tokens = append(tokens, "no LDPC extra OFDM symbols")
@@ -585,8 +585,8 @@ func (self RadioTapVht) String() string {
 		}
 		tokens = append(tokens, token)
 	}
-	for i, mcsNss := range self.McsNss {
-		if mcsNss.Present() {
+	for i, MCSNSS := range self.MCSNSS {
+		if MCSNSS.Present() {
 			fec := "?"
 			switch self.Coding & (1 << uint8(i)) {
 			case 0:
@@ -594,73 +594,79 @@ func (self RadioTapVht) String() string {
 			case 1:
 				fec = "LDPC"
 			}
-			tokens = append(tokens, fmt.Sprintf("user%d(%s,%s)", i, mcsNss.String(), fec))
+			tokens = append(tokens, fmt.Sprintf("user%d(%s,%s)", i, MCSNSS.String(), fec))
 		}
 	}
 	if self.Known.GroupId() {
 		tokens = append(tokens,
 			fmt.Sprintf("group=%d", self.GroupId))
 	}
-	if self.Known.PartialAid() {
+	if self.Known.PartialAID() {
 		tokens = append(tokens,
-			fmt.Sprintf("partial-AID=%d", self.PartialAid))
+			fmt.Sprintf("partial-AID=%d", self.PartialAID))
 	}
 	return strings.Join(tokens, ",")
 }
 
-type RadioTapVhtKnown uint16
+type RadioTapVHTKnown uint16
 
 const (
-	RadioTapVhtKnownStbc RadioTapVhtKnown = 1 << iota
-	RadioTapVhtKnownTxopPsNa
-	RadioTapVhtKnownGi
-	RadioTapVhtKnownSgiNsymDis
-	RadioTapVhtKnownLdpcExtraOfdmSym
-	RadioTapVhtKnownBeamformed
-	RadioTapVhtKnownBandwidth
-	RadioTapVhtKnownGroupId
-	RadioTapVhtKnownPartialAid
+	RadioTapVHTKnownSTBC RadioTapVHTKnown = 1 << iota
+	RadioTapVHTKnownTXOPPSNotAllowed
+	RadioTapVHTKnownGI
+	RadioTapVHTKnownSGINSYMDisambiguation
+	RadioTapVHTKnownLDPCExtraOFDMSymbol
+	RadioTapVHTKnownBeamformed
+	RadioTapVHTKnownBandwidth
+	RadioTapVHTKnownGroupId
+	RadioTapVHTKnownPartialAID
 )
 
-func (self RadioTapVhtKnown) Stbc() bool       { return self&RadioTapVhtKnownStbc != 0 }
-func (self RadioTapVhtKnown) TxopPsNa() bool   { return self&RadioTapVhtKnownTxopPsNa != 0 }
-func (self RadioTapVhtKnown) Gi() bool         { return self&RadioTapVhtKnownGi != 0 }
-func (self RadioTapVhtKnown) SgiNsymDis() bool { return self&RadioTapVhtKnownSgiNsymDis != 0 }
-func (self RadioTapVhtKnown) LdpcExtraOfdmSym() bool {
-	return self&RadioTapVhtKnownLdpcExtraOfdmSym != 0
+func (self RadioTapVHTKnown) STBC() bool { return self&RadioTapVHTKnownSTBC != 0 }
+func (self RadioTapVHTKnown) TXOPPSNotAllowed() bool {
+	return self&RadioTapVHTKnownTXOPPSNotAllowed != 0
 }
-func (self RadioTapVhtKnown) Beamformed() bool { return self&RadioTapVhtKnownBeamformed != 0 }
-func (self RadioTapVhtKnown) Bandwidth() bool  { return self&RadioTapVhtKnownBandwidth != 0 }
-func (self RadioTapVhtKnown) GroupId() bool    { return self&RadioTapVhtKnownGroupId != 0 }
-func (self RadioTapVhtKnown) PartialAid() bool { return self&RadioTapVhtKnownPartialAid != 0 }
+func (self RadioTapVHTKnown) GI() bool { return self&RadioTapVHTKnownGI != 0 }
+func (self RadioTapVHTKnown) SGINSYMDisambiguation() bool {
+	return self&RadioTapVHTKnownSGINSYMDisambiguation != 0
+}
+func (self RadioTapVHTKnown) LDPCExtraOFDMSymbol() bool {
+	return self&RadioTapVHTKnownLDPCExtraOFDMSymbol != 0
+}
+func (self RadioTapVHTKnown) Beamformed() bool { return self&RadioTapVHTKnownBeamformed != 0 }
+func (self RadioTapVHTKnown) Bandwidth() bool  { return self&RadioTapVHTKnownBandwidth != 0 }
+func (self RadioTapVHTKnown) GroupId() bool    { return self&RadioTapVHTKnownGroupId != 0 }
+func (self RadioTapVHTKnown) PartialAID() bool { return self&RadioTapVHTKnownPartialAID != 0 }
 
-type RadioTapVhtFlags uint8
+type RadioTapVHTFlags uint8
 
 const (
-	RadioTapVhtFlagsStbc RadioTapVhtFlags = 1 << iota
-	RadioTapVhtFlagsTxopPsNa
-	RadioTapVhtFlagsSgi
-	RadioTapVhtFlagsSgiNsymMod
-	RadioTapVhtFlagsLdpcExtraOfdmSym
-	RadioTapVhtFlagsBeamformed
+	RadioTapVHTFlagsSTBC RadioTapVHTFlags = 1 << iota
+	RadioTapVHTFlagsTXOPPSNotAllowed
+	RadioTapVHTFlagsSGI
+	RadioTapVHTFlagsSGINSYMMod
+	RadioTapVHTFlagsLDPCExtraOFDMSymbol
+	RadioTapVHTFlagsBeamformed
 )
 
-func (self RadioTapVhtFlags) Stbc() bool       { return self&RadioTapVhtFlagsStbc != 0 }
-func (self RadioTapVhtFlags) TxopPsNa() bool   { return self&RadioTapVhtFlagsTxopPsNa != 0 }
-func (self RadioTapVhtFlags) Sgi() bool        { return self&RadioTapVhtFlagsSgi != 0 }
-func (self RadioTapVhtFlags) SgiNsymMod() bool { return self&RadioTapVhtFlagsSgiNsymMod != 0 }
-func (self RadioTapVhtFlags) LdpcExtraOfdmSym() bool {
-	return self&RadioTapVhtFlagsLdpcExtraOfdmSym != 0
+func (self RadioTapVHTFlags) STBC() bool { return self&RadioTapVHTFlagsSTBC != 0 }
+func (self RadioTapVHTFlags) TXOPPSNotAllowed() bool {
+	return self&RadioTapVHTFlagsTXOPPSNotAllowed != 0
 }
-func (self RadioTapVhtFlags) Beamformed() bool { return self&RadioTapVhtFlagsBeamformed != 0 }
+func (self RadioTapVHTFlags) SGI() bool        { return self&RadioTapVHTFlagsSGI != 0 }
+func (self RadioTapVHTFlags) SGINSYMMod() bool { return self&RadioTapVHTFlagsSGINSYMMod != 0 }
+func (self RadioTapVHTFlags) LDPCExtraOFDMSymbol() bool {
+	return self&RadioTapVHTFlagsLDPCExtraOFDMSymbol != 0
+}
+func (self RadioTapVHTFlags) Beamformed() bool { return self&RadioTapVHTFlagsBeamformed != 0 }
 
-type RadioTapVhtMcsNss uint8
+type RadioTapVHTMCSNSS uint8
 
-func (self RadioTapVhtMcsNss) Present() bool {
+func (self RadioTapVHTMCSNSS) Present() bool {
 	return self&0x0F != 0
 }
 
-func (self RadioTapVhtMcsNss) String() string {
+func (self RadioTapVHTMCSNSS) String() string {
 	return fmt.Sprintf("NSS#%dMCS#%d", uint32(self&0xf), uint32(self>>4))
 }
 
@@ -712,9 +718,9 @@ type RadioTap struct {
 	TxFlags     RadioTapTxFlags
 	RtsRetries  uint8
 	DataRetries uint8
-	Mcs         RadioTapMcs
-	AmpduStatus RadioTapAmpduStatus
-	Vht         RadioTapVht
+	MCS         RadioTapMCS
+	AMPDUStatus RadioTapAMPDUStatus
+	VHT         RadioTapVHT
 }
 
 func (m *RadioTap) LayerType() gopacket.LayerType { return LayerTypeRadioTap }
@@ -815,38 +821,38 @@ func (m *RadioTap) DecodeFromBytes(data []byte, df gopacket.DecodeFeedback) erro
 		m.DataRetries = uint8(data[offset])
 		offset++
 	}
-	if m.Present.Mcs() {
-		m.Mcs = RadioTapMcs{
-			RadioTapMcsKnown(data[offset]),
-			RadioTapMcsFlags(data[offset+1]),
+	if m.Present.MCS() {
+		m.MCS = RadioTapMCS{
+			RadioTapMCSKnown(data[offset]),
+			RadioTapMCSFlags(data[offset+1]),
 			uint8(data[offset+2]),
 		}
 		offset += 3
 	}
-	if m.Present.AmpduStatus() {
+	if m.Present.AMPDUStatus() {
 		offset += align(offset, 4)
-		m.AmpduStatus = RadioTapAmpduStatus{
+		m.AMPDUStatus = RadioTapAMPDUStatus{
 			Reference: binary.LittleEndian.Uint32(data[offset:]),
-			Flags:     RadioTapAmpduStatusFlags(binary.LittleEndian.Uint16(data[offset+4:])),
-			Crc:       uint8(data[offset+6]),
+			Flags:     RadioTapAMPDUStatusFlags(binary.LittleEndian.Uint16(data[offset+4:])),
+			CRC:       uint8(data[offset+6]),
 		}
 		offset += 8
 	}
-	if m.Present.Vht() {
+	if m.Present.VHT() {
 		offset += align(offset, 2)
-		m.Vht = RadioTapVht{
-			Known:     RadioTapVhtKnown(binary.LittleEndian.Uint16(data[offset:])),
-			Flags:     RadioTapVhtFlags(data[offset+2]),
+		m.VHT = RadioTapVHT{
+			Known:     RadioTapVHTKnown(binary.LittleEndian.Uint16(data[offset:])),
+			Flags:     RadioTapVHTFlags(data[offset+2]),
 			Bandwidth: uint8(data[offset+3]),
-			McsNss: [4]RadioTapVhtMcsNss{
-				RadioTapVhtMcsNss(data[offset+4]),
-				RadioTapVhtMcsNss(data[offset+5]),
-				RadioTapVhtMcsNss(data[offset+6]),
-				RadioTapVhtMcsNss(data[offset+7]),
+			MCSNSS: [4]RadioTapVHTMCSNSS{
+				RadioTapVHTMCSNSS(data[offset+4]),
+				RadioTapVHTMCSNSS(data[offset+5]),
+				RadioTapVHTMCSNSS(data[offset+6]),
+				RadioTapVHTMCSNSS(data[offset+7]),
 			},
 			Coding:     uint8(data[offset+8]),
 			GroupId:    uint8(data[offset+9]),
-			PartialAid: binary.LittleEndian.Uint16(data[offset+10:]),
+			PartialAID: binary.LittleEndian.Uint16(data[offset+10:]),
 		}
 		offset += 12
 	}
