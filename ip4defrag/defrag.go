@@ -255,11 +255,23 @@ func (f *fragmentList) build(in *layers.IPv4) (*layers.IPv4, error) {
 	}
 
 	// TODO recompute IP Checksum
-	out := in
+	out := &layers.IPv4{
+		Version:    in.Version,
+		IHL:        in.IHL,
+		TOS:        in.TOS,
+		Length:     f.Highest,
+		Id:         0,
+		Flags:      0,
+		FragOffset: 0,
+		TTL:        in.TTL,
+		Protocol:   in.Protocol,
+		Checksum:   0,
+		SrcIP:      in.SrcIP,
+		DstIP:      in.DstIP,
+		Options:    in.Options,
+		Padding:    in.Padding,
+	}
 	out.Payload = final
-	out.Length = f.Highest
-	out.FragOffset = 0
-	out.Flags = 0
 
 	return out, nil
 }
