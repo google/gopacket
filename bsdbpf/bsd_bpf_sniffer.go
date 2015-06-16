@@ -1,21 +1,10 @@
 // +build darwin dragonfly freebsd netbsd openbsd
 
-/*
- * This rough sketch of a golang API for a Berkeley packet filter sniffer for BSD variants.
- * It provides only the capability to sniff ethernet frames... but could easily be extended for
- * sending frames as well.
- *
- * This file was inspired by BSD licensed code from https://github.com/songgao/ether
- *
- * ( http://opensource.org/licenses/BSD-3-Clause )
- *
- * The bpf_wordalign function was borrowed... and readFrames was very much inspired by
- * design I saw in songgao's ether git repository; the rest of the code I wrote myself ;-)
- *
- * Author: David Anthony Stainton
- * License: BSD
- *
- */
+// Copyright 2012 Google, Inc. All rights reserved.
+//
+// Use of this source code is governed by a BSD-style license
+// that can be found in the LICENSE file in the root of the source
+// tree.
 
 package bpf_sniffer
 
