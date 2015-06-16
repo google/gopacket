@@ -20,7 +20,7 @@ import (
 
 const wordSize = int(unsafe.Sizeof(uintptr(0)))
 
-func bpf_wordalign(x int) int {
+func bpfWordAlign(x int) int {
 	return (((x) + (wordSize - 1)) &^ (wordSize - 1))
 }
 
@@ -29,7 +29,7 @@ type TimedFrame struct {
 	Timestamp time.Time
 }
 
-type BpfSniffer struct {
+type BPFSniffer struct {
 	sniffDeveiceName string
 	bpfDeviceName string
 	fd       int
@@ -37,15 +37,15 @@ type BpfSniffer struct {
 	readChan chan TimedFrame
 }
 
-func NewBpfSniffer(name string) *BpfSniffer {
-	return &BpfSniffer{
+func NewBPFSniffer(name string) *BPFSniffer {
+	return &BPFSniffer{
 		sniffDeviceName: name,
 		stopChan: make(chan bool, 0),
 		readChan: make(chan TimedFrame, 0),
 	}
 }
 
-func (b *BpfSniffer) pickBpfDevice() {
+func (b *BPFSniffer) pickBpfDevice() {
 	for i := 0; i < 99; i++ {
 		b.bpfDeviceName = fmt.Sprintf("/dev/bpf%d", i)
 		b.fd, err = syscall.Open(b.bpfDeviceName, syscall.O_RDWR, 0)
@@ -57,7 +57,7 @@ func (b *BpfSniffer) pickBpfDevice() {
 
 // Init is used to initialize a BPF device for promiscuous sniffing.
 // It also starts a goroutine to continuously read frames.
-func (b *BpfSniffer) Init() error {
+func (b *BPFSniffer) Init() error {
 	var err error
 	enable := 1
 
@@ -92,11 +92,11 @@ func (b *BpfSniffer) Init() error {
 	return nil
 }
 
-func (b *BpfSniffer) Stop() {
+func (b *BPFSniffer) Stop() {
 	b.stopChan <- true
 }
 
-func (b *BpfSniffer) readFrames() {
+func (b *BPFSniffer) readFrames() {
 	bufLen, err := syscall.BpfBuflen(b.fd)
 	if err != nil {
 		panic(err)
@@ -120,19 +120,19 @@ func (b *BpfSniffer) readFrames() {
 						RawFrame:  buf[frameStart : frameStart+int(hdr.Caplen)],
 						Timestamp: time.Unix(int64(hdr.Tstamp.Sec), int64(hdr.Tstamp.Usec)*1000),
 					}
-					p += bpf_wordalign(int(hdr.Hdrlen) + int(hdr.Caplen))
+					p += bpfWordAlign(int(hdr.Hdrlen) + int(hdr.Caplen))
 				}
 			}
 		}
 	}
 }
 
-func (b *BpfSniffer) ReadTimedFrame() TimedFrame {
+func (b *BPFSniffer) ReadTimedFrame() TimedFrame {
 	timedFrame := <-b.readChan
 	return timedFrame
 }
 
-func (b *BpfSniffer) ReadPacketData() (data []byte, ci gopacket.CaptureInfo, err error) {
+func (b *BPFSniffer) ReadPacketData() (data []byte, ci gopacket.CaptureInfo, err error) {
 	timedFrame := b.ReadTimedFrame()
 	captureInfo := gopacket.CaptureInfo{
 		Timestamp:     timedFrame.Timestamp,
