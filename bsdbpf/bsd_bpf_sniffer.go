@@ -9,9 +9,10 @@
 package bpf_sniffer
 
 import (
-	"fmt"
 	"github.com/google/gopacket"
 	"golang.org/x/sys/unix"
+
+	"fmt"
 	"syscall"
 	"time"
 	"unsafe"
