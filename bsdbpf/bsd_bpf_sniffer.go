@@ -35,14 +35,17 @@ type BPFSniffer struct {
 	fd       int
 	stopChan chan bool
 	readChan chan TimedFrame
+	readBuffer []byte
+	readBufLen int
 }
 
-func NewBPFSniffer(sniffDeviceName, bpfDeviceName string) *BPFSniffer {
+func NewBPFSniffer(sniffDeviceName, bpfDeviceName string, readBufLen int) *BPFSniffer {
 	return &BPFSniffer{
 		sniffDeviceName: sniffDeviceName,
 		bpfDeviceName: bpfDeviceName,
 		stopChan: make(chan bool, 0),
 		readChan: make(chan TimedFrame, 0),
+		readBufLen: readBufLen,
 	}
 }
 
@@ -91,56 +94,37 @@ func (b *BPFSniffer) Init() error {
 		return err
 	}
 
-	go b.readFrames()
+	// setup our read buffer
+	if b.readBufLen == 0 {
+		b.readBufLen, err := syscall.BpfBuflen(b.fd)
+		if err != nil {
+			panic(err)
+		}
+	} else {
+		b.readBufLen, err := syscall.SetBpfBuflen(b.fd)
+		if err != nil {
+			panic(err)
+		}
+	}
+	b.readBuffer = make([]byte, b.readBufLen)
+
 	return nil
 }
 
-func (b *BPFSniffer) Stop() {
-	b.stopChan <- true
-}
-
-func (b *BPFSniffer) readFrames() {
-	bufLen, err := syscall.BpfBuflen(b.fd)
-	if err != nil {
-		panic(err)
-	}
-	buf := make([]byte, bufLen)
-	var n int
-	for {
-		select {
-		case <-b.stopChan:
-			return
-		default:
-			n, err = syscall.Read(b.fd, buf)
-			if err != nil {
-				continue
-			} else {
-				p := int(0)
-				for p < n {
-					hdr := (*unix.BpfHdr)(unsafe.Pointer(&buf[p]))
-					frameStart := p + int(hdr.Hdrlen)
-					b.readChan <- TimedFrame{
-						RawFrame:  buf[frameStart : frameStart+int(hdr.Caplen)],
-						Timestamp: time.Unix(int64(hdr.Tstamp.Sec), int64(hdr.Tstamp.Usec)*1000),
-					}
-					p += bpfWordAlign(int(hdr.Hdrlen) + int(hdr.Caplen))
-				}
-			}
-		}
-	}
-}
-
-func (b *BPFSniffer) ReadTimedFrame() TimedFrame {
-	timedFrame := <-b.readChan
-	return timedFrame
-}
-
 func (b *BPFSniffer) ReadPacketData() (data []byte, ci gopacket.CaptureInfo, err error) {
-	timedFrame := b.ReadTimedFrame()
-	captureInfo := gopacket.CaptureInfo{
-		Timestamp:     timedFrame.Timestamp,
-		CaptureLength: len(timedFrame.RawFrame),
-		Length:        len(timedFrame.RawFrame),
+	var err error
+	b.lastReadLen, err = syscall.Read(b.fd, b.readBuffer)
+	if err != nil {
+		return nil, gopacket.CaptureInfo{}, err
 	}
-	return timedFrame.RawFrame, captureInfo, nil
+	hdr := (*unix.BpfHdr)(unsafe.Pointer(&buf[b.readBytesConsumed]))
+	frameStart := b.readBytesConsumed + int(hdr.Hdrlen)
+	b.readBytesConsumed += bpfWordAlign(int(hdr.Hdrlen) + int(hdr.Caplen))
+	rawFrame := buf[frameStart : frameStart+int(hdr.Caplen)],
+	captureInfo := gopacket.CaptureInfo{
+		Timestamp:     time.Unix(int64(hdr.Tstamp.Sec), int64(hdr.Tstamp.Usec)*1000),
+		CaptureLength: len(rawFrame),
+		Length:        len(rawFrame),
+	}
+	return rawFrame, captureInfo, nil
 }
