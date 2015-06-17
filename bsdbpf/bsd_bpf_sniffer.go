@@ -37,9 +37,10 @@ type BPFSniffer struct {
 	readChan chan TimedFrame
 }
 
-func NewBPFSniffer(name string) *BPFSniffer {
+func NewBPFSniffer(sniffDeviceName, bpfDeviceName string) *BPFSniffer {
 	return &BPFSniffer{
-		sniffDeviceName: name,
+		sniffDeviceName: sniffDeviceName,
+		bpfDeviceName: bpfDeviceName,
 		stopChan: make(chan bool, 0),
 		readChan: make(chan TimedFrame, 0),
 	}
@@ -61,7 +62,9 @@ func (b *BPFSniffer) Init() error {
 	var err error
 	enable := 1
 
-	b.pickBpfDevice()
+	if b.bpfDeviceName == "" {
+		b.pickBpfDevice()
+	}
 
 	err = syscall.SetBpfInterface(b.fd, b.sniffDeviceName)
 	if err != nil {
