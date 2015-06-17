@@ -49,6 +49,10 @@ func NewBPFSniffer(sniffDeviceName, bpfDeviceName string, readBufLen int) *BPFSn
 	}
 }
 
+func (b *BPFSniffer) Close() error {
+	return syscall.Close(b.fd)
+}
+
 func (b *BPFSniffer) pickBpfDevice() {
 	for i := 0; i < 99; i++ {
 		b.bpfDeviceName = fmt.Sprintf("/dev/bpf%d", i)
