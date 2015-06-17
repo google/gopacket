@@ -24,31 +24,43 @@ func bpfWordAlign(x int) int {
 	return (((x) + (wordSize - 1)) &^ (wordSize - 1))
 }
 
-type TimedFrame struct {
-	RawFrame  []byte
-	Timestamp time.Time
+type Options struct {
+	bpfDeviceName    string
+	readBufLen       int
+	timeout          *syscall.Timeval
+	promisc          bool
+	immediate        bool
+	preserveLinkAddr bool
+}
+
+var defaultOptions = Options{
+	bpfDeviceName:    "",
+	readBufLen:       0,
+	timeout:          nil,
+	promisc:          true,
+	immediate:        false,
+	preserveLinkAddr: true,
 }
 
 type BPFSniffer struct {
+	options           *Options
 	sniffDeviceName   string
-	bpfDeviceName     string
 	fd                int
 	readBuffer        []byte
-	readBufLen        int
 	lastReadLen       int
 	readBytesConsumed int
-	timeout           int
 }
 
-func NewBPFSniffer(sniffDeviceName, bpfDeviceName string, readBufLen, timeout int) *BPFSniffer {
-	return &BPFSniffer{
-		sniffDeviceName: sniffDeviceName,
-		bpfDeviceName:   bpfDeviceName,
-		stopChan:        make(chan bool, 0),
-		readChan:        make(chan TimedFrame, 0),
-		readBufLen:      readBufLen,
-		timeout:         timeout,
+func NewBPFSniffer(iface string, options *Options) *BPFSniffer {
+	sniffer := BPFSniffer{
+		sniffDeviceName: iface,
 	}
+	if options == nil {
+		sniffer.options = &defaultOptions
+	} else {
+		sniffer.options = options
+	}
+	return &sniffer
 }
 
 func (b *BPFSniffer) Close() error {
@@ -58,8 +70,8 @@ func (b *BPFSniffer) Close() error {
 func (b *BPFSniffer) pickBpfDevice() {
 	var err error
 	for i := 0; i < 99; i++ {
-		b.bpfDeviceName = fmt.Sprintf("/dev/bpf%d", i)
-		b.fd, err = syscall.Open(b.bpfDeviceName, syscall.O_RDWR, 0)
+		b.options.bpfDeviceName = fmt.Sprintf("/dev/bpf%d", i)
+		b.fd, err = syscall.Open(b.options.bpfDeviceName, syscall.O_RDWR, 0)
 		if err == nil {
 			break
 		}
@@ -72,59 +84,62 @@ func (b *BPFSniffer) Init() error {
 	var err error
 	enable := 1
 
-	if b.bpfDeviceName == "" {
+	if b.options.bpfDeviceName == "" {
 		b.pickBpfDevice()
 	}
 
 	// setup our read buffer
-	if b.readBufLen == 0 {
-		b.readBufLen, err = syscall.BpfBuflen(b.fd)
+	if b.options.readBufLen == 0 {
+		b.options.readBufLen, err = syscall.BpfBuflen(b.fd)
 		if err != nil {
 			panic(err)
 		}
 	} else {
-		b.readBufLen, err = syscall.SetBpfBuflen(b.fd, b.readBufLen)
+		b.options.readBufLen, err = syscall.SetBpfBuflen(b.fd, b.options.readBufLen)
 		if err != nil {
 			panic(err)
 		}
 	}
-	b.readBuffer = make([]byte, b.readBufLen)
+	b.readBuffer = make([]byte, b.options.readBufLen)
 
 	err = syscall.SetBpfInterface(b.fd, b.sniffDeviceName)
 	if err != nil {
 		return err
 	}
 
-	// turn immediate mode on. This makes the snffer non-blocking.
-	err = syscall.SetBpfImmediate(b.fd, enable)
-	if err != nil {
-		return err
+	if b.options.immediate {
+		// turn immediate mode on. This makes the snffer non-blocking.
+		err = syscall.SetBpfImmediate(b.fd, enable)
+		if err != nil {
+			return err
+		}
 	}
 
 	// the above call to syscall.SetBpfImmediate needs to be made
 	// before setting a timer otherwise the reads will block for the
 	// entire timer duration even if there are packets to return.
-	if b.timeout != 0 {
-		tv := syscall.Timeval{
-			Sec: int64(b.timeout),
-		}
-		err = syscall.SetBpfTimeout(b.fd, &tv)
+	if b.options.timeout != nil {
+		err = syscall.SetBpfTimeout(b.fd, b.options.timeout)
 		if err != nil {
 			panic(err)
 		}
 	}
 
-	// preserves the link level source address...
-	// higher level protocol analyzers will not need this
-	err = syscall.SetBpfHeadercmpl(b.fd, enable)
-	if err != nil {
-		return err
+	if b.options.preserveLinkAddr {
+		// preserves the link level source address...
+		// higher level protocol analyzers will not need this
+		err = syscall.SetBpfHeadercmpl(b.fd, enable)
+		if err != nil {
+			return err
+		}
 	}
 
-	// forces the interface into promiscuous mode
-	err = syscall.SetBpfPromisc(b.fd, enable)
-	if err != nil {
-		return err
+	if b.options.promisc {
+		// forces the interface into promiscuous mode
+		err = syscall.SetBpfPromisc(b.fd, enable)
+		if err != nil {
+			return err
+		}
 	}
 
 	return nil
