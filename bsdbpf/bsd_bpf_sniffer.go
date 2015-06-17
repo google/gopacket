@@ -30,26 +30,24 @@ type TimedFrame struct {
 }
 
 type BPFSniffer struct {
-	sniffDeviceName string
-	bpfDeviceName string
-	fd       int
-	stopChan chan bool
-	readChan chan TimedFrame
-	readBuffer []byte
-	readBufLen int
-	lastReadLen int
+	sniffDeviceName   string
+	bpfDeviceName     string
+	fd                int
+	readBuffer        []byte
+	readBufLen        int
+	lastReadLen       int
 	readBytesConsumed int
-	timeout int
+	timeout           int
 }
 
 func NewBPFSniffer(sniffDeviceName, bpfDeviceName string, readBufLen, timeout int) *BPFSniffer {
 	return &BPFSniffer{
 		sniffDeviceName: sniffDeviceName,
-		bpfDeviceName: bpfDeviceName,
-		stopChan: make(chan bool, 0),
-		readChan: make(chan TimedFrame, 0),
-		readBufLen: readBufLen,
-		timeout: timeout,
+		bpfDeviceName:   bpfDeviceName,
+		stopChan:        make(chan bool, 0),
+		readChan:        make(chan TimedFrame, 0),
+		readBufLen:      readBufLen,
+		timeout:         timeout,
 	}
 }
 
@@ -91,7 +89,6 @@ func (b *BPFSniffer) Init() error {
 		}
 	}
 	b.readBuffer = make([]byte, b.readBufLen)
-
 
 	err = syscall.SetBpfInterface(b.fd, b.sniffDeviceName)
 	if err != nil {
