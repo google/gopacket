@@ -39,15 +39,17 @@ type BPFSniffer struct {
 	readBufLen int
 	lastReadLen int
 	readBytesConsumed int
+	timeout int
 }
 
-func NewBPFSniffer(sniffDeviceName, bpfDeviceName string, readBufLen int) *BPFSniffer {
+func NewBPFSniffer(sniffDeviceName, bpfDeviceName string, readBufLen, timeout int) *BPFSniffer {
 	return &BPFSniffer{
 		sniffDeviceName: sniffDeviceName,
 		bpfDeviceName: bpfDeviceName,
 		stopChan: make(chan bool, 0),
 		readChan: make(chan TimedFrame, 0),
 		readBufLen: readBufLen,
+		timeout: timeout,
 	}
 }
 
@@ -96,11 +98,23 @@ func (b *BPFSniffer) Init() error {
 		return err
 	}
 
-	// turning Immediate mode off should make the snffer
-	// block when no packets are available.
+	// turn immediate mode on. This makes the snffer non-blocking.
 	err = syscall.SetBpfImmediate(b.fd, enable)
 	if err != nil {
 		return err
+	}
+
+	// the above call to syscall.SetBpfImmediate needs to be made
+	// before setting a timer otherwise the reads will block for the
+	// entire timer duration even if there are packets to return.
+	if b.timeout != 0 {
+		tv := syscall.Timeval{
+			Sec: int64(b.timeout),
+		}
+		err = syscall.SetBpfTimeout(b.fd, &tv)
+		if err != nil {
+			panic(err)
+		}
 	}
 
 	// preserves the link level source address...
