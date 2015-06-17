@@ -72,6 +72,20 @@ func (b *BPFSniffer) Init() error {
 	var err error
 	enable := 1
 
+	// setup our read buffer
+	if b.readBufLen == 0 {
+		b.readBufLen, err = syscall.BpfBuflen(b.fd)
+		if err != nil {
+			panic(err)
+		}
+	} else {
+		b.readBufLen, err = syscall.SetBpfBuflen(b.fd, b.readBufLen)
+		if err != nil {
+			panic(err)
+		}
+	}
+	b.readBuffer = make([]byte, b.readBufLen)
+
 	if b.bpfDeviceName == "" {
 		b.pickBpfDevice()
 	}
@@ -100,20 +114,6 @@ func (b *BPFSniffer) Init() error {
 	if err != nil {
 		return err
 	}
-
-	// setup our read buffer
-	if b.readBufLen == 0 {
-		b.readBufLen, err = syscall.BpfBuflen(b.fd)
-		if err != nil {
-			panic(err)
-		}
-	} else {
-		b.readBufLen, err = syscall.SetBpfBuflen(b.fd, b.readBufLen)
-		if err != nil {
-			panic(err)
-		}
-	}
-	b.readBuffer = make([]byte, b.readBufLen)
 
 	return nil
 }
