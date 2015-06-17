@@ -6,7 +6,7 @@
 // that can be found in the LICENSE file in the root of the source
 // tree.
 
-package bpf_sniffer
+package bsdbpf
 
 import (
 	"github.com/google/gopacket"
@@ -30,13 +30,15 @@ type TimedFrame struct {
 }
 
 type BPFSniffer struct {
-	sniffDeveiceName string
+	sniffDeviceName string
 	bpfDeviceName string
 	fd       int
 	stopChan chan bool
 	readChan chan TimedFrame
 	readBuffer []byte
 	readBufLen int
+	lastReadLen int
+	readBytesConsumed int
 }
 
 func NewBPFSniffer(sniffDeviceName, bpfDeviceName string, readBufLen int) *BPFSniffer {
@@ -54,6 +56,7 @@ func (b *BPFSniffer) Close() error {
 }
 
 func (b *BPFSniffer) pickBpfDevice() {
+	var err error
 	for i := 0; i < 99; i++ {
 		b.bpfDeviceName = fmt.Sprintf("/dev/bpf%d", i)
 		b.fd, err = syscall.Open(b.bpfDeviceName, syscall.O_RDWR, 0)
@@ -100,12 +103,12 @@ func (b *BPFSniffer) Init() error {
 
 	// setup our read buffer
 	if b.readBufLen == 0 {
-		b.readBufLen, err := syscall.BpfBuflen(b.fd)
+		b.readBufLen, err = syscall.BpfBuflen(b.fd)
 		if err != nil {
 			panic(err)
 		}
 	} else {
-		b.readBufLen, err := syscall.SetBpfBuflen(b.fd)
+		b.readBufLen, err = syscall.SetBpfBuflen(b.fd, b.readBufLen)
 		if err != nil {
 			panic(err)
 		}
@@ -115,19 +118,19 @@ func (b *BPFSniffer) Init() error {
 	return nil
 }
 
-func (b *BPFSniffer) ReadPacketData() (data []byte, ci gopacket.CaptureInfo, err error) {
+func (b *BPFSniffer) ReadPacketData() ([]byte, gopacket.CaptureInfo, error) {
 	var err error
-	if b.readBytesConsumed == b.lastReadLen {
+	if b.readBytesConsumed >= b.lastReadLen {
 		b.lastReadLen, err = syscall.Read(b.fd, b.readBuffer)
 		if err != nil {
 			return nil, gopacket.CaptureInfo{}, err
 		}
 		b.readBytesConsumed = 0
 	}
-	hdr := (*unix.BpfHdr)(unsafe.Pointer(&buf[b.readBytesConsumed]))
+	hdr := (*unix.BpfHdr)(unsafe.Pointer(&b.readBuffer[b.readBytesConsumed]))
 	frameStart := b.readBytesConsumed + int(hdr.Hdrlen)
 	b.readBytesConsumed += bpfWordAlign(int(hdr.Hdrlen) + int(hdr.Caplen))
-	rawFrame := buf[frameStart : frameStart+int(hdr.Caplen)],
+	rawFrame := b.readBuffer[frameStart : frameStart+int(hdr.Caplen)]
 	captureInfo := gopacket.CaptureInfo{
 		Timestamp:     time.Unix(int64(hdr.Tstamp.Sec), int64(hdr.Tstamp.Usec)*1000),
 		CaptureLength: len(rawFrame),
