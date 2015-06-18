@@ -64,6 +64,8 @@ var defaultOptions = Options{
 	PreserveLinkAddr: true,
 }
 
+// BPFSniffer is a struct used to track state of a BSD BPF ethernet sniffer
+// such that gopacket's PacketDataSource interface is implemented.
 type BPFSniffer struct {
 	options           *Options
 	sniffDeviceName   string
@@ -73,6 +75,11 @@ type BPFSniffer struct {
 	readBytesConsumed int
 }
 
+// NewBPFSniffer is used to create BSD-only BPF ethernet sniffer
+// iface is the network interface device name that you wish to sniff
+// options can set to nil in order to utilize default values for everything.
+// Each field of Options also have a default setting if left unspecified by
+// the user's custome Options struct.
 func NewBPFSniffer(iface string, options *Options) *BPFSniffer {
 	sniffer := BPFSniffer{
 		sniffDeviceName: iface,
@@ -85,6 +92,7 @@ func NewBPFSniffer(iface string, options *Options) *BPFSniffer {
 	return &sniffer
 }
 
+// Close is used to close the file-descriptor of the BPF device file.
 func (b *BPFSniffer) Close() error {
 	return syscall.Close(b.fd)
 }
