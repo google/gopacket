@@ -24,22 +24,44 @@ func bpfWordAlign(x int) int {
 	return (((x) + (wordSize - 1)) &^ (wordSize - 1))
 }
 
+// Options is used to configure various properties of the BPF sniffer.
+// Default values are used when a nil Options pointer is passed to NewBPFSniffer.
 type Options struct {
-	bpfDeviceName    string
-	readBufLen       int
-	timeout          *syscall.Timeval
-	promisc          bool
-	immediate        bool
-	preserveLinkAddr bool
+	// BPFDeviceName is name of the bpf device to use for sniffing
+	// the network device. The default value of BPFDeviceName is empty string
+	// which causes the first available BPF device file /dev/bpfX to be used.
+	BPFDeviceName string
+	// ReadBufLen specifies the size of the buffer used to read packets
+	// off the wire such that multiple packets are buffered with each read syscall.
+	// The packet will be clipped if it's size exceeds the buffer size.
+	// A larger buffer should increase performance because fewer read syscalls would be made.
+	// If zero is used the system's default buffer length will be used.
+	// ReadBufLen defaults to 32767.
+	ReadBufLen int
+	// Timeout is the length of time to wait before timing out on a read request.
+	// Timeout defaults to nil which means no timeout is used.
+	Timeout *syscall.Timeval
+	// Promisc is set to true for promiscuous mode ethernet sniffing.
+	// Promisc defaults to true.
+	Promisc bool
+	// Immediate is set to true to make our read requests return as soon as a packet becomes available.
+	// Otherwise, a read will block until either the kernel buffer becomes full or a timeout occurs.
+	// The default is false.
+	Immediate bool
+	// PreserveLinkAddr is set to false if the link level source address should be filled in automatically
+	// by the interface output routine. Set to true if the link level source address will be written,
+	// as provided, to the wire.
+	// The default is true.
+	PreserveLinkAddr bool
 }
 
 var defaultOptions = Options{
-	bpfDeviceName:    "",
-	readBufLen:       0,
-	timeout:          nil,
-	promisc:          true,
-	immediate:        false,
-	preserveLinkAddr: true,
+	BpfDeviceName:    "",
+	ReadBufLen:       32767,
+	Timeout:          nil,
+	Promisc:          true,
+	Immediate:        false,
+	PreserveLinkAddr: true,
 }
 
 type BPFSniffer struct {
