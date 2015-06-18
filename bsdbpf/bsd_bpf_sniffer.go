@@ -46,7 +46,7 @@ type Options struct {
 	Promisc bool
 	// Immediate is set to true to make our read requests return as soon as a packet becomes available.
 	// Otherwise, a read will block until either the kernel buffer becomes full or a timeout occurs.
-	// The default is false.
+	// The default is true.
 	Immediate bool
 	// PreserveLinkAddr is set to false if the link level source address should be filled in automatically
 	// by the interface output routine. Set to true if the link level source address will be written,
@@ -56,11 +56,11 @@ type Options struct {
 }
 
 var defaultOptions = Options{
-	BpfDeviceName:    "",
+	BPFDeviceName:    "",
 	ReadBufLen:       32767,
 	Timeout:          nil,
 	Promisc:          true,
-	Immediate:        false,
+	Immediate:        true,
 	PreserveLinkAddr: true,
 }
 
@@ -92,8 +92,8 @@ func (b *BPFSniffer) Close() error {
 func (b *BPFSniffer) pickBpfDevice() {
 	var err error
 	for i := 0; i < 99; i++ {
-		b.options.bpfDeviceName = fmt.Sprintf("/dev/bpf%d", i)
-		b.fd, err = syscall.Open(b.options.bpfDeviceName, syscall.O_RDWR, 0)
+		b.options.BPFDeviceName = fmt.Sprintf("/dev/bpf%d", i)
+		b.fd, err = syscall.Open(b.options.BPFDeviceName, syscall.O_RDWR, 0)
 		if err == nil {
 			break
 		}
@@ -106,30 +106,30 @@ func (b *BPFSniffer) Init() error {
 	var err error
 	enable := 1
 
-	if b.options.bpfDeviceName == "" {
+	if b.options.BPFDeviceName == "" {
 		b.pickBpfDevice()
 	}
 
 	// setup our read buffer
-	if b.options.readBufLen == 0 {
-		b.options.readBufLen, err = syscall.BpfBuflen(b.fd)
+	if b.options.ReadBufLen == 0 {
+		b.options.ReadBufLen, err = syscall.BpfBuflen(b.fd)
 		if err != nil {
 			panic(err)
 		}
 	} else {
-		b.options.readBufLen, err = syscall.SetBpfBuflen(b.fd, b.options.readBufLen)
+		b.options.ReadBufLen, err = syscall.SetBpfBuflen(b.fd, b.options.ReadBufLen)
 		if err != nil {
 			panic(err)
 		}
 	}
-	b.readBuffer = make([]byte, b.options.readBufLen)
+	b.readBuffer = make([]byte, b.options.ReadBufLen)
 
 	err = syscall.SetBpfInterface(b.fd, b.sniffDeviceName)
 	if err != nil {
 		return err
 	}
 
-	if b.options.immediate {
+	if b.options.Immediate {
 		// turn immediate mode on. This makes the snffer non-blocking.
 		err = syscall.SetBpfImmediate(b.fd, enable)
 		if err != nil {
@@ -140,14 +140,14 @@ func (b *BPFSniffer) Init() error {
 	// the above call to syscall.SetBpfImmediate needs to be made
 	// before setting a timer otherwise the reads will block for the
 	// entire timer duration even if there are packets to return.
-	if b.options.timeout != nil {
-		err = syscall.SetBpfTimeout(b.fd, b.options.timeout)
+	if b.options.Timeout != nil {
+		err = syscall.SetBpfTimeout(b.fd, b.options.Timeout)
 		if err != nil {
 			panic(err)
 		}
 	}
 
-	if b.options.preserveLinkAddr {
+	if b.options.PreserveLinkAddr {
 		// preserves the link level source address...
 		// higher level protocol analyzers will not need this
 		err = syscall.SetBpfHeadercmpl(b.fd, enable)
@@ -156,7 +156,7 @@ func (b *BPFSniffer) Init() error {
 		}
 	}
 
-	if b.options.promisc {
+	if b.options.Promisc {
 		// forces the interface into promiscuous mode
 		err = syscall.SetBpfPromisc(b.fd, enable)
 		if err != nil {
@@ -171,7 +171,7 @@ func (b *BPFSniffer) ReadPacketData() ([]byte, gopacket.CaptureInfo, error) {
 	var err error
 	if b.readBytesConsumed >= b.lastReadLen {
 		b.readBytesConsumed = 0
-		b.readBuffer = make([]byte, b.options.readBufLen)
+		b.readBuffer = make([]byte, b.options.ReadBufLen)
 		b.lastReadLen, err = syscall.Read(b.fd, b.readBuffer)
 		if err != nil {
 			b.lastReadLen = 0
