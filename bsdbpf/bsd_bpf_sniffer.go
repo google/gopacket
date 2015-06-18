@@ -148,11 +148,13 @@ func (b *BPFSniffer) Init() error {
 func (b *BPFSniffer) ReadPacketData() ([]byte, gopacket.CaptureInfo, error) {
 	var err error
 	if b.readBytesConsumed >= b.lastReadLen {
+		b.readBytesConsumed = 0
+		b.readBuffer = make([]byte, b.options.readBufLen)
 		b.lastReadLen, err = syscall.Read(b.fd, b.readBuffer)
 		if err != nil {
+			b.lastReadLen = 0
 			return nil, gopacket.CaptureInfo{}, err
 		}
-		b.readBytesConsumed = 0
 	}
 	hdr := (*unix.BpfHdr)(unsafe.Pointer(&b.readBuffer[b.readBytesConsumed]))
 	frameStart := b.readBytesConsumed + int(hdr.Hdrlen)
