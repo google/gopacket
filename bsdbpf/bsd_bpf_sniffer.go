@@ -202,6 +202,7 @@ func (b *BPFSniffer) ReadPacketData() ([]byte, gopacket.CaptureInfo, error) {
 	return rawFrame, captureInfo, nil
 }
 
+// GetReadBufLen returns the BPF read buffer length
 func (b *BPFSniffer) GetReadBufLen() int {
 	return b.options.ReadBufLen
 }
