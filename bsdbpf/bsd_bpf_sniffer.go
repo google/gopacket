@@ -84,7 +84,9 @@ type BPFSniffer struct {
 // options can set to nil in order to utilize default values for everything.
 // Each field of Options also have a default setting if left unspecified by
 // the user's custome Options struct.
-func NewBPFSniffer(iface string, options *Options) *BPFSniffer {
+func NewBPFSniffer(iface string, options *Options) (*BPFSniffer, error) {
+	var err error
+	enable := 1
 	sniffer := BPFSniffer{
 		sniffDeviceName: iface,
 	}
@@ -93,7 +95,66 @@ func NewBPFSniffer(iface string, options *Options) *BPFSniffer {
 	} else {
 		sniffer.options = options
 	}
-	return &sniffer
+
+	if sniffer.options.BPFDeviceName == "" {
+		sniffer.pickBpfDevice()
+	}
+
+	// setup our read buffer
+	if sniffer.options.ReadBufLen == 0 {
+		sniffer.options.ReadBufLen, err = syscall.BpfBuflen(sniffer.fd)
+		if err != nil {
+			return nil, err
+		}
+	} else {
+		sniffer.options.ReadBufLen, err = syscall.SetBpfBuflen(sniffer.fd, sniffer.options.ReadBufLen)
+		if err != nil {
+			return nil, err
+		}
+	}
+	sniffer.readBuffer = make([]byte, sniffer.options.ReadBufLen)
+
+	err = syscall.SetBpfInterface(sniffer.fd, sniffer.sniffDeviceName)
+	if err != nil {
+		return nil, err
+	}
+
+	if sniffer.options.Immediate {
+		// turn immediate mode on. This makes the snffer non-blocking.
+		err = syscall.SetBpfImmediate(sniffer.fd, enable)
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	// the above call to syscall.SetBpfImmediate needs to be made
+	// before setting a timer otherwise the reads will block for the
+	// entire timer duration even if there are packets to return.
+	if sniffer.options.Timeout != nil {
+		err = syscall.SetBpfTimeout(sniffer.fd, sniffer.options.Timeout)
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	if sniffer.options.PreserveLinkAddr {
+		// preserves the link level source address...
+		// higher level protocol analyzers will not need this
+		err = syscall.SetBpfHeadercmpl(sniffer.fd, enable)
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	if sniffer.options.Promisc {
+		// forces the interface into promiscuous mode
+		err = syscall.SetBpfPromisc(sniffer.fd, enable)
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	return &sniffer, nil
 }
 
 // Close is used to close the file-descriptor of the BPF device file.
@@ -110,73 +171,6 @@ func (b *BPFSniffer) pickBpfDevice() {
 			break
 		}
 	}
-}
-
-// Init is used to initialize a BPF device for promiscuous sniffing.
-// It also starts a goroutine to continuously read frames.
-func (b *BPFSniffer) Init() error {
-	var err error
-	enable := 1
-
-	if b.options.BPFDeviceName == "" {
-		b.pickBpfDevice()
-	}
-
-	// setup our read buffer
-	if b.options.ReadBufLen == 0 {
-		b.options.ReadBufLen, err = syscall.BpfBuflen(b.fd)
-		if err != nil {
-			panic(err)
-		}
-	} else {
-		b.options.ReadBufLen, err = syscall.SetBpfBuflen(b.fd, b.options.ReadBufLen)
-		if err != nil {
-			panic(err)
-		}
-	}
-	b.readBuffer = make([]byte, b.options.ReadBufLen)
-
-	err = syscall.SetBpfInterface(b.fd, b.sniffDeviceName)
-	if err != nil {
-		return err
-	}
-
-	if b.options.Immediate {
-		// turn immediate mode on. This makes the snffer non-blocking.
-		err = syscall.SetBpfImmediate(b.fd, enable)
-		if err != nil {
-			return err
-		}
-	}
-
-	// the above call to syscall.SetBpfImmediate needs to be made
-	// before setting a timer otherwise the reads will block for the
-	// entire timer duration even if there are packets to return.
-	if b.options.Timeout != nil {
-		err = syscall.SetBpfTimeout(b.fd, b.options.Timeout)
-		if err != nil {
-			panic(err)
-		}
-	}
-
-	if b.options.PreserveLinkAddr {
-		// preserves the link level source address...
-		// higher level protocol analyzers will not need this
-		err = syscall.SetBpfHeadercmpl(b.fd, enable)
-		if err != nil {
-			return err
-		}
-	}
-
-	if b.options.Promisc {
-		// forces the interface into promiscuous mode
-		err = syscall.SetBpfPromisc(b.fd, enable)
-		if err != nil {
-			return err
-		}
-	}
-
-	return nil
 }
 
 func (b *BPFSniffer) ReadPacketData() ([]byte, gopacket.CaptureInfo, error) {
