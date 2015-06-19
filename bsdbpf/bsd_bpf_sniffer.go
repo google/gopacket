@@ -33,10 +33,14 @@ type Options struct {
 	BPFDeviceName string
 	// ReadBufLen specifies the size of the buffer used to read packets
 	// off the wire such that multiple packets are buffered with each read syscall.
-	// The packet will be clipped if it's size exceeds the buffer size.
+	// Note that an individual packet larger than the buffer size is necessarily truncated.
 	// A larger buffer should increase performance because fewer read syscalls would be made.
-	// If zero is used the system's default buffer length will be used.
-	// ReadBufLen defaults to 32767.
+	// If zero is used, the system's default buffer length will be used which depending on the
+	// system may default to 4096 bytes which is not big enough to accomodate some link layers
+	// such as WLAN (802.11).
+	// ReadBufLen defaults to 32767... however typical BSD manual pages for BPF indicate that
+	// if the requested buffer size cannot be accommodated, the closest allowable size will be
+	// set and returned... hence our GetReadBufLen method.
 	ReadBufLen int
 	// Timeout is the length of time to wait before timing out on a read request.
 	// Timeout defaults to nil which means no timeout is used.
@@ -196,4 +200,8 @@ func (b *BPFSniffer) ReadPacketData() ([]byte, gopacket.CaptureInfo, error) {
 		Length:        len(rawFrame),
 	}
 	return rawFrame, captureInfo, nil
+}
+
+func (b *BPFSniffer) GetReadBufLen() int {
+	return b.options.ReadBufLen
 }
