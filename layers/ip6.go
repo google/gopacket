@@ -287,12 +287,14 @@ func decodeIPv6Routing(data []byte, p gopacket.PacketBuilder) error {
 	}
 	switch i.RoutingType {
 	case 0: // Source routing
-		if (len(data)-8)%16 != 0 {
-			return fmt.Errorf("Invalid IPv6 source routing, length of type 0 packet %d", len(data))
+		if (i.ActualLength-8)%16 != 0 {
+			return fmt.Errorf("Invalid IPv6 source routing, length of type 0 packet %d", i.ActualLength)
 		}
 		for d := i.Contents[8:]; len(d) >= 16; d = d[16:] {
 			i.SourceRoutingIPs = append(i.SourceRoutingIPs, net.IP(d[:16]))
 		}
+	default:
+		return fmt.Errorf("Unknown IPv6 routing header type %d", i.RoutingType)
 	}
 	p.AddLayer(i)
 	return p.NextDecoder(i.NextHeader)
