@@ -69,7 +69,7 @@ func (u *UDP) SerializeTo(b gopacket.SerializeBuffer, opts gopacket.SerializeOpt
 		// zero out checksum bytes
 		bytes[6] = 0
 		bytes[7] = 0
-		csum, err := u.computeChecksum(b.Bytes())
+		csum, err := u.computeChecksum(b.Bytes(), IPProtocolUDP)
 		if err != nil {
 			return err
 		}
