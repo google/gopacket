@@ -298,6 +298,9 @@ func (a activateError) Error() string {
 // getNextBufPtrLocked is shared code for ReadPacketData and
 // ZeroCopyReadPacketData.
 func (p *Handle) getNextBufPtrLocked(ci *gopacket.CaptureInfo) error {
+	if p.cptr == nil {
+		return io.EOF
+	}
 	var result NextError
 	for {
 		result = NextError(C.pcap_next_ex(p.cptr, &p.pkthdr, &p.buf_ptr))
@@ -345,7 +348,13 @@ func (p *Handle) ZeroCopyReadPacketData() (data []byte, ci gopacket.CaptureInfo,
 
 // Close closes the underlying pcap handle.
 func (p *Handle) Close() {
+	p.mu.Lock()
+	if p.cptr == nil {
+		return
+	}
 	C.pcap_close(p.cptr)
+	p.cptr = nil
+	p.mu.Unlock()
 }
 
 // Error returns the current error associated with a pcap handle (pcap_geterr).
