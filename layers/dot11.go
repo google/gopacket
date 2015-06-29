@@ -738,21 +738,21 @@ func (m *Dot11InformationElement) DecodeFromBytes(data []byte, df gopacket.Decod
 	}
 	m.ID = Dot11InformationElementID(data[0])
 	m.Length = data[1]
-	offset := uint8(2)
+	offset := int(2)
 
-	if len(data) < int(offset)+int(m.Length) {
+	if len(data) < offset+int(m.Length) {
 		df.SetTruncated()
-		return fmt.Errorf("Dot11InformationElement length %v too short, %v required", len(data), int(offset+m.Length))
+		return fmt.Errorf("Dot11InformationElement length %v too short, %v required", len(data), offset+int(m.Length))
 	}
 	if m.ID == 221 {
 		// Vendor extension
 		m.OUI = data[offset : offset+4]
-		m.Info = data[offset+4 : offset+m.Length]
+		m.Info = data[offset+4 : offset+int(m.Length)]
 	} else {
-		m.Info = data[offset : offset+m.Length]
+		m.Info = data[offset : offset+int(m.Length)]
 	}
 
-	offset += m.Length
+	offset += int(m.Length)
 
 	m.BaseLayer = BaseLayer{Contents: data[:offset], Payload: data[offset:]}
 	return nil
