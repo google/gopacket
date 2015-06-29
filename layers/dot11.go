@@ -740,7 +740,7 @@ func (m *Dot11InformationElement) DecodeFromBytes(data []byte, df gopacket.Decod
 	m.Length = data[1]
 	offset := uint8(2)
 
-	if len(data) < int(offset+m.Length) {
+	if len(data) < int(offset)+int(m.Length) {
 		df.SetTruncated()
 		return fmt.Errorf("Dot11InformationElement length %v too short, %v required", len(data), int(offset+m.Length))
 	}
