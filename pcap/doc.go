@@ -30,7 +30,7 @@ Reading Live Packets
 The following code can be used to read in data from a live device, in this case
 "eth0".
 
- if handle, err := pcap.OpenLive("eth0", 1600, true, 0); err != nil {
+ if handle, err := pcap.OpenLive("eth0", 1600, true, pcap.BlockForever); err != nil {
    panic(err)
  } else if err := handle.SetBPFFilter("tcp and port 80"); err != nil {  // optional
    panic(err)
