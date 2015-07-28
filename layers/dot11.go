@@ -334,6 +334,10 @@ func (m *Dot11) NextLayerType() gopacket.LayerType {
 }
 
 func (m *Dot11) DecodeFromBytes(data []byte, df gopacket.DecodeFeedback) error {
+	if len(data) < 10 {
+		df.SetTruncated()
+		return fmt.Errorf("Dot11 length %v too short, %v required", len(data), 10)
+	}
 	m.Type = Dot11Type((data[0])&0xFC) >> 2
 
 	m.Proto = uint8(data[0]) & 0x0003
@@ -349,10 +353,18 @@ func (m *Dot11) DecodeFromBytes(data []byte, df gopacket.DecodeFeedback) error {
 	case Dot11TypeCtrl:
 		switch m.Type {
 		case Dot11TypeCtrlRTS, Dot11TypeCtrlPowersavePoll, Dot11TypeCtrlCFEnd, Dot11TypeCtrlCFEndAck:
+			if len(data) < offset+6 {
+				df.SetTruncated()
+				return fmt.Errorf("Dot11 length %v too short, %v required", len(data), offset+6)
+			}
 			m.Address2 = net.HardwareAddr(data[offset : offset+6])
 			offset += 6
 		}
 	case Dot11TypeMgmt, Dot11TypeData:
+		if len(data) < offset+14 {
+			df.SetTruncated()
+			return fmt.Errorf("Dot11 length %v too short, %v required", len(data), offset+14)
+		}
 		m.Address2 = net.HardwareAddr(data[offset : offset+6])
 		offset += 6
 		m.Address3 = net.HardwareAddr(data[offset : offset+6])
@@ -364,16 +376,16 @@ func (m *Dot11) DecodeFromBytes(data []byte, df gopacket.DecodeFeedback) error {
 	}
 
 	if mainType == Dot11TypeData && m.Flags.FromDS() && m.Flags.ToDS() {
+		if len(data) < offset+6 {
+			df.SetTruncated()
+			return fmt.Errorf("Dot11 length %v too short, %v required", len(data), offset+6)
+		}
 		m.Address4 = net.HardwareAddr(data[offset : offset+6])
 		offset += 6
 	}
 
-	if mainType == Dot11TypeData {
-		m.BaseLayer = BaseLayer{Contents: data[0:offset], Payload: data[offset:len(data)]}
-	} else {
-		m.BaseLayer = BaseLayer{Contents: data[0:offset], Payload: data[offset : len(data)-4]}
-		m.Checksum = binary.LittleEndian.Uint32(data[len(data)-4 : len(data)])
-	}
+	m.BaseLayer = BaseLayer{Contents: data[0:offset], Payload: data[offset : len(data)-4]}
+	m.Checksum = binary.LittleEndian.Uint32(data[len(data)-4 : len(data)])
 	return nil
 }
 
@@ -571,6 +583,10 @@ type Dot11DataQOS struct {
 }
 
 func (m *Dot11DataQOS) DecodeFromBytes(data []byte, df gopacket.DecodeFeedback) error {
+	if len(data) < 4 {
+		df.SetTruncated()
+		return fmt.Errorf("Dot11DataQOS length %v too short, %v required", len(data), 4)
+	}
 	m.TID = (uint8(data[0]) & 0x0F)
 	m.EOSP = (uint8(data[0]) & 0x10) == 0x10
 	m.AckPolicy = Dot11AckPolicy((uint8(data[0]) & 0x60) >> 5)
@@ -716,19 +732,27 @@ func (m *Dot11InformationElement) NextLayerType() gopacket.LayerType {
 }
 
 func (m *Dot11InformationElement) DecodeFromBytes(data []byte, df gopacket.DecodeFeedback) error {
+	if len(data) < 2 {
+		df.SetTruncated()
+		return fmt.Errorf("Dot11InformationElement length %v too short, %v required", len(data), 2)
+	}
 	m.ID = Dot11InformationElementID(data[0])
 	m.Length = data[1]
-	offset := uint8(2)
+	offset := int(2)
 
+	if len(data) < offset+int(m.Length) {
+		df.SetTruncated()
+		return fmt.Errorf("Dot11InformationElement length %v too short, %v required", len(data), offset+int(m.Length))
+	}
 	if m.ID == 221 {
 		// Vendor extension
 		m.OUI = data[offset : offset+4]
-		m.Info = data[offset+4 : offset+m.Length]
+		m.Info = data[offset+4 : offset+int(m.Length)]
 	} else {
-		m.Info = data[offset : offset+m.Length]
+		m.Info = data[offset : offset+int(m.Length)]
 	}
 
-	offset += m.Length
+	offset += int(m.Length)
 
 	m.BaseLayer = BaseLayer{Contents: data[:offset], Payload: data[offset:]}
 	return nil
@@ -937,6 +961,10 @@ func (m *Dot11MgmtAssociationReq) NextLayerType() gopacket.LayerType {
 	return LayerTypeDot11InformationElement
 }
 func (m *Dot11MgmtAssociationReq) DecodeFromBytes(data []byte, df gopacket.DecodeFeedback) error {
+	if len(data) < 4 {
+		df.SetTruncated()
+		return fmt.Errorf("Dot11MgmtAssociationReq length %v too short, %v required", len(data), 4)
+	}
 	m.CapabilityInfo = binary.LittleEndian.Uint16(data[0:2])
 	m.ListenInterval = binary.LittleEndian.Uint16(data[2:4])
 	m.Payload = data[4:]
@@ -965,6 +993,10 @@ func (m *Dot11MgmtAssociationResp) NextLayerType() gopacket.LayerType {
 	return LayerTypeDot11InformationElement
 }
 func (m *Dot11MgmtAssociationResp) DecodeFromBytes(data []byte, df gopacket.DecodeFeedback) error {
+	if len(data) < 6 {
+		df.SetTruncated()
+		return fmt.Errorf("Dot11MgmtAssociationResp length %v too short, %v required", len(data), 6)
+	}
 	m.CapabilityInfo = binary.LittleEndian.Uint16(data[0:2])
 	m.Status = Dot11Status(binary.LittleEndian.Uint16(data[2:4]))
 	m.AID = binary.LittleEndian.Uint16(data[4:6])
@@ -994,6 +1026,10 @@ func (m *Dot11MgmtReassociationReq) NextLayerType() gopacket.LayerType {
 	return LayerTypeDot11InformationElement
 }
 func (m *Dot11MgmtReassociationReq) DecodeFromBytes(data []byte, df gopacket.DecodeFeedback) error {
+	if len(data) < 10 {
+		df.SetTruncated()
+		return fmt.Errorf("Dot11MgmtReassociationReq length %v too short, %v required", len(data), 10)
+	}
 	m.CapabilityInfo = binary.LittleEndian.Uint16(data[0:2])
 	m.ListenInterval = binary.LittleEndian.Uint16(data[2:4])
 	m.CurrentApAddress = net.HardwareAddr(data[4:10])
@@ -1081,6 +1117,10 @@ func decodeDot11MgmtBeacon(data []byte, p gopacket.PacketBuilder) error {
 func (m *Dot11MgmtBeacon) LayerType() gopacket.LayerType  { return LayerTypeDot11MgmtBeacon }
 func (m *Dot11MgmtBeacon) CanDecode() gopacket.LayerClass { return LayerTypeDot11MgmtBeacon }
 func (m *Dot11MgmtBeacon) DecodeFromBytes(data []byte, df gopacket.DecodeFeedback) error {
+	if len(data) < 12 {
+		df.SetTruncated()
+		return fmt.Errorf("Dot11MgmtBeacon length %v too short, %v required", len(data), 12)
+	}
 	m.Timestamp = binary.LittleEndian.Uint64(data[0:8])
 	m.Interval = binary.LittleEndian.Uint16(data[8:10])
 	m.Flags = binary.LittleEndian.Uint16(data[10:12])
@@ -1119,6 +1159,10 @@ func (m *Dot11MgmtDisassociation) CanDecode() gopacket.LayerClass {
 	return LayerTypeDot11MgmtDisassociation
 }
 func (m *Dot11MgmtDisassociation) DecodeFromBytes(data []byte, df gopacket.DecodeFeedback) error {
+	if len(data) < 2 {
+		df.SetTruncated()
+		return fmt.Errorf("Dot11MgmtDisassociation length %v too short, %v required", len(data), 2)
+	}
 	m.Reason = Dot11Reason(binary.LittleEndian.Uint16(data[0:2]))
 	return m.Dot11Mgmt.DecodeFromBytes(data, df)
 }
@@ -1145,6 +1189,10 @@ func (m *Dot11MgmtAuthentication) NextLayerType() gopacket.LayerType {
 	return LayerTypeDot11InformationElement
 }
 func (m *Dot11MgmtAuthentication) DecodeFromBytes(data []byte, df gopacket.DecodeFeedback) error {
+	if len(data) < 6 {
+		df.SetTruncated()
+		return fmt.Errorf("Dot11MgmtAuthentication length %v too short, %v required", len(data), 6)
+	}
 	m.Algorithm = Dot11Algorithm(binary.LittleEndian.Uint16(data[0:2]))
 	m.Sequence = binary.LittleEndian.Uint16(data[2:4])
 	m.Status = Dot11Status(binary.LittleEndian.Uint16(data[4:6]))
@@ -1169,6 +1217,10 @@ func (m *Dot11MgmtDeauthentication) CanDecode() gopacket.LayerClass {
 	return LayerTypeDot11MgmtDeauthentication
 }
 func (m *Dot11MgmtDeauthentication) DecodeFromBytes(data []byte, df gopacket.DecodeFeedback) error {
+	if len(data) < 2 {
+		df.SetTruncated()
+		return fmt.Errorf("Dot11MgmtDeauthentication length %v too short, %v required", len(data), 2)
+	}
 	m.Reason = Dot11Reason(binary.LittleEndian.Uint16(data[0:2]))
 	return m.Dot11Mgmt.DecodeFromBytes(data, df)
 }

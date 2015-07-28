@@ -298,6 +298,9 @@ func (a activateError) Error() string {
 // getNextBufPtrLocked is shared code for ReadPacketData and
 // ZeroCopyReadPacketData.
 func (p *Handle) getNextBufPtrLocked(ci *gopacket.CaptureInfo) error {
+	if p.cptr == nil {
+		return io.EOF
+	}
 	var result NextError
 	for {
 		result = NextError(C.pcap_next_ex(p.cptr, &p.pkthdr, &p.buf_ptr))
@@ -345,7 +348,13 @@ func (p *Handle) ZeroCopyReadPacketData() (data []byte, ci gopacket.CaptureInfo,
 
 // Close closes the underlying pcap handle.
 func (p *Handle) Close() {
+	p.mu.Lock()
+	if p.cptr == nil {
+		return
+	}
 	C.pcap_close(p.cptr)
+	p.cptr = nil
+	p.mu.Unlock()
 }
 
 // Error returns the current error associated with a pcap handle (pcap_geterr).
@@ -521,9 +530,19 @@ func findalladdresses(addresses *_Ctype_struct_pcap_addr) (retval []InterfaceAdd
 	// TODO - make it support more than IPv4 and IPv6?
 	retval = make([]InterfaceAddress, 0, 1)
 	for curaddr := addresses; curaddr != nil; curaddr = (*_Ctype_struct_pcap_addr)(curaddr.next) {
+		// Strangely, it appears that in some cases, we get a pcap address back from
+		// pcap_findalldevs with a nil .addr.  It appears that we can skip over
+		// these.
+		if curaddr.addr == nil {
+			continue
+		}
 		var a InterfaceAddress
 		var err error
 		if a.IP, err = sockaddr_to_IP((*syscall.RawSockaddr)(unsafe.Pointer(curaddr.addr))); err != nil {
+			continue
+		}
+		// To be safe, we'll also check for netmask.
+		if curaddr.netmask == nil {
 			continue
 		}
 		if a.Netmask, err = sockaddr_to_IP((*syscall.RawSockaddr)(unsafe.Pointer(curaddr.netmask))); err != nil {

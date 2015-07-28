@@ -28,6 +28,7 @@ type GRERouting struct {
 	AddressFamily        uint16
 	SREOffset, SRELength uint8
 	RoutingInformation   []byte
+	Next                 *GRERouting
 }
 
 // LayerType returns gopacket.LayerTypeGRE.
@@ -44,26 +45,38 @@ func (g *GRE) DecodeFromBytes(data []byte, df gopacket.DecodeFeedback) error {
 	g.Flags = data[1] >> 3
 	g.Version = data[1] & 0x7
 	g.Protocol = EthernetType(binary.BigEndian.Uint16(data[2:4]))
-	g.Checksum = binary.BigEndian.Uint16(data[4:6])
-	g.Offset = binary.BigEndian.Uint16(data[6:8])
-	g.Key = binary.BigEndian.Uint32(data[8:12])
-	g.Seq = binary.BigEndian.Uint32(data[12:16])
-	g.BaseLayer = BaseLayer{data[:16], data[16:]}
-	// reset data to point to after the main gre header
-	rData := data[16:]
-	if g.RoutingPresent {
-		g.GRERouting = &GRERouting{
-			AddressFamily: binary.BigEndian.Uint16(rData[:2]),
-			SREOffset:     rData[2],
-			SRELength:     rData[3],
-		}
-		end := g.SRELength + 4
-		g.RoutingInformation = rData[4:end]
-		g.Contents = data[:16+end]
-		g.Payload = data[16+end:]
-	} else {
-		g.GRERouting = nil
+	offset := 4
+	if g.ChecksumPresent || g.RoutingPresent {
+		g.Checksum = binary.BigEndian.Uint16(data[offset : offset+2])
+		g.Offset = binary.BigEndian.Uint16(data[offset+2 : offset+4])
+		offset += 4
 	}
+	if g.KeyPresent {
+		g.Key = binary.BigEndian.Uint32(data[offset : offset+4])
+		offset += 4
+	}
+	if g.SeqPresent {
+		g.Seq = binary.BigEndian.Uint32(data[offset : offset+4])
+		offset += 4
+	}
+	if g.RoutingPresent {
+		tail := &g.GRERouting
+		for {
+			sre := &GRERouting{
+				AddressFamily: binary.BigEndian.Uint16(data[offset : offset+2]),
+				SREOffset:     data[offset+2],
+				SRELength:     data[offset+3],
+			}
+			sre.RoutingInformation = data[offset+4 : offset+4+int(sre.SRELength)]
+			offset += 4 + int(sre.SRELength)
+			if sre.AddressFamily == 0 && sre.SRELength == 0 {
+				break
+			}
+			(*tail) = sre
+			tail = &sre.Next
+		}
+	}
+	g.BaseLayer = BaseLayer{data[:offset], data[offset:]}
 	return nil
 }
 

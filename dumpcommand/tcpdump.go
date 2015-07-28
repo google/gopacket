@@ -20,14 +20,16 @@ import (
 	"time"
 )
 
-var print = flag.Bool("print", true, "Print out packets, if false only prints out statistics")
-var maxcount = flag.Int("c", -1, "Only grab this many packets, then exit")
-var decoder = flag.String("decoder", "Ethernet", "Name of the decoder to use")
-var dump = flag.Bool("X", false, "If true, dump very verbose info on each packet")
-var statsevery = flag.Int("stats", 1000, "Output statistics every N packets")
-var printErrors = flag.Bool("errors", false, "Print out packet dumps of decode errors, useful for checking decoders against live traffic")
-var lazy = flag.Bool("lazy", false, "If true, do lazy decoding")
-var defrag = flag.Bool("defrag", false, "If true, do IPv4 defrag")
+var (
+	print       = flag.Bool("print", true, "Print out packets, if false only prints out statistics")
+	maxcount    = flag.Int("c", -1, "Only grab this many packets, then exit")
+	decoder     = flag.String("decoder", "Ethernet", "Name of the decoder to use")
+	dump        = flag.Bool("X", false, "If true, dump very verbose info on each packet")
+	statsevery  = flag.Int("stats", 1000, "Output statistics every N packets")
+	printErrors = flag.Bool("errors", false, "Print out packet dumps of decode errors, useful for checking decoders against live traffic")
+	lazy        = flag.Bool("lazy", false, "If true, do lazy decoding")
+	defrag = flag.Bool("defrag", false, "If true, do IPv4 defrag")
+)
 
 func Run(src gopacket.PacketDataSource) {
 	if !flag.Parsed() {
