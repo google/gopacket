@@ -18,25 +18,37 @@ type tcpipchecksum struct {
 }
 
 type tcpipPseudoHeader interface {
-	pseudoheaderChecksum() uint32
+	pseudoheaderChecksum() (uint32, error)
 }
 
-func (ip *IPv4) pseudoheaderChecksum() (csum uint32) {
+func (ip *IPv4) pseudoheaderChecksum() (csum uint32, err error) {
+	if len(ip.SrcIP) != 4 {
+		return 0, fmt.Errorf("invalid src IP %v", ip.SrcIP)
+	}
+	if len(ip.DstIP) != 4 {
+		return 0, fmt.Errorf("invalid dst IP %v", ip.DstIP)
+	}
 	csum += (uint32(ip.SrcIP[0]) + uint32(ip.SrcIP[2])) << 8
 	csum += uint32(ip.SrcIP[1]) + uint32(ip.SrcIP[3])
 	csum += (uint32(ip.DstIP[0]) + uint32(ip.DstIP[2])) << 8
 	csum += uint32(ip.DstIP[1]) + uint32(ip.DstIP[3])
-	return
+	return csum, nil
 }
 
-func (ip *IPv6) pseudoheaderChecksum() (csum uint32) {
+func (ip *IPv6) pseudoheaderChecksum() (csum uint32, err error) {
+	if len(ip.SrcIP) != 16 {
+		return 0, fmt.Errorf("invalid src IP %v", ip.SrcIP)
+	}
+	if len(ip.DstIP) != 16 {
+		return 0, fmt.Errorf("invalid dst IP %v", ip.DstIP)
+	}
 	for i := 0; i < 16; i += 2 {
 		csum += uint32(ip.SrcIP[i]) << 8
 		csum += uint32(ip.SrcIP[i+1])
 		csum += uint32(ip.DstIP[i]) << 8
 		csum += uint32(ip.DstIP[i+1])
 	}
-	return
+	return csum, nil
 }
 
 // Calculate the TCP/IP checksum defined in rfc1071.  The passed-in csum is any
@@ -69,7 +81,10 @@ func (c *tcpipchecksum) computeChecksum(headerAndPayload []byte, headerProtocol 
 		return 0, fmt.Errorf("TCP/IP layer 4 checksum cannot be computed without network layer... call SetNetworkLayerForChecksum to set which layer to use")
 	}
 	length := uint32(len(headerAndPayload))
-	csum := c.pseudoheader.pseudoheaderChecksum()
+	csum, err := c.pseudoheader.pseudoheaderChecksum()
+	if err != nil {
+		return 0, err
+	}
 	csum += uint32(headerProtocol)
 	csum += length & 0xffff
 	csum += length >> 16
