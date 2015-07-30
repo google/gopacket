@@ -22,11 +22,11 @@ type tcpipPseudoHeader interface {
 }
 
 func (ip *IPv4) pseudoheaderChecksum() (csum uint32, err error) {
-	if len(ip.SrcIP) != 4 {
-		return 0, fmt.Errorf("invalid src IP %v", ip.SrcIP)
+	if err := checkIPv4Address(ip.SrcIP); err != nil {
+		return 0, fmt.Errorf("invalid IPv4 src address (%s)", err)
 	}
-	if len(ip.DstIP) != 4 {
-		return 0, fmt.Errorf("invalid dst IP %v", ip.DstIP)
+	if err := checkIPv4Address(ip.DstIP); err != nil {
+		return 0, fmt.Errorf("invalid IPv4 dst address (%s)", err)
 	}
 	csum += (uint32(ip.SrcIP[0]) + uint32(ip.SrcIP[2])) << 8
 	csum += uint32(ip.SrcIP[1]) + uint32(ip.SrcIP[3])
@@ -36,11 +36,11 @@ func (ip *IPv4) pseudoheaderChecksum() (csum uint32, err error) {
 }
 
 func (ip *IPv6) pseudoheaderChecksum() (csum uint32, err error) {
-	if len(ip.SrcIP) != 16 {
-		return 0, fmt.Errorf("invalid src IP %v", ip.SrcIP)
+	if err := checkIPv6Address(ip.SrcIP); err != nil {
+		return 0, fmt.Errorf("invalid IPv6 src address (%s)", err)
 	}
-	if len(ip.DstIP) != 16 {
-		return 0, fmt.Errorf("invalid dst IP %v", ip.DstIP)
+	if err := checkIPv6Address(ip.DstIP); err != nil {
+		return 0, fmt.Errorf("invalid IPv6 dst address (%s)", err)
 	}
 	for i := 0; i < 16; i += 2 {
 		csum += uint32(ip.SrcIP[i]) << 8
