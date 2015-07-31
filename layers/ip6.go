@@ -62,11 +62,8 @@ func (ip6 *IPv6) SerializeTo(b gopacket.SerializeBuffer, opts gopacket.Serialize
 	binary.BigEndian.PutUint16(bytes[4:], ip6.Length)
 	bytes[6] = byte(ip6.NextHeader)
 	bytes[7] = byte(ip6.HopLimit)
-	if err := checkIPv6Address(ip6.SrcIP); err != nil {
-		return fmt.Errorf("invalid IPv6 src address (%s)", err)
-	}
-	if err := checkIPv6Address(ip6.DstIP); err != nil {
-		return fmt.Errorf("invalid IPv6 dst address (%s)", err)
+	if err := ip6.AddressTo16(); err != nil {
+		return err
 	}
 	copy(bytes[8:], ip6.SrcIP)
 	copy(bytes[24:], ip6.DstIP)
@@ -402,4 +399,14 @@ func checkIPv6Address(addr net.IP) error {
 		return fmt.Errorf("address is IPv4")
 	}
 	return fmt.Errorf("wrong length of %d bytes instead of %d", len(addr), net.IPv6len)
+}
+
+func (ip *IPv6) AddressTo16() error {
+	if err := checkIPv6Address(ip.SrcIP); err != nil {
+		return fmt.Errorf("Invalid source IPv6 address (%s)", err)
+	}
+	if err := checkIPv6Address(ip.DstIP); err != nil {
+		return fmt.Errorf("Invalid destination IPv6 address (%s)", err)
+	}
+	return nil
 }

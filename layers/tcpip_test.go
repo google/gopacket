@@ -21,8 +21,8 @@ func createIPv4ChecksumTestLayer() (ip4 *IPv4) {
 	ip4 = &IPv4{}
 	ip4.Version = 4
 	ip4.TTL = 64
-	ip4.SrcIP = net.ParseIP("192.0.2.1").To4()
-	ip4.DstIP = net.ParseIP("198.51.100.1").To4()
+	ip4.SrcIP = net.ParseIP("192.0.2.1")
+	ip4.DstIP = net.ParseIP("198.51.100.1")
 	return
 }
 

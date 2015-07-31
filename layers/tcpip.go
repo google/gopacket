@@ -22,11 +22,8 @@ type tcpipPseudoHeader interface {
 }
 
 func (ip *IPv4) pseudoheaderChecksum() (csum uint32, err error) {
-	if err := checkIPv4Address(ip.SrcIP); err != nil {
-		return 0, fmt.Errorf("invalid IPv4 src address (%s)", err)
-	}
-	if err := checkIPv4Address(ip.DstIP); err != nil {
-		return 0, fmt.Errorf("invalid IPv4 dst address (%s)", err)
+	if err := ip.AddressTo4(); err != nil {
+		return 0, err
 	}
 	csum += (uint32(ip.SrcIP[0]) + uint32(ip.SrcIP[2])) << 8
 	csum += uint32(ip.SrcIP[1]) + uint32(ip.SrcIP[3])
@@ -36,11 +33,8 @@ func (ip *IPv4) pseudoheaderChecksum() (csum uint32, err error) {
 }
 
 func (ip *IPv6) pseudoheaderChecksum() (csum uint32, err error) {
-	if err := checkIPv6Address(ip.SrcIP); err != nil {
-		return 0, fmt.Errorf("invalid IPv6 src address (%s)", err)
-	}
-	if err := checkIPv6Address(ip.DstIP); err != nil {
-		return 0, fmt.Errorf("invalid IPv6 dst address (%s)", err)
+	if err := ip.AddressTo16(); err != nil {
+		return 0, err
 	}
 	for i := 0; i < 16; i += 2 {
 		csum += uint32(ip.SrcIP[i]) << 8

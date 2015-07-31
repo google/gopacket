@@ -115,11 +115,8 @@ func (ip *IPv4) SerializeTo(b gopacket.SerializeBuffer, opts gopacket.SerializeO
 	binary.BigEndian.PutUint16(bytes[6:], ip.flagsfrags())
 	bytes[8] = ip.TTL
 	bytes[9] = byte(ip.Protocol)
-	if err := checkIPv4Address(ip.SrcIP); err != nil {
-		return fmt.Errorf("invalid IPv4 src address (%s)", err)
-	}
-	if err := checkIPv4Address(ip.DstIP); err != nil {
-		return fmt.Errorf("invalid IPv4 dst address (%s)", err)
+	if err := ip.AddressTo4(); err != nil {
+		return err
 	}
 	copy(bytes[12:16], ip.SrcIP)
 	copy(bytes[16:20], ip.DstIP)
@@ -260,12 +257,30 @@ func decodeIPv4(data []byte, p gopacket.PacketBuilder) error {
 	return p.NextDecoder(ip.NextLayerType())
 }
 
-func checkIPv4Address(addr net.IP) error {
-	if len(addr) == net.IPv4len {
-		return nil
+func checkIPv4Address(addr net.IP) (net.IP, error) {
+	if c := addr.To4(); c != nil {
+		return c, nil
 	}
 	if len(addr) == net.IPv6len {
-		return fmt.Errorf("address is IPv6")
+		return nil, fmt.Errorf("address is IPv6")
 	}
-	return fmt.Errorf("wrong length of %d bytes instead of %d", len(addr), net.IPv4len)
+	return nil, fmt.Errorf("wrong length of %d bytes instead of %d", len(addr), net.IPv4len)
+}
+
+func (ip *IPv4) AddressTo4() error {
+	var src, dst net.IP
+
+	if addr, err := checkIPv4Address(ip.SrcIP); err != nil {
+		return fmt.Errorf("Invalid source IPv4 address (%s)", err)
+	} else {
+		src = addr
+	}
+	if addr, err := checkIPv4Address(ip.DstIP); err != nil {
+		return fmt.Errorf("Invalid destination IPv4 address (%s)", err)
+	} else {
+		dst = addr
+	}
+	ip.SrcIP = src
+	ip.DstIP = dst
+	return nil
 }
