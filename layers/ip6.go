@@ -381,7 +381,14 @@ func (i *IPv6Destination) SerializeTo(b gopacket.SerializeBuffer, opts gopacket.
 	}
 	bytes[0] = uint8(i.NextHeader)
 	if opts.FixLengths {
-		i.HeaderLength = uint8((optionLength + 2) / 8)
+		if optionLength <= 0 {
+			return fmt.Errorf("cannot serialize empty IPv6Destination")
+		}
+		length := optionLength + 2
+		if length % 8 != 0 {
+			return fmt.Errorf("IPv6Destination actual length must be multiple of 8 (check TLV alignment)")
+		}
+		i.HeaderLength = uint8((length / 8) - 1)
 	}
 	bytes[1] = i.HeaderLength
 	return nil
