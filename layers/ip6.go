@@ -34,6 +34,7 @@ type IPv6 struct {
 	HopLimit     uint8
 	SrcIP        net.IP
 	DstIP        net.IP
+	RoutingDstIP net.IP
 	HopByHop     *IPv6HopByHop
 	// hbh will be pointed to by HopByHop if that layer exists.
 	hbh IPv6HopByHop
@@ -43,7 +44,11 @@ type IPv6 struct {
 func (i *IPv6) LayerType() gopacket.LayerType { return LayerTypeIPv6 }
 
 func (i *IPv6) NetworkFlow() gopacket.Flow {
-	return gopacket.NewFlow(EndpointIPv6, i.SrcIP, i.DstIP)
+	dst := i.DstIP
+	if i.RoutingDstIP != nil {
+		dst = i.RoutingDstIP
+	}
+	return gopacket.NewFlow(EndpointIPv6, i.SrcIP, dst)
 }
 
 // Search for Jumbo Payload TLV in IPv6HopByHop and return (length, true) if found
@@ -494,41 +499,85 @@ func (o *IPv6HopByHopOption) SetJumboLength(len uint32) {
 }
 
 // IPv6Routing is the IPv6 routing extension.
-type IPv6Routing struct {
+type ipv6RoutingBase struct {
 	ipv6ExtensionBase
 	RoutingType  uint8
 	SegmentsLeft uint8
-	// This segment is supposed to be zero according to RFC2460, the second set of
-	// 4 bytes in the extension.
-	Reserved []byte
-	// SourceRoutingIPs is the set of IPv6 addresses requested for source routing,
-	// set only if RoutingType == 0.
-	SourceRoutingIPs []net.IP
 }
 
 // LayerType returns LayerTypeIPv6Routing.
-func (i *IPv6Routing) LayerType() gopacket.LayerType { return LayerTypeIPv6Routing }
+func (i *ipv6RoutingBase) LayerType() gopacket.LayerType { return LayerTypeIPv6Routing }
+
+type IPv6RoutingType0 struct {
+	ipv6RoutingBase
+	// This segment is supposed to be zero according to RFC2460, the second set of
+	// 4 bytes in the extension.
+	Reserved []byte
+	// SourceRoutingIPs is the set of IPv6 addresses requested for source routing
+	SourceRoutingIPs []net.IP
+}
+
+func (i *IPv6RoutingType0) SerializeTo(b gopacket.SerializeBuffer, opts gopacket.SerializeOptions) error {
+	addrLength := len(i.SourceRoutingIPs) * net.IPv6len
+	bytes, err := b.PrependBytes(8 + addrLength)
+	if err != nil {
+		return err
+	}
+	bytes[0] = uint8(i.NextHeader)
+	if opts.FixLengths {
+		if addrLength <= 0 {
+			return fmt.Errorf("cannot serialize empty IPv6RoutingType0")
+		}
+		i.HeaderLength = uint8(addrLength / 8)
+	}
+	bytes[1] = i.HeaderLength
+	bytes[2] = i.RoutingType
+	bytes[3] = i.SegmentsLeft
+	for n, a := range i.SourceRoutingIPs {
+		if err := checkIPv6Address(a); err != nil {
+			return fmt.Errorf("Invalid IPv6 routing type 0 address (addr[%d]: %s)", n, err)
+		}
+		i := 8 + n*net.IPv6len
+		copy(bytes[i:], a)
+	}
+	return nil
+}
 
 func decodeIPv6Routing(data []byte, p gopacket.PacketBuilder) error {
-	i := &IPv6Routing{
+	i := &ipv6RoutingBase{
 		ipv6ExtensionBase: decodeIPv6ExtensionBase(data),
 		RoutingType:       data[2],
 		SegmentsLeft:      data[3],
-		Reserved:          data[4:8],
 	}
 	switch i.RoutingType {
-	case 0: // Source routing
-		if (i.ActualLength-8)%16 != 0 {
+	case 0:
+		i := &IPv6RoutingType0{ipv6RoutingBase: *i}
+		i.Reserved = i.Contents[4:8]
+		n := i.HeaderLength / 2
+		if i.ActualLength != int(n)*16+8 {
 			return fmt.Errorf("Invalid IPv6 source routing, length of type 0 packet %d", i.ActualLength)
 		}
 		for d := i.Contents[8:]; len(d) >= 16; d = d[16:] {
 			i.SourceRoutingIPs = append(i.SourceRoutingIPs, net.IP(d[:16]))
 		}
-	default:
-		return fmt.Errorf("Unknown IPv6 routing header type %d", i.RoutingType)
+		// XXX - We should be setting ip6.RoutingDst here
+		p.AddLayer(i)
+		return p.NextDecoder(i.NextHeader)
 	}
-	p.AddLayer(i)
-	return p.NextDecoder(i.NextHeader)
+	return fmt.Errorf("Unknown IPv6 routing type %d", i.RoutingType)
+}
+
+func (i *IPv6RoutingType0) SetNetworkLayerForRouting(ip6 *IPv6) error {
+	l := len(i.SourceRoutingIPs)
+	if l == 0 {
+		return fmt.Errorf("Empty routing address vector")
+	}
+	a := i.SourceRoutingIPs[l-1]
+	if err := checkIPv6Address(a); err != nil {
+		return fmt.Errorf("Invalid routing IPv6 address (%s)", err)
+	}
+	ip6.RoutingDstIP = a
+	return nil
 }
 
 // IPv6Fragment is the IPv6 fragment header, used for packet
@@ -646,6 +695,11 @@ func (ip *IPv6) AddressTo16() error {
 	}
 	if err := checkIPv6Address(ip.DstIP); err != nil {
 		return fmt.Errorf("Invalid destination IPv6 address (%s)", err)
+	}
+	if ip.RoutingDstIP != nil {
+		if err := checkIPv6Address(ip.RoutingDstIP); err != nil {
+			return fmt.Errorf("Invalid routing destination IPv6 address (%s)", err)
+		}
 	}
 	return nil
 }
