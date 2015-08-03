@@ -32,15 +32,19 @@ func (ip *IPv4) pseudoheaderChecksum() (csum uint32, err error) {
 	return csum, nil
 }
 
-func (ip *IPv6) pseudoheaderChecksum() (csum uint32, err error) {
-	if err := ip.AddressTo16(); err != nil {
+func (ip6 *IPv6) pseudoheaderChecksum() (csum uint32, err error) {
+	if err := ip6.AddressTo16(); err != nil {
 		return 0, err
 	}
+	dst := ip6.DstIP
+	if ip6.RoutingDstIP != nil {
+		dst = ip6.RoutingDstIP
+	}
 	for i := 0; i < 16; i += 2 {
-		csum += uint32(ip.SrcIP[i]) << 8
-		csum += uint32(ip.SrcIP[i+1])
-		csum += uint32(ip.DstIP[i]) << 8
-		csum += uint32(ip.DstIP[i+1])
+		csum += uint32(ip6.SrcIP[i]) << 8
+		csum += uint32(ip6.SrcIP[i+1])
+		csum += uint32(dst[i]) << 8
+		csum += uint32(dst[i+1])
 	}
 	return csum, nil
 }

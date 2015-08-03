@@ -13,9 +13,10 @@ import (
 )
 
 const (
-	ipv4UDPChecksum                = uint16(0xbc5f) // Wireshark
-	ipv6UDPChecksumWithIPv6DstOpts = uint16(0x4d21) // Wireshark
-	ipv6UDPChecksumJumbogram       = uint16(0xcda8)
+	ipv4UDPChecksum                     = uint16(0xbc5f) // Wireshark
+	ipv6UDPChecksumWithIPv6DstOpts      = uint16(0x4d21) // Wireshark
+	ipv6UDPChecksumJumbogram            = uint16(0xcda8)
+	ipv6UDPChecksumWithIPv6RoutingType0 = uint16(0x4d1f) // Wireshark
 )
 
 func createIPv4ChecksumTestLayer() (ip4 *IPv4) {
@@ -42,6 +43,15 @@ func createIPv6DestinationChecksumTestLayer() (dst *IPv6Destination) {
 	dst = &IPv6Destination{}
 	dst.Options = append(dst.Options, tlv)
 	dst.NextHeader = IPProtocolNoNextHeader
+	return
+}
+
+func createIPv6RoutingType0ChecksumTestLayer() (rt0 *IPv6RoutingType0) {
+	rt0 = &IPv6RoutingType0{}
+	rt0.NextHeader = IPProtocolNoNextHeader
+	rt0.SegmentsLeft = 2
+	rt0.SourceRoutingIPs = append(rt0.SourceRoutingIPs, net.ParseIP("2001:db8::3"))
+	rt0.SourceRoutingIPs = append(rt0.SourceRoutingIPs, net.ParseIP("2001:db8::4"))
 	return
 }
 
@@ -181,6 +191,48 @@ func TestIPv6JumbogramUDPChecksum(t *testing.T) {
 	}
 	got := u.Checksum
 	want := ipv6UDPChecksumJumbogram
+	if got != want {
+		t.Errorf("Bad checksum:\ngot:\n%#v\n\nwant:\n%#v\n\n", got, want)
+	}
+}
+
+func TestIPv6UDPChecksumWithIPv6RoutingType0(t *testing.T) {
+	var serialize []gopacket.SerializableLayer = make([]gopacket.SerializableLayer, 0, 3)
+	var u *UDP
+	var err error
+
+	ip6 := createIPv6ChecksumTestLayer()
+	ip6.NextHeader = IPProtocolIPv6Routing
+	serialize = append(serialize, ip6)
+
+	rt0 := createIPv6RoutingType0ChecksumTestLayer()
+	rt0.NextHeader = IPProtocolUDP
+	rt0.SetNetworkLayerForRouting(ip6)
+	serialize = append(serialize, rt0)
+
+	udp := createUDPChecksumTestLayer()
+	udp.SetNetworkLayerForChecksum(ip6)
+	serialize = append(serialize, udp)
+
+	buf := gopacket.NewSerializeBuffer()
+	opts := gopacket.SerializeOptions{FixLengths: true, ComputeChecksums: true}
+	err = gopacket.SerializeLayers(buf, opts, serialize...)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	p := gopacket.NewPacket(buf.Bytes(), LinkTypeRaw, gopacket.Default)
+	if p.ErrorLayer() != nil {
+		t.Fatal("Failed to decode packet:", p.ErrorLayer().Error())
+	}
+	if l, ok := p.Layer(LayerTypeUDP).(*UDP); !ok {
+		t.Fatal("No UDP layer type found in packet")
+	} else {
+		u = l
+	}
+
+	got := u.Checksum
+	want := ipv6UDPChecksumWithIPv6RoutingType0
 	if got != want {
 		t.Errorf("Bad checksum:\ngot:\n%#v\n\nwant:\n%#v\n\n", got, want)
 	}
