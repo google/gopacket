@@ -62,11 +62,8 @@ func (ip6 *IPv6) SerializeTo(b gopacket.SerializeBuffer, opts gopacket.Serialize
 	binary.BigEndian.PutUint16(bytes[4:], ip6.Length)
 	bytes[6] = byte(ip6.NextHeader)
 	bytes[7] = byte(ip6.HopLimit)
-	if len(ip6.SrcIP) != 16 {
-		return fmt.Errorf("invalid src ip %v", ip6.SrcIP)
-	}
-	if len(ip6.DstIP) != 16 {
-		return fmt.Errorf("invalid dst ip %v", ip6.DstIP)
+	if err := ip6.AddressTo16(); err != nil {
+		return err
 	}
 	copy(bytes[8:], ip6.SrcIP)
 	copy(bytes[24:], ip6.DstIP)
@@ -287,12 +284,14 @@ func decodeIPv6Routing(data []byte, p gopacket.PacketBuilder) error {
 	}
 	switch i.RoutingType {
 	case 0: // Source routing
-		if (len(data)-8)%16 != 0 {
-			return fmt.Errorf("Invalid IPv6 source routing, length of type 0 packet %d", len(data))
+		if (i.ActualLength-8)%16 != 0 {
+			return fmt.Errorf("Invalid IPv6 source routing, length of type 0 packet %d", i.ActualLength)
 		}
 		for d := i.Contents[8:]; len(d) >= 16; d = d[16:] {
 			i.SourceRoutingIPs = append(i.SourceRoutingIPs, net.IP(d[:16]))
 		}
+	default:
+		return fmt.Errorf("Unknown IPv6 routing header type %d", i.RoutingType)
 	}
 	p.AddLayer(i)
 	return p.NextDecoder(i.NextHeader)
@@ -379,8 +378,35 @@ func (i *IPv6Destination) SerializeTo(b gopacket.SerializeBuffer, opts gopacket.
 	}
 	bytes[0] = uint8(i.NextHeader)
 	if opts.FixLengths {
-		i.HeaderLength = uint8((optionLength + 2) / 8)
+		if optionLength <= 0 {
+			return fmt.Errorf("cannot serialize empty IPv6Destination")
+		}
+		length := optionLength + 2
+		if length % 8 != 0 {
+			return fmt.Errorf("IPv6Destination actual length must be multiple of 8 (check TLV alignment)")
+		}
+		i.HeaderLength = uint8((length / 8) - 1)
 	}
 	bytes[1] = i.HeaderLength
+	return nil
+}
+
+func checkIPv6Address(addr net.IP) error {
+	if len(addr) == net.IPv6len {
+		return nil
+	}
+	if len(addr) == net.IPv4len {
+		return fmt.Errorf("address is IPv4")
+	}
+	return fmt.Errorf("wrong length of %d bytes instead of %d", len(addr), net.IPv6len)
+}
+
+func (ip *IPv6) AddressTo16() error {
+	if err := checkIPv6Address(ip.SrcIP); err != nil {
+		return fmt.Errorf("Invalid source IPv6 address (%s)", err)
+	}
+	if err := checkIPv6Address(ip.DstIP); err != nil {
+		return fmt.Errorf("Invalid destination IPv6 address (%s)", err)
+	}
 	return nil
 }

@@ -103,7 +103,7 @@ func (t *TCP) SerializeTo(b gopacket.SerializeBuffer, opts gopacket.SerializeOpt
 		// zero out checksum bytes in current serialization.
 		bytes[16] = 0
 		bytes[17] = 0
-		csum, err := t.computeChecksum(b.Bytes())
+		csum, err := t.computeChecksum(b.Bytes(), IPProtocolTCP)
 		if err != nil {
 			return err
 		}
