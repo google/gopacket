@@ -107,7 +107,7 @@ func TestPacketIPv6Destination0Decode(t *testing.T) {
 		}
 		want.Options = append(want.Options, opt)
 		if !reflect.DeepEqual(got, want) {
-			t.Errorf("IPV6Destination packet processing failed:\ngot  :\n%#v\n\nwant :\n%#v\n\n", got, want)
+			t.Errorf("IPv6Destination packet processing failed:\ngot  :\n%#v\n\nwant :\n%#v\n\n", got, want)
 		}
 	} else {
 		t.Error("No IPv6Destination layer type found in packet")
