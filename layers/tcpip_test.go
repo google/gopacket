@@ -77,12 +77,13 @@ func TestIPv4UDPChecksum(t *testing.T) {
 	if p.ErrorLayer() != nil {
 		t.Fatal("Failed to decode packet:", p.ErrorLayer().Error())
 	}
+	checkLayers(p, []gopacket.LayerType{LayerTypeIPv4, LayerTypeUDP}, t)
+
 	if l, ok := p.Layer(LayerTypeUDP).(*UDP); !ok {
 		t.Fatal("No UDP layer type found in packet")
 	} else {
 		u = l
 	}
-
 	got := u.Checksum
 	want := ipv4UDPChecksum
 	if got != want {
@@ -118,12 +119,13 @@ func TestIPv6UDPChecksumWithIPv6DstOpts(t *testing.T) {
 	if p.ErrorLayer() != nil {
 		t.Fatal("Failed to decode packet:", p.ErrorLayer().Error())
 	}
+	checkLayers(p, []gopacket.LayerType{LayerTypeIPv6, LayerTypeIPv6Destination, LayerTypeUDP}, t)
+
 	if l, ok := p.Layer(LayerTypeUDP).(*UDP); !ok {
 		t.Fatal("No UDP layer type found in packet")
 	} else {
 		u = l
 	}
-
 	got := u.Checksum
 	want := ipv6UDPChecksumWithIPv6DstOpts
 	if got != want {
