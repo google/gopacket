@@ -269,9 +269,6 @@ func decodeIPv6(data []byte, p gopacket.PacketBuilder) error {
 	p.AddLayer(ip6)
 	p.SetNetworkLayer(ip6)
 	if ip6.HopByHop != nil {
-		// TODO(gconnell):  Since HopByHop is now an integral part of the IPv6
-		// layer, should it actually be added as its own layer?  I'm leaning towards
-		// no.
 		p.AddLayer(ip6.HopByHop)
 	}
 	if err != nil {
