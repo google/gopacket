@@ -200,3 +200,10 @@ func (b *BPFSniffer) ReadPacketData() ([]byte, gopacket.CaptureInfo, error) {
 func (b *BPFSniffer) GetReadBufLen() int {
 	return b.options.ReadBufLen
 }
+
+// Fd returns the BPF file descriptor, as required by SetBPF() to set filter program, etc.
+// from golang/go/src/syscall/bpf_bsd.go )
+func (b *BPFSniffer) Fd() int {
+        return b.fd
+}
+
