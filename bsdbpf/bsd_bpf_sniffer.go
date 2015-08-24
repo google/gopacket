@@ -137,6 +137,27 @@ func NewBPFSniffer(iface string, options *Options) (*BPFSniffer, error) {
 		}
 	}
 
+        filDrop, err:= BpfFilDrop(sniffer.fd)
+        if err != nil {
+		return nil, err
+        }
+        fmt.Println("filDrop= ", filDrop)
+
+	// syscall.BIOCSFILDROP: append definition of SetBpfFilDrop() to 
+	//  https://github.com/golang/go/blob/master/src/syscall/bpf_bsd.go
+	// temporarily use locally defined setBpfFilDrop()
+	//err = syscall.SetBpfFilDrop(sniffer.fd, enable)
+	err = setBpfFilDrop(sniffer.fd, enable)
+	if err != nil {
+		return nil, err
+	}
+
+        filDrop, err= BpfFilDrop(sniffer.fd)
+        if err != nil {
+		return nil, err
+        }
+        fmt.Println("filDrop= ", filDrop)
+
 	if sniffer.options.PreserveLinkAddr {
 		// preserves the link level source address...
 		// higher level protocol analyzers will not need this
@@ -178,10 +199,15 @@ func (b *BPFSniffer) ReadPacketData() ([]byte, gopacket.CaptureInfo, error) {
 	if b.readBytesConsumed >= b.lastReadLen {
 		b.readBytesConsumed = 0
 		b.readBuffer = make([]byte, b.options.ReadBufLen)
-		b.lastReadLen, err = syscall.Read(b.fd, b.readBuffer)
-		if err != nil {
-			b.lastReadLen = 0
-			return nil, gopacket.CaptureInfo{}, err
+		for b.lastReadLen= 0; b.lastReadLen ==0; {	// skip empty frames, e.g. EOF returned by OpenBSD
+			b.lastReadLen, err = syscall.Read(b.fd, b.readBuffer);
+			if err != nil {
+				b.lastReadLen = 0
+				return nil, gopacket.CaptureInfo{}, err
+			}
+			if b.lastReadLen ==0 {
+				fmt.Print(".")
+			}
 		}
 	}
 	hdr := (*unix.BpfHdr)(unsafe.Pointer(&b.readBuffer[b.readBytesConsumed]))
@@ -205,5 +231,42 @@ func (b *BPFSniffer) GetReadBufLen() int {
 // from golang/go/src/syscall/bpf_bsd.go )
 func (b *BPFSniffer) Fd() int {
         return b.fd
+}
+
+/*
+func BpfFilDrop(fd int) (int, error) {
+	var f int
+	_, _, err := Syscall(SYS_IOCTL, uintptr(fd), BIOCSFILDROP, uintptr(unsafe.Pointer(&f)))
+	if err != 0 {
+		return 0, Errno(err)
+	}
+	return &f, nil
+}
+*/
+func BpfFilDrop(fd int) (int, error) {
+        var f int
+        _, _, err := syscall.Syscall(syscall.SYS_IOCTL, uintptr(fd), syscall.BIOCSFILDROP, uintptr(unsafe.Pointer(&f)))
+        if err != 0 {
+                return 0, syscall.Errno(err)
+        }
+        return f, nil
+}
+
+
+/*
+func SetBpfFilDrop(fd, f int) error {
+	_, _, err := Syscall(SYS_IOCTL, uintptr(fd), BIOCSFILDROP, uintptr(unsafe.Pointer(&f)))
+	if err != 0 {
+		return Errno(err)
+	}
+	return nil
+}
+*/
+func setBpfFilDrop(fd, f int) error {
+	_, _, err := syscall.Syscall(syscall.SYS_IOCTL, uintptr(fd), syscall.BIOCSFILDROP, uintptr(unsafe.Pointer(&f)))
+	if err != 0 {
+		return syscall.Errno(err)
+	}
+	return nil
 }
 
