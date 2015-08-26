@@ -89,7 +89,7 @@ func TestSerializeIPv6HeaderTLVOptions(t *testing.T) {
 	want = []byte{0x00, 0x3e, 0x07, 0x11, 0x22, 0x22, 0x44, 0x44, 0x44, 0x44, 0x01, 0x04, 0x00, 0x00, 0x00, 0x00, 0x1e, 0x0c, 0xaa, 0xaa, 0xaa, 0xaa, 0xbb, 0xbb, 0xbb, 0xbb, 0xbb, 0xbb, 0xbb, 0xbb}
 
 	if !bytes.Equal(got, want) {
-		t.Errorf("IPv6HeaderTLVOption serialize (Y, X) failed:\ngot:\n%#v\n\nwant:\n%#v\n\n", got, want)
+		t.Errorf("IPv6HeaderTLVOption serialize (Y,X) failed:\ngot:\n%#v\n\nwant:\n%#v\n\n", got, want)
 	}
 }
 
@@ -184,7 +184,7 @@ func TestPacketIPv6HopByHop0Decode(t *testing.T) {
 		want := ip6
 		want.HopByHop = got.HopByHop // avoid comparing pointers
 		if !reflect.DeepEqual(got, want) {
-			t.Errorf("IPv6 packet processing failed:\ngot  :\n%#v\n\nwant :\n%#v\n\n", got, want)
+			t.Errorf("IPv6 packet processing failed:\ngot:\n%#v\n\nwant:\n%#v\n\n", got, want)
 		}
 	} else {
 		t.Error("No IPv6 layer type found in packet")
@@ -192,7 +192,7 @@ func TestPacketIPv6HopByHop0Decode(t *testing.T) {
 	if got, ok := p.Layer(LayerTypeIPv6HopByHop).(*IPv6HopByHop); ok {
 		want := hop
 		if !reflect.DeepEqual(got, want) {
-			t.Errorf("IPv6HopByHop packet processing failed:\ngot  :\n%#v\n\nwant :\n%#v\n\n", got, want)
+			t.Errorf("IPv6HopByHop packet processing failed:\ngot\n%#v\n\nwant:\n%#v\n\n", got, want)
 		}
 	} else {
 		t.Error("No IPv6HopByHop layer type found in packet")
@@ -271,7 +271,7 @@ func TestPacketIPv6Destination0Decode(t *testing.T) {
 				0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02},
 		}
 		if !reflect.DeepEqual(got, want) {
-			t.Errorf("IPv6 packet processing failed:\ngot  :\n%#v\n\nwant :\n%#v\n\n", got, want)
+			t.Errorf("IPv6 packet processing failed:\ngot:\n%#v\n\nwant:\n%#v\n\n", got, want)
 		}
 	} else {
 		t.Error("No IPv6 layer type found in packet")
@@ -293,7 +293,7 @@ func TestPacketIPv6Destination0Decode(t *testing.T) {
 		}
 		want.Options = append(want.Options, opt)
 		if !reflect.DeepEqual(got, want) {
-			t.Errorf("IPv6Destination packet processing failed:\ngot  :\n%#v\n\nwant :\n%#v\n\n", got, want)
+			t.Errorf("IPv6Destination packet processing failed:\ngot:\n%#v\n\nwant:\n%#v\n\n", got, want)
 		}
 	} else {
 		t.Error("No IPv6Destination layer type found in packet")
@@ -346,8 +346,8 @@ func TestIPv6JumbogramSerialize(t *testing.T) {
 	want := w.Bytes()
 
 	if !bytes.Equal(got, want) {
-		t.Errorf("IPv6 Jumbogram serialize failed:\n\nwant: %s\n\ngot: %s\n\n",
-			jumboSerializeString(want, 40, 32), jumboSerializeString(got, 40, 32))
+		t.Errorf("IPv6 Jumbogram serialize failed:\ngot:\n%v\n\nwant:\n%v\n\n",
+			jumboSerializeString(got, 40, 32), jumboSerializeString(want, 40, 32))
 	}
 
 }
