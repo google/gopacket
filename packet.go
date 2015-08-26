@@ -15,6 +15,7 @@ import (
 	"os"
 	"reflect"
 	"runtime/debug"
+	"strings"
 	"time"
 )
 
@@ -298,6 +299,91 @@ func layerString(i interface{}, anonymous bool, writeSpace bool) string {
 		return b.String()
 	}
 	return fmt.Sprintf("%v", v.Interface())
+}
+
+const (
+	longBytesLength = 128
+)
+
+func longBytesString(buf []byte) string {
+	if len(buf) < longBytesLength {
+		return fmt.Sprintf("%#v", buf)
+	}
+	s := fmt.Sprintf("%#v", buf[:longBytesLength-1])
+	s = strings.TrimSuffix(s, "}")
+	return fmt.Sprintf("%s ... (%d bytes)}", s, len(buf))
+}
+
+func LongBytesString(buf []byte) string {
+	return longBytesString(buf)
+}
+
+//LayerGoString returns a representation of the layer in Go syntax,
+// taking care to shorten "very long" BaseLayer byte slices
+func LayerGoString(l Layer) string {
+	return layerGoString(l, nil)
+}
+
+func baseLayerString(value reflect.Value) string {
+	t := value.Type()
+	content := value.Field(0)
+	c := make([]byte, content.Len())
+	for i := range c {
+		c[i] = byte(content.Index(i).Uint())
+	}
+	payload := value.Field(1)
+	p := make([]byte, payload.Len())
+	for i := range p {
+		p[i] = byte(payload.Index(i).Uint())
+	}
+	return fmt.Sprintf("%s{Contents:%s, Payload:%s}", t.String(),
+		longBytesString(c),
+		longBytesString(p))
+}
+
+func layerGoString(i interface{}, b *bytes.Buffer) string {
+	if s, ok := i.(fmt.GoStringer); ok {
+		return s.GoString()
+	}
+	if b == nil {
+		b = new(bytes.Buffer)
+	}
+	var v reflect.Value
+	var ok bool
+	if v, ok = i.(reflect.Value); !ok {
+		v = reflect.ValueOf(i)
+	}
+	switch v.Kind() {
+	case reflect.Ptr, reflect.Interface:
+		if v.Kind() == reflect.Ptr {
+			b.WriteByte('&')
+		}
+		layerGoString(v.Elem().Interface(), b)
+	case reflect.Struct:
+		t := v.Type()
+		b.WriteString(t.String())
+		b.WriteByte('{')
+		for i := 0; i < v.NumField(); i += 1 {
+			if i > 0 {
+				b.WriteString(", ")
+			}
+			if t.Field(i).Name == "BaseLayer" {
+				fmt.Fprintf(b, "BaseLayer:%s", baseLayerString(v.Field(i)))
+			} else if v.Field(i).Kind() == reflect.Struct {
+				fmt.Fprintf(b, "%s:", t.Field(i).Name)
+				layerGoString(v.Field(i), b)
+			} else if v.Field(i).Kind() == reflect.Ptr {
+				b.WriteByte('&')
+				layerGoString(v.Field(i), b)
+			} else {
+				fmt.Fprintf(b, "%s:%#v", t.Field(i).Name, v.Field(i))
+			}
+		}
+		b.WriteByte('}')
+	default:
+		fmt.Fprintf(b, "%#v", i)
+	}
+	return b.String()
 }
 
 func (p *packet) packetString() string {
