@@ -38,9 +38,7 @@ func createIPv6ChecksumTestLayer() (ip6 *IPv6) {
 }
 
 func createIPv6DestinationChecksumTestLayer() (dst *IPv6Destination) {
-	tlv := &IPv6DestinationOption{}
-	tlv.OptionType = 0x01 //PadN
-	tlv.OptionData = []byte{0x00, 0x00, 0x00, 0x00}
+	tlv := IPv6HeaderTLVOptionPad(6)
 	dst = &IPv6Destination{}
 	dst.Options = append(dst.Options, tlv)
 	dst.NextHeader = IPProtocolNoNextHeader

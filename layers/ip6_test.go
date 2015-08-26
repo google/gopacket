@@ -41,23 +41,34 @@ func TestSerializeIPv6HeaderTLVOptions(t *testing.T) {
 	   | PadN Option=1 |Opt Data Len=2 |       0       |       0       |
 	   +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
 	*/
-	opt1 := &ipv6HeaderTLVOption{}
-	opt1.OptionType = 0x1E
-	opt1.OptionData = []byte{0xaa, 0xaa, 0xaa, 0xaa, 0xbb, 0xbb, 0xbb, 0xbb, 0xbb, 0xbb, 0xbb, 0xbb}
-	opt1.OptionAlignment = [2]uint8{8, 2}
+	opt1 := &IPv6HeaderTLVOptionUnknown{}
+	opt1.Type = 0x1e
+	opt1.Value = []byte{0xaa, 0xaa, 0xaa, 0xaa, 0xbb, 0xbb, 0xbb, 0xbb, 0xbb, 0xbb, 0xbb, 0xbb}
+	opt1.Alignment = [2]uint8{8, 2}
 
-	opt2 := &ipv6HeaderTLVOption{}
-	opt2.OptionType = 0x3E
-	opt2.OptionData = []byte{0x11, 0x22, 0x22, 0x44, 0x44, 0x44, 0x44}
-	opt2.OptionAlignment = [2]uint8{4, 3}
+	opt2 := &IPv6HeaderTLVOptionUnknown{}
+	opt2.Type = 0x3e
+	opt2.Value = []byte{0x11, 0x22, 0x22, 0x44, 0x44, 0x44, 0x44}
+	opt2.Alignment = [2]uint8{4, 3}
 
-	l := serializeIPv6HeaderTLVOptions(nil, []*ipv6HeaderTLVOption{opt1, opt2}, true, true)
-	b := make([]byte, l)
-	serializeIPv6HeaderTLVOptions(b, []*ipv6HeaderTLVOption{opt1, opt2}, true, false)
-	got := b
-	want := []byte{0x1E, 0x0C, 0xaa, 0xaa, 0xaa, 0xaa, 0xbb, 0xbb, 0xbb, 0xbb, 0xbb, 0xbb, 0xbb, 0xbb, 0x01, 0x01, 0x00, 0x3E, 0x07, 0x11, 0x22, 0x22, 0x44, 0x44, 0x44, 0x44, 0x01, 0x02, 0x00, 0x00}
+	// Check that Align(Align(X)) == Align(X)
+	hopopt1 := []IPv6HeaderTLVOption{opt1, opt2}
+	IPv6AlignHeaderTLVOptions(&hopopt1)
+	hopopt2 := []IPv6HeaderTLVOption{}
+	for i := range hopopt1 {
+		hopopt2 = append(hopopt2, hopopt1[i])
+	}
+	IPv6AlignHeaderTLVOptions(&hopopt2)
+	if !reflect.DeepEqual(hopopt1, hopopt2) {
+		t.Errorf("Align(Align(X)) != Align(X):\n%#v != %#v\n\n", hopopt1, hopopt2)
+	}
 
-	if !reflect.DeepEqual(got, want) {
+	buf := gopacket.NewSerializeBuffer()
+	serializeIPv6HeaderTLVOptions(buf, []IPv6HeaderTLVOption{opt1, opt2}, true)
+	got := buf.Bytes()
+	want := []byte{0x1e, 0x0c, 0xaa, 0xaa, 0xaa, 0xaa, 0xbb, 0xbb, 0xbb, 0xbb, 0xbb, 0xbb, 0xbb, 0xbb, 0x01, 0x01, 0x00, 0x3e, 0x07, 0x11, 0x22, 0x22, 0x44, 0x44, 0x44, 0x44, 0x01, 0x02, 0x00, 0x00}
+
+	if !bytes.Equal(got, want) {
 		t.Errorf("IPv6HeaderTLVOption serialize (X,Y) failed:\ngot:\n%#v\n\nwant:\n%#v\n\n", got, want)
 	}
 
@@ -81,14 +92,13 @@ func TestSerializeIPv6HeaderTLVOptions(t *testing.T) {
 	   +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
 	*/
 
-	l = serializeIPv6HeaderTLVOptions(nil, []*ipv6HeaderTLVOption{opt2, opt1}, true, true)
-	b = make([]byte, l)
-	serializeIPv6HeaderTLVOptions(b, []*ipv6HeaderTLVOption{opt2, opt1}, true, false)
-	got = b
-	want = []byte{0x00, 0x3E, 0x07, 0x11, 0x22, 0x22, 0x44, 0x44, 0x44, 0x44, 0x01, 0x04, 0x00, 0x00, 0x00, 0x00, 0x1E, 0x0C, 0xaa, 0xaa, 0xaa, 0xaa, 0xbb, 0xbb, 0xbb, 0xbb, 0xbb, 0xbb, 0xbb, 0xbb}
+	buf.Clear()
+	serializeIPv6HeaderTLVOptions(buf, []IPv6HeaderTLVOption{opt2, opt1}, true)
+	got = buf.Bytes()
+	want = []byte{0x00, 0x3e, 0x07, 0x11, 0x22, 0x22, 0x44, 0x44, 0x44, 0x44, 0x01, 0x04, 0x00, 0x00, 0x00, 0x00, 0x1e, 0x0c, 0xaa, 0xaa, 0xaa, 0xaa, 0xbb, 0xbb, 0xbb, 0xbb, 0xbb, 0xbb, 0xbb, 0xbb}
 
-	if !reflect.DeepEqual(got, want) {
-		t.Errorf("IPv6HeaderTLVOption serialize (Y, X) failed:\ngot:\n%#v\n\nwant:\n%#v\n\n", got, want)
+	if !bytes.Equal(got, want) {
+		t.Errorf("IPv6HeaderTLVOption serialize (Y,X) failed:\ngot:\n%#v\n\nwant:\n%#v\n\n", got, want)
 	}
 }
 
@@ -110,9 +120,7 @@ func TestPacketIPv6HopByHop0Serialize(t *testing.T) {
 	ip6.DstIP = net.ParseIP("2001:db8::2")
 	serialize = append(serialize, ip6)
 
-	tlv := &IPv6HopByHopOption{}
-	tlv.OptionType = 0x01 //PadN
-	tlv.OptionData = []byte{0x00, 0x00, 0x00, 0x00}
+	tlv := IPv6HeaderTLVOptionPad(6)
 	hop := &IPv6HopByHop{}
 	hop.Options = append(hop.Options, tlv)
 	hop.NextHeader = IPProtocolNoNextHeader
@@ -127,7 +135,7 @@ func TestPacketIPv6HopByHop0Serialize(t *testing.T) {
 
 	got := buf.Bytes()
 	want := testPacketIPv6HopByHop0
-	if !reflect.DeepEqual(got, want) {
+	if !bytes.Equal(got, want) {
 		t.Errorf("IPv6HopByHop serialize failed:\ngot:\n%#v\n\nwant:\n%#v\n\n", got, want)
 	}
 }
@@ -165,12 +173,7 @@ func TestPacketIPv6HopByHop0Decode(t *testing.T) {
 		HeaderLength: uint8(0),
 		ActualLength: 8,
 	}
-	opt := &IPv6HopByHopOption{
-		OptionType:   uint8(0x01),
-		OptionLength: uint8(0x04),
-		ActualLength: 6,
-		OptionData:   []byte{0x00, 0x00, 0x00, 0x00},
-	}
+	opt := IPv6HeaderTLVOptionPad(6)
 	hop.Options = append(hop.Options, opt)
 	ip6.HopByHop = hop
 
@@ -221,9 +224,7 @@ func TestPacketIPv6Destination0Serialize(t *testing.T) {
 	ip6.DstIP = net.ParseIP("2001:db8::2")
 	serialize = append(serialize, ip6)
 
-	tlv := &IPv6DestinationOption{}
-	tlv.OptionType = 0x01 //PadN
-	tlv.OptionData = []byte{0x00, 0x00, 0x00, 0x00}
+	tlv := IPv6HeaderTLVOptionPad(6)
 	dst := &IPv6Destination{}
 	dst.Options = append(dst.Options, tlv)
 	dst.NextHeader = IPProtocolNoNextHeader
@@ -284,12 +285,7 @@ func TestPacketIPv6Destination0Decode(t *testing.T) {
 		want.NextHeader = IPProtocolNoNextHeader
 		want.HeaderLength = uint8(0)
 		want.ActualLength = 8
-		opt := &IPv6DestinationOption{
-			OptionType:   uint8(0x01),
-			OptionLength: uint8(0x04),
-			ActualLength: 6,
-			OptionData:   []byte{0x00, 0x00, 0x00, 0x00},
-		}
+		opt := IPv6HeaderTLVOptionPad(6)
 		want.Options = append(want.Options, opt)
 		if !reflect.DeepEqual(got, want) {
 			t.Errorf("IPv6Destination packet processing failed:\ngot  :\n%#v\n\nwant :\n%#v\n\n", got, want)
@@ -381,11 +377,7 @@ func TestIPv6JumbogramDecode(t *testing.T) {
 	hop.NextHeader = IPProtocolNoNextHeader
 	hop.HeaderLength = uint8(0)
 	hop.ActualLength = 8
-	opt := &IPv6HopByHopOption{}
-	opt.OptionType = uint8(0xc2)
-	opt.OptionLength = uint8(0x04)
-	opt.ActualLength = 6
-	opt.OptionData = []byte{0x00, 0x01, 0x00, 0x08}
+	opt := IPv6HeaderTLVOptionJumbo(len(hop.Contents) + ipv6MaxPayloadLength + 1)
 	hop.Options = append(hop.Options, opt)
 	ip6.HopByHop = hop
 
