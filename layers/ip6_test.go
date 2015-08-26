@@ -58,7 +58,7 @@ func TestSerializeIPv6HeaderTLVOptions(t *testing.T) {
 	got := b
 	want := []byte{0x1e, 0x0c, 0xaa, 0xaa, 0xaa, 0xaa, 0xbb, 0xbb, 0xbb, 0xbb, 0xbb, 0xbb, 0xbb, 0xbb, 0x01, 0x01, 0x00, 0x3e, 0x07, 0x11, 0x22, 0x22, 0x44, 0x44, 0x44, 0x44, 0x01, 0x02, 0x00, 0x00}
 
-	if !reflect.DeepEqual(got, want) {
+	if !bytes.Equal(got, want) {
 		t.Errorf("IPv6HeaderTLVOption serialize (X,Y) failed:\ngot:\n%#v\n\nwant:\n%#v\n\n", got, want)
 	}
 
@@ -88,7 +88,7 @@ func TestSerializeIPv6HeaderTLVOptions(t *testing.T) {
 	got = b
 	want = []byte{0x00, 0x3e, 0x07, 0x11, 0x22, 0x22, 0x44, 0x44, 0x44, 0x44, 0x01, 0x04, 0x00, 0x00, 0x00, 0x00, 0x1e, 0x0c, 0xaa, 0xaa, 0xaa, 0xaa, 0xbb, 0xbb, 0xbb, 0xbb, 0xbb, 0xbb, 0xbb, 0xbb}
 
-	if !reflect.DeepEqual(got, want) {
+	if !bytes.Equal(got, want) {
 		t.Errorf("IPv6HeaderTLVOption serialize (Y, X) failed:\ngot:\n%#v\n\nwant:\n%#v\n\n", got, want)
 	}
 }
@@ -128,7 +128,7 @@ func TestPacketIPv6HopByHop0Serialize(t *testing.T) {
 
 	got := buf.Bytes()
 	want := testPacketIPv6HopByHop0
-	if !reflect.DeepEqual(got, want) {
+	if !bytes.Equal(got, want) {
 		t.Errorf("IPv6HopByHop serialize failed:\ngot:\n%#v\n\nwant:\n%#v\n\n", got, want)
 	}
 }
@@ -239,7 +239,7 @@ func TestPacketIPv6Destination0Serialize(t *testing.T) {
 
 	got := buf.Bytes()
 	want := testPacketIPv6Destination0
-	if !reflect.DeepEqual(got, want) {
+	if !bytes.Equal(got, want) {
 		t.Errorf("IPv6Destination serialize failed:\ngot:\n%#v\n\nwant:\n%#v\n\n", got, want)
 	}
 }
