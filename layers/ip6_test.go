@@ -8,7 +8,6 @@ package layers
 
 import (
 	"bytes"
-	"fmt"
 	"github.com/google/gopacket"
 	"net"
 	"reflect"
@@ -300,14 +299,6 @@ func TestPacketIPv6Destination0Decode(t *testing.T) {
 	}
 }
 
-func jumboSerializeString(buf []byte, off int, siz int) string {
-	s1 := fmt.Sprintf("%#v", buf[:off+siz])
-	s1 = s1[7 : len(s1)-1]
-	s2 := fmt.Sprintf("%#v", buf[len(buf)-siz:])
-	s2 = s2[7 : len(s2)-1]
-	return fmt.Sprintf("[]byte{%s ... %s (%d bytes)}", s1, s2, len(buf))
-}
-
 var testPacketIPv6JumbogramHeader = []byte{
 	0x60, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x40, 0x20, 0x01, 0x0d, 0xb8, 0x00, 0x00, 0x00, 0x00,
 	0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x01, 0x20, 0x01, 0x0d, 0xb8, 0x00, 0x00, 0x00, 0x00,
@@ -346,8 +337,8 @@ func TestIPv6JumbogramSerialize(t *testing.T) {
 	want := w.Bytes()
 
 	if !bytes.Equal(got, want) {
-		t.Errorf("IPv6 Jumbogram serialize failed:\n\nwant: %s\n\ngot: %s\n\n",
-			jumboSerializeString(want, 40, 32), jumboSerializeString(got, 40, 32))
+		t.Errorf("IPv6 Jumbogram serialize failed:\ngot:\n%v\n\nwant:\n%v\n\n",
+			gopacket.LongBytesGoString(got), gopacket.LongBytesGoString(want))
 	}
 
 }
@@ -413,7 +404,7 @@ func TestIPv6JumbogramDecode(t *testing.T) {
 		want.HopByHop = got.HopByHop // Hack, avoid comparing pointers
 		if !reflect.DeepEqual(got, want) {
 			t.Errorf("IPv6 packet processing failed:\ngot:\n%v\n\nwant:\n%v\n\n",
-				gopacket.LayerString(got), gopacket.LayerString(want))
+				gopacket.LayerGoString(got), gopacket.LayerGoString(want))
 		}
 	} else {
 		t.Error("No IPv6 layer type found in packet")
@@ -423,18 +414,17 @@ func TestIPv6JumbogramDecode(t *testing.T) {
 		want := hop
 		if !reflect.DeepEqual(got, want) {
 			t.Errorf("IPv6HopByHop packet processing failed:\ngot:\n%v\n\nwant:\n%v\n\n",
-				gopacket.LayerString(got), gopacket.LayerString(want))
+				gopacket.LayerGoString(got), gopacket.LayerGoString(want))
 		}
 	} else {
 		t.Error("No IPv6HopByHop layer type found in packet")
 	}
 
 	if got, ok := p.Layer(gopacket.LayerTypePayload).(*gopacket.Payload); ok {
-		got := got.LayerContents()
-		want := payload
-		if !bytes.Equal(got, want) {
+		want := (*gopacket.Payload)(&payload)
+		if !reflect.DeepEqual(got, want) {
 			t.Errorf("Payload packet processing failed:\ngot:\n%v\n\nwant:\n%v\n\n",
-				jumboSerializeString(got, 0, 32), jumboSerializeString(want, 0, 32))
+				gopacket.LayerGoString(got), gopacket.LayerGoString(want))
 		}
 	} else {
 		t.Error("No Payload layer type found in packet")

@@ -38,6 +38,7 @@ func (p Payload) LayerContents() []byte    { return []byte(p) }
 func (p Payload) LayerPayload() []byte     { return nil }
 func (p Payload) Payload() []byte          { return []byte(p) }
 func (p Payload) String() string           { return fmt.Sprintf("%d byte(s)", len(p)) }
+func (p Payload) GoString() string         { return LongBytesGoString([]byte(p)) }
 func (p Payload) CanDecode() LayerClass    { return LayerTypePayload }
 func (p Payload) NextLayerType() LayerType { return LayerTypeZero }
 func (p *Payload) DecodeFromBytes(data []byte, df DecodeFeedback) error {
