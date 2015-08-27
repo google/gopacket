@@ -10,7 +10,7 @@ import (
 	"github.com/google/gopacket"
 )
 
-// BaseLayer is a convenience struct which implements the LayerData and
+// BaseLayer is a convenience struct which implements the LayerContents and
 // LayerPayload functions of the Layer interface.
 type BaseLayer struct {
 	// Contents is the set of bytes that make up this layer.  IE: for an
