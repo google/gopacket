@@ -112,6 +112,7 @@ func NewBPFSniffer(iface string, options *Options) (*BPFSniffer, error) {
 			return nil, err
 		}
 	}
+	//fmt.Printf("ReadBufLen= %v\n", sniffer.options.ReadBufLen)
 	sniffer.readBuffer = make([]byte, sniffer.options.ReadBufLen)
 
 	err = syscall.SetBpfInterface(sniffer.fd, sniffer.sniffDeviceName)
@@ -137,27 +138,6 @@ func NewBPFSniffer(iface string, options *Options) (*BPFSniffer, error) {
 		}
 	}
 
-        filDrop, err:= BpfFilDrop(sniffer.fd)
-        if err != nil {
-		return nil, err
-        }
-        fmt.Println("filDrop= ", filDrop)
-
-	// syscall.BIOCSFILDROP: append definition of SetBpfFilDrop() to 
-	//  https://github.com/golang/go/blob/master/src/syscall/bpf_bsd.go
-	// temporarily use locally defined setBpfFilDrop()
-	//err = syscall.SetBpfFilDrop(sniffer.fd, enable)
-	err = setBpfFilDrop(sniffer.fd, enable)
-	if err != nil {
-		return nil, err
-	}
-
-        filDrop, err= BpfFilDrop(sniffer.fd)
-        if err != nil {
-		return nil, err
-        }
-        fmt.Println("filDrop= ", filDrop)
-
 	if sniffer.options.PreserveLinkAddr {
 		// preserves the link level source address...
 		// higher level protocol analyzers will not need this
@@ -173,6 +153,13 @@ func NewBPFSniffer(iface string, options *Options) (*BPFSniffer, error) {
 		if err != nil {
 			return nil, err
 		}
+	}
+
+	// Flushes the buffer of incoming packets and resets the statistics
+	err = syscall.FlushBpf(sniffer.fd)
+	if err != nil {
+		//log.Fatal("unable to flush filter")
+		return nil, err
 	}
 
 	return &sniffer, nil
@@ -199,26 +186,38 @@ func (b *BPFSniffer) ReadPacketData() ([]byte, gopacket.CaptureInfo, error) {
 	if b.readBytesConsumed >= b.lastReadLen {
 		b.readBytesConsumed = 0
 		b.readBuffer = make([]byte, b.options.ReadBufLen)
-		for b.lastReadLen= 0; b.lastReadLen ==0; {	// skip empty frames, e.g. EOF returned by OpenBSD
-			b.lastReadLen, err = syscall.Read(b.fd, b.readBuffer);
+		// OpenBSD's read(4) returns empty frames, e.g. EOF after timeouts, etc.
+		for b.lastReadLen = 0; b.lastReadLen == 0; {
+			b.lastReadLen, err = syscall.Read(b.fd, b.readBuffer)
 			if err != nil {
 				b.lastReadLen = 0
+				//fmt.Print("e")
 				return nil, gopacket.CaptureInfo{}, err
 			}
-			if b.lastReadLen ==0 {
-				fmt.Print(".")
-			}
+			//if b.lastReadLen ==0 {
+			//	fmt.Print(".")
+			//}
 		}
 	}
 	hdr := (*unix.BpfHdr)(unsafe.Pointer(&b.readBuffer[b.readBytesConsumed]))
 	frameStart := b.readBytesConsumed + int(hdr.Hdrlen)
 	b.readBytesConsumed += bpfWordAlign(int(hdr.Hdrlen) + int(hdr.Caplen))
 	rawFrame := b.readBuffer[frameStart : frameStart+int(hdr.Caplen)]
+
 	captureInfo := gopacket.CaptureInfo{
-		Timestamp:     time.Unix(int64(hdr.Tstamp.Sec), int64(hdr.Tstamp.Usec)*1000),
-		CaptureLength: len(rawFrame),
-		Length:        len(rawFrame),
+		// time the packet was captured, if that is known.
+		Timestamp: time.Unix(int64(hdr.Tstamp.Sec), int64(hdr.Tstamp.Usec)*1000),
+		// total number of bytes read off of the wire
+		CaptureLength: int(hdr.Caplen),
+		// size of the original packet, should be >=CaptureLength
+		Length: int(hdr.Datalen),
 	}
+	if captureInfo.Length < captureInfo.CaptureLength {
+		//fmt.Print("<")
+		return nil, gopacket.CaptureInfo{}, err
+	}
+	//fmt.Printf("hdr= %#v\n", hdr)
+	//fmt.Printf("captureInfo= %#v\n", captureInfo)
 	return rawFrame, captureInfo, nil
 }
 
@@ -227,31 +226,57 @@ func (b *BPFSniffer) GetReadBufLen() int {
 	return b.options.ReadBufLen
 }
 
-// Fd returns the BPF file descriptor, as required by SetBPF() to set filter program, etc.
-// from golang/go/src/syscall/bpf_bsd.go )
-func (b *BPFSniffer) Fd() int {
-        return b.fd
+// SetBpfReadFilterProgram sets up BPF read filter program.
+func (b *BPFSniffer) SetBpfReadFilterProgram(fp []syscall.BpfInsn) error {
+	err := syscall.SetBpf(b.fd, fp)
+	if err != nil {
+		//log.Fatal("unable to set filter program")
+		return err
+	}
+	err = setBpfFilDrop(b.fd, 1)
+	if err != nil {
+		return err
+	}
+	return nil
 }
+
+// CompileBpfExpression compiles filter expression to filter program.
+func (b *BPFSniffer) CompileBpfExpression(fs string) ([]syscall.BpfInsn, error) {
+	panic(fmt.Sprintf("bsdbpf.CompileBpfExpression() not yet implemented")) // XXX
+	return []syscall.BpfInsn{}, nil
+}
+
+// SetBpfReadFilter sets up BPF read filter expression.
+func (b *BPFSniffer) SetBpfReadFilter(fs string) error {
+	fp, err := b.CompileBpfExpression(fs)
+	if err != nil {
+		return err
+	}
+	err = b.SetBpfReadFilterProgram(fp)
+	return err
+}
+
+// XXX move stuff below to
+//  https://github.com/golang/go/blob/master/src/syscall/bpf_bsd.go
 
 /*
 func BpfFilDrop(fd int) (int, error) {
 	var f int
-	_, _, err := Syscall(SYS_IOCTL, uintptr(fd), BIOCSFILDROP, uintptr(unsafe.Pointer(&f)))
+	_, _, err := Syscall(SYS_IOCTL, uintptr(fd), BIOCGFILDROP, uintptr(unsafe.Pointer(&f)))
 	if err != 0 {
 		return 0, Errno(err)
 	}
 	return &f, nil
 }
 */
-func BpfFilDrop(fd int) (int, error) {
-        var f int
-        _, _, err := syscall.Syscall(syscall.SYS_IOCTL, uintptr(fd), syscall.BIOCSFILDROP, uintptr(unsafe.Pointer(&f)))
-        if err != 0 {
-                return 0, syscall.Errno(err)
-        }
-        return f, nil
+func bpfFilDrop(fd int) (int, error) {
+	var f int
+	_, _, err := syscall.Syscall(syscall.SYS_IOCTL, uintptr(fd), syscall.BIOCGFILDROP, uintptr(unsafe.Pointer(&f)))
+	if err != 0 {
+		return 0, syscall.Errno(err)
+	}
+	return f, nil
 }
-
 
 /*
 func SetBpfFilDrop(fd, f int) error {
@@ -269,4 +294,3 @@ func setBpfFilDrop(fd, f int) error {
 	}
 	return nil
 }
-
