@@ -41,6 +41,7 @@ func TestSerializeIPv6HeaderTLVOptions(t *testing.T) {
 	   | PadN Option=1 |Opt Data Len=2 |       0       |       0       |
 	   +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
 	*/
+
 	opt1 := &IPv6HeaderTLVOptionUnknown{}
 	opt1.Type = 0x1e
 	opt1.Value = []byte{0xaa, 0xaa, 0xaa, 0xaa, 0xbb, 0xbb, 0xbb, 0xbb, 0xbb, 0xbb, 0xbb, 0xbb}
@@ -186,7 +187,7 @@ func TestPacketIPv6HopByHop0Decode(t *testing.T) {
 		want := ip6
 		want.HopByHop = got.HopByHop // avoid comparing pointers
 		if !reflect.DeepEqual(got, want) {
-			t.Errorf("IPv6 packet processing failed:\ngot  :\n%#v\n\nwant :\n%#v\n\n", got, want)
+			t.Errorf("IPv6 packet processing failed:\ngot:\n%#v\n\nwant:\n%#v\n\n", got, want)
 		}
 	} else {
 		t.Error("No IPv6 layer type found in packet")
@@ -194,7 +195,7 @@ func TestPacketIPv6HopByHop0Decode(t *testing.T) {
 	if got, ok := p.Layer(LayerTypeIPv6HopByHop).(*IPv6HopByHop); ok {
 		want := hop
 		if !reflect.DeepEqual(got, want) {
-			t.Errorf("IPv6HopByHop packet processing failed:\ngot  :\n%#v\n\nwant :\n%#v\n\n", got, want)
+			t.Errorf("IPv6HopByHop packet processing failed:\ngot\n%#v\n\nwant:\n%#v\n\n", got, want)
 		}
 	} else {
 		t.Error("No IPv6HopByHop layer type found in packet")
@@ -239,7 +240,7 @@ func TestPacketIPv6Destination0Serialize(t *testing.T) {
 
 	got := buf.Bytes()
 	want := testPacketIPv6Destination0
-	if !reflect.DeepEqual(got, want) {
+	if !bytes.Equal(got, want) {
 		t.Errorf("IPv6Destination serialize failed:\ngot:\n%#v\n\nwant:\n%#v\n\n", got, want)
 	}
 }
@@ -271,7 +272,7 @@ func TestPacketIPv6Destination0Decode(t *testing.T) {
 				0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02},
 		}
 		if !reflect.DeepEqual(got, want) {
-			t.Errorf("IPv6 packet processing failed:\ngot  :\n%#v\n\nwant :\n%#v\n\n", got, want)
+			t.Errorf("IPv6 packet processing failed:\ngot:\n%#v\n\nwant:\n%#v\n\n", got, want)
 		}
 	} else {
 		t.Error("No IPv6 layer type found in packet")
@@ -288,7 +289,7 @@ func TestPacketIPv6Destination0Decode(t *testing.T) {
 		opt := IPv6HeaderTLVOptionPad(6)
 		want.Options = append(want.Options, opt)
 		if !reflect.DeepEqual(got, want) {
-			t.Errorf("IPv6Destination packet processing failed:\ngot  :\n%#v\n\nwant :\n%#v\n\n", got, want)
+			t.Errorf("IPv6Destination packet processing failed:\ngot:\n%#v\n\nwant:\n%#v\n\n", got, want)
 		}
 	} else {
 		t.Error("No IPv6Destination layer type found in packet")
