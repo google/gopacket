@@ -1,8 +1,5 @@
 // +build darwin dragonfly freebsd linux netbsd openbsd solaris
 
-// from
-//  /home/rs/go/src/github.com/google/gopacket/examples/httpassembly/main.go
-
 // Copyright 2012 Google, Inc. All rights reserved.
 //
 // Use of this source code is governed by a BSD-style license
@@ -24,14 +21,12 @@ import (
 	"time"
 
 	"github.com/google/gopacket"
-	//"github.com/hb9cwp/gopacket"
 	"github.com/google/gopacket/examples/util"
 	"github.com/google/gopacket/layers"
 	//"github.com/google/gopacket/pcap"
-	//"github.com/google/gopacket/bsdbpf"
+	"github.com/google/gopacket/bsdbpf"
 	"github.com/google/gopacket/tcpassembly"
 	"github.com/google/gopacket/tcpassembly/tcpreader"
-	"github.com/hb9cwp/gopacket/bsdbpf"
 )
 
 var iface = flag.String("i", "alc0", "Interface to get packets from")
@@ -40,18 +35,6 @@ var fname = flag.String("r", "", "Filename to read from, overrides -i")
 //var snaplen = flag.Int("s", 1600, "SnapLen for pcap packet capture")
 //var filter = flag.String("f", "tcp and dst port 80", "BPF filter for pcap")
 var logAllPackets = flag.Bool("v", false, "Logs every packet in great detail")
-
-/*
-var bpfARPFilterProg = []syscall.BpfInsn{
-	// make sure this is an arp packet
-	*syscall.BpfStmt(syscall.BPF_LD+syscall.BPF_H+syscall.BPF_ABS, 12),
-	*syscall.BpfJump(syscall.BPF_JMP+syscall.BPF_JEQ+syscall.BPF_K, 0x0806, 0, 1),
-	// if we passed all the tests, ask for the whole packet.
-	*syscall.BpfStmt(syscall.BPF_RET+syscall.BPF_K, -1),
-	// otherwise, drop it.
-	*syscall.BpfStmt(syscall.BPF_RET+syscall.BPF_K, 0),
-}
-*/
 
 /*  BPF filter expressions for TCP from OpenBSD man bpf() page (at the very bottom of the man page)
  http://www.openbsd.org/cgi-bin/man.cgi/OpenBSD-current/man4/bpf.4?query=bpf
@@ -77,7 +60,7 @@ struct bpf_insn insns[] = {
 }
 */
 
-// tcp and dst port 80
+// BPF filter expression for HTTP over IPv4/IPv6: tcp and dst port 80
 var bpfHTTPFilterProg = []syscall.BpfInsn{
 	// if EtherType is IPv4 (at offset (2*6), with VLAN tag (2*6+4))
 	*syscall.BpfStmt(syscall.BPF_LD+syscall.BPF_H+syscall.BPF_ABS, 12),
