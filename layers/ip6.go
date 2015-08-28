@@ -435,6 +435,8 @@ func decodeIPv6HopByHop(data []byte, p gopacket.PacketBuilder) error {
 		} else if jmb == nil && ip6.Length == 0 {
 			return fmt.Errorf("IPv6 length 0, but HopByHop header does not have jumbogram option")
 		}
+	} else {
+		p.AddWarning(fmt.Errorf("Packet has IPv6HopByHop but network layer is %s, not IPv6", l))
 	}
 	return p.NextDecoder(i.NextHeader)
 }

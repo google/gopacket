@@ -40,6 +40,9 @@ type PacketMetadata struct {
 	// This is also set automatically for packets captured off the wire if
 	// CaptureInfo.CaptureLength < CaptureInfo.Length.
 	Truncated bool
+	// Warning list any conditions that are unexpected while not
+	// preventing full layer decoding
+	Warnings []error
 }
 
 // Packet is the primary object used by gopacket.  Packets are created by a
@@ -124,6 +127,13 @@ type packet struct {
 
 func (p *packet) SetTruncated() {
 	p.metadata.Truncated = true
+}
+
+func (p *packet) AddWarning(err error) {
+	if p.metadata.Warnings == nil {
+		p.metadata.Warnings = make([]error, 0, 4)
+	}
+	p.metadata.Warnings = append(p.metadata.Warnings, err)
 }
 
 func (p *packet) SetLinkLayer(l LinkLayer) {

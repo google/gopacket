@@ -16,11 +16,15 @@ type DecodeFeedback interface {
 	// is shorter than internal layer variables (HeaderLength, or the like) say it
 	// should be.  It sets packet.Metadata().Truncated.
 	SetTruncated()
+	//AddWarning appends an warning to the list
+	AddWarning(error)
 }
 
 type nilDecodeFeedback struct{}
 
 func (nilDecodeFeedback) SetTruncated() {}
+
+func (nilDecodeFeedback) AddWarning(error) {}
 
 // NilDecodeFeedback implements DecodeFeedback by doing nothing.
 var NilDecodeFeedback DecodeFeedback = nilDecodeFeedback{}
