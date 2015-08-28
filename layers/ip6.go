@@ -22,6 +22,47 @@ const (
 	ipv6MaxPayloadLength = 65535
 )
 
+// https://www.iana.org/assignments/ipv6-parameters/ipv6-parameters.xhtml
+type IPv6RoutingType uint8
+
+const (
+	IPv6RoutingSourceRoute IPv6RoutingType = 0
+)
+
+type IPv6RoutingEnumMetadata struct {
+	DecodeWith gopacket.Decoder
+	Name       string
+	LayerType  gopacket.LayerType
+}
+
+var (
+	IPv6RoutingTypeMetadata map[IPv6RoutingType]*IPv6RoutingEnumMetadata
+)
+
+func (a IPv6RoutingType) Decode(data []byte, p gopacket.PacketBuilder) error {
+	m, ok := IPv6RoutingTypeMetadata[a]
+	if !ok {
+		return fmt.Errorf("Unknown IPv6 routing type %d", a)
+	}
+	return m.DecodeWith.Decode(data, p)
+}
+func (a IPv6RoutingType) String() string {
+	m, ok := IPv6RoutingTypeMetadata[a]
+	if !ok {
+		return fmt.Sprintf("Unknown IPv6RoutingType %d", a)
+	}
+	return m.Name
+}
+func (a IPv6RoutingType) LayerType() gopacket.LayerType {
+	return LayerTypeIPv6Routing
+}
+
+func init() {
+	IPv6RoutingTypeMetadata = make(map[IPv6RoutingType]*IPv6RoutingEnumMetadata)
+
+	IPv6RoutingTypeMetadata[IPv6RoutingSourceRoute] = &IPv6RoutingEnumMetadata{DecodeWith: gopacket.DecodeFunc(decodeIPv6RoutingType0), Name: "IPv6RoutingSourceRoute"}
+}
+
 // IPv6 is the layer for the IPv6 header.
 type IPv6 struct {
 	// http://www.networksorcery.com/enp/protocol/ipv6.htm
@@ -543,28 +584,24 @@ func (i *IPv6RoutingType0) SerializeTo(b gopacket.SerializeBuffer, opts gopacket
 	return nil
 }
 
-func decodeIPv6Routing(data []byte, p gopacket.PacketBuilder) error {
-	i := &ipv6RoutingBase{
+func decodeIPv6RoutingType0(data []byte, p gopacket.PacketBuilder) error {
+	i := &IPv6RoutingType0{ipv6RoutingBase: ipv6RoutingBase{
 		ipv6ExtensionBase: decodeIPv6ExtensionBase(data),
 		RoutingType:       data[2],
 		SegmentsLeft:      data[3],
+	},
 	}
-	switch i.RoutingType {
-	case 0:
-		i := &IPv6RoutingType0{ipv6RoutingBase: *i}
-		i.Reserved = i.Contents[4:8]
-		n := i.HeaderLength / 2
-		if i.ActualLength != int(n)*16+8 {
-			return fmt.Errorf("Invalid IPv6 source routing, length of type 0 packet %d", i.ActualLength)
-		}
-		for d := i.Contents[8:]; len(d) >= 16; d = d[16:] {
-			i.SourceRoutingIPs = append(i.SourceRoutingIPs, net.IP(d[:16]))
-		}
-		// XXX - We should be setting ip6.RoutingDst here
-		p.AddLayer(i)
-		return p.NextDecoder(i.NextHeader)
+	i.Reserved = i.Contents[4:8]
+	n := i.HeaderLength / 2
+	if i.ActualLength != int(n)*16+8 {
+		return fmt.Errorf("Invalid IPv6 source routing, length of type 0 packet %d", i.ActualLength)
 	}
-	return fmt.Errorf("Unknown IPv6 routing type %d", i.RoutingType)
+	for d := i.Contents[8:]; len(d) >= 16; d = d[16:] {
+		i.SourceRoutingIPs = append(i.SourceRoutingIPs, net.IP(d[:16]))
+	}
+	// XXX - We should be setting ip6.RoutingDst here
+	p.AddLayer(i)
+	return p.NextDecoder(i.NextHeader)
 }
 
 func (i *IPv6RoutingType0) SetNetworkLayerForRouting(ip6 *IPv6) error {
@@ -578,6 +615,14 @@ func (i *IPv6RoutingType0) SetNetworkLayerForRouting(ip6 *IPv6) error {
 	}
 	ip6.RoutingDstIP = a
 	return nil
+}
+
+func decodeIPv6Routing(data []byte, p gopacket.PacketBuilder) error {
+	if len(data) < 8 {
+		return fmt.Errorf("IPv6 routing header too short (length %d)", len(data))
+	}
+	t := IPv6RoutingType(data[2])
+	return t.Decode(data, p)
 }
 
 // IPv6Fragment is the IPv6 fragment header, used for packet
