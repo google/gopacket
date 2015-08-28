@@ -139,11 +139,15 @@ func TestIPv6JumbogramUDPChecksum(t *testing.T) {
 
 	ip6 := &IPv6{}
 	ip6.Version = 6
-	ip6.NextHeader = IPProtocolUDP
+	ip6.NextHeader = IPProtocolIPv6HopByHop
 	ip6.HopLimit = 64
 	ip6.SrcIP = net.ParseIP("2001:db8::1")
 	ip6.DstIP = net.ParseIP("2001:db8::2")
 	serialize = append(serialize, ip6)
+
+	hop := &IPv6HopByHop{}
+	hop.NextHeader = IPProtocolUDP
+	serialize = append(serialize, hop)
 
 	udp := &UDP{}
 	udp.SrcPort = UDPPort(12345)

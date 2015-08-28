@@ -125,13 +125,13 @@ func TestPacketIPv6HopByHop0Serialize(t *testing.T) {
 	hop := &IPv6HopByHop{}
 	hop.Options = append(hop.Options, tlv)
 	hop.NextHeader = IPProtocolNoNextHeader
-	ip6.HopByHop = hop
+	serialize = append(serialize, hop)
 
 	buf := gopacket.NewSerializeBuffer()
 	opts := gopacket.SerializeOptions{FixLengths: true}
 	err = gopacket.SerializeLayers(buf, opts, serialize...)
 	if err != nil {
-		t.Fatal(err)
+		t.Fatalf("%s\n\n", err)
 	}
 
 	got := buf.Bytes()
@@ -164,7 +164,7 @@ func TestPacketIPv6HopByHop0Decode(t *testing.T) {
 		DstIP: net.IP{0x20, 0x01, 0x0d, 0xb8, 0x00, 0x00, 0x00, 0x00,
 			0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02},
 	}
-	hop = &ip6.hbh
+	hop = &IPv6HopByHop{}
 	hop.ipv6ExtensionBase = ipv6ExtensionBase{
 		BaseLayer: BaseLayer{
 			Contents: []byte{0x3b, 0x00, 0x01, 0x04, 0x00, 0x00, 0x00, 0x00},
@@ -176,21 +176,19 @@ func TestPacketIPv6HopByHop0Decode(t *testing.T) {
 	}
 	opt := IPv6HeaderTLVOptionPad(6)
 	hop.Options = append(hop.Options, opt)
-	ip6.HopByHop = hop
 
 	p := gopacket.NewPacket(testPacketIPv6HopByHop0, LinkTypeRaw, gopacket.DecodeOptions{SkipDecodeRecovery: true})
 	if p.ErrorLayer() != nil {
-		t.Error("Failed to decode packet:", p.ErrorLayer().Error())
+		t.Errorf("Failed to decode packet: %s\n\n", p.ErrorLayer().Error())
 	}
 	checkLayers(p, []gopacket.LayerType{LayerTypeIPv6, LayerTypeIPv6HopByHop}, t)
 	if got, ok := p.Layer(LayerTypeIPv6).(*IPv6); ok {
 		want := ip6
-		want.HopByHop = got.HopByHop // avoid comparing pointers
 		if !reflect.DeepEqual(got, want) {
 			t.Errorf("IPv6 packet processing failed:\ngot:\n%#v\n\nwant:\n%#v\n\n", got, want)
 		}
 	} else {
-		t.Error("No IPv6 layer type found in packet")
+		t.Errorf("No IPv6 layer type found in packet\n\n")
 	}
 	if got, ok := p.Layer(LayerTypeIPv6HopByHop).(*IPv6HopByHop); ok {
 		want := hop
@@ -198,7 +196,7 @@ func TestPacketIPv6HopByHop0Decode(t *testing.T) {
 			t.Errorf("IPv6HopByHop packet processing failed:\ngot\n%#v\n\nwant:\n%#v\n\n", got, want)
 		}
 	} else {
-		t.Error("No IPv6HopByHop layer type found in packet")
+		t.Errorf("No IPv6HopByHop layer type found in packet\n\n")
 	}
 }
 
@@ -235,7 +233,7 @@ func TestPacketIPv6Destination0Serialize(t *testing.T) {
 	opts := gopacket.SerializeOptions{FixLengths: true, ComputeChecksums: true}
 	err = gopacket.SerializeLayers(buf, opts, serialize...)
 	if err != nil {
-		t.Fatal(err)
+		t.Fatalf("%s\n\n", err)
 	}
 
 	got := buf.Bytes()
@@ -248,7 +246,7 @@ func TestPacketIPv6Destination0Serialize(t *testing.T) {
 func TestPacketIPv6Destination0Decode(t *testing.T) {
 	p := gopacket.NewPacket(testPacketIPv6Destination0, LinkTypeRaw, gopacket.Default)
 	if p.ErrorLayer() != nil {
-		t.Error("Failed to decode packet:", p.ErrorLayer().Error())
+		t.Errorf("Failed to decode packet:%s\n\n", p.ErrorLayer().Error())
 	}
 	checkLayers(p, []gopacket.LayerType{LayerTypeIPv6, LayerTypeIPv6Destination}, t)
 	if got, ok := p.Layer(LayerTypeIPv6).(*IPv6); ok {
@@ -275,7 +273,7 @@ func TestPacketIPv6Destination0Decode(t *testing.T) {
 			t.Errorf("IPv6 packet processing failed:\ngot:\n%#v\n\nwant:\n%#v\n\n", got, want)
 		}
 	} else {
-		t.Error("No IPv6 layer type found in packet")
+		t.Errorf("No IPv6 layer type found in packet\n\n")
 	}
 	if got, ok := p.Layer(LayerTypeIPv6Destination).(*IPv6Destination); ok {
 		want := &IPv6Destination{}
@@ -292,7 +290,7 @@ func TestPacketIPv6Destination0Decode(t *testing.T) {
 			t.Errorf("IPv6Destination packet processing failed:\ngot:\n%#v\n\nwant:\n%#v\n\n", got, want)
 		}
 	} else {
-		t.Error("No IPv6Destination layer type found in packet")
+		t.Errorf("No IPv6Destination layer type found in packet\n\n")
 	}
 }
 
@@ -308,11 +306,15 @@ func TestIPv6JumbogramSerialize(t *testing.T) {
 
 	ip6 := &IPv6{}
 	ip6.Version = 6
-	ip6.NextHeader = IPProtocolNoNextHeader
+	ip6.NextHeader = IPProtocolIPv6HopByHop
 	ip6.HopLimit = 64
 	ip6.SrcIP = net.ParseIP("2001:db8::1")
 	ip6.DstIP = net.ParseIP("2001:db8::2")
 	serialize = append(serialize, ip6)
+
+	hop := &IPv6HopByHop{}
+	hop.NextHeader = IPProtocolNoNextHeader
+	serialize = append(serialize, hop)
 
 	payload := make([]byte, ipv6MaxPayloadLength+1)
 	for i := range payload {
@@ -324,7 +326,7 @@ func TestIPv6JumbogramSerialize(t *testing.T) {
 	opts := gopacket.SerializeOptions{FixLengths: true}
 	err = gopacket.SerializeLayers(buf, opts, serialize...)
 	if err != nil {
-		t.Fatal(err)
+		t.Fatalf("%s\n\n", err)
 	}
 
 	got := buf.Bytes()
@@ -372,7 +374,7 @@ func TestIPv6JumbogramDecode(t *testing.T) {
 	buf.Write(payload)
 	ip6.Payload = buf.Bytes()
 
-	hop = &ip6.hbh
+	hop = &IPv6HopByHop{}
 	hop.Contents = []byte{0x3b, 0x00, 0xc2, 0x04, 0x00, 0x01, 0x00, 0x08}
 	hop.Payload = payload
 	hop.NextHeader = IPProtocolNoNextHeader
@@ -380,7 +382,6 @@ func TestIPv6JumbogramDecode(t *testing.T) {
 	hop.ActualLength = 8
 	opt := IPv6HeaderTLVOptionJumbo(len(hop.Contents) + ipv6MaxPayloadLength + 1)
 	hop.Options = append(hop.Options, opt)
-	ip6.HopByHop = hop
 
 	pkt := new(bytes.Buffer)
 	pkt.Write(testPacketIPv6JumbogramHeader)
@@ -388,19 +389,18 @@ func TestIPv6JumbogramDecode(t *testing.T) {
 
 	p := gopacket.NewPacket(pkt.Bytes(), LinkTypeRaw, gopacket.Default)
 	if p.ErrorLayer() != nil {
-		t.Error("Failed to decode packet:", p.ErrorLayer().Error())
+		t.Errorf("Failed to decode packet: %s\n\n", p.ErrorLayer().Error())
 	}
 	checkLayers(p, []gopacket.LayerType{LayerTypeIPv6, LayerTypeIPv6HopByHop, gopacket.LayerTypePayload}, t)
 
 	if got, ok := p.Layer(LayerTypeIPv6).(*IPv6); ok {
 		want := ip6
-		want.HopByHop = got.HopByHop // Hack, avoid comparing pointers
 		if !reflect.DeepEqual(got, want) {
 			t.Errorf("IPv6 packet processing failed:\ngot:\n%v\n\nwant:\n%v\n\n",
 				gopacket.LayerGoString(got), gopacket.LayerGoString(want))
 		}
 	} else {
-		t.Error("No IPv6 layer type found in packet")
+		t.Errorf("No IPv6 layer type found in packet\n\n")
 	}
 
 	if got, ok := p.Layer(LayerTypeIPv6HopByHop).(*IPv6HopByHop); ok {
@@ -410,7 +410,7 @@ func TestIPv6JumbogramDecode(t *testing.T) {
 				gopacket.LayerGoString(got), gopacket.LayerGoString(want))
 		}
 	} else {
-		t.Error("No IPv6HopByHop layer type found in packet")
+		t.Errorf("No IPv6HopByHop layer type found in packet\n\n")
 	}
 
 	if got, ok := p.Layer(gopacket.LayerTypePayload).(*gopacket.Payload); ok {
@@ -420,6 +420,6 @@ func TestIPv6JumbogramDecode(t *testing.T) {
 				gopacket.LayerGoString(got), gopacket.LayerGoString(want))
 		}
 	} else {
-		t.Error("No Payload layer type found in packet")
+		t.Errorf("No Payload layer type found in packet\n\n")
 	}
 }

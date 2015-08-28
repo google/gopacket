@@ -34,9 +34,6 @@ type IPv6 struct {
 	HopLimit     uint8
 	SrcIP        net.IP
 	DstIP        net.IP
-	HopByHop     *IPv6HopByHop
-	// hbh will be pointed to by HopByHop if that layer exists.
-	hbh IPv6HopByHop
 }
 
 // LayerType returns LayerTypeIPv6
@@ -50,9 +47,6 @@ func (i *IPv6) CanDecode() gopacket.LayerClass {
 	return LayerTypeIPv6
 }
 func (i *IPv6) NextLayerType() gopacket.LayerType {
-	if i.HopByHop != nil {
-		return i.HopByHop.NextHeader.LayerType()
-	}
 	return i.NextHeader.LayerType()
 }
 
@@ -60,77 +54,13 @@ func (i *IPv6) NextLayerType() gopacket.LayerType {
 // SerializationBuffer, implementing gopacket.SerializableLayer.
 // See the docs for gopacket.SerializableLayer for more info.
 func (ip6 *IPv6) SerializeTo(b gopacket.SerializeBuffer, opts gopacket.SerializeOptions) error {
-	var fJumbo bool
-	var fNewHopByHop bool
-	var err error
-	var jmb *IPv6HeaderTLVOptionJumbo
-
 	payload := b.Bytes()
 	pLen := len(payload)
-	if pLen > ipv6MaxPayloadLength {
-		var l int
-		fJumbo = true
-		if opts.FixLengths {
-			// Jumbogram, need HopByHop
-			if ip6.HopByHop == nil {
-				ip6.HopByHop = &IPv6HopByHop{}
-				ip6.HopByHop.NextHeader = ip6.NextHeader
-				ip6.NextHeader = IPProtocolIPv6HopByHop
-				fNewHopByHop = true
-			}
-			// Check if Jumbo option is present
-			for _, t := range ip6.HopByHop.Options {
-				if j, ok := t.(IPv6HeaderTLVOptionJumbo); ok {
-					jmb = &j
-					break
-				}
-			}
-			// If not, insert it
-			if jmb == nil {
-				jmb = new(IPv6HeaderTLVOptionJumbo)
-				ip6.HopByHop.Options = append(ip6.HopByHop.Options, jmb)
-				if !fNewHopByHop {
-					// Needed to get correct length because of possible padding
-					IPv6AlignHeaderTLVOptions(&ip6.HopByHop.Options)
-				}
-			}
-			if fNewHopByHop {
-				l = 8
-			} else {
-				l = 2
-				for _, t := range ip6.HopByHop.Options {
-					l += t.ActualLength()
-				}
-			}
-			*jmb = IPv6HeaderTLVOptionJumbo(pLen + l)
-		} else if ip6.HopByHop == nil {
-			return fmt.Errorf("Cannot fit payload length of %d into IPv6 packet", pLen)
-		} else {
-			for _, t := range ip6.HopByHop.Options {
-				if j, ok := t.(IPv6HeaderTLVOptionJumbo); ok {
-					jmb = &j
-					break
-				}
-			}
-			if jmb == nil {
-				return fmt.Errorf("Missing jumbo length hop-by-hop option")
-			}
-		}
-	}
-	if ip6.HopByHop != nil {
+	if opts.FixLengths && pLen > ipv6MaxPayloadLength {
 		if ip6.NextHeader != IPProtocolIPv6HopByHop {
-			// Just fix it instead of throwing an error
-			ip6.NextHeader = IPProtocolIPv6HopByHop
+			return fmt.Errorf("Cannot fit payload length of %d into IPv6 packet, need Hop-By-Hop", pLen)
 		}
-		err = ip6.HopByHop.SerializeTo(b, opts)
-		if err != nil {
-			return err
-		}
-		payload = b.Bytes()
-		pLen = len(payload)
-	}
-	if !fJumbo && pLen > ipv6MaxPayloadLength {
-		return fmt.Errorf("Cannot fit payload into IPv6 header")
+		pLen = 0
 	}
 	bytes, err := b.PrependBytes(40)
 	if err != nil {
@@ -140,11 +70,7 @@ func (ip6 *IPv6) SerializeTo(b gopacket.SerializeBuffer, opts gopacket.Serialize
 	bytes[1] = (ip6.TrafficClass << 4) | uint8(ip6.FlowLabel>>16)
 	binary.BigEndian.PutUint16(bytes[2:], uint16(ip6.FlowLabel))
 	if opts.FixLengths {
-		if fJumbo {
-			ip6.Length = 0
-		} else {
-			ip6.Length = uint16(pLen)
-		}
+		ip6.Length = uint16(pLen)
 	}
 	binary.BigEndian.PutUint16(bytes[4:], ip6.Length)
 	bytes[6] = byte(ip6.NextHeader)
@@ -166,42 +92,11 @@ func (ip6 *IPv6) DecodeFromBytes(data []byte, df gopacket.DecodeFeedback) error 
 	ip6.HopLimit = data[7]
 	ip6.SrcIP = data[8:24]
 	ip6.DstIP = data[24:40]
-	ip6.HopByHop = nil
 	ip6.BaseLayer = BaseLayer{data[:40], data[40:]}
 
-	// We treat a HopByHop IPv6 option as part of the IPv6 packet, since its
-	// options are crucial for understanding what's actually happening per packet.
-	if ip6.NextHeader == IPProtocolIPv6HopByHop {
-		err := ip6.hbh.DecodeFromBytes(ip6.Payload, df)
-		if err != nil {
-			return err
-		}
-		ip6.HopByHop = &ip6.hbh
-		var jmb *IPv6HeaderTLVOptionJumbo
-		for _, t := range ip6.HopByHop.Options {
-			if j, ok := t.(IPv6HeaderTLVOptionJumbo); ok {
-				jmb = &j
-				break
-			}
-		}
-		if jmb != nil && ip6.Length == 0 {
-			pEnd := int(*jmb)
-			if pEnd > len(ip6.Payload) {
-				df.SetTruncated()
-				pEnd = len(ip6.Payload)
-			}
-			ip6.Payload = ip6.Payload[:pEnd]
-			return nil
-		} else if jmb != nil && ip6.Length != 0 {
-			return fmt.Errorf("IPv6 has jumbo length and IPv6 length is not 0")
-		} else if jmb == nil && ip6.Length == 0 {
-			return fmt.Errorf("IPv6 length 0, but HopByHop header does not have jumbogram option")
-		}
-	}
-
-	if ip6.Length == 0 {
+	if ip6.Length == 0 && ip6.NextHeader != IPProtocolIPv6HopByHop {
 		return fmt.Errorf("IPv6 length 0, but next header is %v, not HopByHop", ip6.NextHeader)
-	} else {
+	} else if ip6.Length != 0 {
 		pEnd := int(ip6.Length)
 		if pEnd > len(ip6.Payload) {
 			df.SetTruncated()
@@ -217,14 +112,8 @@ func decodeIPv6(data []byte, p gopacket.PacketBuilder) error {
 	err := ip6.DecodeFromBytes(data, p)
 	p.AddLayer(ip6)
 	p.SetNetworkLayer(ip6)
-	if ip6.HopByHop != nil {
-		p.AddLayer(ip6.HopByHop)
-	}
 	if err != nil {
 		return err
-	}
-	if ip6.HopByHop != nil {
-		return p.NextDecoder(ip6.HopByHop.NextHeader)
 	}
 	return p.NextDecoder(ip6.NextHeader)
 }
@@ -340,6 +229,9 @@ func (o IPv6HeaderTLVOptionJumbo) GoString() string {
 }
 
 func IPv6AlignHeaderTLVOptions(options *[]IPv6HeaderTLVOption) {
+	if len(*options) == 0 {
+		return
+	}
 	oldOpt := *options
 	newOpt := make([]IPv6HeaderTLVOption, 0, len(oldOpt))
 	length := 2
@@ -442,6 +334,45 @@ type IPv6HopByHop struct {
 func (i *IPv6HopByHop) LayerType() gopacket.LayerType { return LayerTypeIPv6HopByHop }
 
 func (i *IPv6HopByHop) SerializeTo(b gopacket.SerializeBuffer, opts gopacket.SerializeOptions) error {
+	payload := b.Bytes()
+	pLen := len(payload)
+	if opts.FixLengths {
+		var l int
+		IPv6AlignHeaderTLVOptions(&i.Options)
+		l = 2
+		for _, t := range i.Options {
+			l += t.ActualLength()
+		}
+		pLen += l
+	}
+	if pLen > ipv6MaxPayloadLength {
+		var jmb *IPv6HeaderTLVOptionJumbo
+		// Check if Jumbo option is present
+		for _, t := range i.Options {
+			if j, ok := t.(IPv6HeaderTLVOptionJumbo); ok {
+				jmb = &j
+				break
+			}
+		}
+		if jmb == nil && !opts.FixLengths {
+			return fmt.Errorf("Missing jumbo length hop-by-hop option")
+		} else if opts.FixLengths {
+			var l int
+			// If not, insert it
+			if jmb == nil {
+				jmb = new(IPv6HeaderTLVOptionJumbo)
+				i.Options = append(i.Options, jmb)
+				IPv6AlignHeaderTLVOptions(&i.Options)
+				l = 2
+				for _, t := range i.Options {
+					l += t.ActualLength()
+				}
+				pLen = len(payload) + l
+			}
+			*jmb = IPv6HeaderTLVOptionJumbo(pLen)
+		}
+	}
+
 	l, err := serializeIPv6HeaderTLVOptions(b, i.Options, opts.FixLengths)
 	if err != nil {
 		return err
@@ -482,6 +413,28 @@ func decodeIPv6HopByHop(data []byte, p gopacket.PacketBuilder) error {
 	p.AddLayer(i)
 	if err != nil {
 		return err
+	}
+	l := p.LastNetworkLayer()
+	if ip6, ok := l.(*IPv6); ok {
+		var jmb *IPv6HeaderTLVOptionJumbo
+		for _, t := range i.Options {
+			if j, ok := t.(IPv6HeaderTLVOptionJumbo); ok {
+				jmb = &j
+				break
+			}
+		}
+		if jmb != nil && ip6.Length == 0 {
+			pEnd := int(*jmb)
+			if pEnd > len(ip6.Payload) {
+				p.SetTruncated()
+				pEnd = len(ip6.Payload)
+			}
+			ip6.Payload = ip6.Payload[:pEnd]
+		} else if jmb != nil && ip6.Length != 0 {
+			return fmt.Errorf("IPv6 has jumbo length and IPv6 length is not 0")
+		} else if jmb == nil && ip6.Length == 0 {
+			return fmt.Errorf("IPv6 length 0, but HopByHop header does not have jumbogram option")
+		}
 	}
 	return p.NextDecoder(i.NextHeader)
 }
