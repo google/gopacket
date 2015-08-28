@@ -154,14 +154,6 @@ func NewBPFSniffer(iface string, options *Options) (*BPFSniffer, error) {
 			return nil, err
 		}
 	}
-
-	// Flushes the buffer of incoming packets and resets the statistics
-	err = syscall.FlushBpf(sniffer.fd)
-	if err != nil {
-		//log.Fatal("unable to flush filter")
-		return nil, err
-	}
-
 	return &sniffer, nil
 }
 
@@ -179,6 +171,11 @@ func (b *BPFSniffer) pickBpfDevice() {
 			break
 		}
 	}
+}
+
+// FlushBpf flushes the buffer of incoming packets and resets the statistics
+func (b *BPFSniffer) FlushBpf() error {
+	return syscall.FlushBpf(b.fd)
 }
 
 func (b *BPFSniffer) ReadPacketData() ([]byte, gopacket.CaptureInfo, error) {
@@ -203,7 +200,6 @@ func (b *BPFSniffer) ReadPacketData() ([]byte, gopacket.CaptureInfo, error) {
 	frameStart := b.readBytesConsumed + int(hdr.Hdrlen)
 	b.readBytesConsumed += bpfWordAlign(int(hdr.Hdrlen) + int(hdr.Caplen))
 	rawFrame := b.readBuffer[frameStart : frameStart+int(hdr.Caplen)]
-
 	captureInfo := gopacket.CaptureInfo{
 		// time the packet was captured, if that is known.
 		Timestamp: time.Unix(int64(hdr.Tstamp.Sec), int64(hdr.Tstamp.Usec)*1000),
@@ -233,7 +229,7 @@ func (b *BPFSniffer) SetBpfReadFilterProgram(fp []syscall.BpfInsn) error {
 		//log.Fatal("unable to set filter program")
 		return err
 	}
-	err = setBpfFilDrop(b.fd, 1)
+	err = b.SetBpfFilDrop(1)
 	if err != nil {
 		return err
 	}
@@ -269,9 +265,9 @@ func BpfFilDrop(fd int) (int, error) {
 	return &f, nil
 }
 */
-func bpfFilDrop(fd int) (int, error) {
+func (b *BPFSniffer) BpfFilDrop() (int, error) {
 	var f int
-	_, _, err := syscall.Syscall(syscall.SYS_IOCTL, uintptr(fd), syscall.BIOCGFILDROP, uintptr(unsafe.Pointer(&f)))
+	_, _, err := syscall.Syscall(syscall.SYS_IOCTL, uintptr(b.fd), syscall.BIOCGFILDROP, uintptr(unsafe.Pointer(&f)))
 	if err != 0 {
 		return 0, syscall.Errno(err)
 	}
@@ -287,8 +283,8 @@ func SetBpfFilDrop(fd, f int) error {
 	return nil
 }
 */
-func setBpfFilDrop(fd, f int) error {
-	_, _, err := syscall.Syscall(syscall.SYS_IOCTL, uintptr(fd), syscall.BIOCSFILDROP, uintptr(unsafe.Pointer(&f)))
+func (b *BPFSniffer) SetBpfFilDrop(f int) error {
+	_, _, err := syscall.Syscall(syscall.SYS_IOCTL, uintptr(b.fd), syscall.BIOCSFILDROP, uintptr(unsafe.Pointer(&f)))
 	if err != 0 {
 		return syscall.Errno(err)
 	}
