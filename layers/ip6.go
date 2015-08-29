@@ -15,28 +15,28 @@ import (
 )
 
 const (
-	IPv6HopByHopOptionJumbogram = 0xC2 // RFC 2675
-)
-
-const (
 	ipv6MaxPayloadLength = 65535
 )
 
 // https://www.iana.org/assignments/ipv6-parameters/ipv6-parameters.xhtml
+type IPv6HeaderTLVOptionType uint8
+
+const (
+	IPv6TLVOptionPad1      IPv6HeaderTLVOptionType = 0x00
+	IPv6TLVOptionPadN      IPv6HeaderTLVOptionType = 0x01
+	IPv6TLVOptionJumbogram IPv6HeaderTLVOptionType = 0xc2
+)
+
+type DecodeIPv6TLVOptionFunc func([]byte, gopacket.DecodeFeedback) (IPv6HeaderTLVOption, error)
+
+type IPv6TLVOptionEnumMetadata struct {
+	DecodeWith DecodeIPv6TLVOptionFunc
+}
+
 type IPv6RoutingType uint8
 
 const (
 	IPv6RoutingSourceRoute IPv6RoutingType = 0
-)
-
-type IPv6RoutingEnumMetadata struct {
-	DecodeWith gopacket.Decoder
-	Name       string
-	LayerType  gopacket.LayerType
-}
-
-var (
-	IPv6RoutingTypeMetadata map[IPv6RoutingType]*IPv6RoutingEnumMetadata
 )
 
 func (a IPv6RoutingType) Decode(data []byte, p gopacket.PacketBuilder) error {
@@ -57,7 +57,24 @@ func (a IPv6RoutingType) LayerType() gopacket.LayerType {
 	return LayerTypeIPv6Routing
 }
 
+type IPv6RoutingEnumMetadata struct {
+	DecodeWith gopacket.Decoder
+	Name       string
+	LayerType  gopacket.LayerType
+}
+
+var (
+	IPv6TLVOptionTypeMetadata map[IPv6HeaderTLVOptionType]*IPv6TLVOptionEnumMetadata
+	IPv6RoutingTypeMetadata   map[IPv6RoutingType]*IPv6RoutingEnumMetadata
+)
+
 func init() {
+	IPv6TLVOptionTypeMetadata = make(map[IPv6HeaderTLVOptionType]*IPv6TLVOptionEnumMetadata)
+
+	IPv6TLVOptionTypeMetadata[IPv6TLVOptionPad1] = &IPv6TLVOptionEnumMetadata{DecodeWith: DecodeIPv6TLVOptionFunc(decodeIPv6HeaderTLVOption)}
+	IPv6TLVOptionTypeMetadata[IPv6TLVOptionPadN] = &IPv6TLVOptionEnumMetadata{DecodeWith: DecodeIPv6TLVOptionFunc(decodeIPv6HeaderTLVOption)}
+	IPv6TLVOptionTypeMetadata[IPv6TLVOptionJumbogram] = &IPv6TLVOptionEnumMetadata{DecodeWith: DecodeIPv6TLVOptionFunc(decodeIPv6HeaderTLVOption)}
+
 	IPv6RoutingTypeMetadata = make(map[IPv6RoutingType]*IPv6RoutingEnumMetadata)
 
 	IPv6RoutingTypeMetadata[IPv6RoutingSourceRoute] = &IPv6RoutingEnumMetadata{DecodeWith: gopacket.DecodeFunc(decodeIPv6RoutingType0), Name: "IPv6RoutingSourceRoute"}
@@ -252,7 +269,7 @@ func (o IPv6HeaderTLVOptionPad) OptionAlignment() [2]uint8 { return [2]uint8{0, 
 
 type IPv6HeaderTLVOptionJumbo uint32
 
-func (o IPv6HeaderTLVOptionJumbo) OptionType() uint8 { return IPv6HopByHopOptionJumbogram }
+func (o IPv6HeaderTLVOptionJumbo) OptionType() uint8 { return uint8(IPv6TLVOptionJumbogram) }
 
 func (o IPv6HeaderTLVOptionJumbo) OptionLength() uint8 { return 4 }
 
@@ -326,25 +343,29 @@ func serializeIPv6HeaderTLVOptions(b gopacket.SerializeBuffer, options []IPv6Hea
 	return length, nil
 }
 
-func decodeIPv6HeaderTLVOption(data []byte) (IPv6HeaderTLVOption, error) {
-	if data[0] == 0 {
-		// Pad1
-		return IPv6HeaderTLVOptionPad(1), nil
-	}
-	l := data[1]
+func decodeIPv6HeaderTLVOption(data []byte, df gopacket.DecodeFeedback) (IPv6HeaderTLVOption, error) {
 	var tlv IPv6HeaderTLVOption
 	var err error
-	switch data[0] {
-	case 1:
-		//PadN
+
+	t := IPv6HeaderTLVOptionType(data[0])
+	if t == IPv6TLVOptionPad1 {
+		return IPv6HeaderTLVOptionPad(1), nil
+	}
+	l := int(data[1])
+	switch t {
+	case IPv6TLVOptionPadN:
 		tlv = IPv6HeaderTLVOptionPad(l + 2)
-	case IPv6HopByHopOptionJumbogram:
+	case IPv6TLVOptionJumbogram:
 		if l != 4 {
 			err = fmt.Errorf("Invalid jumbo TLV length (%d bytes)", l)
 		} else {
 			tlv = IPv6HeaderTLVOptionJumbo(binary.BigEndian.Uint32(data[2:]))
 		}
 	default:
+		m, ok := IPv6TLVOptionTypeMetadata[t]
+		if ok {
+			return m.DecodeWith(data, df)
+		}
 		tlv := IPv6HeaderTLVOptionUnknown{}
 		tlv.Type = data[0]
 		l := int(data[1])
@@ -443,7 +464,7 @@ func (i *IPv6HopByHop) DecodeFromBytes(data []byte, df gopacket.DecodeFeedback) 
 	i.ipv6ExtensionBase = decodeIPv6ExtensionBase(data)
 	offset := 2
 	for offset < i.ActualLength {
-		opt, err := decodeIPv6HeaderTLVOption(data[offset:])
+		opt, err := decodeIPv6HeaderTLVOption(data[offset:], df)
 		if err != nil {
 			return err
 		}
@@ -524,7 +545,7 @@ func (i *IPv6Destination) DecodeFromBytes(data []byte, df gopacket.DecodeFeedbac
 	i.ipv6ExtensionBase = decodeIPv6ExtensionBase(data)
 	offset := 2
 	for offset < i.ActualLength {
-		opt, err := decodeIPv6HeaderTLVOption(data[offset:])
+		opt, err := decodeIPv6HeaderTLVOption(data[offset:], df)
 		if err != nil {
 			return err
 		}
