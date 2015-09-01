@@ -431,6 +431,7 @@ type DNSResourceRecord struct {
 	// RDATA Decoded Values
 	IP                  net.IP
 	NS, CNAME, PTR, TXT []byte
+	TXTs                [][]byte
 	SOA                 DNSSOA
 	SRV                 DNSSRV
 	MX                  DNSMX
@@ -464,16 +465,31 @@ func (rr *DNSResourceRecord) String() string {
 	return "..."
 }
 
+func decodeCharacterStrings(data []byte) ([][]byte, error) {
+	var strings [][]byte
+	end := len(data)
+	for index := 0; index < end; index += 1 + int(data[index]) {
+		length := int(data[index])
+		if index+length > end {
+			return nil, errors.New("Insufficient data for a <character-string>")
+		}
+		strings = append(strings, data[index+1:index+1+length])
+	}
+	return strings, nil
+}
+
 func (rr *DNSResourceRecord) decodeRData(data []byte, offset int, buffer *[]byte) error {
 	switch rr.Type {
 	case DNSTypeA:
 		rr.IP = rr.Data
 	case DNSTypeAAAA:
 		rr.IP = rr.Data
-	case DNSTypeTXT:
+	case DNSTypeTXT, DNSTypeHINFO:
+		var err error
 		rr.TXT = rr.Data
-	case DNSTypeHINFO:
-		rr.TXT = rr.Data
+		if rr.TXTs, err = decodeCharacterStrings(rr.Data); err != nil {
+			return err
+		}
 	case DNSTypeNS:
 		name, _, err := decodeName(data, offset, buffer, 1)
 		if err != nil {

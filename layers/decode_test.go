@@ -1262,7 +1262,10 @@ func TestParseDNSTypeTXT(t *testing.T) {
 	if len(answers) != 1 {
 		t.Error("Failed to parse 1 DNS answer")
 	}
-	txt := string(answers[0].TXT)
+	if len(answers[0].TXTs) != 1 {
+		t.Error("Failed to parse 1 TXT record")
+	}
+	txt := string(answers[0].TXTs[0])
 	if txt != testParseDNSTypeTXTValue {
 		t.Errorf("Incorrect TXT value, expected %q, got %q", testParseDNSTypeTXTValue, txt)
 	}
