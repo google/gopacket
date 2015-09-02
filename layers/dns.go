@@ -485,11 +485,12 @@ func (rr *DNSResourceRecord) decodeRData(data []byte, offset int, buffer *[]byte
 	case DNSTypeAAAA:
 		rr.IP = rr.Data
 	case DNSTypeTXT, DNSTypeHINFO:
-		var err error
 		rr.TXT = rr.Data
-		if rr.TXTs, err = decodeCharacterStrings(rr.Data); err != nil {
+		txts, err := decodeCharacterStrings(rr.Data)
+		if err != nil {
 			return err
 		}
+		rr.TXTs = txts
 	case DNSTypeNS:
 		name, _, err := decodeName(data, offset, buffer, 1)
 		if err != nil {
