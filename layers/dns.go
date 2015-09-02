@@ -468,12 +468,12 @@ func (rr *DNSResourceRecord) String() string {
 func decodeCharacterStrings(data []byte) ([][]byte, error) {
 	var strings [][]byte
 	end := len(data)
-	for index := 0; index < end; index += 1 + int(data[index]) {
-		length := int(data[index])
-		if index+length > end {
+	for index, index2 := 0, 0; index != end; index = index2 {
+		index2 = index + 1 + int(data[index])
+		if index2 > end {
 			return nil, errors.New("Insufficient data for a <character-string>")
 		}
-		strings = append(strings, data[index+1:index+1+length])
+		strings = append(strings, data[index+1:index2])
 	}
 	return strings, nil
 }
