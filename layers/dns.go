@@ -424,17 +424,20 @@ type DNSResourceRecord struct {
 	Class DNSClass
 	TTL   uint32
 
-	// RData Raw Values
+	// RDATA Raw Values
 	DataLength uint16
 	Data       []byte
 
 	// RDATA Decoded Values
-	IP                  net.IP
-	NS, CNAME, PTR, TXT []byte
-	TXTs                [][]byte
-	SOA                 DNSSOA
-	SRV                 DNSSRV
-	MX                  DNSMX
+	IP             net.IP
+	NS, CNAME, PTR []byte
+	TXTs           [][]byte
+	SOA            DNSSOA
+	SRV            DNSSRV
+	MX             DNSMX
+
+	// Undecoded TXT for backward compatibility
+	TXT []byte
 }
 
 // decode decodes the resource record, returning the total length of the record.
@@ -466,10 +469,10 @@ func (rr *DNSResourceRecord) String() string {
 }
 
 func decodeCharacterStrings(data []byte) ([][]byte, error) {
-	var strings [][]byte
+	strings := make([][]byte, 0, 1)
 	end := len(data)
 	for index, index2 := 0, 0; index != end; index = index2 {
-		index2 = index + 1 + int(data[index])
+		index2 = index + 1 + int(data[index]) // index increases by 1..256 and does not overflow
 		if index2 > end {
 			return nil, errors.New("Insufficient data for a <character-string>")
 		}
