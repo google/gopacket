@@ -14,6 +14,14 @@ import (
 	"net"
 )
 
+const (
+	IPv6HopByHopOptionJumbogram = 0xC2 // RFC 2675
+)
+
+const (
+	ipv6MaxPayloadLength = 65535
+)
+
 // IPv6 is the layer for the IPv6 header.
 type IPv6 struct {
 	// http://www.networksorcery.com/enp/protocol/ipv6.htm
@@ -33,17 +41,10 @@ type IPv6 struct {
 
 // LayerType returns LayerTypeIPv6
 func (i *IPv6) LayerType() gopacket.LayerType { return LayerTypeIPv6 }
+
 func (i *IPv6) NetworkFlow() gopacket.Flow {
 	return gopacket.NewFlow(EndpointIPv6, i.SrcIP, i.DstIP)
 }
-
-const (
-	IPv6HopByHopOptionJumbogram = 0xC2 // RFC 2675
-)
-
-const (
-	ipv6MaxPayloadLength = 65535
-)
 
 // Search for Jumbo Payload TLV in IPv6HopByHop and return (length, true) if found
 func getIPv6HopByHopJumboLength(hopopts *IPv6HopByHop) (uint32, bool, error) {
@@ -256,6 +257,7 @@ func (ip6 *IPv6) DecodeFromBytes(data []byte, df gopacket.DecodeFeedback) error 
 func (i *IPv6) CanDecode() gopacket.LayerClass {
 	return LayerTypeIPv6
 }
+
 func (i *IPv6) NextLayerType() gopacket.LayerType {
 	if i.HopByHop != nil {
 		return i.HopByHop.NextHeader.LayerType()
@@ -280,77 +282,11 @@ func decodeIPv6(data []byte, p gopacket.PacketBuilder) error {
 	return p.NextDecoder(ip6.NextHeader)
 }
 
-func (i *IPv6HopByHop) SerializeTo(b gopacket.SerializeBuffer, opts gopacket.SerializeOptions) error {
-	var bytes []byte
-	var err error
-
-	o := make([]*ipv6HeaderTLVOption, 0, len(i.Options))
-	for _, v := range i.Options {
-		o = append(o, (*ipv6HeaderTLVOption)(v))
-	}
-
-	l := serializeIPv6HeaderTLVOptions(nil, o, opts.FixLengths, true)
-	bytes, err = b.PrependBytes(l)
-	if err != nil {
-		return err
-	}
-	serializeIPv6HeaderTLVOptions(bytes, o, opts.FixLengths, false)
-
-	length := len(bytes) + 2
-	if length%8 != 0 {
-		return fmt.Errorf("IPv6HopByHop actual length must be multiple of 8")
-	}
-	bytes, err = b.PrependBytes(2)
-	if err != nil {
-		return err
-	}
-	bytes[0] = uint8(i.NextHeader)
-	if opts.FixLengths {
-		i.HeaderLength = uint8((length / 8) - 1)
-	}
-	bytes[1] = uint8(i.HeaderLength)
-	return nil
-}
-
-func (i *IPv6HopByHop) DecodeFromBytes(data []byte, df gopacket.DecodeFeedback) error {
-	i.ipv6ExtensionBase = decodeIPv6ExtensionBase(data)
-	offset := 2
-	for offset < i.ActualLength {
-		opt := decodeIPv6HeaderTLVOption(data[offset:])
-		i.Options = append(i.Options, (*IPv6HopByHopOption)(opt))
-		offset += opt.ActualLength
-	}
-	return nil
-}
-
-func decodeIPv6HopByHop(data []byte, p gopacket.PacketBuilder) error {
-	i := &IPv6HopByHop{}
-	err := i.DecodeFromBytes(data, p)
-	p.AddLayer(i)
-	if err != nil {
-		return err
-	}
-	return p.NextDecoder(i.NextHeader)
-}
-
 type ipv6HeaderTLVOption struct {
 	OptionType, OptionLength uint8
 	ActualLength             int
 	OptionData               []byte
 	OptionAlignment          [2]uint8 // Xn+Y = [2]uint8{X, Y}
-}
-
-func decodeIPv6HeaderTLVOption(data []byte) (h *ipv6HeaderTLVOption) {
-	h = &ipv6HeaderTLVOption{}
-	if data[0] == 0 {
-		h.ActualLength = 1
-		return
-	}
-	h.OptionType = data[0]
-	h.OptionLength = data[1]
-	h.ActualLength = int(h.OptionLength) + 2
-	h.OptionData = data[2:h.ActualLength]
-	return
 }
 
 func (h *ipv6HeaderTLVOption) serializeTo(data []byte, fixLengths bool, dryrun bool) int {
@@ -366,18 +302,17 @@ func (h *ipv6HeaderTLVOption) serializeTo(data []byte, fixLengths bool, dryrun b
 	return length
 }
 
-// IPv6HopByHopOption is a TLV option present in an IPv6 hop-by-hop extension.
-type IPv6HopByHopOption ipv6HeaderTLVOption
-
-func (o *IPv6HopByHopOption) SetJumboLength(len uint32) {
-	o.OptionType = IPv6HopByHopOptionJumbogram
-	o.OptionLength = 4
-	o.ActualLength = 6
-	if o.OptionData == nil {
-		o.OptionData = make([]byte, 4)
+func decodeIPv6HeaderTLVOption(data []byte) (h *ipv6HeaderTLVOption) {
+	h = &ipv6HeaderTLVOption{}
+	if data[0] == 0 {
+		h.ActualLength = 1
+		return
 	}
-	binary.BigEndian.PutUint32(o.OptionData, len)
-	o.OptionAlignment = [2]uint8{4, 2}
+	h.OptionType = data[0]
+	h.OptionLength = data[1]
+	h.ActualLength = int(h.OptionLength) + 2
+	h.OptionData = data[2:h.ActualLength]
+	return
 }
 
 func serializeTLVOptionPadding(data []byte, padLength int) {
@@ -399,9 +334,11 @@ func serializeTLVOptionPadding(data []byte, padLength int) {
 	return
 }
 
-func serializeIPv6HeaderTLVOptions(buf []byte, options []*ipv6HeaderTLVOption, fixLengths bool, dryrun bool) int {
+// If buf is 'nil' do a serialize dry run 
+func serializeIPv6HeaderTLVOptions(buf []byte, options []*ipv6HeaderTLVOption, fixLengths bool) int {
 	var l int
 
+	dryrun := buf == nil
 	length := 2
 	for _, opt := range options {
 		if fixLengths {
@@ -471,12 +408,17 @@ func (i *IPv6ExtensionSkipper) DecodeFromBytes(data []byte, df gopacket.DecodeFe
 	i.NextHeader = extension.NextHeader
 	return nil
 }
+
 func (i *IPv6ExtensionSkipper) CanDecode() gopacket.LayerClass {
 	return LayerClassIPv6Extension
 }
+
 func (i *IPv6ExtensionSkipper) NextLayerType() gopacket.LayerType {
 	return i.NextHeader.LayerType()
 }
+
+// IPv6HopByHopOption is a TLV option present in an IPv6 hop-by-hop extension.
+type IPv6HopByHopOption ipv6HeaderTLVOption
 
 // IPv6HopByHop is the IPv6 hop-by-hop extension.
 type IPv6HopByHop struct {
@@ -486,6 +428,70 @@ type IPv6HopByHop struct {
 
 // LayerType returns LayerTypeIPv6HopByHop.
 func (i *IPv6HopByHop) LayerType() gopacket.LayerType { return LayerTypeIPv6HopByHop }
+
+func (i *IPv6HopByHop) SerializeTo(b gopacket.SerializeBuffer, opts gopacket.SerializeOptions) error {
+	var bytes []byte
+	var err error
+
+	o := make([]*ipv6HeaderTLVOption, 0, len(i.Options))
+	for _, v := range i.Options {
+		o = append(o, (*ipv6HeaderTLVOption)(v))
+	}
+
+	l := serializeIPv6HeaderTLVOptions(nil, o, opts.FixLengths)
+	bytes, err = b.PrependBytes(l)
+	if err != nil {
+		return err
+	}
+	serializeIPv6HeaderTLVOptions(bytes, o, opts.FixLengths)
+
+	length := len(bytes) + 2
+	if length%8 != 0 {
+		return fmt.Errorf("IPv6HopByHop actual length must be multiple of 8")
+	}
+	bytes, err = b.PrependBytes(2)
+	if err != nil {
+		return err
+	}
+	bytes[0] = uint8(i.NextHeader)
+	if opts.FixLengths {
+		i.HeaderLength = uint8((length / 8) - 1)
+	}
+	bytes[1] = uint8(i.HeaderLength)
+	return nil
+}
+
+func (i *IPv6HopByHop) DecodeFromBytes(data []byte, df gopacket.DecodeFeedback) error {
+	i.ipv6ExtensionBase = decodeIPv6ExtensionBase(data)
+	offset := 2
+	for offset < i.ActualLength {
+		opt := decodeIPv6HeaderTLVOption(data[offset:])
+		i.Options = append(i.Options, (*IPv6HopByHopOption)(opt))
+		offset += opt.ActualLength
+	}
+	return nil
+}
+
+func decodeIPv6HopByHop(data []byte, p gopacket.PacketBuilder) error {
+	i := &IPv6HopByHop{}
+	err := i.DecodeFromBytes(data, p)
+	p.AddLayer(i)
+	if err != nil {
+		return err
+	}
+	return p.NextDecoder(i.NextHeader)
+}
+
+func (o *IPv6HopByHopOption) SetJumboLength(len uint32) {
+	o.OptionType = IPv6HopByHopOptionJumbogram
+	o.OptionLength = 4
+	o.ActualLength = 6
+	if o.OptionData == nil {
+		o.OptionData = make([]byte, 4)
+	}
+	binary.BigEndian.PutUint32(o.OptionData, len)
+	o.OptionAlignment = [2]uint8{4, 2}
+}
 
 // IPv6Routing is the IPv6 routing extension.
 type IPv6Routing struct {
@@ -601,12 +607,12 @@ func (i *IPv6Destination) SerializeTo(b gopacket.SerializeBuffer, opts gopacket.
 		o = append(o, (*ipv6HeaderTLVOption)(v))
 	}
 
-	l := serializeIPv6HeaderTLVOptions(nil, o, opts.FixLengths, true)
+	l := serializeIPv6HeaderTLVOptions(nil, o, opts.FixLengths)
 	bytes, err = b.PrependBytes(l)
 	if err != nil {
 		return err
 	}
-	serializeIPv6HeaderTLVOptions(bytes, o, opts.FixLengths, false)
+	serializeIPv6HeaderTLVOptions(bytes, o, opts.FixLengths)
 
 	length := len(bytes) + 2
 	if length%8 != 0 {
