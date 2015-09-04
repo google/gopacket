@@ -63,6 +63,11 @@ type PacketBuilder interface {
 	// data will be dumped to stderr so you can create a test.  This should never
 	// be called from a production decoder.
 	DumpPacketData()
+
+	// LastNetworkLayer returns the last decoded NetworkLayer, from the current
+	// layer's viewpoint. This is relevant in the case of encapsulation such as
+	// IP over IP.
+	LastNetworkLayer() NetworkLayer
 }
 
 // Decoder is an interface for logic to decode a packet layer.  Users may

@@ -599,7 +599,12 @@ func decodeIPv6RoutingType0(data []byte, p gopacket.PacketBuilder) error {
 	for d := i.Contents[8:]; len(d) >= 16; d = d[16:] {
 		i.SourceRoutingIPs = append(i.SourceRoutingIPs, net.IP(d[:16]))
 	}
-	// XXX - We should be setting ip6.RoutingDst here
+	l := p.LastNetworkLayer()
+	if ip6, ok := l.(*IPv6); ok {
+		if i.SegmentsLeft != 0 {
+			ip6.RoutingDstIP = i.SourceRoutingIPs[n-1]
+		}
+	}
 	p.AddLayer(i)
 	return p.NextDecoder(i.NextHeader)
 }
