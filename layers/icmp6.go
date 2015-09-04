@@ -14,7 +14,10 @@ import (
 	"strconv"
 )
 
-type ICMPv6TypeCode uint16
+type ICMPv6TypeCode struct {
+	Type uint8
+	Code uint8
+}
 
 const (
 	ICMPv6TypeDestinationUnreachable = 1
@@ -32,13 +35,11 @@ const (
 )
 
 func (a ICMPv6TypeCode) String() string {
-	typ := uint8(a >> 8)
-	code := uint8(a)
 	var typeStr, codeStr string
-	switch typ {
+	switch a.Type {
 	case ICMPv6TypeDestinationUnreachable:
 		typeStr = "DestinationUnreachable"
-		switch code {
+		switch a.Code {
 		case 0:
 			codeStr = "NoRouteToDst"
 		case 1:
@@ -52,7 +53,7 @@ func (a ICMPv6TypeCode) String() string {
 		typeStr = "PacketTooBig"
 	case ICMPv6TypeTimeExceeded:
 		typeStr = "TimeExceeded"
-		switch code {
+		switch a.Code {
 		case 0:
 			codeStr = "HopLimitExceeded"
 		case 1:
@@ -60,7 +61,7 @@ func (a ICMPv6TypeCode) String() string {
 		}
 	case ICMPv6TypeParameterProblem:
 		typeStr = "ParameterProblem"
-		switch code {
+		switch a.Code {
 		case 0:
 			codeStr = "ErroneousHeader"
 		case 1:
@@ -83,10 +84,10 @@ func (a ICMPv6TypeCode) String() string {
 	case ICMPv6TypeRedirect:
 		typeStr = "Redirect"
 	default:
-		typeStr = strconv.Itoa(int(typ))
+		typeStr = strconv.Itoa(int(a.Type))
 	}
 	if codeStr == "" {
-		codeStr = strconv.Itoa(int(code))
+		codeStr = strconv.Itoa(int(a.Code))
 	}
 	return fmt.Sprintf("%s(%s)", typeStr, codeStr)
 }
@@ -105,7 +106,7 @@ func (i *ICMPv6) LayerType() gopacket.LayerType { return LayerTypeICMPv6 }
 
 // DecodeFromBytes decodes the given bytes into this layer.
 func (i *ICMPv6) DecodeFromBytes(data []byte, df gopacket.DecodeFeedback) error {
-	i.TypeCode = ICMPv6TypeCode(binary.BigEndian.Uint16(data[:2]))
+	i.TypeCode = ICMPv6TypeCode{data[0], data[1]}
 	i.Checksum = binary.BigEndian.Uint16(data[2:4])
 	i.TypeBytes = data[4:8]
 	i.BaseLayer = BaseLayer{data[:8], data[8:]}
@@ -125,7 +126,8 @@ func (i *ICMPv6) SerializeTo(b gopacket.SerializeBuffer, opts gopacket.Serialize
 	if err != nil {
 		return err
 	}
-	binary.BigEndian.PutUint16(bytes, uint16(i.TypeCode))
+	bytes[0] = i.TypeCode.Type
+	bytes[1] = i.TypeCode.Code
 	copy(bytes[4:8], i.TypeBytes)
 	if opts.ComputeChecksums {
 		bytes[2] = 0
