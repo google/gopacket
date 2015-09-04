@@ -52,9 +52,9 @@ func TestSerializeIPv6HeaderTLVOptions(t *testing.T) {
 	opt2.OptionData = []byte{0x11, 0x22, 0x22, 0x44, 0x44, 0x44, 0x44}
 	opt2.OptionAlignment = [2]uint8{4, 3}
 
-	l := serializeIPv6HeaderTLVOptions(nil, []*ipv6HeaderTLVOption{opt1, opt2}, true, true)
+	l := serializeIPv6HeaderTLVOptions(nil, []*ipv6HeaderTLVOption{opt1, opt2}, true)
 	b := make([]byte, l)
-	serializeIPv6HeaderTLVOptions(b, []*ipv6HeaderTLVOption{opt1, opt2}, true, false)
+	serializeIPv6HeaderTLVOptions(b, []*ipv6HeaderTLVOption{opt1, opt2}, true)
 	got := b
 	want := []byte{0x1E, 0x0C, 0xaa, 0xaa, 0xaa, 0xaa, 0xbb, 0xbb, 0xbb, 0xbb, 0xbb, 0xbb, 0xbb, 0xbb, 0x01, 0x01, 0x00, 0x3E, 0x07, 0x11, 0x22, 0x22, 0x44, 0x44, 0x44, 0x44, 0x01, 0x02, 0x00, 0x00}
 
@@ -82,9 +82,9 @@ func TestSerializeIPv6HeaderTLVOptions(t *testing.T) {
 	   +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
 	*/
 
-	l = serializeIPv6HeaderTLVOptions(nil, []*ipv6HeaderTLVOption{opt2, opt1}, true, true)
+	l = serializeIPv6HeaderTLVOptions(nil, []*ipv6HeaderTLVOption{opt2, opt1}, true)
 	b = make([]byte, l)
-	serializeIPv6HeaderTLVOptions(b, []*ipv6HeaderTLVOption{opt2, opt1}, true, false)
+	serializeIPv6HeaderTLVOptions(b, []*ipv6HeaderTLVOption{opt2, opt1}, true)
 	got = b
 	want = []byte{0x00, 0x3E, 0x07, 0x11, 0x22, 0x22, 0x44, 0x44, 0x44, 0x44, 0x01, 0x04, 0x00, 0x00, 0x00, 0x00, 0x1E, 0x0C, 0xaa, 0xaa, 0xaa, 0xaa, 0xbb, 0xbb, 0xbb, 0xbb, 0xbb, 0xbb, 0xbb, 0xbb}
 

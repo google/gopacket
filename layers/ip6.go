@@ -289,12 +289,12 @@ func (i *IPv6HopByHop) SerializeTo(b gopacket.SerializeBuffer, opts gopacket.Ser
 		o = append(o, (*ipv6HeaderTLVOption)(v))
 	}
 
-	l := serializeIPv6HeaderTLVOptions(nil, o, opts.FixLengths, true)
+	l := serializeIPv6HeaderTLVOptions(nil, o, opts.FixLengths)
 	bytes, err = b.PrependBytes(l)
 	if err != nil {
 		return err
 	}
-	serializeIPv6HeaderTLVOptions(bytes, o, opts.FixLengths, false)
+	serializeIPv6HeaderTLVOptions(bytes, o, opts.FixLengths)
 
 	length := len(bytes) + 2
 	if length%8 != 0 {
@@ -399,9 +399,11 @@ func serializeTLVOptionPadding(data []byte, padLength int) {
 	return
 }
 
-func serializeIPv6HeaderTLVOptions(buf []byte, options []*ipv6HeaderTLVOption, fixLengths bool, dryrun bool) int {
+// If buf is 'nil' do a serialize dry run 
+func serializeIPv6HeaderTLVOptions(buf []byte, options []*ipv6HeaderTLVOption, fixLengths bool) int {
 	var l int
 
+	dryrun := buf == nil
 	length := 2
 	for _, opt := range options {
 		if fixLengths {
@@ -601,12 +603,12 @@ func (i *IPv6Destination) SerializeTo(b gopacket.SerializeBuffer, opts gopacket.
 		o = append(o, (*ipv6HeaderTLVOption)(v))
 	}
 
-	l := serializeIPv6HeaderTLVOptions(nil, o, opts.FixLengths, true)
+	l := serializeIPv6HeaderTLVOptions(nil, o, opts.FixLengths)
 	bytes, err = b.PrependBytes(l)
 	if err != nil {
 		return err
 	}
-	serializeIPv6HeaderTLVOptions(bytes, o, opts.FixLengths, false)
+	serializeIPv6HeaderTLVOptions(bytes, o, opts.FixLengths)
 
 	length := len(bytes) + 2
 	if length%8 != 0 {
