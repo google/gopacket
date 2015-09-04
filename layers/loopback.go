@@ -23,6 +23,33 @@ type Loopback struct {
 // LayerType returns LayerTypeLoopback.
 func (l *Loopback) LayerType() gopacket.LayerType { return LayerTypeLoopback }
 
+func (l *Loopback) DecodeFromBytes(data []byte, df gopacket.DecodeFeedback) error {
+	if len(data) < 4 {
+		return fmt.Errorf("Loopback packet too small")
+	}
+
+	var prot uint32
+	if data[0] == 0 && data[1] == 0 {
+		prot = binary.BigEndian.Uint32(data[:4])
+	} else {
+		prot = binary.LittleEndian.Uint32(data[:4])
+	}
+	if prot > 0xFF {
+		return fmt.Errorf("Invalid loopback protocol %q", data[:4])
+	}
+
+	l.Family = ProtocolFamily(prot)
+	l.BaseLayer = BaseLayer{data[:4], data[4:]}
+	return nil
+}
+func (l *Loopback) CanDecode() gopacket.LayerClass {
+	return LayerTypeLoopback
+}
+
+func (l *Loopback) NextLayerType() gopacket.LayerType {
+	return l.Family.LayerType()
+}
+
 func decodeLoopback(data []byte, p gopacket.PacketBuilder) error {
 	// The protocol could be either big-endian or little-endian, we're
 	// not sure.  But we're PRETTY sure that the value is less than
