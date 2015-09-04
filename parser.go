@@ -51,6 +51,8 @@ type DecodingLayerParser struct {
 	// Truncated is set when a decode layer detects that the packet has been
 	// truncated.
 	Truncated bool
+	// Warnings are appends to the []error slice for non-fatal errors/warnings/notes
+	Warnings  []error
 }
 
 // AddDecodingLayer adds a decoding layer to the parser.  This adds support for
@@ -67,6 +69,14 @@ func (l *DecodingLayerParser) AddDecodingLayer(d DecodingLayer) {
 // DecodeLayers.
 func (l *DecodingLayerParser) SetTruncated() {
 	l.Truncated = true
+}
+
+// AddWarning appends the error the DecodingLayerParser warning slice
+func (l *DecodingLayerParser) AddWarning(err error) {
+	if l.Warnings == nil {
+		l.Warnings = make([]error, 0, 4)
+	}
+	l.Warnings = append(l.Warnings, err)
 }
 
 // NewDecodingLayerParser creates a new DecodingLayerParser and adds in all
