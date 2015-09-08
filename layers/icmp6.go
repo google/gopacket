@@ -12,6 +12,7 @@ import (
 	"fmt"
 	"github.com/google/gopacket"
 	"strconv"
+	"reflect"
 )
 
 type ICMPv6TypeCode uint16
@@ -97,6 +98,11 @@ func (a ICMPv6TypeCode) String() string {
 		codeStr = strconv.Itoa(int(code))
 	}
 	return fmt.Sprintf("%s(%s)", typeStr, codeStr)
+}
+
+func (a ICMPv6TypeCode) GoString() string {
+	t := reflect.TypeOf(a)
+	return fmt.Sprintf("%s(%d, %d)", t.String(), a.Type(), a.Code())
 }
 
 // SerializeTo writes the ICMPv6TypeCode value to the 'bytes' buffer.
