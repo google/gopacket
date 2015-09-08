@@ -99,10 +99,13 @@ func (a ICMPv6TypeCode) String() string {
 	return fmt.Sprintf("%s(%s)", typeStr, codeStr)
 }
 
+// SerializeTo writes the ICMPv6TypeCode value to the 'bytes' buffer.
 func (a ICMPv6TypeCode) SerializeTo(bytes []byte) {
 	binary.BigEndian.PutUint16(bytes, uint16(a))
 }
 
+// CreateICMPv6TypeCode is a helper function to create an ICMPv6TypeCode
+// gopacket type from the ICMPv6 type and code values.
 func CreateICMPv6TypeCode(typ uint8, code uint8) ICMPv6TypeCode {
 	return ICMPv6TypeCode(binary.BigEndian.Uint16([]byte{typ, code}))
 }
