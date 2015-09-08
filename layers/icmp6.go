@@ -31,9 +31,17 @@ const (
 	ICMPv6TypeRedirect              = 137
 )
 
+func (a ICMPv6TypeCode) Type() uint8 {
+	return uint8(a >> 8)
+}
+
+func (a ICMPv6TypeCode) Code() uint8 {
+	return uint8(a)
+}
+
 func (a ICMPv6TypeCode) String() string {
-	typ := uint8(a >> 8)
-	code := uint8(a)
+	typ := a.Type()
+	code := a.Code()
 	var typeStr, codeStr string
 	switch typ {
 	case ICMPv6TypeDestinationUnreachable:
@@ -91,6 +99,14 @@ func (a ICMPv6TypeCode) String() string {
 	return fmt.Sprintf("%s(%s)", typeStr, codeStr)
 }
 
+func (a ICMPv6TypeCode) SerializeTo(bytes []byte) {
+	binary.BigEndian.PutUint16(bytes, uint16(a))
+}
+
+func CreateICMPv6TypeCode(typ uint8, code uint8) ICMPv6TypeCode {
+	return ICMPv6TypeCode(binary.BigEndian.Uint16([]byte{typ, code}))
+}
+
 // ICMPv6 is the layer for IPv6 ICMP packet data
 type ICMPv6 struct {
 	BaseLayer
@@ -105,7 +121,7 @@ func (i *ICMPv6) LayerType() gopacket.LayerType { return LayerTypeICMPv6 }
 
 // DecodeFromBytes decodes the given bytes into this layer.
 func (i *ICMPv6) DecodeFromBytes(data []byte, df gopacket.DecodeFeedback) error {
-	i.TypeCode = ICMPv6TypeCode(binary.BigEndian.Uint16(data[:2]))
+	i.TypeCode = CreateICMPv6TypeCode(data[0], data[1])
 	i.Checksum = binary.BigEndian.Uint16(data[2:4])
 	i.TypeBytes = data[4:8]
 	i.BaseLayer = BaseLayer{data[:8], data[8:]}
@@ -125,7 +141,7 @@ func (i *ICMPv6) SerializeTo(b gopacket.SerializeBuffer, opts gopacket.Serialize
 	if err != nil {
 		return err
 	}
-	binary.BigEndian.PutUint16(bytes, uint16(i.TypeCode))
+	i.TypeCode.SerializeTo(bytes)
 	copy(bytes[4:8], i.TypeBytes)
 	if opts.ComputeChecksums {
 		bytes[2] = 0
