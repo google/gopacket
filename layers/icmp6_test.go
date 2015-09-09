@@ -75,8 +75,8 @@ func TestPacketICMPv6(t *testing.T) {
 		if !reflect.DeepEqual(got, want) {
 			t.Errorf("ICMPv6 packet processing failed:\ngot  :\n%#v\n\nwant :\n%#v\n\n", got, want)
 		}
-		if got.TypeCode.String() != "NeighborAdvertisement(0)" {
-			t.Errorf("ICMPv6 type code, got %q want 'NeighborAdvertisement(0)'", got.TypeCode.String())
+		if got.TypeCode.String() != "NeighborAdvertisement" {
+			t.Errorf("ICMPv6 type code, got %q want 'NeighborAdvertisement'", got.TypeCode.String())
 		}
 	} else {
 		t.Error("No ICMPv6 layer type found in packet")

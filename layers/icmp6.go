@@ -11,10 +11,8 @@ import (
 	"encoding/binary"
 	"fmt"
 	"github.com/google/gopacket"
-	"strconv"
+	"reflect"
 )
-
-type ICMPv6TypeCode uint16
 
 const (
 	ICMPv6TypeDestinationUnreachable = 1
@@ -31,6 +29,47 @@ const (
 	ICMPv6TypeRedirect              = 137
 )
 
+var (
+	icmpv6TypeStringMap = map[uint8]string{
+		1:   "DestinationUnreachable",
+		2:   "PacketTooBig",
+		3:   "TimeExceeded",
+		4:   "ParameterProblem",
+		128: "EchoRequest",
+		129: "EchoReply",
+		133: "RouterSolicitation",
+		134: "RouterAdvertisement",
+		135: "NeighborSolicitation",
+		136: "NeighborAdvertisement",
+		137: "Redirect",
+	}
+
+	icmpv6CodeStringMap = map[[2]uint8]string{
+		[2]uint8{1, 0}:   "NoRouteToDst",
+		[2]uint8{1, 1}:   "AdminProhibited",
+		[2]uint8{1, 2}:   "BeyondScopeOfSrc",
+		[2]uint8{1, 3}:   "AddressUnreachable",
+		[2]uint8{1, 4}:   "PortUnreachable",
+		[2]uint8{1, 5}:   "SrcAddressFailedPolicy",
+		[2]uint8{1, 6}:   "RejectRouteToDst",
+		[2]uint8{2, 0}:   "",
+		[2]uint8{3, 0}:   "HopLimitExceeded",
+		[2]uint8{3, 1}:   "FragmentReassemblyTimeExceeded",
+		[2]uint8{4, 0}:   "ErroneousHeader",
+		[2]uint8{4, 1}:   "UnrecognizedNextHeader",
+		[2]uint8{4, 1}:   "UnrecognizedIPv6Option",
+		[2]uint8{128, 0}: "",
+		[2]uint8{129, 0}: "",
+		[2]uint8{133, 0}: "",
+		[2]uint8{134, 0}: "",
+		[2]uint8{135, 0}: "",
+		[2]uint8{136, 0}: "",
+		[2]uint8{137, 0}: "",
+	}
+)
+
+type ICMPv6TypeCode uint16
+
 func (a ICMPv6TypeCode) Type() uint8 {
 	return uint8(a >> 8)
 }
@@ -40,63 +79,27 @@ func (a ICMPv6TypeCode) Code() uint8 {
 }
 
 func (a ICMPv6TypeCode) String() string {
-	typ := a.Type()
-	code := a.Code()
-	var typeStr, codeStr string
-	switch typ {
-	case ICMPv6TypeDestinationUnreachable:
-		typeStr = "DestinationUnreachable"
-		switch code {
-		case 0:
-			codeStr = "NoRouteToDst"
-		case 1:
-			codeStr = "AdminProhibited"
-		case 3:
-			codeStr = "Address"
-		case 4:
-			codeStr = "Port"
-		}
-	case ICMPv6TypePacketTooBig:
-		typeStr = "PacketTooBig"
-	case ICMPv6TypeTimeExceeded:
-		typeStr = "TimeExceeded"
-		switch code {
-		case 0:
-			codeStr = "HopLimitExceeded"
-		case 1:
-			codeStr = "FragmentReassemblyTimeExceeded"
-		}
-	case ICMPv6TypeParameterProblem:
-		typeStr = "ParameterProblem"
-		switch code {
-		case 0:
-			codeStr = "ErroneousHeader"
-		case 1:
-			codeStr = "UnrecognizedNextHeader"
-		case 2:
-			codeStr = "UnrecognizedIPv6Option"
-		}
-	case ICMPv6TypeEchoRequest:
-		typeStr = "EchoRequest"
-	case ICMPv6TypeEchoReply:
-		typeStr = "EchoReply"
-	case ICMPv6TypeRouterSolicitation:
-		typeStr = "RouterSolicitation"
-	case ICMPv6TypeRouterAdvertisement:
-		typeStr = "RouterAdvertisement"
-	case ICMPv6TypeNeighborSolicitation:
-		typeStr = "NeighborSolicitation"
-	case ICMPv6TypeNeighborAdvertisement:
-		typeStr = "NeighborAdvertisement"
-	case ICMPv6TypeRedirect:
-		typeStr = "Redirect"
-	default:
-		typeStr = strconv.Itoa(int(typ))
+	tc := [2]uint8{a.Type(), a.Code()}
+	typeStr, ok := icmpv6TypeStringMap[tc[0]]
+	if !ok {
+		return fmt.Sprintf("%d(%d)", tc[0], tc[1])
 	}
+	codeStr, ok := icmpv6CodeStringMap[tc]
+	if !ok {
+		// We don't know this ICMPv6 code; print the numerical value
+		return fmt.Sprintf("%s(Code: %d)", typeStr, tc[1])
+	}
+	// We have a string for the ICMPv6 code. The string may be the zero
+	// string (signalling the ICMPv6 code does not have any particular meaning)
 	if codeStr == "" {
-		codeStr = strconv.Itoa(int(code))
+		return fmt.Sprintf("%s", typeStr)
 	}
 	return fmt.Sprintf("%s(%s)", typeStr, codeStr)
+}
+
+func (a ICMPv6TypeCode) GoString() string {
+	t := reflect.TypeOf(a)
+	return fmt.Sprintf("%s(%d, %d)", t.String(), a.Type(), a.Code())
 }
 
 // SerializeTo writes the ICMPv6TypeCode value to the 'bytes' buffer.
