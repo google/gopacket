@@ -57,7 +57,7 @@ var (
 		[2]uint8{3, 1}:   "FragmentReassemblyTimeExceeded",
 		[2]uint8{4, 0}:   "ErroneousHeader",
 		[2]uint8{4, 1}:   "UnrecognizedNextHeader",
-		[2]uint8{4, 1}:   "UnrecognizedIPv6Option",
+		[2]uint8{4, 2}:   "UnrecognizedIPv6Option",
 		[2]uint8{128, 0}: "",
 		[2]uint8{129, 0}: "",
 		[2]uint8{133, 0}: "",
@@ -70,10 +70,12 @@ var (
 
 type ICMPv6TypeCode uint16
 
+// Type returns the ICMPv6 type field.
 func (a ICMPv6TypeCode) Type() uint8 {
 	return uint8(a >> 8)
 }
 
+// Code returns the ICMPv6 code field.
 func (a ICMPv6TypeCode) Code() uint8 {
 	return uint8(a)
 }
@@ -107,7 +109,7 @@ func (a ICMPv6TypeCode) SerializeTo(bytes []byte) {
 	binary.BigEndian.PutUint16(bytes, uint16(a))
 }
 
-// CreateICMPv6TypeCode is a helper function to create an ICMPv6TypeCode
+// CreateICMPv6TypeCode is a convenience function to create an ICMPv6TypeCode
 // gopacket type from the ICMPv6 type and code values.
 func CreateICMPv6TypeCode(typ uint8, code uint8) ICMPv6TypeCode {
 	return ICMPv6TypeCode(binary.BigEndian.Uint16([]byte{typ, code}))
