@@ -15,6 +15,7 @@ import (
 )
 
 const (
+	// The following are from RFC 4443
 	ICMPv6TypeDestinationUnreachable = 1
 	ICMPv6TypePacketTooBig           = 2
 	ICMPv6TypeTimeExceeded           = 3
@@ -29,42 +30,61 @@ const (
 	ICMPv6TypeRedirect              = 137
 )
 
-var (
-	icmpv6TypeStringMap = map[uint8]string{
-		1:   "DestinationUnreachable",
-		2:   "PacketTooBig",
-		3:   "TimeExceeded",
-		4:   "ParameterProblem",
-		128: "EchoRequest",
-		129: "EchoReply",
-		133: "RouterSolicitation",
-		134: "RouterAdvertisement",
-		135: "NeighborSolicitation",
-		136: "NeighborAdvertisement",
-		137: "Redirect",
-	}
+type icmpv6TypeCodeInfoStruct struct {
+	typeStr string
+	codeStr *map[uint8]string
+}
 
-	icmpv6CodeStringMap = map[[2]uint8]string{
-		[2]uint8{1, 0}:   "NoRouteToDst",
-		[2]uint8{1, 1}:   "AdminProhibited",
-		[2]uint8{1, 2}:   "BeyondScopeOfSrc",
-		[2]uint8{1, 3}:   "AddressUnreachable",
-		[2]uint8{1, 4}:   "PortUnreachable",
-		[2]uint8{1, 5}:   "SrcAddressFailedPolicy",
-		[2]uint8{1, 6}:   "RejectRouteToDst",
-		[2]uint8{2, 0}:   "",
-		[2]uint8{3, 0}:   "HopLimitExceeded",
-		[2]uint8{3, 1}:   "FragmentReassemblyTimeExceeded",
-		[2]uint8{4, 0}:   "ErroneousHeader",
-		[2]uint8{4, 1}:   "UnrecognizedNextHeader",
-		[2]uint8{4, 2}:   "UnrecognizedIPv6Option",
-		[2]uint8{128, 0}: "",
-		[2]uint8{129, 0}: "",
-		[2]uint8{133, 0}: "",
-		[2]uint8{134, 0}: "",
-		[2]uint8{135, 0}: "",
-		[2]uint8{136, 0}: "",
-		[2]uint8{137, 0}: "",
+var (
+	icmpv6TypeCodeInfo = map[uint8]icmpv6TypeCodeInfoStruct{
+		1: icmpv6TypeCodeInfoStruct{
+			"DestinationUnreachable", &map[uint8]string{
+				0: "NoRouteToDst",
+				1: "AdminProhibited",
+				2: "BeyondScopeOfSrc",
+				3: "AddressUnreachable",
+				4: "PortUnreachable",
+				5: "SrcAddressFailedPolicy",
+				6: "RejectRouteToDst",
+			},
+		},
+		2: icmpv6TypeCodeInfoStruct{
+			"PacketTooBig", nil,
+		},
+		3: icmpv6TypeCodeInfoStruct{
+			"TimeExceeded", &map[uint8]string{
+				0: "HopLimitExceeded",
+				1: "FragmentReassemblyTimeExceeded",
+			},
+		},
+		4: icmpv6TypeCodeInfoStruct{
+			"ParameterProblem", &map[uint8]string{
+				0: "ErroneousHeaderField",
+				1: "UnrecognizedNextHeader",
+				2: "UnrecognizedNextHeader",
+			},
+		},
+		128: icmpv6TypeCodeInfoStruct{
+			"EchoRequest", nil,
+		},
+		129: icmpv6TypeCodeInfoStruct{
+			"EchoReply", nil,
+		},
+		133: icmpv6TypeCodeInfoStruct{
+			"RouterSolicitation", nil,
+		},
+		134: icmpv6TypeCodeInfoStruct{
+			"RouterAdvertisement", nil,
+		},
+		135: icmpv6TypeCodeInfoStruct{
+			"NeighborSolicitation", nil,
+		},
+		136: icmpv6TypeCodeInfoStruct{
+			"NeighborAdvertisement", nil,
+		},
+		137: icmpv6TypeCodeInfoStruct{
+			"Redirect", nil,
+		},
 	}
 )
 
@@ -81,20 +101,25 @@ func (a ICMPv6TypeCode) Code() uint8 {
 }
 
 func (a ICMPv6TypeCode) String() string {
-	tc := [2]uint8{a.Type(), a.Code()}
-	typeStr, ok := icmpv6TypeStringMap[tc[0]]
+	t, c := a.Type(), a.Code()
+	strInfo, ok := icmpv6TypeCodeInfo[t]
 	if !ok {
-		return fmt.Sprintf("%d(%d)", tc[0], tc[1])
+		// Unknown ICMPv6 type field
+		return fmt.Sprintf("%d(%d)", t, c)
 	}
-	codeStr, ok := icmpv6CodeStringMap[tc]
+	typeStr := strInfo.typeStr
+	if strInfo.codeStr == nil && c == 0 {
+		// The ICMPv6 type does not make use of the code field
+		return fmt.Sprintf("%s", strInfo.typeStr)
+	}
+	if strInfo.codeStr == nil && c != 0 {
+		// The ICMPv6 type does not make use of the code field, but it is present anyway
+		return fmt.Sprintf("%s(Code: %d)", typeStr, c)
+	}
+	codeStr, ok := (*strInfo.codeStr)[c]
 	if !ok {
 		// We don't know this ICMPv6 code; print the numerical value
-		return fmt.Sprintf("%s(Code: %d)", typeStr, tc[1])
-	}
-	// We have a string for the ICMPv6 code. The string may be the zero
-	// string (signalling the ICMPv6 code does not have any particular meaning)
-	if codeStr == "" {
-		return fmt.Sprintf("%s", typeStr)
+		return fmt.Sprintf("%s(Code: %d)", typeStr, c)
 	}
 	return fmt.Sprintf("%s(%s)", typeStr, codeStr)
 }
