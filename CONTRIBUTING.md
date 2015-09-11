@@ -37,7 +37,7 @@ make a new change, you'll first have to get our code:
     ... code code code ...
     ./gc --benchmark  # Run this whenever your commit could affect performance
 
-Nw that you're in the gopacket code directory, you can start making your initial
+Now that you're in the gopacket code directory, you can start making your initial
 change.  PLEASE make sure you're using a new branch to develop whatever feature
 you're working on.
 
