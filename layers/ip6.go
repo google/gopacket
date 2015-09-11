@@ -548,6 +548,35 @@ type IPv6Fragment struct {
 // LayerType returns LayerTypeIPv6Fragment.
 func (i *IPv6Fragment) LayerType() gopacket.LayerType { return LayerTypeIPv6Fragment }
 
+// SerializeTo writes the serialized form of this layer into the
+// SerializationBuffer, implementing gopacket.SerializableLayer.
+// See the docs for gopacket.SerializableLayer for more info.
+func (i *IPv6Fragment) SerializeTo(b gopacket.SerializeBuffer, opts gopacket.SerializeOptions) error {
+	var bytes []byte
+	var err error
+
+	bytes, err = b.PrependBytes(8)
+	if err != nil {
+		return err
+	}
+	bytes[0] = uint8(i.NextHeader)
+	if opts.FixLengths {
+		bytes[1] = 0
+	} else {
+		bytes[1] = i.Reserved1
+	}
+	offlg := i.FragmentOffset << 3
+	if !opts.FixLengths {
+		offlg |= uint16((i.Reserved2 << 1) & 0x6)
+	}
+	if i.MoreFragments {
+		offlg |= 0x1
+	}
+	binary.BigEndian.PutUint16(bytes[2:], offlg)
+	binary.BigEndian.PutUint32(bytes[4:], i.Identification)
+	return nil
+}
+
 func decodeIPv6Fragment(data []byte, p gopacket.PacketBuilder) error {
 	i := &IPv6Fragment{
 		BaseLayer:      BaseLayer{data[:8], data[8:]},
