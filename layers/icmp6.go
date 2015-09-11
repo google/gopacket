@@ -37,7 +37,7 @@ type icmpv6TypeCodeInfoStruct struct {
 
 var (
 	icmpv6TypeCodeInfo = map[uint8]icmpv6TypeCodeInfoStruct{
-		1: icmpv6TypeCodeInfoStruct{
+		ICMPv6TypeDestinationUnreachable: icmpv6TypeCodeInfoStruct{
 			"DestinationUnreachable", &map[uint8]string{
 				0: "NoRouteToDst",
 				1: "AdminProhibited",
@@ -48,41 +48,41 @@ var (
 				6: "RejectRouteToDst",
 			},
 		},
-		2: icmpv6TypeCodeInfoStruct{
+		ICMPv6TypePacketTooBig: icmpv6TypeCodeInfoStruct{
 			"PacketTooBig", nil,
 		},
-		3: icmpv6TypeCodeInfoStruct{
+		ICMPv6TypeTimeExceeded: icmpv6TypeCodeInfoStruct{
 			"TimeExceeded", &map[uint8]string{
 				0: "HopLimitExceeded",
 				1: "FragmentReassemblyTimeExceeded",
 			},
 		},
-		4: icmpv6TypeCodeInfoStruct{
+		ICMPv6TypeParameterProblem: icmpv6TypeCodeInfoStruct{
 			"ParameterProblem", &map[uint8]string{
 				0: "ErroneousHeaderField",
 				1: "UnrecognizedNextHeader",
 				2: "UnrecognizedNextHeader",
 			},
 		},
-		128: icmpv6TypeCodeInfoStruct{
+		ICMPv6TypeEchoRequest: icmpv6TypeCodeInfoStruct{
 			"EchoRequest", nil,
 		},
-		129: icmpv6TypeCodeInfoStruct{
+		ICMPv6TypeEchoReply: icmpv6TypeCodeInfoStruct{
 			"EchoReply", nil,
 		},
-		133: icmpv6TypeCodeInfoStruct{
+		ICMPv6TypeRouterSolicitation: icmpv6TypeCodeInfoStruct{
 			"RouterSolicitation", nil,
 		},
-		134: icmpv6TypeCodeInfoStruct{
+		ICMPv6TypeRouterAdvertisement: icmpv6TypeCodeInfoStruct{
 			"RouterAdvertisement", nil,
 		},
-		135: icmpv6TypeCodeInfoStruct{
+		ICMPv6TypeNeighborSolicitation: icmpv6TypeCodeInfoStruct{
 			"NeighborSolicitation", nil,
 		},
-		136: icmpv6TypeCodeInfoStruct{
+		ICMPv6TypeNeighborAdvertisement: icmpv6TypeCodeInfoStruct{
 			"NeighborAdvertisement", nil,
 		},
-		137: icmpv6TypeCodeInfoStruct{
+		ICMPv6TypeRedirect: icmpv6TypeCodeInfoStruct{
 			"Redirect", nil,
 		},
 	}
