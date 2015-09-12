@@ -22,12 +22,33 @@ const (
 	ICMPv6TypeParameterProblem       = 4
 	ICMPv6TypeEchoRequest            = 128
 	ICMPv6TypeEchoReply              = 129
+
 	// The following are from RFC 4861
 	ICMPv6TypeRouterSolicitation    = 133
 	ICMPv6TypeRouterAdvertisement   = 134
 	ICMPv6TypeNeighborSolicitation  = 135
 	ICMPv6TypeNeighborAdvertisement = 136
 	ICMPv6TypeRedirect              = 137
+)
+
+const (
+	// ICMPv6TypeDestinationUnreachable
+	ICMPv6CodeNoRouteToDst           = 0
+	ICMPv6CodeAdminProhibited        = 1
+	ICMPv6CodeBeyondScopeOfSrc       = 2
+	ICMPv6CodeAddressUnreachable     = 3
+	ICMPv6CodePortUnReachable        = 4
+	ICMPv6CodeSrcAddressFailedPolicy = 5
+	ICMPv6CodeRejectRouteToDst       = 6
+
+	// ICMPv6TypeTimeExceeded
+	ICMPv6CodeHopLimitExceeded               = 0
+	ICMPv6CodeFragmentReassemblyTimeExceeded = 1
+
+	// ICMPv6TypeParameterProblem
+	ICMPv6CodeErroneousHeaderField   = 0
+	ICMPv6CodeUnrecognizedNextHeader = 1
+	ICMPv6CodeUnrecognizedIPv6Option = 2
 )
 
 type icmpv6TypeCodeInfoStruct struct {
@@ -37,52 +58,52 @@ type icmpv6TypeCodeInfoStruct struct {
 
 var (
 	icmpv6TypeCodeInfo = map[uint8]icmpv6TypeCodeInfoStruct{
-		1: icmpv6TypeCodeInfoStruct{
+		ICMPv6TypeDestinationUnreachable: icmpv6TypeCodeInfoStruct{
 			"DestinationUnreachable", &map[uint8]string{
-				0: "NoRouteToDst",
-				1: "AdminProhibited",
-				2: "BeyondScopeOfSrc",
-				3: "AddressUnreachable",
-				4: "PortUnreachable",
-				5: "SrcAddressFailedPolicy",
-				6: "RejectRouteToDst",
+				ICMPv6CodeNoRouteToDst:           "NoRouteToDst",
+				ICMPv6CodeAdminProhibited:        "AdminProhibited",
+				ICMPv6CodeBeyondScopeOfSrc:       "BeyondScopeOfSrc",
+				ICMPv6CodeAddressUnreachable:     "AddressUnreachable",
+				ICMPv6CodePortUnReachable:        "PortUnreachable",
+				ICMPv6CodeSrcAddressFailedPolicy: "SrcAddressFailedPolicy",
+				ICMPv6CodeRejectRouteToDst:       "RejectRouteToDst",
 			},
 		},
-		2: icmpv6TypeCodeInfoStruct{
+		ICMPv6TypePacketTooBig: icmpv6TypeCodeInfoStruct{
 			"PacketTooBig", nil,
 		},
-		3: icmpv6TypeCodeInfoStruct{
+		ICMPv6TypeTimeExceeded: icmpv6TypeCodeInfoStruct{
 			"TimeExceeded", &map[uint8]string{
-				0: "HopLimitExceeded",
-				1: "FragmentReassemblyTimeExceeded",
+				ICMPv6CodeHopLimitExceeded:               "HopLimitExceeded",
+				ICMPv6CodeFragmentReassemblyTimeExceeded: "FragmentReassemblyTimeExceeded",
 			},
 		},
-		4: icmpv6TypeCodeInfoStruct{
+		ICMPv6TypeParameterProblem: icmpv6TypeCodeInfoStruct{
 			"ParameterProblem", &map[uint8]string{
-				0: "ErroneousHeaderField",
-				1: "UnrecognizedNextHeader",
-				2: "UnrecognizedNextHeader",
+				ICMPv6CodeErroneousHeaderField:   "ErroneousHeaderField",
+				ICMPv6CodeUnrecognizedNextHeader: "UnrecognizedNextHeader",
+				ICMPv6CodeUnrecognizedIPv6Option: "UnrecognizedIPv6Option",
 			},
 		},
-		128: icmpv6TypeCodeInfoStruct{
+		ICMPv6TypeEchoRequest: icmpv6TypeCodeInfoStruct{
 			"EchoRequest", nil,
 		},
-		129: icmpv6TypeCodeInfoStruct{
+		ICMPv6TypeEchoReply: icmpv6TypeCodeInfoStruct{
 			"EchoReply", nil,
 		},
-		133: icmpv6TypeCodeInfoStruct{
+		ICMPv6TypeRouterSolicitation: icmpv6TypeCodeInfoStruct{
 			"RouterSolicitation", nil,
 		},
-		134: icmpv6TypeCodeInfoStruct{
+		ICMPv6TypeRouterAdvertisement: icmpv6TypeCodeInfoStruct{
 			"RouterAdvertisement", nil,
 		},
-		135: icmpv6TypeCodeInfoStruct{
+		ICMPv6TypeNeighborSolicitation: icmpv6TypeCodeInfoStruct{
 			"NeighborSolicitation", nil,
 		},
-		136: icmpv6TypeCodeInfoStruct{
+		ICMPv6TypeNeighborAdvertisement: icmpv6TypeCodeInfoStruct{
 			"NeighborAdvertisement", nil,
 		},
-		137: icmpv6TypeCodeInfoStruct{
+		ICMPv6TypeRedirect: icmpv6TypeCodeInfoStruct{
 			"Redirect", nil,
 		},
 	}
@@ -110,7 +131,7 @@ func (a ICMPv6TypeCode) String() string {
 	typeStr := strInfo.typeStr
 	if strInfo.codeStr == nil && c == 0 {
 		// The ICMPv6 type does not make use of the code field
-		return fmt.Sprintf("%s", strInfo.typeStr)
+		return fmt.Sprintf("%s", typeStr)
 	}
 	if strInfo.codeStr == nil && c != 0 {
 		// The ICMPv6 type does not make use of the code field, but it is present anyway
@@ -118,7 +139,7 @@ func (a ICMPv6TypeCode) String() string {
 	}
 	codeStr, ok := (*strInfo.codeStr)[c]
 	if !ok {
-		// We don't know this ICMPv6 code; print the numerical value
+		// Unknown ICMPv6 code field
 		return fmt.Sprintf("%s(Code: %d)", typeStr, c)
 	}
 	return fmt.Sprintf("%s(%s)", typeStr, codeStr)
