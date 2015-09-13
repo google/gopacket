@@ -30,6 +30,26 @@ const (
 	ICMPv6TypeRedirect              = 137
 )
 
+const (
+	// DestinationUnreachable
+	ICMPv6CodeNoRouteToDst           = 0
+	ICMPv6CodeAdminProhibited        = 1
+	ICMPv6CodeBeyondScopeOfSrc       = 2
+	ICMPv6CodeAddressUnreachable     = 3
+	ICMPv6CodePortUnreachable        = 4
+	ICMPv6CodeSrcAddressFailedPolicy = 5
+	ICMPv6CodeRejectRouteToDst       = 6
+
+	// TimeExceeded
+	ICMPv6CodeHopLimitExceeded               = 0
+	ICMPv6CodeFragmentReassemblyTimeExceeded = 1
+
+	// ParameterProblem
+	ICMPv6CodeErroneousHeaderField   = 0
+	ICMPv6CodeUnrecognizedNextHeader = 1
+	ICMPv6CodeUnrecognizedIPv6Option = 2
+)
+
 type icmpv6TypeCodeInfoStruct struct {
 	typeStr string
 	codeStr *map[uint8]string
@@ -39,13 +59,13 @@ var (
 	icmpv6TypeCodeInfo = map[uint8]icmpv6TypeCodeInfoStruct{
 		ICMPv6TypeDestinationUnreachable: icmpv6TypeCodeInfoStruct{
 			"DestinationUnreachable", &map[uint8]string{
-				0: "NoRouteToDst",
-				1: "AdminProhibited",
-				2: "BeyondScopeOfSrc",
-				3: "AddressUnreachable",
-				4: "PortUnreachable",
-				5: "SrcAddressFailedPolicy",
-				6: "RejectRouteToDst",
+				ICMPv6CodeNoRouteToDst:           "NoRouteToDst",
+				ICMPv6CodeAdminProhibited:        "AdminProhibited",
+				ICMPv6CodeBeyondScopeOfSrc:       "BeyondScopeOfSrc",
+				ICMPv6CodeAddressUnreachable:     "AddressUnreachable",
+				ICMPv6CodePortUnreachable:        "PortUnreachable",
+				ICMPv6CodeSrcAddressFailedPolicy: "SrcAddressFailedPolicy",
+				ICMPv6CodeRejectRouteToDst:       "RejectRouteToDst",
 			},
 		},
 		ICMPv6TypePacketTooBig: icmpv6TypeCodeInfoStruct{
@@ -53,15 +73,15 @@ var (
 		},
 		ICMPv6TypeTimeExceeded: icmpv6TypeCodeInfoStruct{
 			"TimeExceeded", &map[uint8]string{
-				0: "HopLimitExceeded",
-				1: "FragmentReassemblyTimeExceeded",
+				ICMPv6CodeHopLimitExceeded:               "HopLimitExceeded",
+				ICMPv6CodeFragmentReassemblyTimeExceeded: "FragmentReassemblyTimeExceeded",
 			},
 		},
 		ICMPv6TypeParameterProblem: icmpv6TypeCodeInfoStruct{
 			"ParameterProblem", &map[uint8]string{
-				0: "ErroneousHeaderField",
-				1: "UnrecognizedNextHeader",
-				2: "UnrecognizedIPv6Option",
+				ICMPv6CodeErroneousHeaderField:   "ErroneousHeaderField",
+				ICMPv6CodeUnrecognizedNextHeader: "UnrecognizedNextHeader",
+				ICMPv6CodeUnrecognizedIPv6Option: "UnrecognizedIPv6Option",
 			},
 		},
 		ICMPv6TypeEchoRequest: icmpv6TypeCodeInfoStruct{
