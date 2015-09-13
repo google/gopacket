@@ -212,11 +212,12 @@ type ICMPv4 struct {
 	Seq      uint16
 }
 
-// LayerType returns gopacket.LayerTypeICMPv4
+// LayerType returns LayerTypeICMPv4.
 func (i *ICMPv4) LayerType() gopacket.LayerType { return LayerTypeICMPv4 }
 
 var tooShort error = fmt.Errorf("icmp layer less than 8 bytes")
 
+// DecodeFromBytes decodes the given bytes into this layer.
 func (i *ICMPv4) DecodeFromBytes(data []byte, df gopacket.DecodeFeedback) error {
 	if len(data) < 8 {
 		df.SetTruncated()
@@ -250,10 +251,12 @@ func (i *ICMPv4) SerializeTo(b gopacket.SerializeBuffer, opts gopacket.Serialize
 	return nil
 }
 
+// CanDecode returns the set of layer types that this DecodingLayer can decode.
 func (i *ICMPv4) CanDecode() gopacket.LayerClass {
 	return LayerTypeICMPv4
 }
 
+// NextLayerType returns the layer type contained by this DecodingLayer.
 func (i *ICMPv4) NextLayerType() gopacket.LayerType {
 	return gopacket.LayerTypePayload
 }
