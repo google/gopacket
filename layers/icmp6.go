@@ -61,7 +61,7 @@ var (
 			"ParameterProblem", &map[uint8]string{
 				0: "ErroneousHeaderField",
 				1: "UnrecognizedNextHeader",
-				2: "UnrecognizedNextHeader",
+				2: "UnrecognizedIPv6Option",
 			},
 		},
 		ICMPv6TypeEchoRequest: icmpv6TypeCodeInfoStruct{
