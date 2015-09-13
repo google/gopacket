@@ -11,7 +11,6 @@ import (
 	"encoding/binary"
 	"fmt"
 	"github.com/google/gopacket"
-	"strconv"
 )
 
 const (
@@ -32,6 +31,125 @@ const (
 	ICMPv4TypeAddressMaskReply       = 18
 )
 
+const (
+	// DestinationUnreachable
+	ICMPv4CodeNet                 = 0
+	ICMPv4CodeHost                = 1
+	ICMPv4CodeProtocol            = 2
+	ICMPv4CodePort                = 3
+	ICMPv4CodeFragmentationNeeded = 4
+	ICMPv4CodeSourceRoutingFailed = 5
+	ICMPv4CodeNetUnknown          = 6
+	ICMPv4CodeHostUnknown         = 7
+	ICMPv4CodeSourceIsolated      = 8
+	ICMPv4CodeNetAdminProhibited  = 9
+	ICMPv4CodeHostAdminProhibited = 10
+	ICMPv4CodeNetTOS              = 11
+	ICMPv4CodeHostTOS             = 12
+	ICMPv4CodeCommAdminProhibited = 13
+	ICMPv4CodeHostPrecedence      = 14
+	ICMPv4CodePrecedenceCutoff    = 15
+
+	// TimeExceeded
+	ICMPv4CodeTTLExceeded                    = 0
+	ICMPv4CodeFragmentReassemblyTimeExceeded = 1
+
+	// ParameterProblem
+	ICMPv4CodePointerIndicatesError = 0
+	ICMPv4CodeMissingOption         = 1
+	ICMPv4CodeBadLength             = 2
+
+	// Redirect
+	// ICMPv4CodeNet  = same as for DestinationUnreachable
+	// ICMPv4CodeHost = same as for DestinationUnreachable
+	ICMPv4CodeTOSNet  = 2
+	ICMPv4CodeTOSHost = 3
+)
+
+type icmpv4TypeCodeInfoStruct struct {
+	typeStr string
+	codeStr *map[uint8]string
+}
+
+var (
+	icmpv4TypeCodeInfo = map[uint8]icmpv4TypeCodeInfoStruct{
+		ICMPv4TypeDestinationUnreachable: icmpv4TypeCodeInfoStruct{
+			"DestinationUnreachable", &map[uint8]string{
+				ICMPv4CodeNet:                 "Net",
+				ICMPv4CodeHost:                "Host",
+				ICMPv4CodeProtocol:            "Protocol",
+				ICMPv4CodePort:                "Port",
+				ICMPv4CodeFragmentationNeeded: "FragmentationNeeded",
+				ICMPv4CodeSourceRoutingFailed: "SourceRoutingFailed",
+				ICMPv4CodeNetUnknown:          "NetUnknown",
+				ICMPv4CodeHostUnknown:         "HostUnknown",
+				ICMPv4CodeSourceIsolated:      "SourceIsolated",
+				ICMPv4CodeNetAdminProhibited:  "NetAdminProhibited",
+				ICMPv4CodeHostAdminProhibited: "HostAdminProhibited",
+				ICMPv4CodeNetTOS:              "NetTOS",
+				ICMPv4CodeHostTOS:             "HostTOS",
+				ICMPv4CodeCommAdminProhibited: "CommAdminProhibited",
+				ICMPv4CodeHostPrecedence:      "HostPrecedence",
+				ICMPv4CodePrecedenceCutoff:    "PrecedenceCutoff",
+			},
+		},
+		ICMPv4TypeTimeExceeded: icmpv4TypeCodeInfoStruct{
+			"TimeExceeded", &map[uint8]string{
+				ICMPv4CodeTTLExceeded:                    "TTLExceeded",
+				ICMPv4CodeFragmentReassemblyTimeExceeded: "FragmentReassemblyTimeExceeded",
+			},
+		},
+		ICMPv4TypeParameterProblem: icmpv4TypeCodeInfoStruct{
+			"ParameterProblem", &map[uint8]string{
+				ICMPv4CodePointerIndicatesError: "PointerIndicatesError",
+				ICMPv4CodeMissingOption:         "MissingOption",
+				ICMPv4CodeBadLength:             "BadLength",
+			},
+		},
+		ICMPv4TypeSourceQuench: icmpv4TypeCodeInfoStruct{
+			"SourceQuench", nil,
+		},
+		ICMPv4TypeRedirect: icmpv4TypeCodeInfoStruct{
+			"Redirect", &map[uint8]string{
+				ICMPv4CodeNet:     "Net",
+				ICMPv4CodeHost:    "Host",
+				ICMPv4CodeTOSNet:  "TOS+Net",
+				ICMPv4CodeTOSHost: "TOS+Host",
+			},
+		},
+		ICMPv4TypeEchoRequest: icmpv4TypeCodeInfoStruct{
+			"EchoRequest", nil,
+		},
+		ICMPv4TypeEchoReply: icmpv4TypeCodeInfoStruct{
+			"EchoReply", nil,
+		},
+		ICMPv4TypeTimestampRequest: icmpv4TypeCodeInfoStruct{
+			"TimestampRequest", nil,
+		},
+		ICMPv4TypeTimestampReply: icmpv4TypeCodeInfoStruct{
+			"TimestampReply", nil,
+		},
+		ICMPv4TypeInfoRequest: icmpv4TypeCodeInfoStruct{
+			"InfoRequest", nil,
+		},
+		ICMPv4TypeInfoReply: icmpv4TypeCodeInfoStruct{
+			"InfoReply", nil,
+		},
+		ICMPv4TypeRouterSolicitation: icmpv4TypeCodeInfoStruct{
+			"RouterSolicitation", nil,
+		},
+		ICMPv4TypeRouterAdvertisement: icmpv4TypeCodeInfoStruct{
+			"RouterAdvertisement", nil,
+		},
+		ICMPv4TypeAddressMaskRequest: icmpv4TypeCodeInfoStruct{
+			"AddressMaskRequest", nil,
+		},
+		ICMPv4TypeAddressMaskReply: icmpv4TypeCodeInfoStruct{
+			"AddressMaskReply", nil,
+		},
+	}
+)
+
 type ICMPv4TypeCode uint16
 
 // Type returns the ICMPv4 type field.
@@ -45,103 +163,25 @@ func (a ICMPv4TypeCode) Code() uint8 {
 }
 
 func (a ICMPv4TypeCode) String() string {
-	typ := uint8(a >> 8)
-	code := uint8(a)
-	var typeStr, codeStr string
-	switch typ {
-	case ICMPv4TypeDestinationUnreachable:
-		typeStr = "DestinationUnreachable"
-		switch code {
-		case 0:
-			codeStr = "Net"
-		case 1:
-			codeStr = "Host"
-		case 2:
-			codeStr = "Protocol"
-		case 3:
-			codeStr = "Port"
-		case 4:
-			codeStr = "FragmentationNeeded"
-		case 5:
-			codeStr = "SourceRoutingFailed"
-		case 6:
-			codeStr = "NetUnknown"
-		case 7:
-			codeStr = "HostUnknown"
-		case 8:
-			codeStr = "SourceIsolated"
-		case 9:
-			codeStr = "NetAdminProhibited"
-		case 10:
-			codeStr = "HostAdminProhibited"
-		case 11:
-			codeStr = "NetTOS"
-		case 12:
-			codeStr = "HostTOS"
-		case 13:
-			codeStr = "CommAdminProhibited"
-		case 14:
-			codeStr = "HostPrecedence"
-		case 15:
-			codeStr = "PrecedenceCutoff"
-		}
-	case ICMPv4TypeTimeExceeded:
-		typeStr = "TimeExceeded"
-		switch code {
-		case 0:
-			codeStr = "TTLExceeded"
-		case 1:
-			codeStr = "FragmentReassemblyTimeExceeded"
-		}
-	case ICMPv4TypeParameterProblem:
-		typeStr = "ParameterProblem"
-		switch code {
-		case 0:
-			codeStr = "PointerIndicatesError"
-		case 1:
-			codeStr = "MissingOption"
-		case 2:
-			codeStr = "BadLength"
-		}
-	case ICMPv4TypeSourceQuench:
-		typeStr = "SourceQuench"
-	case ICMPv4TypeRedirect:
-		typeStr = "Redirect"
-		switch code {
-		case 0:
-			codeStr = "Network"
-		case 1:
-			codeStr = "Host"
-		case 2:
-			codeStr = "TOS+Network"
-		case 3:
-			codeStr = "TOS+Host"
-		}
-	case ICMPv4TypeEchoRequest:
-		typeStr = "EchoRequest"
-	case ICMPv4TypeEchoReply:
-		typeStr = "EchoReply"
-	case ICMPv4TypeTimestampRequest:
-		typeStr = "TimestampRequest"
-	case ICMPv4TypeTimestampReply:
-		typeStr = "TimestampReply"
-	case ICMPv4TypeInfoRequest:
-		typeStr = "InfoRequest"
-	case ICMPv4TypeInfoReply:
-		typeStr = "InfoReply"
-	case ICMPv4TypeRouterSolicitation:
-		typeStr = "RouterSolicitation"
-	case ICMPv4TypeRouterAdvertisement:
-		typeStr = "RouterAdvertisement"
-	case ICMPv4TypeAddressMaskRequest:
-		typeStr = "AddressMaskRequest"
-	case ICMPv4TypeAddressMaskReply:
-		typeStr = "AddressMaskReply"
-	default:
-		typeStr = strconv.Itoa(int(typ))
+	t, c := a.Type(), a.Code()
+	strInfo, ok := icmpv4TypeCodeInfo[t]
+	if !ok {
+		// Unknown ICMPv4 type field
+		return fmt.Sprintf("%d(%d)", t, c)
 	}
-	if codeStr == "" {
-		codeStr = strconv.Itoa(int(code))
+	typeStr := strInfo.typeStr
+	if strInfo.codeStr == nil && c == 0 {
+		// The ICMPv4 type does not make use of the code field
+		return fmt.Sprintf("%s", strInfo.typeStr)
+	}
+	if strInfo.codeStr == nil && c != 0 {
+		// The ICMPv4 type does not make use of the code field, but it is present anyway
+		return fmt.Sprintf("%s(Code: %d)", typeStr, c)
+	}
+	codeStr, ok := (*strInfo.codeStr)[c]
+	if !ok {
+		// We don't know this ICMPv4 code; print the numerical value
+		return fmt.Sprintf("%s(Code: %d)", typeStr, c)
 	}
 	return fmt.Sprintf("%s(%s)", typeStr, codeStr)
 }
