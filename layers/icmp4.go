@@ -34,6 +34,16 @@ const (
 
 type ICMPv4TypeCode uint16
 
+// Type returns the ICMPv4 type field.
+func (a ICMPv4TypeCode) Type() uint8 {
+	return uint8(a >> 8)
+}
+
+// Code returns the ICMPv4 code field.
+func (a ICMPv4TypeCode) Code() uint8 {
+	return uint8(a)
+}
+
 func (a ICMPv4TypeCode) String() string {
 	typ := uint8(a >> 8)
 	code := uint8(a)
