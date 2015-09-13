@@ -192,6 +192,17 @@ func (a ICMPv4TypeCode) GoString() string {
 	return fmt.Sprintf("%s(%d, %d)", t.String(), a.Type(), a.Code())
 }
 
+// SerializeTo writes the ICMPv4TypeCode value to the 'bytes' buffer.
+func (a ICMPv4TypeCode) SerializeTo(bytes []byte) {
+	binary.BigEndian.PutUint16(bytes, uint16(a))
+}
+
+// CreateICMPv4TypeCode is a convenience function to create an ICMPv4TypeCode
+// gopacket type from the ICMPv4 type and code values.
+func CreateICMPv4TypeCode(typ uint8, code uint8) ICMPv4TypeCode {
+	return ICMPv4TypeCode(binary.BigEndian.Uint16([]byte{typ, code}))
+}
+
 // ICMPv4 is the layer for IPv4 ICMP packet data.
 type ICMPv4 struct {
 	BaseLayer
@@ -211,7 +222,7 @@ func (i *ICMPv4) DecodeFromBytes(data []byte, df gopacket.DecodeFeedback) error 
 		df.SetTruncated()
 		return tooShort
 	}
-	i.TypeCode = ICMPv4TypeCode(binary.BigEndian.Uint16(data[:2]))
+	i.TypeCode = CreateICMPv4TypeCode(data[0], data[1])
 	i.Checksum = binary.BigEndian.Uint16(data[2:4])
 	i.Id = binary.BigEndian.Uint16(data[4:6])
 	i.Seq = binary.BigEndian.Uint16(data[6:8])
@@ -227,7 +238,7 @@ func (i *ICMPv4) SerializeTo(b gopacket.SerializeBuffer, opts gopacket.Serialize
 	if err != nil {
 		return err
 	}
-	binary.BigEndian.PutUint16(bytes, uint16(i.TypeCode))
+	i.TypeCode.SerializeTo(bytes)
 	binary.BigEndian.PutUint16(bytes[4:], i.Id)
 	binary.BigEndian.PutUint16(bytes[6:], i.Seq)
 	if opts.ComputeChecksums {
