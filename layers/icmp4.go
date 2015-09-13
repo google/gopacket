@@ -11,6 +11,7 @@ import (
 	"encoding/binary"
 	"fmt"
 	"github.com/google/gopacket"
+	"reflect"
 )
 
 const (
@@ -184,6 +185,11 @@ func (a ICMPv4TypeCode) String() string {
 		return fmt.Sprintf("%s(Code: %d)", typeStr, c)
 	}
 	return fmt.Sprintf("%s(%s)", typeStr, codeStr)
+}
+
+func (a ICMPv4TypeCode) GoString() string {
+	t := reflect.TypeOf(a)
+	return fmt.Sprintf("%s(%d, %d)", t.String(), a.Type(), a.Code())
 }
 
 // ICMPv4 is the layer for IPv4 ICMP packet data.
