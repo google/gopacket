@@ -215,13 +215,11 @@ type ICMPv4 struct {
 // LayerType returns LayerTypeICMPv4.
 func (i *ICMPv4) LayerType() gopacket.LayerType { return LayerTypeICMPv4 }
 
-var tooShort error = fmt.Errorf("icmp layer less than 8 bytes")
-
 // DecodeFromBytes decodes the given bytes into this layer.
 func (i *ICMPv4) DecodeFromBytes(data []byte, df gopacket.DecodeFeedback) error {
 	if len(data) < 8 {
 		df.SetTruncated()
-		return tooShort
+		return fmt.Errorf("ICMP layer less then 8 bytes for ICMPv4 packet")
 	}
 	i.TypeCode = CreateICMPv4TypeCode(data[0], data[1])
 	i.Checksum = binary.BigEndian.Uint16(data[2:4])
