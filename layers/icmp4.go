@@ -260,10 +260,5 @@ func (i *ICMPv4) NextLayerType() gopacket.LayerType {
 
 func decodeICMPv4(data []byte, p gopacket.PacketBuilder) error {
 	i := &ICMPv4{}
-	err := i.DecodeFromBytes(data, p)
-	if err != nil {
-		return err
-	}
-	p.AddLayer(i)
-	return p.NextDecoder(gopacket.LayerTypePayload)
+	return decodingLayerDecoder(i, data, p)
 }
