@@ -109,6 +109,15 @@ import (
 
 const errorBufferSize = 256
 
+// Maximum number of BPF instructions supported (BPF_MAXINSNS),
+// taken from Linux kernel: include/uapi/linux/bpf_common.h
+//
+// https://github.com/torvalds/linux/blob/master/include/uapi/linux/bpf_common.h
+const MaxBpfInstructions = 4096
+
+// 8 bytes per instruction, max 4096 instructions
+const bpfInstructionBufferSize = 8 * MaxBpfInstructions
+
 // Handle provides a connection to a pcap handle, allowing users to read packets
 // off the wire (Next), inject packets onto the wire (Inject), and
 // perform a number of other functions to affect and understand packet output.
@@ -162,6 +171,14 @@ type InterfaceAddress struct {
 type BPF struct {
 	orig string
 	bpf  _Ctype_struct_bpf_program // takes a finalizer, not overriden by outsiders
+}
+
+// BPFInstruction is a byte encoded structure holding a BPF instruction
+type BPFInstruction struct {
+	Code uint16
+	Jt   uint8
+	Jf   uint8
+	K    uint32
 }
 
 // BlockForever, when passed into OpenLive/SetTimeout, causes it to block forever
@@ -401,8 +418,7 @@ func (p *Handle) ListDataLinks() (datalinks []Datalink, err error) {
 	return datalinks, nil
 }
 
-// SetBPFFilter compiles and sets a BPF filter for the pcap handle.
-func (p *Handle) SetBPFFilter(expr string) (err error) {
+func (p *Handle) compileBPFFilter(expr string) (_Ctype_struct_bpf_program, error) {
 	errorBuf := (*C.char)(C.calloc(errorBufferSize, 1))
 	defer C.free(unsafe.Pointer(errorBuf))
 
@@ -430,7 +446,39 @@ func (p *Handle) SetBPFFilter(expr string) (err error) {
 	defer C.free(unsafe.Pointer(cexpr))
 
 	if -1 == C.pcap_compile(p.cptr, &bpf, cexpr, 1, C.bpf_u_int32(maskp)) {
-		return p.Error()
+		return bpf, p.Error()
+	}
+
+	return bpf, nil
+}
+
+// CompileBPFFilter compiles and returns a BPF filter for the pcap handle.
+func (p *Handle) CompileBPFFilter(expr string) ([]BPFInstruction, error) {
+	bpf, err := p.compileBPFFilter(expr)
+	if err != nil {
+		return nil, err
+	}
+
+	bpfInsn := (*[bpfInstructionBufferSize]_Ctype_struct_bpf_insn)(unsafe.Pointer(bpf.bf_insns))[0:bpf.bf_len:bpf.bf_len]
+	bpfInstruction := make([]BPFInstruction, len(bpfInsn), len(bpfInsn))
+
+	for i, v := range bpfInsn {
+		bpfInstruction[i].Code = uint16(v.code)
+		bpfInstruction[i].Jt = uint8(v.jt)
+		bpfInstruction[i].Jf = uint8(v.jf)
+		bpfInstruction[i].K = uint32(v.k)
+	}
+
+	C.pcap_freecode(&bpf)
+
+	return bpfInstruction, nil
+}
+
+// SetBPFFilter compiles and sets a BPF filter for the pcap handle.
+func (p *Handle) SetBPFFilter(expr string) (err error) {
+	bpf, err := p.compileBPFFilter(expr)
+	if err != nil {
+		return err
 	}
 
 	if -1 == C.pcap_setfilter(p.cptr, &bpf) {
@@ -441,6 +489,68 @@ func (p *Handle) SetBPFFilter(expr string) (err error) {
 	C.pcap_freecode(&bpf)
 
 	return nil
+}
+
+// SetBPFInstructionFilter may be used to apply a filter in BPF asm byte code format.
+//
+// Simplest way to generate BPF asm byte code is with tcpdump:
+//     tcpdump -dd 'udp'
+//
+// The output may be used directly to add a filter, e.g.:
+//     bpfInstructions := []pcap.BpfInstruction{
+//			{0x28, 0, 0, 0x0000000c},
+//			{0x15, 0, 9, 0x00000800},
+//			{0x30, 0, 0, 0x00000017},
+//			{0x15, 0, 7, 0x00000006},
+//			{0x28, 0, 0, 0x00000014},
+//			{0x45, 5, 0, 0x00001fff},
+//			{0xb1, 0, 0, 0x0000000e},
+//			{0x50, 0, 0, 0x0000001b},
+//			{0x54, 0, 0, 0x00000012},
+//			{0x15, 0, 1, 0x00000012},
+//			{0x6, 0, 0, 0x0000ffff},
+//			{0x6, 0, 0, 0x00000000},
+//		}
+//
+// An other posibility is to write the bpf code in bpf asm.
+// Documentation: https://www.kernel.org/doc/Documentation/networking/filter.txt
+//
+// To compile the code use bpf_asm from
+// https://github.com/torvalds/linux/tree/master/tools/net
+//
+// The following command may be used to convert bpf_asm output to c/go struct, usable for SetBPFFilterByte:
+// bpf_asm -c tcp.bpf
+func (p *Handle) SetBPFInstructionFilter(bpfInstructions []BPFInstruction) (err error) {
+	bpf, err := bpfInstructionFilter(bpfInstructions)
+	if err != nil {
+		return err
+	}
+
+	if -1 == C.pcap_setfilter(p.cptr, &bpf) {
+		C.pcap_freecode(&bpf)
+		return p.Error()
+	}
+
+	C.pcap_freecode(&bpf)
+
+	return nil
+}
+func bpfInstructionFilter(bpfInstructions []BPFInstruction) (bpf _Ctype_struct_bpf_program, err error) {
+	if len(bpfInstructions) < 1 {
+		return bpf, errors.New("bpfInstructions must not be empty")
+	}
+
+	if len(bpfInstructions) > MaxBpfInstructions {
+		return bpf, fmt.Errorf("bpfInstructions must not be larger than %d", MaxBpfInstructions)
+	}
+
+	bpf.bf_len = C.u_int(len(bpfInstructions))
+	cbpfInsns := C.calloc(C.size_t(len(bpfInstructions)), C.size_t(unsafe.Sizeof(bpfInstructions[0])))
+
+	copy((*[bpfInstructionBufferSize]BPFInstruction)(cbpfInsns)[0:len(bpfInstructions)], bpfInstructions)
+	bpf.bf_insns = (*_Ctype_struct_bpf_insn)(cbpfInsns)
+
+	return
 }
 
 // NewBPF compiles the given string into a new filter program.
@@ -455,6 +565,26 @@ func (p *Handle) NewBPF(expr string) (*BPF, error) {
 	if C.pcap_compile(p.cptr, &bpf.bpf, cexpr /* optimize */, 1, C.PCAP_NETMASK_UNKNOWN) != 0 {
 		return nil, p.Error()
 	}
+
+	runtime.SetFinalizer(bpf, destroyBPF)
+	return bpf, nil
+}
+
+// NewBPFInstructionFilter sets the given BPFInstructions as new filter program.
+//
+// More details see func SetBPFInstructionFilter
+//
+// BPF filters need to be created from activated handles, because they need to
+// know the underlying link type to correctly compile their offsets.
+func (p *Handle) NewBPFInstructionFilter(bpfInstructions []BPFInstruction) (*BPF, error) {
+	var err error
+	bpf := &BPF{orig: "BPF Instruction Filter"}
+
+	bpf.bpf, err = bpfInstructionFilter(bpfInstructions)
+	if err != nil {
+		return nil, err
+	}
+
 	runtime.SetFinalizer(bpf, destroyBPF)
 	return bpf, nil
 }
