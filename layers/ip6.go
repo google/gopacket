@@ -65,7 +65,7 @@ func getIPv6HopByHopJumboLength(hopopts *IPv6HopByHop) (uint32, bool, error) {
 	}
 	l := binary.BigEndian.Uint32(tlv.OptionData)
 	if l <= ipv6MaxPayloadLength {
-		return 0, false, fmt.Errorf("Jumbo length cannot be less than %d", ipv6MaxPayloadLength + 1)
+		return 0, false, fmt.Errorf("Jumbo length cannot be less than %d", ipv6MaxPayloadLength+1)
 	}
 	// Found
 	return l, true, nil
@@ -334,7 +334,7 @@ func serializeTLVOptionPadding(data []byte, padLength int) {
 	return
 }
 
-// If buf is 'nil' do a serialize dry run 
+// If buf is 'nil' do a serialize dry run
 func serializeIPv6HeaderTLVOptions(buf []byte, options []*ipv6HeaderTLVOption, fixLengths bool) int {
 	var l int
 

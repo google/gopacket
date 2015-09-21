@@ -30,3 +30,8 @@ examples/pcapdump/pcapdump
 examples/httpassembly/httpassembly
 examples/statsassembly/statsassembly
 examples/arpscan/arpscan
+examples/bidirectional/bidirectional
+examples/bytediff/bytediff
+layers/gen
+macs/gen
+pcap/pcap_tester

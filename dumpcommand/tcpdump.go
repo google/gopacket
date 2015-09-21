@@ -28,7 +28,7 @@ var (
 	statsevery  = flag.Int("stats", 1000, "Output statistics every N packets")
 	printErrors = flag.Bool("errors", false, "Print out packet dumps of decode errors, useful for checking decoders against live traffic")
 	lazy        = flag.Bool("lazy", false, "If true, do lazy decoding")
-	defrag = flag.Bool("defrag", false, "If true, do IPv4 defrag")
+	defrag      = flag.Bool("defrag", false, "If true, do IPv4 defrag")
 )
 
 func Run(src gopacket.PacketDataSource) {
