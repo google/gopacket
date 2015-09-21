@@ -106,6 +106,94 @@ func TestBPF(t *testing.T) {
 	}
 }
 
+func TestBPFInstruction(t *testing.T) {
+	handle, err := OpenOffline("test_ethernet.pcap")
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	cntr := 0
+	oversizedBpfInstructionBuffer := [MaxBpfInstructions + 1]BPFInstruction{}
+
+	for _, expected := range []struct {
+		BpfInstruction []BPFInstruction
+		Error          bool
+		Result         bool
+	}{
+		// {"foobar", true, false},
+		{[]BPFInstruction{}, true, false},
+
+		// {"tcp[tcpflags] & (tcp-syn|tcp-ack) == (tcp-syn|tcp-ack)", false, true},
+		// tcpdump -dd 'tcp[tcpflags] & (tcp-syn|tcp-ack) == (tcp-syn|tcp-ack)'
+		{[]BPFInstruction{
+			{0x28, 0, 0, 0x0000000c},
+			{0x15, 0, 9, 0x00000800},
+			{0x30, 0, 0, 0x00000017},
+			{0x15, 0, 7, 0x00000006},
+			{0x28, 0, 0, 0x00000014},
+			{0x45, 5, 0, 0x00001fff},
+			{0xb1, 0, 0, 0x0000000e},
+			{0x50, 0, 0, 0x0000001b},
+			{0x54, 0, 0, 0x00000012},
+			{0x15, 0, 1, 0x00000012},
+			{0x6, 0, 0, 0x0000ffff},
+			{0x6, 0, 0, 0x00000000},
+		}, false, true},
+
+		// {"tcp[tcpflags] & (tcp-syn|tcp-ack) == tcp-ack", false, true},
+		// tcpdump -dd 'tcp[tcpflags] & (tcp-syn|tcp-ack) == tcp-ack'
+		{[]BPFInstruction{
+			{0x28, 0, 0, 0x0000000c},
+			{0x15, 0, 9, 0x00000800},
+			{0x30, 0, 0, 0x00000017},
+			{0x15, 0, 7, 0x00000006},
+			{0x28, 0, 0, 0x00000014},
+			{0x45, 5, 0, 0x00001fff},
+			{0xb1, 0, 0, 0x0000000e},
+			{0x50, 0, 0, 0x0000001b},
+			{0x54, 0, 0, 0x00000012},
+			{0x15, 0, 1, 0x00000010},
+			{0x6, 0, 0, 0x0000ffff},
+			{0x6, 0, 0, 0x00000000},
+		}, false, true},
+
+		// {"udp", false, false},
+		// tcpdump -dd 'udp'
+		{[]BPFInstruction{
+			{0x28, 0, 0, 0x0000000c},
+			{0x15, 0, 5, 0x000086dd},
+			{0x30, 0, 0, 0x00000014},
+			{0x15, 6, 0, 0x00000011},
+			{0x15, 0, 6, 0x0000002c},
+			{0x30, 0, 0, 0x00000036},
+			{0x15, 3, 4, 0x00000011},
+			{0x15, 0, 3, 0x00000800},
+			{0x30, 0, 0, 0x00000017},
+			{0x15, 0, 1, 0x00000011},
+			{0x6, 0, 0, 0x0000ffff},
+			{0x6, 0, 0, 0x00000000},
+		}, false, false},
+
+		{oversizedBpfInstructionBuffer[:], true, false},
+	} {
+		cntr++
+		data, ci, err := handle.ReadPacketData()
+		if err != nil {
+			t.Fatal(err)
+		}
+		t.Log("Testing BpfInstruction filter", cntr)
+		if bpf, err := handle.NewBPFInstructionFilter(expected.BpfInstruction); err != nil {
+			if !expected.Error {
+				t.Error(err, "while compiling filter was unexpected")
+			}
+		} else if expected.Error {
+			t.Error("expected error but didn't see one")
+		} else if matches := bpf.Matches(ci, data); matches != expected.Result {
+			t.Error("Filter result was", matches, "but should be", expected.Result)
+		}
+	}
+}
+
 func ExampleBPF() {
 	handle, err := OpenOffline("test_ethernet.pcap")
 	if err != nil {
