@@ -9,6 +9,7 @@ package layers
 import (
 	"encoding/binary"
 	"fmt"
+
 	"github.com/google/gopacket"
 )
 
@@ -58,22 +59,10 @@ func (l *Loopback) NextLayerType() gopacket.LayerType {
 }
 
 func decodeLoopback(data []byte, p gopacket.PacketBuilder) error {
-	// The protocol could be either big-endian or little-endian, we're
-	// not sure.  But we're PRETTY sure that the value is less than
-	// 256, so we can check the first two bytes.
-	var prot uint32
-	if data[0] == 0 && data[1] == 0 {
-		prot = binary.BigEndian.Uint32(data[:4])
-	} else {
-		prot = binary.LittleEndian.Uint32(data[:4])
+	l := Loopback{}
+	if err := l.DecodeFromBytes(data, gopacket.NilDecodeFeedback); err != nil {
+		return err
 	}
-	if prot > 0xFF {
-		return fmt.Errorf("Invalid loopback protocol %q", data[:4])
-	}
-	l := &Loopback{
-		BaseLayer: BaseLayer{data[:4], data[4:]},
-		Family:    ProtocolFamily(prot),
-	}
-	p.AddLayer(l)
+	p.AddLayer(&l)
 	return p.NextDecoder(l.Family)
 }
