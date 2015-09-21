@@ -23,11 +23,15 @@ type Loopback struct {
 // LayerType returns LayerTypeLoopback.
 func (l *Loopback) LayerType() gopacket.LayerType { return LayerTypeLoopback }
 
+// DecodeFromBytes decodes the given bytes into this layer.
 func (l *Loopback) DecodeFromBytes(data []byte, df gopacket.DecodeFeedback) error {
 	if len(data) < 4 {
 		return fmt.Errorf("Loopback packet too small")
 	}
 
+	// The protocol could be either big-endian or little-endian, we're
+	// not sure.  But we're PRETTY sure that the value is less than
+	// 256, so we can check the first two bytes.
 	var prot uint32
 	if data[0] == 0 && data[1] == 0 {
 		prot = binary.BigEndian.Uint32(data[:4])
@@ -42,10 +46,13 @@ func (l *Loopback) DecodeFromBytes(data []byte, df gopacket.DecodeFeedback) erro
 	l.BaseLayer = BaseLayer{data[:4], data[4:]}
 	return nil
 }
+
+// CanDecode returns the set of layer types that this DecodingLayer can decode.
 func (l *Loopback) CanDecode() gopacket.LayerClass {
 	return LayerTypeLoopback
 }
 
+// NextLayerType returns the layer type contained by this DecodingLayer.
 func (l *Loopback) NextLayerType() gopacket.LayerType {
 	return l.Family.LayerType()
 }
