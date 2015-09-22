@@ -1,3 +1,5 @@
+// Copyright 2013 Google, Inc. All rights reserved.
+//
 // Package ip4defrag implements a IPv4 defragmenter
 package ip4defrag
 
