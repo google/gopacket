@@ -446,6 +446,7 @@ func (p *Handle) compileBPFFilter(expr string) (_Ctype_struct_bpf_program, error
 	defer C.free(unsafe.Pointer(cexpr))
 
 	if -1 == C.pcap_compile(p.cptr, &bpf, cexpr, 1, C.bpf_u_int32(maskp)) {
+		C.pcap_freecode(&bpf)
 		return bpf, p.Error()
 	}
 
@@ -455,6 +456,7 @@ func (p *Handle) compileBPFFilter(expr string) (_Ctype_struct_bpf_program, error
 // CompileBPFFilter compiles and returns a BPF filter for the pcap handle.
 func (p *Handle) CompileBPFFilter(expr string) ([]BPFInstruction, error) {
 	bpf, err := p.compileBPFFilter(expr)
+	defer C.pcap_freecode(&bpf)
 	if err != nil {
 		return nil, err
 	}
@@ -469,14 +471,13 @@ func (p *Handle) CompileBPFFilter(expr string) ([]BPFInstruction, error) {
 		bpfInstruction[i].K = uint32(v.k)
 	}
 
-	C.pcap_freecode(&bpf)
-
 	return bpfInstruction, nil
 }
 
 // SetBPFFilter compiles and sets a BPF filter for the pcap handle.
 func (p *Handle) SetBPFFilter(expr string) (err error) {
 	bpf, err := p.compileBPFFilter(expr)
+	defer C.pcap_freecode(&bpf)
 	if err != nil {
 		return err
 	}
@@ -485,8 +486,6 @@ func (p *Handle) SetBPFFilter(expr string) (err error) {
 		C.pcap_freecode(&bpf)
 		return p.Error()
 	}
-
-	C.pcap_freecode(&bpf)
 
 	return nil
 }
