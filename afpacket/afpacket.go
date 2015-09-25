@@ -42,7 +42,7 @@ func tpacketAlign(v int) int {
 	return int((uint(v) + tpacketAlignment - 1) & ((^tpacketAlignment) - 1))
 }
 
-// SocketStats contains counters reported by the socket used by TPacket
+// Stats is a set of counters detailing the work TPacket has done so far.
 type Stats struct {
 	// Packets is the total number of packets returned to the caller.
 	Packets int64
@@ -55,18 +55,6 @@ type Stats struct {
 // Get structs to store socket stats
 type SocketStats C.struct_tpacket_stats
 type SocketStatsV3 C.struct_tpacket_stats_v3
-
-// Same as SocketStats, but for TPacket V3 sockets
-/*
-type SocketStats struct {
-	// Total packet count
-	Packets int64
-	// Dropped packet count
-	Drops int64
-	// Freeze queue count, only applies for V3 sockets
-	FreezeQCount int64
-}
-*/
 
 type TPacket struct {
 	// fd is the C file descriptor.
