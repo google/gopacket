@@ -102,8 +102,8 @@ func TestPacketPrism(t *testing.T) {
 			Address2:       net.HardwareAddr{0xcc, 0xfa, 0x0, 0xad, 0x79, 0xe8},
 			Address3:       net.HardwareAddr{0xff, 0xff, 0xff, 0xff, 0xff, 0xff},
 			Address4:       net.HardwareAddr(nil),
-			SequenceNumber: 0x106,
-			FragmentNumber: 0x20,
+			SequenceNumber: 0x041a,
+			FragmentNumber: 0x0,
 			Checksum:       0x0,
 		}
 
