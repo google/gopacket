@@ -147,6 +147,12 @@ func TestPacketDot11MgmtBeacon(t *testing.T) {
 	}
 	checkLayers(p, expectedLayers, t)
 
+	if p.Layer(LayerTypeDot11).(*Dot11).SequenceNumber != 2431 {
+		t.Error("dot11 invalid sequence number")
+	}
+	if p.Layer(LayerTypeDot11).(*Dot11).FragmentNumber != 0 {
+		t.Error("dot11 invalid fragment number")
+	}
 	if _, ok := p.Layer(LayerTypeDot11MgmtBeacon).(*Dot11MgmtBeacon); !ok {
 		t.Errorf("dot11 management beacon frame was expected")
 	}
