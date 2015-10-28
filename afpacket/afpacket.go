@@ -16,7 +16,7 @@ package afpacket
 import (
 	"errors"
 	"fmt"
-	"github.com/google/gopacket"
+	"github.com/lrsk/gopacket"
 	"net"
 	"runtime"
 	"sync"

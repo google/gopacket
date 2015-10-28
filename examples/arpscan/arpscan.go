@@ -20,9 +20,9 @@ import (
 	"sync"
 	"time"
 
-	"github.com/google/gopacket"
-	"github.com/google/gopacket/layers"
-	"github.com/google/gopacket/pcap"
+	"github.com/lrsk/gopacket"
+	"github.com/lrsk/gopacket/layers"
+	"github.com/lrsk/gopacket/pcap"
 )
 
 func main() {

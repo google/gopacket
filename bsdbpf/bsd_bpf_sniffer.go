@@ -9,7 +9,7 @@
 package bsdbpf
 
 import (
-	"github.com/google/gopacket"
+	"github.com/lrsk/gopacket"
 	"golang.org/x/sys/unix"
 
 	"fmt"
