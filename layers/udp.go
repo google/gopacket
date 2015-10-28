@@ -10,7 +10,7 @@ package layers
 import (
 	"encoding/binary"
 	"fmt"
-	"github.com/lrsk/gopacket"
+	"github.com/google/gopacket"
 )
 
 // UDP is the layer for UDP headers.

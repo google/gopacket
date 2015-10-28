@@ -10,7 +10,7 @@ import (
 	"bytes"
 	"encoding/binary"
 	"fmt"
-	"github.com/lrsk/gopacket"
+	"github.com/google/gopacket"
 	"hash/crc32"
 	"strings"
 )

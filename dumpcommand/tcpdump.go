@@ -12,9 +12,9 @@ package dumpcommand
 import (
 	"flag"
 	"fmt"
-	"github.com/lrsk/gopacket"
-	"github.com/lrsk/gopacket/ip4defrag"
-	"github.com/lrsk/gopacket/layers" // pulls in all layers decoders
+	"github.com/google/gopacket"
+	"github.com/google/gopacket/ip4defrag"
+	"github.com/google/gopacket/layers" // pulls in all layers decoders
 	"log"
 	"os"
 	"time"

@@ -8,7 +8,7 @@ package layers
 
 import (
 	"encoding/binary"
-	"github.com/lrsk/gopacket"
+	"github.com/google/gopacket"
 	"net"
 	"strconv"
 )

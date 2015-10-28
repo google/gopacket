@@ -9,7 +9,7 @@ package layers
 import (
 	"bytes"
 	_ "fmt"
-	"github.com/lrsk/gopacket"
+	"github.com/google/gopacket"
 	"net"
 	"reflect"
 	"testing"

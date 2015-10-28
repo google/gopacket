@@ -8,7 +8,7 @@ package pcapgo
 
 import (
 	"bytes"
-	"github.com/lrsk/gopacket"
+	"github.com/google/gopacket"
 	"testing"
 	"time"
 )

@@ -21,7 +21,7 @@ import "C"
 
 import (
 	"fmt"
-	"github.com/lrsk/gopacket"
+	"github.com/google/gopacket"
 	"os"
 	"strconv"
 	"sync"

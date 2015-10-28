@@ -13,7 +13,7 @@ package main
 import (
 	"flag"
 	"fmt"
-	"github.com/lrsk/gopacket/pcap"
+	"github.com/google/gopacket/pcap"
 	"log"
 	"net"
 	"net/http"

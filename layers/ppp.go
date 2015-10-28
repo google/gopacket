@@ -9,7 +9,7 @@ package layers
 import (
 	"encoding/binary"
 	"errors"
-	"github.com/lrsk/gopacket"
+	"github.com/google/gopacket"
 )
 
 // PPP is the layer for PPP encapsulation headers.

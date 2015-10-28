@@ -14,8 +14,8 @@ import (
 	"io"
 	"time"
 
-	"github.com/lrsk/gopacket"
-	"github.com/lrsk/gopacket/layers"
+	"github.com/google/gopacket"
+	"github.com/google/gopacket/layers"
 )
 
 // Writer wraps an underlying io.Writer to write packet data in PCAP

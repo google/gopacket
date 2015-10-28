@@ -9,7 +9,7 @@ package layers
 import (
 	"encoding/binary"
 	"fmt"
-	"github.com/lrsk/gopacket"
+	"github.com/google/gopacket"
 	"hash/crc32"
 )
 
