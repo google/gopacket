@@ -9,10 +9,11 @@ package layers
 import (
 	"bytes"
 	_ "fmt"
-	"github.com/google/gopacket"
 	"net"
 	"reflect"
 	"testing"
+
+	"github.com/google/gopacket"
 )
 
 // Generator: python layers/test_creator.py --layerType=LayerTypeRadioTap --linkType=LinkTypeIEEE80211Radio --name=Dot11%s ~/Downloads/mesh.pcap
@@ -491,5 +492,44 @@ func TestInformationElement(t *testing.T) {
 	}
 	if !bytes.Equal(bin, buf.Bytes()) {
 		t.Error("build failed")
+	}
+}
+
+// TestPacketDot11MgmtProbeRequest:
+var testPacketDot11MgmtProbeRequest = []byte{
+	0x00, 0x00, 0x12, 0x00, 0x2e, 0x48, 0x00, 0x00, 0x00, 0x02, 0x6c, 0x09, 0xa0, 0x00, 0xa9, 0x01,
+	0x00, 0x00, 0x40, 0x00, 0x00, 0x00, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xec, 0x0e, 0xc4, 0x91,
+	0xb9, 0x87, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0x70, 0x80, 0x00, 0x12, 0x41, 0x6e, 0x64, 0x72,
+	0x6f, 0x69, 0x64, 0x48, 0x6f, 0x74, 0x73, 0x70, 0x6f, 0x74, 0x31, 0x39, 0x34, 0x37, 0x01, 0x08,
+	0x02, 0x04, 0x0b, 0x16, 0x0c, 0x12, 0x18, 0x24, 0x03, 0x01, 0x01, 0x32, 0x04, 0x30, 0x48, 0x60,
+	0x6c,
+}
+
+func TestPacketDot11MgmtProbeRequest(t *testing.T) {
+	p := gopacket.NewPacket(testPacketDot11MgmtProbeRequest, LinkTypeIEEE80211Radio, gopacket.Default)
+	if p.ErrorLayer() != nil {
+		t.Error("Failed to decode packet:", p.ErrorLayer().Error())
+	}
+	expected := []gopacket.LayerType{LayerTypeRadioTap, LayerTypeDot11, LayerTypeDot11MgmtProbeReq}
+	for i := 0; i < 4; i++ {
+		expected = append(expected, LayerTypeDot11InformationElement)
+	}
+	checkLayers(p, expected, t)
+
+	layer := p.Layer(LayerTypeDot11InformationElement)
+	if layer == nil {
+		t.Error("missing info layer")
+	}
+	info := layer.(*Dot11InformationElement)
+	if info.ID != Dot11InformationElementIDSSID {
+		t.Error("first info layer should be SSID")
+	}
+	if string(info.Info) != "AndroidHotspot1947" {
+		t.Error("SSID should be 'AndroidHotspot1947'")
+	}
+}
+func BenchmarkDecodePacketDot11MgmtProbeRequest(b *testing.B) {
+	for i := 0; i < b.N; i++ {
+		gopacket.NewPacket(testPacketDot11MgmtProbeRequest, LayerTypeRadioTap, gopacket.NoCopy)
 	}
 }
