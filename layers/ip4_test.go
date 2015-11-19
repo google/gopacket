@@ -53,3 +53,18 @@ func TestGetIPOptLengthOptionEndOfList(t *testing.T) {
 		t.Fatalf("The list should have 12 length.  Actual %d", length)
 	}
 }
+
+// Test if the method IPv4.RawInetSocketByteOrder turns ip.Length, and ip.FragOffSet+ip.Flags to host byte order
+func TestConvertToRawINETSocketBSDByteOrder(t *testing.T) {
+	ip := IPv4{Length: 0x0028, FragOffset: 0x00ff, Flags: 0x80}
+	ip.toRawINETSocketBSDByteOrder()
+	if ip.Length != 0x2800 {
+		t.Fatalf("Length should be %x, Actual %x", 0x2800, ip.Length)
+	}
+	if ip.FragOffset != 0x1f80 {
+		t.Fatalf("FragOffSet should be %x, Actual %x", 0x1f80, ip.FragOffset)
+	}
+	if ip.Flags != 0xe0 {
+		t.Fatalf("Flags should be %X, Actual %x", 0xe0, uint8(ip.Flags))
+	}
+}

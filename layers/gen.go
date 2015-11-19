@@ -75,9 +75,9 @@ func main() {
 	var udpPorts bytes.Buffer
 	var sctpPorts bytes.Buffer
 	done := map[string]map[int]bool{
-		"tcp":  map[int]bool{},
-		"udp":  map[int]bool{},
-		"sctp": map[int]bool{},
+		"tcp":  {},
+		"udp":  {},
+		"sctp": {},
 	}
 	for _, r := range registry.Records {
 		port, err := strconv.Atoi(r.Number)

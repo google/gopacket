@@ -10,9 +10,11 @@ package layers
 import (
 	"encoding/binary"
 	"fmt"
-	"github.com/google/gopacket"
 	"net"
+	"runtime"
 	"strings"
+
+	"github.com/google/gopacket"
 )
 
 type IPv4Flag uint8
@@ -40,20 +42,21 @@ func (f IPv4Flag) String() string {
 // IPv4 is the header of an IP packet.
 type IPv4 struct {
 	BaseLayer
-	Version    uint8
-	IHL        uint8
-	TOS        uint8
-	Length     uint16
-	Id         uint16
-	Flags      IPv4Flag
-	FragOffset uint16
-	TTL        uint8
-	Protocol   IPProtocol
-	Checksum   uint16
-	SrcIP      net.IP
-	DstIP      net.IP
-	Options    []IPv4Option
-	Padding    []byte
+	Version           uint8
+	IHL               uint8
+	TOS               uint8
+	Length            uint16
+	Id                uint16
+	Flags             IPv4Flag
+	FragOffset        uint16
+	TTL               uint8
+	Protocol          IPProtocol
+	Checksum          uint16
+	SrcIP             net.IP
+	DstIP             net.IP
+	Options           []IPv4Option
+	Padding           []byte
+	WithRawINETSocket bool
 }
 
 // LayerType returns LayerTypeIPv4
@@ -107,6 +110,9 @@ func (ip *IPv4) SerializeTo(b gopacket.SerializeBuffer, opts gopacket.SerializeO
 	if opts.FixLengths {
 		ip.IHL = 5 + (optionLength / 4)
 		ip.Length = uint16(len(b.Bytes()))
+		if ip.WithRawINETSocket {
+			ip.CheckRawINETSocketByteOrder()
+		}
 	}
 	bytes[0] = (ip.Version << 4) | ip.IHL
 	bytes[1] = ip.TOS
@@ -163,7 +169,7 @@ func (ip *IPv4) SerializeTo(b gopacket.SerializeBuffer, opts gopacket.SerializeO
 }
 
 func (ip *IPv4) flagsfrags() (ff uint16) {
-	ff |= uint16(ip.Flags) << 13
+	ff = uint16(ip.Flags) << 13
 	ff |= ip.FragOffset
 	return
 }
@@ -283,4 +289,20 @@ func (ip *IPv4) AddressTo4() error {
 	ip.SrcIP = src
 	ip.DstIP = dst
 	return nil
+}
+
+// Convert Length, and FragOffset+Flags to be in host byte order
+func (ip *IPv4) toRawINETSocketBSDByteOrder() {
+	ip.Length = (ip.Length << 8) | (ip.Length >> 8)
+	nf := IPv4Flag(ip.FragOffset & 0xE0)
+	ip.FragOffset = (ip.FragOffset & 0x1F << 8) | (ip.FragOffset>>8 | uint16(ip.Flags))
+	ip.Flags = nf
+}
+
+// With some BSD based kernels when using raw INET sockets the Length and FragOffset+Flags must be in host byte order
+func (ip *IPv4) CheckRawINETSocketByteOrder() {
+	switch runtime.GOOS {
+	case "darwin", "dragonfly", "freebsd", "netbsd":
+		ip.toRawINETSocketBSDByteOrder()
+	}
 }

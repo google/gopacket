@@ -226,7 +226,7 @@ func TestDecodeSFlowDatagram(t *testing.T) {
 			AgentUptime:     uint32(1078576845),
 			SampleCount:     uint32(7),
 			FlowSamples: []SFlowFlowSample{
-				SFlowFlowSample{
+				{
 					EnterpriseID:    0x0,
 					Format:          0x1,
 					SampleLength:    0xd0,
@@ -265,7 +265,7 @@ func TestDecodeSFlowDatagram(t *testing.T) {
 						},
 					},
 				},
-				SFlowFlowSample{
+				{
 					EnterpriseID:    0x0,
 					Format:          0x1,
 					SampleLength:    0xd0,
@@ -304,7 +304,7 @@ func TestDecodeSFlowDatagram(t *testing.T) {
 						},
 					},
 				},
-				SFlowFlowSample{
+				{
 					EnterpriseID:    0x0,
 					Format:          0x1,
 					SampleLength:    0xd0,
@@ -343,7 +343,7 @@ func TestDecodeSFlowDatagram(t *testing.T) {
 						},
 					},
 				},
-				SFlowFlowSample{
+				{
 					EnterpriseID:    0x0,
 					Format:          0x1,
 					SampleLength:    0xd0,
@@ -382,7 +382,7 @@ func TestDecodeSFlowDatagram(t *testing.T) {
 						},
 					},
 				},
-				SFlowFlowSample{
+				{
 					EnterpriseID:    0x0,
 					Format:          0x1,
 					SampleLength:    0xd0,
@@ -421,7 +421,7 @@ func TestDecodeSFlowDatagram(t *testing.T) {
 						},
 					},
 				},
-				SFlowFlowSample{
+				{
 					EnterpriseID:    0x0,
 					Format:          0x1,
 					SampleLength:    0x94,
@@ -462,7 +462,7 @@ func TestDecodeSFlowDatagram(t *testing.T) {
 				},
 			},
 			CounterSamples: []SFlowCounterSample{
-				SFlowCounterSample{
+				{
 					Format:         0x2,
 					SampleLength:   0xa8,
 					SequenceNumber: 0x20f2,
@@ -543,7 +543,7 @@ func TestPacketPacket0(t *testing.T) {
 			AgentUptime:     uint32(52000),
 			SampleCount:     uint32(3),
 			FlowSamples: []SFlowFlowSample{
-				SFlowFlowSample{
+				{
 					EnterpriseID:    0x0,
 					Format:          0x1,
 					SampleLength:    340,
@@ -590,17 +590,17 @@ func TestPacketPacket0(t *testing.T) {
 							PeerAS:      999,
 							ASPathCount: 3,
 							ASPath: []SFlowASDestination{
-								SFlowASDestination{
+								{
 									Type:    SFlowASSequence,
 									Count:   3,
 									Members: []uint32{123, 456, 789},
 								},
-								SFlowASDestination{
+								{
 									Type:    SFlowASSet,
 									Count:   3,
 									Members: []uint32{11111, 22222, 33333},
 								},
-								SFlowASDestination{
+								{
 									Type:    SFlowASSequence,
 									Count:   3,
 									Members: []uint32{777, 888, 999},
@@ -623,7 +623,7 @@ func TestPacketPacket0(t *testing.T) {
 						},
 					},
 				},
-				SFlowFlowSample{
+				{
 					EnterpriseID:    0x0,
 					Format:          0x1,
 					SampleLength:    400,
@@ -670,17 +670,17 @@ func TestPacketPacket0(t *testing.T) {
 							PeerAS:      999,
 							ASPathCount: 3,
 							ASPath: []SFlowASDestination{
-								SFlowASDestination{
+								{
 									Type:    SFlowASSequence,
 									Count:   3,
 									Members: []uint32{123, 456, 789},
 								},
-								SFlowASDestination{
+								{
 									Type:    SFlowASSet,
 									Count:   3,
 									Members: []uint32{11111, 22222, 33333},
 								},
-								SFlowASDestination{
+								{
 									Type:    SFlowASSequence,
 									Count:   3,
 									Members: []uint32{777, 888, 999},
@@ -703,7 +703,7 @@ func TestPacketPacket0(t *testing.T) {
 						},
 					},
 				},
-				SFlowFlowSample{
+				{
 					EnterpriseID:    0x0,
 					Format:          0x1,
 					SampleLength:    340,
@@ -750,17 +750,17 @@ func TestPacketPacket0(t *testing.T) {
 							PeerAS:      999,
 							ASPathCount: 3,
 							ASPath: []SFlowASDestination{
-								SFlowASDestination{
+								{
 									Type:    SFlowASSequence,
 									Count:   3,
 									Members: []uint32{123, 456, 789},
 								},
-								SFlowASDestination{
+								{
 									Type:    SFlowASSet,
 									Count:   3,
 									Members: []uint32{11111, 22222, 33333},
 								},
-								SFlowASDestination{
+								{
 									Type:    SFlowASSequence,
 									Count:   3,
 									Members: []uint32{777, 888, 999},

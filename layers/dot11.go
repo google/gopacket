@@ -385,7 +385,7 @@ func (m *Dot11) DecodeFromBytes(data []byte, df gopacket.DecodeFeedback) error {
 	}
 
 	m.BaseLayer = BaseLayer{Contents: data[0:offset], Payload: data[offset : len(data)-4]}
-	m.Checksum = binary.LittleEndian.Uint32(data[len(data)-4 : len(data)])
+	m.Checksum = binary.LittleEndian.Uint32(data[len(data)-4:])
 	return nil
 }
 
