@@ -92,7 +92,7 @@ const (
 type LinkType uint8
 
 const (
-	// According to pcap-linktype(7).
+	// According to pcap-linktype(7) and http://www.tcpdump.org/linktypes.html
 	LinkTypeNull           LinkType = 0
 	LinkTypeEthernet       LinkType = 1
 	LinkTypeTokenRing      LinkType = 6
@@ -119,6 +119,8 @@ const (
 	LinkTypeLinuxIRDA      LinkType = 144
 	LinkTypeLinuxLAPD      LinkType = 177
 	LinkTypeLinuxUSB       LinkType = 220
+	LinkTypeIPv4           LinkType = 228
+	LinkTypeIPv6           LinkType = 229
 )
 
 // PPPoECode is the PPPoE code enum, taken from http://tools.ietf.org/html/rfc2516
