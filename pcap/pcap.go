@@ -9,6 +9,7 @@ package pcap
 
 /*
 #cgo linux LDFLAGS: -lpcap
+#cgo dragonfly LDFLAGS: -lpcap
 #cgo freebsd LDFLAGS: -lpcap
 #cgo openbsd LDFLAGS: -lpcap
 #cgo darwin LDFLAGS: -lpcap
