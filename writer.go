@@ -6,8 +6,6 @@
 
 package gopacket
 
-import ()
-
 // SerializableLayer allows its implementations to be written out as a set of bytes,
 // so those bytes may be sent on the wire or otherwise used by the caller.
 // SerializableLayer is implemented by certain Layer types, and can be encoded to

@@ -51,12 +51,12 @@ func TestCaptureInfoErrors(t *testing.T) {
 	data := []byte{1, 2, 3, 4}
 	ts := time.Unix(0, 0)
 	for _, test := range []gopacket.CaptureInfo{
-		gopacket.CaptureInfo{
+		{
 			Timestamp:     ts,
 			Length:        5,
 			CaptureLength: 5,
 		},
-		gopacket.CaptureInfo{
+		{
 			Timestamp:     ts,
 			Length:        3,
 			CaptureLength: 4,

@@ -124,7 +124,7 @@ func (c *pageCache) grow() {
 	pages := make([]page, c.pcSize)
 	c.pages = append(c.pages, pages)
 	c.size += c.pcSize
-	for i, _ := range pages {
+	for i := range pages {
 		c.free = append(c.free, &pages[i])
 	}
 	if *memLog {
@@ -307,7 +307,7 @@ type StreamPool struct {
 func (p *StreamPool) grow() {
 	conns := make([]connection, p.nextAlloc)
 	p.all = append(p.all, conns)
-	for i, _ := range conns {
+	for i := range conns {
 		p.free = append(p.free, &conns[i])
 	}
 	if *memLog {
