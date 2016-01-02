@@ -68,6 +68,8 @@ func (a UDPPort) LayerType() gopacket.LayerType {
 		return LayerTypeNTP
 	case 4789:
 		return LayerTypeVXLAN
+	case 67, 68:
+		return LayerTypeDHCPv4
 	case 6343:
 		return LayerTypeSFlow
 	default:
