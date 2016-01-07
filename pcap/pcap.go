@@ -418,6 +418,11 @@ func (p *Handle) ListDataLinks() (datalinks []Datalink, err error) {
 	return datalinks, nil
 }
 
+// compileBPFFilter always returns an allocated _Ctype_struct_bpf_program
+// It is the callers responsibility to free the memory again, e.g.
+//
+//    C.pcap_freecode(&bpf)
+//
 func (p *Handle) compileBPFFilter(expr string) (_Ctype_struct_bpf_program, error) {
 	errorBuf := (*C.char)(C.calloc(errorBufferSize, 1))
 	defer C.free(unsafe.Pointer(errorBuf))
@@ -446,7 +451,6 @@ func (p *Handle) compileBPFFilter(expr string) (_Ctype_struct_bpf_program, error
 	defer C.free(unsafe.Pointer(cexpr))
 
 	if -1 == C.pcap_compile(p.cptr, &bpf, cexpr, 1, C.bpf_u_int32(maskp)) {
-		C.pcap_freecode(&bpf)
 		return bpf, p.Error()
 	}
 
