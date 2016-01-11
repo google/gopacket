@@ -176,7 +176,7 @@ type SFlowDataFormat uint32
 
 func (sdf SFlowDataFormat) decode() (SFlowEnterpriseID, SFlowSampleType) {
 	leftField := sdf >> 12
-	rightField := uint32(0xFFFFF) & uint32(sdf)
+	rightField := uint32(0xFFF) & uint32(sdf)
 	return SFlowEnterpriseID(leftField), SFlowSampleType(rightField)
 }
 
