@@ -666,20 +666,8 @@ func (o *Openflow14) DecodeFromBytes(data []byte, df gopacket.DecodeFeedback) er
 	o.Type = data[1]
 	o.Length = binary.BigEndian.Uint16(data[2:4])
 	o.Xid = binary.BigEndian.Uint32(data[4:8])
-	o.BaseLayer = BaseLayer{Contents: data[:len(data)]}
-
-	switch {
-	case o.Length >= 8:
-		hlen := int(o.Length)
-		if hlen > len(data) {
-			df.SetTruncated()
-			hlen = len(data)
-		}
-		o.Message = newOFP14Message(o.Type, data[8:])
-	default:
-		return fmt.Errorf("Openflow packet too small: %d bytes", o.Length)
-	}
-
+	o.BaseLayer = BaseLayer{Contents: data}
+	o.Message = newOFP14Message(o.Type, data[8:])
 	return nil
 }
 
@@ -716,13 +704,11 @@ func (o *Openflow14) Payload() []byte {
 }
 
 func decodeOpenflow14(data []byte, p gopacket.PacketBuilder) error {
-	o := &Openflow14{}
-	//err := o.DecodeFromBytes(data, p)
-	//if err != nil {
-	//	return err
-	//}
-	//	p.AddLayer(o)
-	//	p.SetApplicationLayer(o)
-	//return nil
-	return decodingLayerDecoder(o, data, p)
+	ofp := &Openflow14{}
+	err := ofp.DecodeFromBytes(data, p)
+	p.AddLayer(ofp)
+	if err != nil {
+		return err
+	}
+	return p.NextDecoder(ofp.NextLayerType())
 }

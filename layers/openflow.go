@@ -8,7 +8,7 @@ package layers
 
 import (
 	"encoding/binary"
-	"fmt"
+	"errors"
 
 	"github.com/google/gopacket"
 )
@@ -32,28 +32,6 @@ type Openflow struct {
 
 func (o *Openflow) LayerType() gopacket.LayerType { return LayerTypeOpenflow }
 
-func (o *Openflow) DecodeFromBytes(data []byte, df gopacket.DecodeFeedback) error {
-	o.Version = data[0]
-	o.Type = data[1]
-	o.Length = binary.BigEndian.Uint16(data[2:4])
-	o.Xid = binary.BigEndian.Uint32(data[4:8])
-	o.BaseLayer = BaseLayer{Contents: data[:8]}
-
-	switch {
-	case o.Length >= 8:
-		hlen := int(o.Length)
-		if hlen > len(data) {
-			df.SetTruncated()
-			hlen = len(data)
-		}
-		// Payload contains this packet data
-		o.Payload = data[:hlen]
-	default:
-		return fmt.Errorf("Openflow packet too small: %d bytes", o.Length)
-	}
-	return nil
-}
-
 // SerializeTo writes the serialized form of this layer into the
 // SerializationBuffer, implementing gopacket.SerializableLayer.
 // See the docs for gopacket.SerializableLayer for more info.
@@ -73,25 +51,42 @@ func (o *Openflow) SerializeTo(b gopacket.SerializeBuffer, opts gopacket.Seriali
 	return nil
 }
 
-func (o *Openflow) CanDecode() gopacket.LayerClass {
-	return LayerTypeOpenflow
+// OpenflowGuessingDecoder attempts to guess the openflow version of the bytes it's
+// given, then decode the packet accordingly.
+type OpenflowGuessingDecoder struct{}
+
+func (OpenflowGuessingDecoder) Decode(data []byte, p gopacket.PacketBuilder) error {
+	switch data[0] {
+	/*
+		case OpenflowV10:
+			return decodeOpenflow10(data, p)
+		case OpenflowV13:
+			return decodeOpenflow13(data, p)
+	*/
+	case OpenflowV14:
+		return decodeOpenflow14(data, p)
+		/*
+			case OpenflowV15:
+				return decodeOpenflow15(data, p)
+		*/
+	}
+	return errors.New("Unsupported openflow version in packet data")
 }
 
-func (o *Openflow) NextLayerType() gopacket.LayerType {
-	switch o.Version {
-	case OpenflowV14:
-		return LayerTypeOpenflow14
-	}
-	return gopacket.LayerTypePayload
-}
+// OpenflowPayloadDecoder is the decoder used to data encapsulated by each
+// Openflow message. If you know that in your environment Openflow always
+// have specific version, you may reset this.
+var OpenflowPayloadDecoder gopacket.Decoder = OpenflowGuessingDecoder{}
 
 func decodeOpenflow(data []byte, p gopacket.PacketBuilder) error {
-	ofp := &Openflow{}
-	err := ofp.DecodeFromBytes(data, p)
-	p.AddLayer(ofp)
-	//	p.SetTransportLayer(ofp)
-	if err != nil {
-		return err
+	ofp := &Openflow{
+		Version:   data[0],
+		Type:      data[1],
+		Length:    binary.BigEndian.Uint16(data[2:4]),
+		Xid:       binary.BigEndian.Uint32(data[4:8]),
+		BaseLayer: BaseLayer{Contents: data[:8], Payload: data},
 	}
-	return p.NextDecoder(ofp.NextLayerType())
+	p.AddLayer(ofp)
+	//	return p.NextDecoder(gopacket.DecodeFunc(decodeOpenflow))
+	return p.NextDecoder(OpenflowPayloadDecoder)
 }
