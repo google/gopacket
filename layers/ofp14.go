@@ -8,37 +8,39 @@ package layers
 
 import (
 	"encoding/binary"
+	"errors"
 	"fmt"
+	"os"
 
 	"github.com/google/gopacket"
 )
 
 const (
 	/* Openflow Meter control */
-	OFP14MeterAdd = 0 /* New meter */
-	OFP14MeterMod = 1 /* Modify specified meter */
-	OFP14MeterDel = 2 /* Delete specified meter */
+	OFPv14MeterAdd = 0 /* New meter */
+	OFPv14MeterMod = 1 /* Modify specified meter */
+	OFPv14MeterDel = 2 /* Delete specified meter */
 )
 
 const (
 	/* Immutable symmetric messages */
-	OFP14TypeHello       = 0
-	OFP14TypeError       = 1
-	OFP14TypeEchoRequest = 2
-	OFP14TypeEchoReply   = 3
-	OFP14TypeExperiment  = 4
+	OFPv14TypeHello       = 0
+	OFPv14TypeError       = 1
+	OFPv14TypeEchoRequest = 2
+	OFPv14TypeEchoReply   = 3
+	OFPv14TypeExperiment  = 4
 
 	/* Switch configuration messages */
-	OFP14TypeFeaturesRequest  = 5
-	OFP14TypeFeaturesReply    = 6
-	OFP14TypeGetConfigRequest = 7
-	OFP14TypeGetConfigReply   = 8
-	OFP14TypeSetConfig        = 9
+	OFPv14TypeFeaturesRequest  = 5
+	OFPv14TypeFeaturesReply    = 6
+	OFPv14TypeGetConfigRequest = 7
+	OFPv14TypeGetConfigReply   = 8
+	OFPv14TypeSetConfig        = 9
 
 	/* Asynchronous messages */
-	OFP14TypePacketIn    = 10
-	OFP14TypeFlowRemoved = 11
-	OFP14TypePortStatus  = 12
+	OFPv14TypePacketIn    = 10
+	OFPv14TypeFlowRemoved = 11
+	OFPv14TypePortStatus  = 12
 
 	/* Controller/switch command messages */
 	OFPT_PACKET_OUT = 13
@@ -618,63 +620,96 @@ const (
 	OFPER_HARD_TIMEOUT = 1 /* Time exceeded hard_timeout. */
 )
 
-type OFP14Message interface {
+type OFPv14Message interface {
 	SerializeTo([]byte)
-	DecodeFromBytes([]byte)
+	DecodeFromBytes([]byte) error
 }
 
 // Openflow layer struct
-type Openflow14 struct {
+type OFPv14 struct {
 	BaseLayer
 	Version uint8
 	Type    uint8
 	Length  uint16
 	Xid     uint32
-	Message OFP14Message
+	Message OFPv14Message
 }
 
-type OFP14MessageHello struct {
-	Elements []byte
+type OFPv14MsgHelloElement struct {
+	Type    uint16
+	Length  uint16
+	Payload []byte
 }
 
-func (m OFP14MessageHello) DecodeFromBytes(data []byte) {
-	m.Elements = data
+type OFPv14MsgHello struct {
+	Elements []*OFPv14MsgHelloElement
 }
 
-func (m OFP14MessageHello) SerializeTo(data []byte) {
-	data = m.Elements
+func (m *OFPv14MsgHello) DecodeFromBytes(data []byte) error {
+	if len(data) < 4 {
+		return errors.New("invalid message type")
+	}
+	i := uint16(0)
+	for {
+		el := OFPv14MsgHelloElement{}
+		el.Type = binary.BigEndian.Uint16(data[i : i+2])
+		el.Length = binary.BigEndian.Uint16(data[i+2 : i+4])
+		//		switch el.Type {
+		//		case 0x01:
+		el.Payload = data[i+4 : i+el.Length]
+		//		default:
+		//			return errors.New("invalid message type")
+		//		}
+		m.Elements = append(m.Elements, &el)
+		i += el.Length
+		if i >= uint16(len(data)) {
+			break
+		}
+	}
+	return nil
 }
 
-func (m OFP14MessageHello) String() string {
-	return fmt.Sprintf("%v", m.Elements)
+func (m *OFPv14MsgHello) SerializeTo(data []byte) {
+	i := uint16(0)
+	for _, el := range m.Elements {
+		binary.BigEndian.PutUint16(data[i:], uint16(el.Type))
+		binary.BigEndian.PutUint16(data[i+2:], uint16(el.Length))
+		copy(data[i+4:], el.Payload)
+		i += 4 + el.Length
+	}
 }
 
-func newOFP14Message(otype uint8, data []byte) OFP14Message {
-	var msg OFP14Message
+//func (m *OFPv14MsgHello) String() string {
+//	return fmt.Sprintf("%v", m.Elements)
+//}
+
+func newOFPv14Message(otype uint8, data []byte) OFPv14Message {
+	var msg OFPv14Message
 	switch otype {
-	case OFP14TypeHello:
-		msg = OFP14MessageHello{}
+	case OFPv14TypeHello:
+		msg = &OFPv14MsgHello{}
 		msg.DecodeFromBytes(data)
+		fmt.Fprintf(os.Stderr, "%#+v\n", msg.(*OFPv14MsgHello).Elements)
 	}
 	return msg
 }
 
-func (o *Openflow14) LayerType() gopacket.LayerType { return LayerTypeOpenflow14 }
+func (o *OFPv14) LayerType() gopacket.LayerType { return LayerTypeOFPv14 }
 
-func (o *Openflow14) DecodeFromBytes(data []byte, df gopacket.DecodeFeedback) error {
+func (o *OFPv14) DecodeFromBytes(data []byte, df gopacket.DecodeFeedback) error {
 	o.Version = data[0]
 	o.Type = data[1]
 	o.Length = binary.BigEndian.Uint16(data[2:4])
 	o.Xid = binary.BigEndian.Uint32(data[4:8])
 	o.BaseLayer = BaseLayer{Contents: data}
-	o.Message = newOFP14Message(o.Type, data[8:])
+	o.Message = newOFPv14Message(o.Type, data[8:])
 	return nil
 }
 
 // SerializeTo writes the serialized form of this layer into the
 // SerializationBuffer, implementing gopacket.SerializableLayer.
 // See the docs for gopacket.SerializableLayer for more info.
-func (o *Openflow14) SerializeTo(b gopacket.SerializeBuffer, opts gopacket.SerializeOptions) error {
+func (o *OFPv14) SerializeTo(b gopacket.SerializeBuffer, opts gopacket.SerializeOptions) error {
 	payload := b.Bytes()
 	bytes, err := b.PrependBytes(8)
 	if err != nil {
@@ -691,20 +726,20 @@ func (o *Openflow14) SerializeTo(b gopacket.SerializeBuffer, opts gopacket.Seria
 	return nil
 }
 
-func (o *Openflow14) CanDecode() gopacket.LayerClass {
-	return LayerTypeOpenflow14
+func (o *OFPv14) CanDecode() gopacket.LayerClass {
+	return LayerTypeOFPv14
 }
 
-func (o *Openflow14) NextLayerType() gopacket.LayerType {
+func (o *OFPv14) NextLayerType() gopacket.LayerType {
 	return gopacket.LayerTypePayload
 }
 
-func (o *Openflow14) Payload() []byte {
+func (o *OFPv14) Payload() []byte {
 	return nil
 }
 
-func decodeOpenflow14(data []byte, p gopacket.PacketBuilder) error {
-	ofp := &Openflow14{}
+func decodeOFPv14(data []byte, p gopacket.PacketBuilder) error {
+	ofp := &OFPv14{}
 	err := ofp.DecodeFromBytes(data, p)
 	p.AddLayer(ofp)
 	if err != nil {

@@ -117,8 +117,8 @@ var (
 	LayerTypeLinuxSLL                    = gopacket.RegisterLayerType(113, gopacket.LayerTypeMetadata{"Linux SLL", gopacket.DecodeFunc(decodeLinuxSLL)})
 	LayerTypeSFlow                       = gopacket.RegisterLayerType(114, gopacket.LayerTypeMetadata{"SFlow", gopacket.DecodeFunc(decodeSFlow)})
 	LayerTypePrismHeader                 = gopacket.RegisterLayerType(115, gopacket.LayerTypeMetadata{"Prism monitor mode header", gopacket.DecodeFunc(decodePrismHeader)})
-	LayerTypeOpenflow                    = gopacket.RegisterLayerType(117, gopacket.LayerTypeMetadata{"Openflow", gopacket.DecodeFunc(decodeOpenflow)})
-	LayerTypeOpenflow14                  = gopacket.RegisterLayerType(118, gopacket.LayerTypeMetadata{"Openflow14", gopacket.DecodeFunc(decodeOpenflow14)})
+	LayerTypeOFP                         = gopacket.RegisterLayerType(117, gopacket.LayerTypeMetadata{"OFP", gopacket.DecodeFunc(decodeOFP)})
+	LayerTypeOFPv14                      = gopacket.RegisterLayerType(118, gopacket.LayerTypeMetadata{"OFPv14", gopacket.DecodeFunc(decodeOFPv14)})
 )
 
 var (
