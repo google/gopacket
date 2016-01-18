@@ -9,6 +9,7 @@ package layers
 
 import (
 	"encoding/binary"
+	"fmt"
 	"github.com/google/gopacket"
 	"net"
 	"time"
@@ -17,71 +18,77 @@ import (
 type IGMPType uint8
 
 const (
-	MembershipQuery    IGMPType = 0x11 // General or group specific query
-	MembershipReportV1 IGMPType = 0x12 // Version 1 Membership Report
-	MembershipReportV2 IGMPType = 0x16 // Version 2 Membership Report
-	LeaveGroup         IGMPType = 0x17 // Leave Group
-	MembershipReportV3 IGMPType = 0x22 // Version 3 Membership Report
+	IGMPMembershipQuery    IGMPType = 0x11 // General or group specific query
+	IGMPMembershipReportV1 IGMPType = 0x12 // Version 1 Membership Report
+	IGMPMembershipReportV2 IGMPType = 0x16 // Version 2 Membership Report
+	IGMPLeaveGroup         IGMPType = 0x17 // Leave Group
+	IGMPMembershipReportV3 IGMPType = 0x22 // Version 3 Membership Report
 )
 
 // String conversions for IGMP message types
 func (i IGMPType) String() string {
 	switch i {
-	case MembershipQuery:
+	case IGMPMembershipQuery:
 		return "IGMP Membership Query"
-	case MembershipReportV1:
+	case IGMPMembershipReportV1:
 		return "IGMPv1 Membership Report"
-	case MembershipReportV2:
+	case IGMPMembershipReportV2:
 		return "IGMPv2 Membership Report"
-	case MembershipReportV3:
+	case IGMPMembershipReportV3:
 		return "IGMPv3 Membership Report"
-	case LeaveGroup:
+	case IGMPLeaveGroup:
 		return "Leave Group"
 	default:
 		return ""
 	}
 }
 
-type IGMPQuery interface {
-	decodeResponse(data []byte) error
-}
-
-// IGMP is the packet structure for IGMP messages.
-type IGMP struct {
-	BaseLayer
-	Type    IGMPType  // IGMP message type
-	Message IGMPQuery // Container for message payload
-	Version uint8     // IGMP protocol version
-}
-
-type GroupRecordType uint8
+type IGMPv3GroupRecordType uint8
 
 const (
-	IsIn  GroupRecordType = 0x01 // Type MODE_IS_INCLUDE, source addresses x
-	IsEx  GroupRecordType = 0x02 // Type MODE_IS_EXCLUDE, source addresses x
-	ToIn  GroupRecordType = 0x03 // Type CHANGE_TO_INCLUDE_MODE, source addresses x
-	ToEx  GroupRecordType = 0x04 // Type CHANGE_TO_EXCLUDE_MODE, source addresses x
-	Allow GroupRecordType = 0x05 // Type ALLOW_NEW_SOURCES, source addresses x
-	Block GroupRecordType = 0x06 // Type BLOCK_OLD_SOURCES, source addresses x
+	IGMPIsIn  IGMPv3GroupRecordType = 0x01 // Type MODE_IS_INCLUDE, source addresses x
+	IGMPIsEx  IGMPv3GroupRecordType = 0x02 // Type MODE_IS_EXCLUDE, source addresses x
+	IGMPToIn  IGMPv3GroupRecordType = 0x03 // Type CHANGE_TO_INCLUDE_MODE, source addresses x
+	IGMPToEx  IGMPv3GroupRecordType = 0x04 // Type CHANGE_TO_EXCLUDE_MODE, source addresses x
+	IGMPAllow IGMPv3GroupRecordType = 0x05 // Type ALLOW_NEW_SOURCES, source addresses x
+	IGMPBlock IGMPv3GroupRecordType = 0x06 // Type BLOCK_OLD_SOURCES, source addresses x
 )
 
-func (i GroupRecordType) String() string {
+func (i IGMPv3GroupRecordType) String() string {
 	switch i {
-	case IsIn:
+	case IGMPIsIn:
 		return "MODE_IS_INCLUDE"
-	case IsEx:
+	case IGMPIsEx:
 		return "MODE_IS_EXCLUDE"
-	case ToIn:
+	case IGMPToIn:
 		return "CHANGE_TO_INCLUDE_MODE"
-	case ToEx:
+	case IGMPToEx:
 		return "CHANGE_TO_EXCLUDE_MODE"
-	case Allow:
+	case IGMPAllow:
 		return "ALLOW_NEW_SOURCES"
-	case Block:
+	case IGMPBlock:
 		return "BLOCK_OLD_SOURCES"
 	default:
 		return ""
 	}
+}
+
+// IGMP represents an IGMPv3 message.
+type IGMP struct {
+	BaseLayer
+	Type                    IGMPType
+	MaxResponseTime         time.Duration
+	Checksum                uint16
+	GroupAddress            net.IP
+	SupressRouterProcessing bool
+	RobustnessValue         uint8
+	IntervalTime            time.Duration
+	SourceAddresses         []net.IP
+	NumberOfGroupRecords    uint16
+	NumberOfSources         uint16
+	GroupRecords            []IGMPv3GroupRecord
+	Version                 uint8 // IGMP protocol version
+
 }
 
 //  0                   1                   2                   3
@@ -91,16 +98,19 @@ func (i GroupRecordType) String() string {
 // +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
 // |                         Group Address                         |
 // +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-// IGMPv1or2 stores header details for an IGMPv1 or IGMPv2 packet.
-type IGMPv1or2 struct {
-	MaxRespTime  time.Duration // meaningful only in Membership Query messages
-	Checksum     uint16        // 16-bit checksum of entire ip payload
-	GroupAddress net.IP        // either 0 or an IP multicast address
+// IGMPv1Orv2 stores header details for an IGMPv1 or IGMPv2 packet.
+type IGMPv1Orv2 struct {
+	BaseLayer
+	Type            IGMPType      // IGMP message type
+	MaxResponseTime time.Duration // meaningful only in Membership Query messages
+	Checksum        uint16        // 16-bit checksum of entire ip payload
+	GroupAddress    net.IP        // either 0 or an IP multicast address
+	Version         uint8
 }
 
 // decodeResponse dissects IGMPv1 or IGMPv2 packet.
-func (i *IGMPv1or2) decodeResponse(data []byte) error {
-	i.MaxRespTime = igmpTimeDecode(data[1])
+func (i *IGMPv1Orv2) decodeResponse(data []byte) error {
+	i.MaxResponseTime = igmpTimeDecode(data[1])
 	i.Checksum = binary.BigEndian.Uint16(data[2:4])
 	i.GroupAddress = net.IP(data[4:8])
 
@@ -126,12 +136,6 @@ func (i *IGMPv1or2) decodeResponse(data []byte) error {
 // .                        Group Record [M]                       .
 // |                                                               |
 // +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-// IGMPv3MembershipReport stores bytes 2: of the V3 Membership Report packet
-type IGMPv3MembershipReport struct {
-	Checksum             uint16 // 16-bit checksum of entire ip payload
-	NumberofGroupRecords uint16
-	GroupRecords         []GroupRecord
-}
 
 // +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
 // |  Record Type  |  Aux Data Len |     Number of Sources (N)     |
@@ -148,9 +152,9 @@ type IGMPv3MembershipReport struct {
 // .                         Auxiliary Data                        .
 // |                                                               |
 // +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-// GroupRecord stores individual group records for a V3 Membership Report message.
-type GroupRecord struct {
-	Type             GroupRecordType
+// IGMPv3GroupRecord stores individual group records for a V3 Membership Report message.
+type IGMPv3GroupRecord struct {
+	Type             IGMPv3GroupRecordType
 	AuxDataLen       uint8 // this should always be 0 as per IGMPv3 spec.
 	NumberOfSources  uint16
 	MulticastAddress net.IP
@@ -158,14 +162,13 @@ type GroupRecord struct {
 	AuxData          uint32 // NOT USED
 }
 
-// decodeResponse decodes an IGMPv3MembershipReport message.
-func (i *IGMPv3MembershipReport) decodeResponse(data []byte) error {
+func (i *IGMP) decodeIGMPv3MembershipReport(data []byte) error {
 	i.Checksum = binary.BigEndian.Uint16(data[2:4])
-	i.NumberofGroupRecords = binary.BigEndian.Uint16(data[6:8])
+	i.NumberOfGroupRecords = binary.BigEndian.Uint16(data[6:8])
 
-	for j := 0; j < int(i.NumberofGroupRecords); j++ {
-		var gr GroupRecord
-		gr.Type = GroupRecordType(data[8])
+	for j := 0; j < int(i.NumberOfGroupRecords); j++ {
+		var gr IGMPv3GroupRecord
+		gr.Type = IGMPv3GroupRecordType(data[8])
 		gr.AuxDataLen = data[9]
 		gr.NumberOfSources = binary.BigEndian.Uint16(data[10:12])
 		gr.MulticastAddress = net.IP(data[12:16])
@@ -195,35 +198,23 @@ func (i *IGMPv3MembershipReport) decodeResponse(data []byte) error {
 // +-                              .                              -+
 // |                       Source Address [N]                      |
 // +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-type IGMPv3MembershipQuery struct {
-	MaxResponseTime time.Duration // IGMP Max response code/time
-	Checksum        uint16        // 16-bit checksum of entire ip payload
-	GroupAddress    net.IP        // IP multicast address.
-	SFlag           bool          // Suppress Router-Side Processing
-	QRV             uint8         // Querier's Robustness Variable
-	QQIC            time.Duration // Querier's Query Interval Code
-	NumberofSources uint16
-	SourceAddresses []net.IP
-}
+// decodeIGMPv3MembershipQuery parses the IGMPv3 message of type 0x11
+func (i *IGMP) decodeIGMPv3MembershipQuery(data []byte) error {
 
-func (i *IGMPv3MembershipQuery) decodeResponse(data []byte) error {
-
+	i.MaxResponseTime = igmpTimeDecode(data[1])
 	i.Checksum = binary.BigEndian.Uint16(data[2:4])
-	i.SFlag = data[8]&0x8 != 0
+	i.SupressRouterProcessing = data[8]&0x8 != 0
 	i.GroupAddress = net.IP(data[4:8])
-	i.QRV = data[8] & 0x7
-	i.QQIC = igmpTimeDecode(data[9])
-	i.NumberofSources = binary.BigEndian.Uint16(data[10:12])
+	i.RobustnessValue = data[8] & 0x7
+	i.IntervalTime = igmpTimeDecode(data[9])
+	i.NumberOfSources = binary.BigEndian.Uint16(data[10:12])
 
-	for j := 0; j < int(i.NumberofSources); j++ {
+	for j := 0; j < int(i.NumberOfSources); j++ {
 		i.SourceAddresses = append(i.SourceAddresses, net.IP(data[12+j*4:16+j*4]))
 	}
 
 	return nil
 }
-
-// LayerType returns LayerTypeIGMP
-func (i *IGMP) LayerType() gopacket.LayerType { return LayerTypeIGMP }
 
 // igmpTimeDecode decodes the duration created by the given byte, using the
 // algorithm in http://www.rfc-base.org/txt/rfc-3376.txt section 4.1.1.
@@ -236,6 +227,27 @@ func igmpTimeDecode(t uint8) time.Duration {
 	return time.Millisecond * 100 * time.Duration((mant|0x10)<<(exp+3))
 }
 
+// LayerType returns LayerTypeIGMP for the V1,2,3 message protocol formats.
+func (i *IGMP) LayerType() gopacket.LayerType       { return LayerTypeIGMP }
+func (i *IGMPv1Orv2) LayerType() gopacket.LayerType { return LayerTypeIGMP }
+
+func (i *IGMPv1Orv2) DecodeFromBytes(data []byte, df gopacket.DecodeFeedback) error {
+	i.Type = IGMPType(data[0])
+	i.MaxResponseTime = igmpTimeDecode(data[1])
+	i.Checksum = binary.BigEndian.Uint16(data[2:4])
+	i.GroupAddress = net.IP(data[4:8])
+
+	return nil
+}
+
+func (i *IGMPv1Orv2) NextLayerType() gopacket.LayerType {
+	return gopacket.LayerTypeZero
+}
+
+func (i *IGMPv1Orv2) CanDecode() gopacket.LayerClass {
+	return LayerTypeIGMP
+}
+
 // DecodeFromBytes decodes the given bytes into this layer.
 func (i *IGMP) DecodeFromBytes(data []byte, df gopacket.DecodeFeedback) error {
 
@@ -244,41 +256,11 @@ func (i *IGMP) DecodeFromBytes(data []byte, df gopacket.DecodeFeedback) error {
 
 	switch i.Type {
 
-	case MembershipQuery:
+	case IGMPMembershipQuery:
+		i.decodeIGMPv3MembershipQuery(data)
 
-		// IGMPv3 Membership Query payload is >= 12
-		if len(data) >= 12 {
-			i.Version = 3
-			i.Message = new(IGMPv3MembershipQuery)
-			i.Message.decodeResponse(data)
-
-		} else if len(data) == 8 {
-
-			if data[1] == 0x00 {
-				i.Version = 1 // IGMPv1 has a query length of 8 and MaxResp = 0
-			} else {
-				i.Version = 2 // IGMPv2 has a query length of 8 and MaxResp != 0
-			}
-
-			i.Message = new(IGMPv1or2)
-			i.Message.decodeResponse(data)
-		}
-
-	case MembershipReportV3:
-		i.Version = 3
-		i.Message = new(IGMPv3MembershipReport)
-		i.Message.decodeResponse(data)
-
-	case MembershipReportV1:
-		i.Version = 1
-		i.Message = new(IGMPv1or2)
-		i.Message.decodeResponse(data)
-
-	case LeaveGroup, MembershipReportV2:
-		// leave group and Query Report v2 used in IGMPv2 only.
-		i.Version = 2
-		i.Message = new(IGMPv1or2)
-		i.Message.decodeResponse(data)
+	case IGMPMembershipReportV3:
+		i.decodeIGMPv3MembershipReport(data)
 	}
 
 	return nil
@@ -294,7 +276,44 @@ func (i *IGMP) NextLayerType() gopacket.LayerType {
 	return gopacket.LayerTypeZero
 }
 
+// decodeIGMP will parse IGMP v1,2 or 3 protocols. Checks against the IGMP type are performed against byte[0], logic then iniitalizes and passes the appropriate struct (IGMP or IGMPv1Or2) to decodingLayerDecoder.
 func decodeIGMP(data []byte, p gopacket.PacketBuilder) error {
-	i := &IGMP{}
-	return decodingLayerDecoder(i, data, p)
+
+	// byte 0 contains IGMP message type.
+	switch IGMPType(data[0]) {
+
+	case IGMPMembershipQuery:
+
+		// IGMPv3 Membership Query payload is >= 12
+		if len(data) >= 12 {
+			i := &IGMP{Version: 3}
+			return decodingLayerDecoder(i, data, p)
+
+		} else if len(data) == 8 {
+			i := &IGMPv1Orv2{}
+			if data[1] == 0x00 {
+				i.Version = 1 // IGMPv1 has a query length of 8 and MaxResp = 0
+			} else {
+				i.Version = 2 // IGMPv2 has a query length of 8 and MaxResp != 0
+			}
+
+			return decodingLayerDecoder(i, data, p)
+		}
+
+	case IGMPMembershipReportV3:
+		i := &IGMP{Version: 3}
+		return decodingLayerDecoder(i, data, p)
+
+	case IGMPMembershipReportV1:
+		i := &IGMPv1Orv2{Version: 1}
+		return decodingLayerDecoder(i, data, p)
+
+	case IGMPLeaveGroup, IGMPMembershipReportV2:
+		// leave group and Query Report v2 used in IGMPv2 only.
+		i := &IGMPv1Orv2{Version: 2}
+		return decodingLayerDecoder(i, data, p)
+	default:
+	}
+
+	return fmt.Errorf("Unable to determine IGMP type.")
 }
