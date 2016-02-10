@@ -8,6 +8,7 @@ package layers
 
 import (
 	"encoding/binary"
+	"fmt"
 	"github.com/google/gopacket"
 )
 
@@ -74,4 +75,68 @@ func decodeSNAP(data []byte, p gopacket.PacketBuilder) error {
 	// type.  This may not actually be an ethernet type in all cases,
 	// depending on the organizational code.  Right now, we don't check.
 	return p.NextDecoder(s.Type)
+}
+
+// SerializeTo writes the serialized form of this layer into the
+// SerializationBuffer, implementing gopacket.SerializableLayer.
+// See the docs for gopacket.SerializableLayer for more info.
+func (l *LLC) SerializeTo(b gopacket.SerializeBuffer, opts gopacket.SerializeOptions) error {
+	var ig_flag, cr_flag byte
+	var length int
+
+	if l.Control&0xFF00 != 0 {
+		length = 4
+	} else {
+		length = 3
+	}
+
+	if l.DSAP&0x1 != 0 {
+		return fmt.Errorf("DSAP value invalid, should not include IG flag bit")
+	}
+
+	if l.SSAP&0x1 != 0 {
+		return fmt.Errorf("SSAP value invalid, should not include CR flag bit")
+	}
+
+	if buf, err := b.PrependBytes(length); err != nil {
+		return err
+	} else {
+		ig_flag = 0
+		if l.IG {
+			ig_flag = 0x1
+		}
+
+		cr_flag = 0
+		if l.CR {
+			cr_flag = 0x1
+		}
+
+		buf[0] = l.DSAP + ig_flag
+		buf[1] = l.SSAP + cr_flag
+
+		if length == 4 {
+			buf[2] = uint8(l.Control >> 8)
+			buf[3] = uint8(l.Control)
+		} else {
+			buf[2] = uint8(l.Control)
+		}
+	}
+
+	return nil
+}
+
+// SerializeTo writes the serialized form of this layer into the
+// SerializationBuffer, implementing gopacket.SerializableLayer.
+// See the docs for gopacket.SerializableLayer for more info.
+func (s *SNAP) SerializeTo(b gopacket.SerializeBuffer, opts gopacket.SerializeOptions) error {
+	if buf, err := b.PrependBytes(5); err != nil {
+		return err
+	} else {
+		buf[0] = s.OrganizationalCode[0]
+		buf[1] = s.OrganizationalCode[1]
+		buf[2] = s.OrganizationalCode[2]
+		binary.BigEndian.PutUint16(buf[3:5], uint16(s.Type))
+	}
+
+	return nil
 }
