@@ -164,12 +164,16 @@ func (b *BPFSniffer) Close() error {
 
 func (b *BPFSniffer) pickBpfDevice() {
 	var err error
+	b.options.BPFDeviceName = ""
 	for i := 0; i < 99; i++ {
 		b.options.BPFDeviceName = fmt.Sprintf("/dev/bpf%d", i)
 		b.fd, err = syscall.Open(b.options.BPFDeviceName, syscall.O_RDWR, 0)
 		if err == nil {
 			break
 		}
+	}
+	if b.options.BPFDeviceName == "" {
+		panic(fmt.Sprintf("failed to open bpd device %s because %s\n", b.options.BPFDeviceName, err))
 	}
 }
 
