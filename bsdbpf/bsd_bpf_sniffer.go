@@ -187,6 +187,16 @@ func (b *BPFSniffer) ReadPacketData() ([]byte, gopacket.CaptureInfo, error) {
 	hdr := (*unix.BpfHdr)(unsafe.Pointer(&b.readBuffer[b.readBytesConsumed]))
 	frameStart := b.readBytesConsumed + int(hdr.Hdrlen)
 	b.readBytesConsumed += bpfWordAlign(int(hdr.Hdrlen) + int(hdr.Caplen))
+
+	if frameStart+int(hdr.Caplen) > len(b.readBuffer) {
+		captureInfo := gopacket.CaptureInfo{
+			Timestamp:     time.Unix(int64(hdr.Tstamp.Sec), int64(hdr.Tstamp.Usec)*1000),
+			CaptureLength: 0,
+			Length:        0,
+		}
+		return nil, captureInfo, nil
+	}
+
 	rawFrame := b.readBuffer[frameStart : frameStart+int(hdr.Caplen)]
 	captureInfo := gopacket.CaptureInfo{
 		Timestamp:     time.Unix(int64(hdr.Tstamp.Sec), int64(hdr.Tstamp.Usec)*1000),
