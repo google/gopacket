@@ -169,12 +169,10 @@ func (b *BPFSniffer) pickBpfDevice() {
 		b.options.BPFDeviceName = fmt.Sprintf("/dev/bpf%d", i)
 		b.fd, err = syscall.Open(b.options.BPFDeviceName, syscall.O_RDWR, 0)
 		if err == nil {
-			break
+			return
 		}
 	}
-	if b.options.BPFDeviceName == "" {
-		panic(fmt.Sprintf("failed to open bpd device %s because %s\n", b.options.BPFDeviceName, err))
-	}
+	panic("failed to acquire a BPF device for read-write access")
 }
 
 func (b *BPFSniffer) ReadPacketData() ([]byte, gopacket.CaptureInfo, error) {
