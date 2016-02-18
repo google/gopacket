@@ -196,7 +196,7 @@ func (b *BPFSniffer) ReadPacketData() ([]byte, gopacket.CaptureInfo, error) {
 			CaptureLength: 0,
 			Length:        0,
 		}
-		return nil, captureInfo, nil
+		return nil, captureInfo, fmt.Errorf("BPF captured frame received with corrupted BpfHdr struct.")
 	}
 
 	rawFrame := b.readBuffer[frameStart : frameStart+int(hdr.Caplen)]
