@@ -131,7 +131,7 @@ func main() {
 		data, ci, err := handleRead.ReadPacketData()
 		switch {
 		case err == io.EOF:
-			fmt.Printf("\nFinished in %s", time.Since(start))
+			fmt.Printf("\nFinished in %s\n", time.Since(start))
 			return
 		case err != nil:
 			log.Printf("Failed to read packet %d: %s\n", pkt, err)
