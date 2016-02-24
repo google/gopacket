@@ -8,7 +8,7 @@
 package pcap
 
 /*
-#cgo smartos LDFLAGS: -L /opt/local/lib -lpcap
+#cgo solaris LDFLAGS: -L /opt/local/lib -lpcap
 #cgo linux LDFLAGS: -lpcap
 #cgo dragonfly LDFLAGS: -lpcap
 #cgo freebsd LDFLAGS: -lpcap
