@@ -117,6 +117,7 @@ var (
 	LayerTypeLinuxSLL                    = gopacket.RegisterLayerType(113, gopacket.LayerTypeMetadata{"Linux SLL", gopacket.DecodeFunc(decodeLinuxSLL)})
 	LayerTypeSFlow                       = gopacket.RegisterLayerType(114, gopacket.LayerTypeMetadata{"SFlow", gopacket.DecodeFunc(decodeSFlow)})
 	LayerTypePrismHeader                 = gopacket.RegisterLayerType(115, gopacket.LayerTypeMetadata{"Prism monitor mode header", gopacket.DecodeFunc(decodePrismHeader)})
+	LayerTypeVXLAN                       = gopacket.RegisterLayerType(116, gopacket.LayerTypeMetadata{"VXLAN", gopacket.DecodeFunc(decodeVXLAN)})
 )
 
 var (
