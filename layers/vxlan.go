@@ -1,4 +1,4 @@
-// Copyright 2016 Robert Clark. All rights reserved.
+// Copyright 2016 Google, Inc. All rights reserved.
 //
 // Use of this source code is governed by a BSD-style license
 // that can be found in the LICENSE file in the root of the source
@@ -39,36 +39,25 @@ func (vx *VXLAN) LayerType() gopacket.LayerType { return LayerTypeVXLAN }
 func decodeVXLAN(data []byte, p gopacket.PacketBuilder) error {
 	vx := &VXLAN{}
 
-	// 'I' bit per RFC7348
-	if (data[0] & 0x08) > 0 {
-		vx.ValidIDFlag = true
-	}
+	// VNI is a 24bit number, Uint32 requires 32 bits
+	var buf [4]byte
+	copy(buf[1:], data[4:7])
 
-	// VNI - VXLAN Network Identifier per RFC7348
-	vx.VNI = binary.BigEndian.Uint32(append([]byte{0x0}, data[4:7]...)) //Uint32 wants 4 bytes in a slice
+	// RFC 7348 https://tools.ietf.org/html/rfc7348
+	vx.ValidIDFlag = data[0] & 0x08 > 0		// 'I' bit per RFC7348
+	vx.VNI = binary.BigEndian.Uint32(buf[:]) // VXLAN Network Identifier per RFC7348
 
-	// 'G' bit per the group policy draft
-	if (data[0] & 0x80) > 0 {
-		vx.GBPExtension = true
-	}
+	// Group Based Policy https://tools.ietf.org/html/draft-smith-vxlan-group-policy-00
+	vx.GBPExtension = data[0] & 0x80 > 0	// 'G' bit per the group policy draft
+	vx.GBPDontLearn = data[1] & 0x40 > 0  // 'D' bit - the egress VTEP MUST NOT learn the source address of the encapsulated frame.
+	vx.GBPApplied = data[1] & 0x80 > 0		// 'A' bit - indicates that the group policy has already been applied to this packet.
+	vx.GBPGroupPolicyID = binary.BigEndian.Uint16(data[2:4])	// Policy ID as per the group policy draft
 
-	// 'D' bit - the egress VTEP MUST NOT learn the source address of the encapsulated frame.
-	if (data[1] & 0x40) > 0 {
-		vx.GBPDontLearn = true
-	}
-
-	// 'A' bit - indicates that the group policy has already been applied to this packet.
-	if (data[1] & 0x80) > 0 {
-		vx.GBPApplied = true
-	}
-
-	// Policy ID as per the group policy draft
-	vx.GBPGroupPolicyID = binary.BigEndian.Uint16(data[2:4])
-
-	vxlanLength := 8
+	// Layer information
+	const vxlanLength = 8
 	vx.Contents = data[:vxlanLength]
 	vx.Payload = data[vxlanLength:]
 
 	p.AddLayer(vx)
-	return p.NextDecoder(LinkType(1))
+	return p.NextDecoder(LinkTypeEthernet)
 }
