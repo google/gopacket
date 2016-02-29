@@ -204,7 +204,7 @@ func (p *packet) recoverDecodeError() {
 // Payload layer and it's internal 'data' field, which contains a large byte
 // array that would really mess up formatting.
 func LayerString(l Layer) string {
-	return fmt.Sprintf("%v\t%s", l.LayerType(), layerString(l, false, false))
+	return fmt.Sprintf("%v\t%s", l.LayerType(), layerString(reflect.ValueOf(l), false, false))
 }
 
 // Dumper dumps verbose information on a value.  If a layer type implements
@@ -242,20 +242,21 @@ func LayerDump(l Layer) string {
 //   writeSpace:  if we've already written a value in a struct, and need to
 //     write a space before writing more.  This happens when we write various
 //     anonymous values, and need to keep writing more.
-func layerString(i interface{}, anonymous bool, writeSpace bool) string {
+func layerString(v reflect.Value, anonymous bool, writeSpace bool) string {
 	// Let String() functions take precedence.
-	if s, ok := i.(fmt.Stringer); ok {
-		return s.String()
+	if v.CanInterface() {
+		if s, ok := v.Interface().(fmt.Stringer); ok {
+			return s.String()
+		}
 	}
 	// Reflect, and spit out all the exported fields as key=value.
-	v := reflect.ValueOf(i)
 	switch v.Type().Kind() {
 	case reflect.Interface, reflect.Ptr:
 		if v.IsNil() {
 			return "nil"
 		}
 		r := v.Elem()
-		return layerString(r.Interface(), anonymous, writeSpace)
+		return layerString(r, anonymous, writeSpace)
 	case reflect.Struct:
 		var b bytes.Buffer
 		typ := v.Type()
@@ -267,7 +268,7 @@ func layerString(i interface{}, anonymous bool, writeSpace bool) string {
 			ftype := typ.Field(i)
 			f := v.Field(i)
 			if ftype.Anonymous {
-				anonStr := layerString(f.Interface(), true, writeSpace)
+				anonStr := layerString(f, true, writeSpace)
 				writeSpace = writeSpace || anonStr != ""
 				b.WriteString(anonStr)
 			} else if ftype.PkgPath == "" { // exported
@@ -275,7 +276,7 @@ func layerString(i interface{}, anonymous bool, writeSpace bool) string {
 					b.WriteByte(' ')
 				}
 				writeSpace = true
-				fmt.Fprintf(&b, "%s=%s", typ.Field(i).Name, layerString(f.Interface(), false, writeSpace))
+				fmt.Fprintf(&b, "%s=%s", typ.Field(i).Name, layerString(f, false, writeSpace))
 			}
 		}
 		if !anonymous {
@@ -292,7 +293,7 @@ func layerString(i interface{}, anonymous bool, writeSpace bool) string {
 				if j != 0 {
 					b.WriteString(", ")
 				}
-				b.WriteString(layerString(v.Index(j).Interface(), false, false))
+				b.WriteString(layerString(v.Index(j), false, false))
 			}
 		}
 		b.WriteByte(']')
