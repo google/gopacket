@@ -102,6 +102,7 @@ func (r *Reader) ReadPacketData() (data []byte, ci gopacket.CaptureInfo, err err
 
 	var n int
 	if 16+ci.CaptureLength > len(r.buf) {
+		err = gopacket.ErrMalformedPacket
 		return
 	}
 	data = r.buf[16 : 16+ci.CaptureLength]
