@@ -362,6 +362,11 @@ func (p *Handle) ZeroCopyReadPacketData() (data []byte, ci gopacket.CaptureInfo,
 		slice.Cap = ci.CaptureLength
 	}
 	p.mu.Unlock()
+	if slice.Len != len(slice.Data) {
+		zero_ci := gopacket.CaptureInfo{}
+		zero_data := []byte
+		return zero_data, zero_ci, nil
+	}
 	return
 }
 
