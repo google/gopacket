@@ -19,8 +19,6 @@ import (
 	"time"
 )
 
-var ErrMalformedPacket = errors.New("malformed packet")
-
 // CaptureInfo provides standardized information about a packet captured off
 // the wire or read from a file.
 type CaptureInfo struct {
