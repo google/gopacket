@@ -106,6 +106,7 @@ func (r *Reader) ReadPacketData() (data []byte, ci gopacket.CaptureInfo, err err
 	}
 	data = r.buf[16 : 16+ci.CaptureLength]
 	if n, err = io.ReadFull(r.r, data); err != nil {
+		err = fmt.Errorf("capture length with header exceeds buffer size: %d > %d", 16+ci.CaptureLength, len(r.buf))
 		return
 	} else if n < ci.CaptureLength {
 		err = io.ErrUnexpectedEOF
