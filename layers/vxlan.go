@@ -44,14 +44,14 @@ func decodeVXLAN(data []byte, p gopacket.PacketBuilder) error {
 	copy(buf[1:], data[4:7])
 
 	// RFC 7348 https://tools.ietf.org/html/rfc7348
-	vx.ValidIDFlag = data[0] & 0x08 > 0		// 'I' bit per RFC7348
+	vx.ValidIDFlag = data[0]&0x08 > 0        // 'I' bit per RFC7348
 	vx.VNI = binary.BigEndian.Uint32(buf[:]) // VXLAN Network Identifier per RFC7348
 
 	// Group Based Policy https://tools.ietf.org/html/draft-smith-vxlan-group-policy-00
-	vx.GBPExtension = data[0] & 0x80 > 0	// 'G' bit per the group policy draft
-	vx.GBPDontLearn = data[1] & 0x40 > 0  // 'D' bit - the egress VTEP MUST NOT learn the source address of the encapsulated frame.
-	vx.GBPApplied = data[1] & 0x80 > 0		// 'A' bit - indicates that the group policy has already been applied to this packet.
-	vx.GBPGroupPolicyID = binary.BigEndian.Uint16(data[2:4])	// Policy ID as per the group policy draft
+	vx.GBPExtension = data[0]&0x80 > 0                       // 'G' bit per the group policy draft
+	vx.GBPDontLearn = data[1]&0x40 > 0                       // 'D' bit - the egress VTEP MUST NOT learn the source address of the encapsulated frame.
+	vx.GBPApplied = data[1]&0x80 > 0                         // 'A' bit - indicates that the group policy has already been applied to this packet.
+	vx.GBPGroupPolicyID = binary.BigEndian.Uint16(data[2:4]) // Policy ID as per the group policy draft
 
 	// Layer information
 	const vxlanLength = 8
