@@ -13,9 +13,10 @@ import (
 	"bytes"
 	"encoding/binary"
 	"fmt"
-	"github.com/google/gopacket"
 	"hash/crc32"
 	"net"
+
+	"github.com/google/gopacket"
 )
 
 // Dot11Flags contains the set of 8 flags in the IEEE 802.11 frame control
@@ -796,6 +797,41 @@ func decodeDot11InformationElement(data []byte, p gopacket.PacketBuilder) error 
 	return decodingLayerDecoder(d, data, p)
 }
 
+type Dot11FixedElement struct {
+	BaseLayer
+	Timestamp      uint64
+	BeaconInterval uint16
+	Capabilities   uint16
+}
+
+func (m *Dot11FixedElement) LayerType() gopacket.LayerType {
+	return LayerTypeDot11InformationElement
+}
+func (m *Dot11FixedElement) CanDecode() gopacket.LayerClass {
+	return LayerTypeDot11InformationElement
+}
+
+func (m *Dot11FixedElement) NextLayerType() gopacket.LayerType {
+	return LayerTypeDot11InformationElement
+}
+
+func (m *Dot11FixedElement) DecodeFromBytes(data []byte, df gopacket.DecodeFeedback) error {
+	const length = 12
+	if len(data) < length {
+		return fmt.Errorf("Dot11FixedElement length %v too short, %v required", len(data), length)
+	}
+	m.Timestamp = binary.LittleEndian.Uint64(data[0:8])
+	m.BeaconInterval = binary.LittleEndian.Uint16(data[8:10])
+	m.Capabilities = binary.LittleEndian.Uint16(data[10:12])
+	m.BaseLayer = BaseLayer{Contents: data[:length], Payload: data[length:]}
+	return nil
+}
+
+func decodeDot11FixedElement(data []byte, p gopacket.PacketBuilder) error {
+	d := &Dot11FixedElement{}
+	return decodingLayerDecoder(d, data, p)
+}
+
 type Dot11CtrlCTS struct {
 	Dot11Ctrl
 }
@@ -1070,6 +1106,10 @@ func (m *Dot11MgmtProbeReq) CanDecode() gopacket.LayerClass { return LayerTypeDo
 func (m *Dot11MgmtProbeReq) NextLayerType() gopacket.LayerType {
 	return LayerTypeDot11InformationElement
 }
+func (m *Dot11MgmtProbeReq) DecodeFromBytes(data []byte, df gopacket.DecodeFeedback) error {
+	m.Payload = data
+	return nil
+}
 
 type Dot11MgmtProbeResp struct {
 	Dot11Mgmt
@@ -1083,7 +1123,11 @@ func decodeDot11MgmtProbeResp(data []byte, p gopacket.PacketBuilder) error {
 func (m *Dot11MgmtProbeResp) LayerType() gopacket.LayerType  { return LayerTypeDot11MgmtProbeResp }
 func (m *Dot11MgmtProbeResp) CanDecode() gopacket.LayerClass { return LayerTypeDot11MgmtProbeResp }
 func (m *Dot11MgmtProbeResp) NextLayerType() gopacket.LayerType {
-	return LayerTypeDot11InformationElement
+	return LayerTypeDot11FixedElement
+}
+func (m *Dot11MgmtProbeResp) DecodeFromBytes(data []byte, df gopacket.DecodeFeedback) error {
+	m.Payload = data
+	return nil
 }
 
 type Dot11MgmtMeasurementPilot struct {
