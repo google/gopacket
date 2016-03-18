@@ -16,12 +16,13 @@ package afpacket
 import (
 	"errors"
 	"fmt"
-	"github.com/google/gopacket"
 	"net"
 	"runtime"
 	"sync"
 	"time"
 	"unsafe"
+
+	"github.com/google/gopacket"
 )
 
 /*
@@ -52,8 +53,10 @@ type Stats struct {
 	Polls int64
 }
 
-// Get structs to store socket stats
+// SocketStats is a struct where socket stats are stored
 type SocketStats C.struct_tpacket_stats
+
+// SocketStatsV3 is a struct where socket stats for TPacketV3 are stored
 type SocketStatsV3 C.struct_tpacket_stats_v3
 
 type TPacket struct {
@@ -264,7 +267,9 @@ func (h *TPacket) InitSocketStats() error {
 	if h.tpVersion == TPacketVersion3 {
 		socklen := unsafe.Sizeof(h.socketStatsV3)
 		var slt C.socklen_t = C.socklen_t(socklen)
-		_, err := C.getsockopt(h.fd, C.SOL_PACKET, C.PACKET_STATISTICS, unsafe.Pointer(&h.socketStatsV3), &slt)
+		var ssv3 SocketStatsV3
+
+		_, err := C.getsockopt(h.fd, C.SOL_PACKET, C.PACKET_STATISTICS, unsafe.Pointer(&ssv3), &slt)
 		if err != nil {
 			return err
 		}
@@ -272,7 +277,9 @@ func (h *TPacket) InitSocketStats() error {
 	} else {
 		socklen := unsafe.Sizeof(h.socketStats)
 		var slt C.socklen_t = C.socklen_t(socklen)
-		_, err := C.getsockopt(h.fd, C.SOL_PACKET, C.PACKET_STATISTICS, unsafe.Pointer(&h.socketStats), &slt)
+		var ss SocketStats
+
+		_, err := C.getsockopt(h.fd, C.SOL_PACKET, C.PACKET_STATISTICS, unsafe.Pointer(&ss), &slt)
 		if err != nil {
 			return err
 		}
@@ -290,30 +297,31 @@ func (h *TPacket) SocketStats() (SocketStats, SocketStatsV3, error) {
 		prevStats := h.socketStatsV3
 		socklen := unsafe.Sizeof(h.socketStatsV3)
 		var slt C.socklen_t = C.socklen_t(socklen)
-		_, err := C.getsockopt(h.fd, C.SOL_PACKET, C.PACKET_STATISTICS, unsafe.Pointer(&h.socketStatsV3), &slt)
+		var ssv3 SocketStatsV3
+
+		_, err := C.getsockopt(h.fd, C.SOL_PACKET, C.PACKET_STATISTICS, unsafe.Pointer(&ssv3), &slt)
 		if err != nil {
 			return SocketStats{}, SocketStatsV3{}, err
 		}
 
-		h.socketStatsV3.tp_packets += prevStats.tp_packets
-		h.socketStatsV3.tp_drops += prevStats.tp_drops
-		h.socketStatsV3.tp_freeze_q_cnt += prevStats.tp_freeze_q_cnt
-
+		h.socketStatsV3.tp_packets = prevStats.tp_packets + ssv3.tp_packets
+		h.socketStatsV3.tp_drops = prevStats.tp_drops + ssv3.tp_drops
+		h.socketStatsV3.tp_freeze_q_cnt = prevStats.tp_freeze_q_cnt + ssv3.tp_freeze_q_cnt
 		return h.socketStats, h.socketStatsV3, nil
 	} else {
 		prevStats := h.socketStats
 		socklen := unsafe.Sizeof(h.socketStats)
 		var slt C.socklen_t = C.socklen_t(socklen)
-		_, err := C.getsockopt(h.fd, C.SOL_PACKET, C.PACKET_STATISTICS, unsafe.Pointer(&h.socketStats), &slt)
+		var ss SocketStats
+
+		_, err := C.getsockopt(h.fd, C.SOL_PACKET, C.PACKET_STATISTICS, unsafe.Pointer(&ss), &slt)
 		if err != nil {
 			return SocketStats{}, SocketStatsV3{}, err
 		}
 
-		h.socketStats.tp_packets += prevStats.tp_packets
-		h.socketStats.tp_drops += prevStats.tp_drops
-
+		h.socketStats.tp_packets = prevStats.tp_packets + ss.tp_packets
+		h.socketStats.tp_drops = prevStats.tp_drops + ss.tp_drops
 		return h.socketStats, h.socketStatsV3, nil
-
 	}
 }
 
