@@ -12,6 +12,19 @@ package pfring
 #include <stdlib.h>
 #include <pfring.h>
 #include <linux/pf_ring.h>
+
+int pfring_readpacketdatato_wrapper(
+    pfring* ring,
+    u_char* buffer,
+    u_int buffer_len,
+    struct pfring_pkthdr* hdr) {
+  // We can't pass a Go pointer to a Go pointer which means we can't pass
+  // buffer as a uchar**, like pfring_recv wants, for ReadPacketDataTo.  So,
+  // this wrapper does the pointer conversion in C code.  Since this isn't
+  // zero-copy, it turns out that the pointer-to-pointer part of things isn't
+  // actually used anyway.
+  return pfring_recv(ring, &buffer, buffer_len, hdr, 1);
+}
 */
 import "C"
 
@@ -113,7 +126,7 @@ func (r *Ring) ReadPacketDataTo(data []byte) (ci gopacket.CaptureInfo, err error
 	// will actually write directly into our Go slice.  Nice!
 	r.mu.Lock()
 	r.buf_ptr = (*C.u_char)(unsafe.Pointer(&data[0]))
-	result := NextResult(C.pfring_recv(r.cptr, &r.buf_ptr, C.u_int(len(data)), &r.pkthdr, 1))
+	result := NextResult(C.pfring_readpacketdatato_wrapper(r.cptr, r.buf_ptr, C.u_int(len(data)), &r.pkthdr))
 	if result != NextOk {
 		err = result
 		r.mu.Unlock()
