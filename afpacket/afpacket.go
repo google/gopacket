@@ -294,7 +294,6 @@ func (h *TPacket) SocketStats() (SocketStats, SocketStatsV3, error) {
 	defer h.mu.Unlock()
 	// We need to save the counters since asking for the stats will clear them
 	if h.tpVersion == TPacketVersion3 {
-		prevStats := h.socketStatsV3
 		socklen := unsafe.Sizeof(h.socketStatsV3)
 		var slt C.socklen_t = C.socklen_t(socklen)
 		var ssv3 SocketStatsV3
@@ -304,12 +303,11 @@ func (h *TPacket) SocketStats() (SocketStats, SocketStatsV3, error) {
 			return SocketStats{}, SocketStatsV3{}, err
 		}
 
-		h.socketStatsV3.tp_packets = prevStats.tp_packets + ssv3.tp_packets
-		h.socketStatsV3.tp_drops = prevStats.tp_drops + ssv3.tp_drops
-		h.socketStatsV3.tp_freeze_q_cnt = prevStats.tp_freeze_q_cnt + ssv3.tp_freeze_q_cnt
+		h.socketStatsV3.tp_packets += ssv3.tp_packets
+		h.socketStatsV3.tp_drops += ssv3.tp_drops
+		h.socketStatsV3.tp_freeze_q_cnt += ssv3.tp_freeze_q_cnt
 		return h.socketStats, h.socketStatsV3, nil
 	} else {
-		prevStats := h.socketStats
 		socklen := unsafe.Sizeof(h.socketStats)
 		var slt C.socklen_t = C.socklen_t(socklen)
 		var ss SocketStats
@@ -319,8 +317,8 @@ func (h *TPacket) SocketStats() (SocketStats, SocketStatsV3, error) {
 			return SocketStats{}, SocketStatsV3{}, err
 		}
 
-		h.socketStats.tp_packets = prevStats.tp_packets + ss.tp_packets
-		h.socketStats.tp_drops = prevStats.tp_drops + ss.tp_drops
+		h.socketStats.tp_packets += ss.tp_packets
+		h.socketStats.tp_drops += ss.tp_drops
 		return h.socketStats, h.socketStatsV3, nil
 	}
 }
