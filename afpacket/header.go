@@ -38,11 +38,18 @@ type header interface {
 	getData() []byte
 	// getLength returns the total length of the packet.
 	getLength() int
+	// getIfaceIndex returns the index of the network interface
+	// where the packet was seen. The index can later be translated to a name.
+	getIfaceIndex() int
 	// next moves this header to point to the next packet it contains,
 	// returning true on success (in which case getTime and getData will
 	// return values for the new packet) or false if there are no more
 	// packets (in which case clearStatus should be called).
 	next() bool
+}
+
+func tpAlign(x int) int {
+	return int((uint(x) + tpacketAlignment - 1) &^ (tpacketAlignment - 1))
 }
 
 type v1header C.struct_tpacket_hdr
@@ -71,9 +78,14 @@ func (h *v1header) getData() []byte {
 func (h *v1header) getLength() int {
 	return int(h.tp_len)
 }
+func (h *v1header) getIfaceIndex() int {
+	ll := (*C.struct_sockaddr_ll)(unsafe.Pointer(uintptr(unsafe.Pointer(h)) + uintptr(tpAlign(int(C.sizeof_struct_tpacket_hdr)))))
+	return int(ll.sll_ifindex)
+}
 func (h *v1header) next() bool {
 	return false
 }
+
 func (h *v2header) getStatus() int {
 	return int(h.tp_status)
 }
@@ -88,6 +100,10 @@ func (h *v2header) getData() []byte {
 }
 func (h *v2header) getLength() int {
 	return int(h.tp_len)
+}
+func (h *v2header) getIfaceIndex() int {
+	ll := (*C.struct_sockaddr_ll)(unsafe.Pointer(uintptr(unsafe.Pointer(h)) + uintptr(tpAlign(int(C.sizeof_struct_tpacket2_hdr)))))
+	return int(ll.sll_ifindex)
 }
 func (h *v2header) next() bool {
 	return false
@@ -121,11 +137,16 @@ func (w *v3wrapper) getData() []byte {
 func (w *v3wrapper) getLength() int {
 	return int(w.packet.tp_len)
 }
+func (w *v3wrapper) getIfaceIndex() int {
+	ll := (*C.struct_sockaddr_ll)(unsafe.Pointer(uintptr(unsafe.Pointer(w.packet)) + uintptr(tpAlign(int(C.sizeof_struct_tpacket3_hdr)))))
+	return int(ll.sll_ifindex)
+}
 func (w *v3wrapper) next() bool {
 	w.used++
 	if w.used >= w.blockhdr.num_pkts {
 		return false
 	}
+
 	next := uintptr(unsafe.Pointer(w.packet))
 	if w.packet.tp_next_offset != 0 {
 		next += uintptr(w.packet.tp_next_offset)
