@@ -368,12 +368,12 @@ func (p *Handle) ZeroCopyReadPacketData() (data []byte, ci gopacket.CaptureInfo,
 // Close closes the underlying pcap handle.
 func (p *Handle) Close() {
 	p.mu.Lock()
+	defer p.mu.Unlock()
 	if p.cptr == nil {
 		return
 	}
 	C.pcap_close(p.cptr)
 	p.cptr = nil
-	p.mu.Unlock()
 }
 
 // Error returns the current error associated with a pcap handle (pcap_geterr).
