@@ -281,6 +281,9 @@ func (p *Handle) ReadPacketData() (data []byte, ci gopacket.CaptureInfo, err err
 		data = C.GoBytes(unsafe.Pointer(p.buf_ptr), C.int(ci.CaptureLength))
 	}
 	p.mu.Unlock()
+	if err == NextErrorTimeoutExpired {
+		runtime.Gosched()
+	}
 	return
 }
 
@@ -362,6 +365,9 @@ func (p *Handle) ZeroCopyReadPacketData() (data []byte, ci gopacket.CaptureInfo,
 		slice.Cap = ci.CaptureLength
 	}
 	p.mu.Unlock()
+	if err == NextErrorTimeoutExpired {
+		runtime.Gosched()
+	}
 	return
 }
 
