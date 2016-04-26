@@ -91,14 +91,20 @@ type TPacket struct {
 
 // bindToInterface binds the TPacket socket to a particular named interface.
 func (h *TPacket) bindToInterface(ifaceName string) error {
-	iface, err := net.InterfaceByName(ifaceName)
-	if err != nil {
-		return fmt.Errorf("InterfaceByName: %v", err)
+	ifIndex := 0
+	// An empty string here means to listen to all interfaces
+	if ifaceName != "" {
+		iface, err := net.InterfaceByName(ifaceName)
+		if err != nil {
+			return fmt.Errorf("InterfaceByName: %v", err)
+		}
+		ifIndex = iface.Index
 	}
+
 	var ll C.struct_sockaddr_ll
 	ll.sll_family = C.AF_PACKET
 	ll.sll_protocol = C.__be16(C.htons(C.ETH_P_ALL))
-	ll.sll_ifindex = C.int(iface.Index)
+	ll.sll_ifindex = C.int(ifIndex)
 	if _, err := C.bind(h.fd, (*C.struct_sockaddr)(unsafe.Pointer(&ll)), C.socklen_t(unsafe.Sizeof(ll))); err != nil {
 		return fmt.Errorf("bindToInterface: %v", err)
 	}
@@ -194,10 +200,8 @@ func NewTPacket(opts ...interface{}) (h *TPacket, err error) {
 		return nil, err
 	}
 	h.fd = fd
-	if h.opts.iface != "" {
-		if err = h.bindToInterface(h.opts.iface); err != nil {
-			goto errlbl
-		}
+	if err = h.bindToInterface(h.opts.iface); err != nil {
+		goto errlbl
 	}
 	if err = h.setRequestedTPacketVersion(); err != nil {
 		goto errlbl
@@ -250,6 +254,7 @@ func (h *TPacket) ZeroCopyReadPacketData() (data []byte, ci gopacket.CaptureInfo
 	ci.Timestamp = h.current.getTime()
 	ci.CaptureLength = len(data)
 	ci.Length = h.current.getLength()
+	ci.InterfaceIndex = h.current.getIfaceIndex()
 	h.stats.Packets++
 	h.mu.Unlock()
 	return

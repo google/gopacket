@@ -34,12 +34,14 @@ import "C"
 
 import (
 	"fmt"
-	"github.com/google/gopacket"
+	"net"
 	"os"
 	"strconv"
 	"sync"
 	"time"
 	"unsafe"
+
+	"github.com/google/gopacket"
 )
 
 const errorBufferSize = 256
@@ -47,10 +49,11 @@ const errorBufferSize = 256
 // Ring provides a handle to a pf_ring.
 type Ring struct {
 	// cptr is the handle for the actual pcap C object.
-	cptr    *C.pfring
-	snaplen int
-
-	mu sync.Mutex
+	cptr                    *C.pfring
+	snaplen                 int
+	useExtendedPacketHeader bool
+	interfaceIndex          int
+	mu                      sync.Mutex
 	// Since pointers to these objects are passed into a C function, if
 	// they're declared locally then the Go compiler thinks they may have
 	// escaped into C-land, so it allocates them on the heap.  This causes a
@@ -82,6 +85,15 @@ func NewRing(device string, snaplen uint32, flags Flag) (ring *Ring, _ error) {
 		return nil, fmt.Errorf("pfring NewRing error: %v", err)
 	}
 	ring = &Ring{cptr: cptr, snaplen: int(snaplen)}
+
+	if flags&FlagLongHeader == FlagLongHeader {
+		ring.useExtendedPacketHeader = true
+	} else {
+		ifc, err := net.InterfaceByName(device)
+		if err == nil {
+			ring.interfaceIndex = ifc.Index
+		}
+	}
 	ring.SetApplicationName(os.Args[0])
 	return
 }
@@ -136,6 +148,11 @@ func (r *Ring) ReadPacketDataTo(data []byte) (ci gopacket.CaptureInfo, err error
 		int64(r.pkthdr.ts.tv_usec)*1000) // convert micros to nanos
 	ci.CaptureLength = int(r.pkthdr.caplen)
 	ci.Length = int(r.pkthdr.len)
+	if r.useExtendedPacketHeader {
+		ci.InterfaceIndex = int(r.pkthdr.extended_hdr.if_index)
+	} else {
+		ci.InterfaceIndex = r.interfaceIndex
+	}
 	r.mu.Unlock()
 	return
 }

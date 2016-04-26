@@ -29,6 +29,8 @@ type CaptureInfo struct {
 	// Length is the size of the original packet.  Should always be >=
 	// CaptureLength.
 	Length int
+	// InterfaceIndex
+	InterfaceIndex int
 }
 
 // PacketMetadata contains metadata for a packet.
