@@ -239,7 +239,7 @@ func (r *Ring) RemoveBPFFilter() error {
 // WritePacketData uses the ring to send raw packet data to the interface.
 func (r *Ring) WritePacketData(data []byte) error {
 	buf := (*C.char)(unsafe.Pointer(&data[0]))
-	if rv := C.pfring_send(r.cptr, buf, C.u_int(len(data)), 1); rv != 0 {
+	if rv := C.pfring_send(r.cptr, buf, C.u_int(len(data)), 1); rv < 0 {
 		return fmt.Errorf("Unable to send packet data, got error code %d", rv)
 	}
 	return nil
