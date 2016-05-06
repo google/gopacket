@@ -1,6 +1,6 @@
 //******************************************************************************
 //
-// Copyright 2016 Ross N. Williams. All rights reserved.
+// Copyright 2016 Google, Inc. All rights reserved.
 //
 // Use of this source code is governed by a BSD-style license
 // that can be found in the LICENSE file in the root of the source
@@ -21,19 +21,6 @@ import (
 // Network Time Protocol (NTP) Decoding Layer
 // ------------------------------------------
 // This file provides a GoPacket decoding layer for NTP.
-//
-// More specifically, this file adds to the package "layers" an additional
-// type called "NTP" that conforms to the interface type DecodingLayer
-// that is defined in the package:
-//
-//    src/github.com/google/gopacket/parser.go
-//
-// To do this, it must implement the following functions:
-//
-//     DecodeFromBytes(data []byte, df DecodeFeedback) error
-//     CanDecode() LayerClass
-//     NextLayerType() LayerType
-//     LayerPayload() []byte
 //
 //******************************************************************************
 //
@@ -140,9 +127,7 @@ import (
 // Endian and bit numbering issues can be confusing. Here is some
 // clarification:
 //
-//    ENDIAN: NTP uses "Network Byte Order" which is big-endian order. This
-//    means that if a value contains (e.g.) four bytes, the most-significant
-//    byte appears first and the least-significant byte appears last.
+//    ENDIAN: Values are sent big endian.
 //    https://en.wikipedia.org/wiki/Endianness
 //
 //    BIT NUMBERING: Bits are numbered 0 upwards from the most significant
@@ -150,54 +135,8 @@ import (
 //    value, the most significant bit is called bit 0 and the least
 //    significant bit is called bit 31.
 //
-// RFC 791 (Internet Protocol) has a helpful Appendix B which describes
-// the endian and bit numbering convention in internet protocols. It is
-// reproduced here verbatim:
+// See RFC 791 Appendix B for more discussion.
 //
-//    |APPENDIX B:  Data Transmission Order
-//    |
-//    |The order of transmission of the header and data described in this
-//    |document is resolved to the octet level.  Whenever a diagram shows a
-//    |group of octets, the order of transmission of those octets is the normal
-//    |order in which they are read in English.  For example, in the following
-//    |diagram the octets are transmitted in the order they are numbered.
-//    |
-//    |
-//    |    0                   1                   2                   3
-//    |    0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1
-//    |   +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+s
-//    |   |       1       |       2       |       3       |       4       |
-//    |   +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-//    |   |       5       |       6       |       7       |       8       |
-//    |   +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-//    |   |       9       |      10       |      11       |      12       |
-//    |   +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-//    |
-//    |                      Transmission Order of Bytes
-//    |
-//    |                               Figure 10.
-//    |
-//    |Whenever an octet represents a numeric quantity the left most bit in the
-//    |diagram is the high order or most significant bit.  That is, the bit
-//    |labeled 0 is the most significant bit.  For example, the following
-//    |diagram represents the value 170 (decimal).
-//    |
-//    |
-//    |                            0 1 2 3 4 5 6 7
-//    |                           +-+-+-+-+-+-+-+-+
-//    |                           |1 0 1 0 1 0 1 0|
-//    |                           +-+-+-+-+-+-+-+-+
-//    |
-//    |                          Significance of Bits
-//    |
-//    |                               Figure 11.
-//    |
-//    |Similarly, whenever a multi-octet field represents a numeric quantity
-//    |the left most bit of the whole field is the most significant bit.  When
-//    |a multi-octet quantity is transmitted the most significant octet is
-//    |transmitted first.
-//    |https://tools.ietf.org/html/rfc791
-
 //******************************************************************************
 //
 // NTP V3 and V4 Packet Format
@@ -272,7 +211,7 @@ import (
 // The fields "Extension Field 1 (variable)" and later are optional fields,
 // and so we can set a minimum NTP record size of 48 bytes.
 //
-const ntp_minimum_record_size_in_bytes int = 48
+const ntpMinimumRecordSizeInBytes int = 48
 
 //******************************************************************************
 
@@ -282,26 +221,37 @@ const ntp_minimum_record_size_in_bytes int = 48
 // represents in a structured form the NTP record present as the UDP
 // payload in an NTP UDP packet.
 //
+
+type NTPLeapIndicator uint8
+type NTPVersion uint8
+type NTPMode uint8
+type NTPStratum uint8
+type NTPPoll int8
+type NTPPrecision int8
+type NTPRootDelay uint32
+type NTPRootDispersion uint32
+type NTPReferenceID uint32
+type NTPReferenceTimestamp uint64
+type NTPOriginTimestamp uint64
+type NTPReceiveTimestamp uint64
+type NTPTransmitTimestamp uint64
+
 type NTP struct {
 	BaseLayer // Stores the packet bytes and payload bytes.
 
-	LeapIndicator uint8 // [0,3]. Indicates whether leap second(s) is to be added.
-	Version       uint8 // [0,7]. Version of the NTP protocol.
-	Mode          uint8 // [0,7]. Mode.
-	Stratum       uint8 // [0,255]. Stratum of time server in the server tree.
-	Poll          int8  // [-128,127]. The maximum interval between
-	//             successive messages, in log2 seconds.
-	Precision int8 // [-128,127]. The precision of the system clock,
-	//             in log2 seconds.
-	RootDelay uint32 // [0,2^32-1]. Total round trip delay to the reference clock
-	//             in seconds times 2^16.
-	RootDispersion uint32 // [0,2^32-1]. Total dispersion to the reference clock,
-	//             in seconds times 2^16.
-	ReferenceID        uint32 // ID code of reference clock [0,2^32-1].
-	ReferenceTimestamp uint64 // Most recent timestamp from the reference clock.
-	OriginTimestamp    uint64 // Local time when request was sent from local host.
-	ReceiveTimestamp   uint64 // Local time (on server) that request arrived at server host.
-	TransmitTimestamp  uint64 // Local time (on server) that request departed server host.
+	LeapIndicator      NTPLeapIndicator      // [0,3]. Indicates whether leap second(s) is to be added.
+	Version            NTPVersion            // [0,7]. Version of the NTP protocol.
+	Mode               NTPMode               // [0,7]. Mode.
+	Stratum            NTPStratum            // [0,255]. Stratum of time server in the server tree.
+	Poll               NTPPoll               // [-128,127]. The maximum interval between successive messages, in log2 seconds.
+	Precision          NTPPrecision          // [-128,127]. The precision of the system clock, in log2 seconds.
+	RootDelay          NTPRootDelay          // [0,2^32-1]. Total round trip delay to the reference clock in seconds times 2^16.
+	RootDispersion     NTPRootDispersion     // [0,2^32-1]. Total dispersion to the reference clock, in seconds times 2^16.
+	ReferenceID        NTPReferenceID        // ID code of reference clock [0,2^32-1].
+	ReferenceTimestamp NTPReferenceTimestamp // Most recent timestamp from the reference clock.
+	OriginTimestamp    NTPOriginTimestamp    // Local time when request was sent from local host.
+	ReceiveTimestamp   NTPReceiveTimestamp   // Local time (on server) that request arrived at server host.
+	TransmitTimestamp  NTPTransmitTimestamp  // Local time (on server) that request departed server host.
 
 	// FIX: This package should analyse the extension fields and represent the extension fields too.
 	ExtensionBytes []byte // Just put extensions in a byte slice.
@@ -309,7 +259,7 @@ type NTP struct {
 
 //******************************************************************************
 
-// LayerType() returns the layer type of the NTP object, which is LayerTypeNTP.
+// LayerType returns the layer type of the NTP object, which is LayerTypeNTP.
 //
 func (d *NTP) LayerType() gopacket.LayerType {
 	return LayerTypeNTP
@@ -317,7 +267,7 @@ func (d *NTP) LayerType() gopacket.LayerType {
 
 //******************************************************************************
 
-// decodeNTP() analyses a byte slice and attempts to decode it as an NTP
+// decodeNTP analyses a byte slice and attempts to decode it as an NTP
 // record of a UDP packet.
 //
 // If it succeeds, it loads p with information about the packet and returns nil.
@@ -346,7 +296,7 @@ func decodeNTP(data []byte, p gopacket.PacketBuilder) error {
 
 //******************************************************************************
 
-// decodeNTP() analyses a byte slice and attempts to decode it as an NTP
+// DecodeFromBytes analyses a byte slice and attempts to decode it as an NTP
 // record of a UDP packet.
 //
 // Upon succeeds, it loads the NTP object with information about the packet
@@ -357,7 +307,7 @@ func (d *NTP) DecodeFromBytes(data []byte, df gopacket.DecodeFeedback) error {
 
 	// If the data block is too short to be a NTP record, then return an error.
 	//
-	if len(data) < ntp_minimum_record_size_in_bytes {
+	if len(data) < ntpMinimumRecordSizeInBytes {
 		df.SetTruncated()
 		return fmt.Errorf("NTP packet too short")
 	}
@@ -385,21 +335,21 @@ func (d *NTP) DecodeFromBytes(data []byte, df gopacket.DecodeFeedback) error {
 
 	// The first few fields are all packed into the first 32 bits. Unpack them.
 	f := binary.BigEndian.Uint32(data[0:4])
-	d.LeapIndicator = uint8((f & 0xC0000000) >> 30)
-	d.Version = uint8((f & 0x38000000) >> 27)
-	d.Mode = uint8((f & 0x07000000) >> 24)
-	d.Stratum = uint8((f & 0x00FF0000) >> 16)
-	d.Poll = int8((f & 0x0000FF00) >> 8)
-	d.Precision = int8((f & 0x000000FF) >> 0)
+	d.LeapIndicator = NTPLeapIndicator((f & 0xC0000000) >> 30)
+	d.Version = NTPVersion((f & 0x38000000) >> 27)
+	d.Mode = NTPMode((f & 0x07000000) >> 24)
+	d.Stratum = NTPStratum((f & 0x00FF0000) >> 16)
+	d.Poll = NTPPoll((f & 0x0000FF00) >> 8)
+	d.Precision = NTPPrecision((f & 0x000000FF) >> 0)
 
 	// The remaining fields can just be copied in big endian order.
-	d.RootDelay = binary.BigEndian.Uint32(data[4:8])
-	d.RootDispersion = binary.BigEndian.Uint32(data[8:12])
-	d.ReferenceID = binary.BigEndian.Uint32(data[12:16])
-	d.ReferenceTimestamp = binary.BigEndian.Uint64(data[16:24])
-	d.OriginTimestamp = binary.BigEndian.Uint64(data[24:32])
-	d.ReceiveTimestamp = binary.BigEndian.Uint64(data[32:40])
-	d.TransmitTimestamp = binary.BigEndian.Uint64(data[40:48])
+	d.RootDelay = NTPRootDelay(binary.BigEndian.Uint32(data[4:8]))
+	d.RootDispersion = NTPRootDispersion(binary.BigEndian.Uint32(data[8:12]))
+	d.ReferenceID = NTPReferenceID(binary.BigEndian.Uint32(data[12:16]))
+	d.ReferenceTimestamp = NTPReferenceTimestamp(binary.BigEndian.Uint64(data[16:24]))
+	d.OriginTimestamp = NTPOriginTimestamp(binary.BigEndian.Uint64(data[24:32]))
+	d.ReceiveTimestamp = NTPReceiveTimestamp(binary.BigEndian.Uint64(data[32:40]))
+	d.TransmitTimestamp = NTPTransmitTimestamp(binary.BigEndian.Uint64(data[40:48]))
 
 	// This layer does not attempt to analyse the extension bytes.
 	// But if there are any, we'd like the user to know. So we just
@@ -412,7 +362,7 @@ func (d *NTP) DecodeFromBytes(data []byte, df gopacket.DecodeFeedback) error {
 
 //******************************************************************************
 
-// CanDecode() returns a set of layers that NTP objects can decode.
+// CanDecode returns a set of layers that NTP objects can decode.
 // As NTP objects can only decide the NTP layer, we can return just that layer.
 // Apparently a single layer type implements LayerClass.
 //
@@ -422,17 +372,12 @@ func (d *NTP) CanDecode() gopacket.LayerClass {
 
 //******************************************************************************
 
-// NextLayerType() specifies the next layer that GoPacket should attempt to
+// NextLayerType specifies the next layer that GoPacket should attempt to
 // analyse after this (NTP) layer. As NTP packets do not contain any payload
 // bytes, there are no further layers to analyse.
 //
-// FIX: What is the GoPacket convention here for indicating that no
-//      further layers should be analysed? It seems inelegant to
-//      specify that the Payload layer should be analysed next when
-//      there is no payload.
-//
 func (d *NTP) NextLayerType() gopacket.LayerType {
-	return gopacket.LayerTypePayload
+	return gopacket.LayerTypeZero
 }
 
 //******************************************************************************

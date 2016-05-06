@@ -1,6 +1,6 @@
 //******************************************************************************
 //
-// Copyright 2016 Ross N. Williams. All rights reserved.
+// Copyright 2016 Google, Inc. All rights reserved.
 //
 // Use of this source code is governed by a BSD-style license
 // that can be found in the LICENSE file in the root of the source
@@ -18,18 +18,18 @@ import (
 
 //******************************************************************************
 
-// check_ntp() uses the ntp.go code to analyse the packet bytes as an NTP UDP
+// checkNTP() uses the ntp.go code to analyse the packet bytes as an NTP UDP
 // packet and generate an NTP object. It then compares the generated NTP object
 // with the one provided and raises the alarm if there is any difference.
 // The desc argument is output with any failure message to identify the test.
 //
-func check_ntp(desc string, t *testing.T, packet_bytes []byte, p_expected_ntp *NTP) {
+func checkNTP(desc string, t *testing.T, packetBytes []byte, pExpectedNTP *NTP) {
 
 	// Analyse the packet bytes, yielding a new packet object p.
 	//
-	p := gopacket.NewPacket(packet_bytes, LinkTypeEthernet, gopacket.Default)
+	p := gopacket.NewPacket(packetBytes, LinkTypeEthernet, gopacket.Default)
 	if p.ErrorLayer() != nil {
-		t.Error("Failed to decode packet "+desc+":", p.ErrorLayer().Error())
+		t.Errorf("Failed to decode packet %s: %v", desc, p.ErrorLayer().Error())
 	}
 
 	// Ensure that the packet analysis yielded the correct set of layers:
@@ -46,23 +46,22 @@ func check_ntp(desc string, t *testing.T, packet_bytes []byte, p_expected_ntp *N
 
 	// Select the Application (NTP) layer.
 	//
-	p_result_ntp, ok := p.ApplicationLayer().(*NTP)
+	pResultNTP, ok := p.ApplicationLayer().(*NTP)
 	if !ok {
 		t.Error("No NTP layer type found in packet in " + desc + ".")
 	}
 
 	// Compare the generated NTP object with the expected NTP object.
 	//
-	if !reflect.DeepEqual(p_result_ntp, p_expected_ntp) {
+	if !reflect.DeepEqual(pResultNTP, pExpectedNTP) {
 		t.Errorf("NTP packet processing failed for packet "+desc+
-			":\ngot  :\n%#v\n\nwant :\n%#v\n\n", p_result_ntp, p_expected_ntp)
+			":\ngot  :\n%#v\n\nwant :\n%#v\n\n", pResultNTP, pExpectedNTP)
 	}
-
 }
 
 //******************************************************************************
 
-func test_01(t *testing.T) {
+func TestNTPOne(t *testing.T) {
 
 	// This test packet is the first NTP packet in the NTP sample capture
 	// pcap file NTP_sync.pcap on the Wireshark sample captures page:
@@ -87,7 +86,7 @@ func test_01(t *testing.T) {
 
 	// Assemble the NTP object that we expect to emerge from this test.
 	//
-	p_expected_ntp := &NTP{
+	pExpectedNTP := &NTP{
 		BaseLayer: BaseLayer{
 			Contents: []byte{0xd9, 0x0, 0xa, 0xfa, 0x0, 0x0, 0x0, 0x0, 0x0,
 				0x1, 0x2, 0x90, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0,
@@ -111,12 +110,12 @@ func test_01(t *testing.T) {
 		ExtensionBytes:     []byte{},
 	}
 
-	check_ntp("test_01", t, testPacketNTP, p_expected_ntp)
+	checkNTP("test01", t, testPacketNTP, pExpectedNTP)
 }
 
 //******************************************************************************
 
-func test_02(t *testing.T) {
+func TestNTPTwo(t *testing.T) {
 
 	// This test packet is packet #18 in the NTP sample capture
 	// pcap file NTP_sync.pcap on the Wireshark sample captures page:
@@ -144,7 +143,7 @@ func test_02(t *testing.T) {
 
 	// Assemble the NTP object that we expect to emerge from this test.
 	//
-	p_expected_ntp := &NTP{
+	pExpectedNTP := &NTP{
 		BaseLayer: BaseLayer{
 			Contents: []byte{0x1a, 0x03, 0x0a, 0xee, 0x00, 0x00,
 				0x1b, 0xf7, 0x00, 0x00, 0x14, 0xec, 0x51, 0xae,
@@ -171,12 +170,12 @@ func test_02(t *testing.T) {
 		ExtensionBytes:     []byte{},
 	}
 
-	check_ntp("test_02", t, testPacketNTP, p_expected_ntp)
+	checkNTP("test02", t, testPacketNTP, pExpectedNTP)
 }
 
 //******************************************************************************
 
-func test_03(t *testing.T) {
+func TestNTPThree(t *testing.T) {
 
 	// This test packet is packet #19 in the NTP sample capture
 	// pcap file NTP_sync.pcap on the Wireshark sample captures page:
@@ -201,7 +200,7 @@ func test_03(t *testing.T) {
 
 	// Assemble the NTP object that we expect to emerge from this test.
 	//
-	p_expected_ntp := &NTP{
+	pExpectedNTP := &NTP{
 		BaseLayer: BaseLayer{
 			Contents: []byte{0x1a, 0x02, 0x0a, 0xec, 0x00, 0x00,
 				0x07, 0xc3, 0x00, 0x00, 0x2f, 0x80, 0xc6, 0x1e,
@@ -228,17 +227,7 @@ func test_03(t *testing.T) {
 		ExtensionBytes:     []byte{},
 	}
 
-	check_ntp("test_03", t, testPacketNTP, p_expected_ntp)
-}
-
-//******************************************************************************
-
-func TestNTP(t *testing.T) {
-
-	test_01(t)
-	test_02(t)
-	test_03(t)
-
+	checkNTP("test03", t, testPacketNTP, pExpectedNTP)
 }
 
 //******************************************************************************
