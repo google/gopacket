@@ -22,7 +22,7 @@ import (
 // ------------------------------------------
 // This file provides a GoPacket decoding layer for NTP.
 //
-// More specifically, this file adds to the package "layers" an additional 
+// More specifically, this file adds to the package "layers" an additional
 // type called "NTP" that conforms to the interface type DecodingLayer
 // that is defined in the package:
 //
@@ -283,28 +283,28 @@ const ntp_minimum_record_size_in_bytes int = 48
 // payload in an NTP UDP packet.
 //
 type NTP struct {
-	BaseLayer                        // Stores the packet bytes and payload bytes.
-    
-    LeapIndicator            uint8   // [0,3]. Indicates whether leap second(s) is to be added.
-    Version                  uint8   // [0,7]. Version of the NTP protocol.
-    Mode                     uint8   // [0,7]. Mode.
-    Stratum                  uint8   // [0,255]. Stratum of time server in the server tree.
-    Poll                     int8    // [-128,127]. The maximum interval between
-                                     //             successive messages, in log2 seconds.
-    Precision                int8    // [-128,127]. The precision of the system clock,
-                                     //             in log2 seconds.
-    RootDelay                uint32  // [0,2^32-1]. Total round trip delay to the reference clock
-                                     //             in seconds times 2^16.
-    RootDispersion           uint32  // [0,2^32-1]. Total dispersion to the reference clock,
-                                     //             in seconds times 2^16.
-    ReferenceID              uint32  // ID code of reference clock [0,2^32-1].
-    ReferenceTimestamp       uint64  // Most recent timestamp from the reference clock.
-    OriginTimestamp          uint64  // Local time when request was sent from local host.
-    ReceiveTimestamp         uint64  // Local time (on server) that request arrived at server host.
-    TransmitTimestamp        uint64  // Local time (on server) that request departed server host.
+	BaseLayer // Stores the packet bytes and payload bytes.
 
-    // FIX: This package should analyse the extension fields and represent the extension fields too.
-    ExtensionBytes           []byte  // Just put extensions in a byte slice.
+	LeapIndicator uint8 // [0,3]. Indicates whether leap second(s) is to be added.
+	Version       uint8 // [0,7]. Version of the NTP protocol.
+	Mode          uint8 // [0,7]. Mode.
+	Stratum       uint8 // [0,255]. Stratum of time server in the server tree.
+	Poll          int8  // [-128,127]. The maximum interval between
+	//             successive messages, in log2 seconds.
+	Precision int8 // [-128,127]. The precision of the system clock,
+	//             in log2 seconds.
+	RootDelay uint32 // [0,2^32-1]. Total round trip delay to the reference clock
+	//             in seconds times 2^16.
+	RootDispersion uint32 // [0,2^32-1]. Total dispersion to the reference clock,
+	//             in seconds times 2^16.
+	ReferenceID        uint32 // ID code of reference clock [0,2^32-1].
+	ReferenceTimestamp uint64 // Most recent timestamp from the reference clock.
+	OriginTimestamp    uint64 // Local time when request was sent from local host.
+	ReceiveTimestamp   uint64 // Local time (on server) that request arrived at server host.
+	TransmitTimestamp  uint64 // Local time (on server) that request departed server host.
+
+	// FIX: This package should analyse the extension fields and represent the extension fields too.
+	ExtensionBytes []byte // Just put extensions in a byte slice.
 }
 
 //******************************************************************************
@@ -312,7 +312,7 @@ type NTP struct {
 // LayerType() returns the layer type of the NTP object, which is LayerTypeNTP.
 //
 func (d *NTP) LayerType() gopacket.LayerType {
-    return LayerTypeNTP
+	return LayerTypeNTP
 }
 
 //******************************************************************************
@@ -327,20 +327,20 @@ func (d *NTP) LayerType() gopacket.LayerType {
 //
 func decodeNTP(data []byte, p gopacket.PacketBuilder) error {
 
-    // Attempt to decode the byte slice.
-    //
+	// Attempt to decode the byte slice.
+	//
 	d := &NTP{}
 	err := d.DecodeFromBytes(data, p)
 	if err != nil {
 		return err
 	}
-	
+
 	// If the decoding worked, add the layer to the packet and set it
 	// as the application layer too, if there isn't already one.
 	//
 	p.AddLayer(d)
 	p.SetApplicationLayer(d)
-	
+
 	return nil
 }
 
@@ -355,58 +355,58 @@ func decodeNTP(data []byte, p gopacket.PacketBuilder) error {
 //
 func (d *NTP) DecodeFromBytes(data []byte, df gopacket.DecodeFeedback) error {
 
-    // If the data block is too short to be a NTP record, then return an error.
-    //
+	// If the data block is too short to be a NTP record, then return an error.
+	//
 	if len(data) < ntp_minimum_record_size_in_bytes {
 		df.SetTruncated()
 		return fmt.Errorf("NTP packet too short")
 	}
 
-    // RFC 5905 does not appear to define a maximum NTP record length.
-    // The protocol allows "extension fields" to be included in the record,
-    // and states about these fields:"
-    //
-    //     "While the minimum field length containing required fields is 
-    //      four words (16 octets), a maximum field length remains to be
-    //      established."
-    //
-    // For this reason, the packet length is not checked here for being too long.
- 
+	// RFC 5905 does not appear to define a maximum NTP record length.
+	// The protocol allows "extension fields" to be included in the record,
+	// and states about these fields:"
+	//
+	//     "While the minimum field length containing required fields is
+	//      four words (16 octets), a maximum field length remains to be
+	//      established."
+	//
+	// For this reason, the packet length is not checked here for being too long.
+
 	// NTP type embeds type BaseLayer which contains two fields:
 	//    Contents is supposed to contain the bytes of the data at this level.
 	//    Payload is supposed to contain the payload of this level.
 	// Here we set the baselayer to be the bytes of the NTP record.
 	//
 	d.BaseLayer = BaseLayer{Contents: data[:len(data)]}
-   
-    // Extract the fields from the block of bytes.
-    // To make sense of this, refer to the packet diagram
-    // above and the section on endian conventions.
-    
-    // The first few fields are all packed into the first 32 bits. Unpack them.
+
+	// Extract the fields from the block of bytes.
+	// To make sense of this, refer to the packet diagram
+	// above and the section on endian conventions.
+
+	// The first few fields are all packed into the first 32 bits. Unpack them.
 	f := binary.BigEndian.Uint32(data[0:4])
-	d.LeapIndicator            = uint8((f & 0xC0000000) >> 30)
-	d.Version                  = uint8((f & 0x38000000) >> 27)
-	d.Mode                     = uint8((f & 0x07000000) >> 24)
-	d.Stratum                  = uint8((f & 0x00FF0000) >> 16)
-    d.Poll                     =  int8((f & 0x0000FF00) >> 8)
-    d.Precision                =  int8((f & 0x000000FF) >> 0)
+	d.LeapIndicator = uint8((f & 0xC0000000) >> 30)
+	d.Version = uint8((f & 0x38000000) >> 27)
+	d.Mode = uint8((f & 0x07000000) >> 24)
+	d.Stratum = uint8((f & 0x00FF0000) >> 16)
+	d.Poll = int8((f & 0x0000FF00) >> 8)
+	d.Precision = int8((f & 0x000000FF) >> 0)
 
-    // The remaining fields can just be copied in big endian order.
-    d.RootDelay                = binary.BigEndian.Uint32(data[4:8])
-    d.RootDispersion           = binary.BigEndian.Uint32(data[8:12])
-    d.ReferenceID              = binary.BigEndian.Uint32(data[12:16])
-    d.ReferenceTimestamp       = binary.BigEndian.Uint64(data[16:24])
-    d.OriginTimestamp          = binary.BigEndian.Uint64(data[24:32])
-    d.ReceiveTimestamp         = binary.BigEndian.Uint64(data[32:40])
-    d.TransmitTimestamp        = binary.BigEndian.Uint64(data[40:48])
-    
-    // This layer does not attempt to analyse the extension bytes.
-    // But if there are any, we'd like the user to know. So we just
-    // place them all in an ExtensionBytes field.
-    d.ExtensionBytes           = data[48:]
+	// The remaining fields can just be copied in big endian order.
+	d.RootDelay = binary.BigEndian.Uint32(data[4:8])
+	d.RootDispersion = binary.BigEndian.Uint32(data[8:12])
+	d.ReferenceID = binary.BigEndian.Uint32(data[12:16])
+	d.ReferenceTimestamp = binary.BigEndian.Uint64(data[16:24])
+	d.OriginTimestamp = binary.BigEndian.Uint64(data[24:32])
+	d.ReceiveTimestamp = binary.BigEndian.Uint64(data[32:40])
+	d.TransmitTimestamp = binary.BigEndian.Uint64(data[40:48])
 
-    // Return no error.
+	// This layer does not attempt to analyse the extension bytes.
+	// But if there are any, we'd like the user to know. So we just
+	// place them all in an ExtensionBytes field.
+	d.ExtensionBytes = data[48:]
+
+	// Return no error.
 	return nil
 }
 
@@ -448,4 +448,3 @@ func (d *NTP) Payload() []byte {
 //******************************************************************************
 //*                            End Of NTP File                                 *
 //******************************************************************************
-
