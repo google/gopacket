@@ -1,5 +1,3 @@
-//******************************************************************************
-//
 // Copyright 2016 Google, Inc. All rights reserved.
 //
 // Use of this source code is governed by a BSD-style license
@@ -22,11 +20,9 @@ import (
 // packet and generate an NTP object. It then compares the generated NTP object
 // with the one provided and raises the alarm if there is any difference.
 // The desc argument is output with any failure message to identify the test.
-//
 func checkNTP(desc string, t *testing.T, packetBytes []byte, pExpectedNTP *NTP) {
 
 	// Analyse the packet bytes, yielding a new packet object p.
-	//
 	p := gopacket.NewPacket(packetBytes, LinkTypeEthernet, gopacket.Default)
 	if p.ErrorLayer() != nil {
 		t.Errorf("Failed to decode packet %s: %v", desc, p.ErrorLayer().Error())
@@ -37,7 +33,6 @@ func checkNTP(desc string, t *testing.T, packetBytes []byte, pExpectedNTP *NTP) 
 	//    Network Layer     = IPv4.
 	//    Transport Layer   = UDP.
 	//    Application Layer = NTP.
-	//
 	checkLayers(p, []gopacket.LayerType{
 		LayerTypeEthernet,
 		LayerTypeIPv4,
@@ -45,14 +40,12 @@ func checkNTP(desc string, t *testing.T, packetBytes []byte, pExpectedNTP *NTP) 
 		LayerTypeNTP}, t)
 
 	// Select the Application (NTP) layer.
-	//
 	pResultNTP, ok := p.ApplicationLayer().(*NTP)
 	if !ok {
 		t.Error("No NTP layer type found in packet in " + desc + ".")
 	}
 
 	// Compare the generated NTP object with the expected NTP object.
-	//
 	if !reflect.DeepEqual(pResultNTP, pExpectedNTP) {
 		t.Errorf("NTP packet processing failed for packet "+desc+
 			":\ngot  :\n%#v\n\nwant :\n%#v\n\n", pResultNTP, pExpectedNTP)
@@ -68,7 +61,6 @@ func TestNTPOne(t *testing.T) {
 	//
 	//    https://wiki.wireshark.org/SampleCaptures
 	//    https://wiki.wireshark.org/SampleCaptures?action=AttachFile&do=get&target=NTP_sync.pcap
-	//
 	var testPacketNTP = []byte{
 		0x00, 0x0c, 0x41, 0x82, 0xb2, 0x53, 0x00, 0xd0,
 		0x59, 0x6c, 0x40, 0x4e, 0x08, 0x00, 0x45, 0x00,
@@ -85,7 +77,6 @@ func TestNTPOne(t *testing.T) {
 	}
 
 	// Assemble the NTP object that we expect to emerge from this test.
-	//
 	pExpectedNTP := &NTP{
 		BaseLayer: BaseLayer{
 			Contents: []byte{0xd9, 0x0, 0xa, 0xfa, 0x0, 0x0, 0x0, 0x0, 0x0,
@@ -142,7 +133,6 @@ func TestNTPTwo(t *testing.T) {
 	}
 
 	// Assemble the NTP object that we expect to emerge from this test.
-	//
 	pExpectedNTP := &NTP{
 		BaseLayer: BaseLayer{
 			Contents: []byte{0x1a, 0x03, 0x0a, 0xee, 0x00, 0x00,
@@ -199,7 +189,6 @@ func TestNTPThree(t *testing.T) {
 	}
 
 	// Assemble the NTP object that we expect to emerge from this test.
-	//
 	pExpectedNTP := &NTP{
 		BaseLayer: BaseLayer{
 			Contents: []byte{0x1a, 0x02, 0x0a, 0xec, 0x00, 0x00,
