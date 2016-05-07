@@ -1,5 +1,3 @@
-//******************************************************************************
-//
 // Copyright 2016 Google, Inc. All rights reserved.
 //
 // Use of this source code is governed by a BSD-style license
@@ -226,32 +224,28 @@ type NTPLeapIndicator uint8
 type NTPVersion uint8
 type NTPMode uint8
 type NTPStratum uint8
-type NTPPoll int8
-type NTPPrecision int8
+type NTPLog2Seconds int8
 type NTPRootDelay uint32
 type NTPRootDispersion uint32
 type NTPReferenceID uint32
-type NTPReferenceTimestamp uint64
-type NTPOriginTimestamp uint64
-type NTPReceiveTimestamp uint64
-type NTPTransmitTimestamp uint64
+type NTPTimestamp uint64
 
 type NTP struct {
 	BaseLayer // Stores the packet bytes and payload bytes.
 
-	LeapIndicator      NTPLeapIndicator      // [0,3]. Indicates whether leap second(s) is to be added.
-	Version            NTPVersion            // [0,7]. Version of the NTP protocol.
-	Mode               NTPMode               // [0,7]. Mode.
-	Stratum            NTPStratum            // [0,255]. Stratum of time server in the server tree.
-	Poll               NTPPoll               // [-128,127]. The maximum interval between successive messages, in log2 seconds.
-	Precision          NTPPrecision          // [-128,127]. The precision of the system clock, in log2 seconds.
-	RootDelay          NTPRootDelay          // [0,2^32-1]. Total round trip delay to the reference clock in seconds times 2^16.
-	RootDispersion     NTPRootDispersion     // [0,2^32-1]. Total dispersion to the reference clock, in seconds times 2^16.
-	ReferenceID        NTPReferenceID        // ID code of reference clock [0,2^32-1].
-	ReferenceTimestamp NTPReferenceTimestamp // Most recent timestamp from the reference clock.
-	OriginTimestamp    NTPOriginTimestamp    // Local time when request was sent from local host.
-	ReceiveTimestamp   NTPReceiveTimestamp   // Local time (on server) that request arrived at server host.
-	TransmitTimestamp  NTPTransmitTimestamp  // Local time (on server) that request departed server host.
+	LeapIndicator      NTPLeapIndicator  // [0,3]. Indicates whether leap second(s) is to be added.
+	Version            NTPVersion        // [0,7]. Version of the NTP protocol.
+	Mode               NTPMode           // [0,7]. Mode.
+	Stratum            NTPStratum        // [0,255]. Stratum of time server in the server tree.
+	Poll               NTPLog2Seconds    // [-128,127]. The maximum interval between successive messages, in log2 seconds.
+	Precision          NTPLog2Seconds    // [-128,127]. The precision of the system clock, in log2 seconds.
+	RootDelay          NTPRootDelay      // [0,2^32-1]. Total round trip delay to the reference clock in seconds times 2^16.
+	RootDispersion     NTPRootDispersion // [0,2^32-1]. Total dispersion to the reference clock, in seconds times 2^16.
+	ReferenceID        NTPReferenceID    // ID code of reference clock [0,2^32-1].
+	ReferenceTimestamp NTPTimestamp      // Most recent timestamp from the reference clock.
+	OriginTimestamp    NTPTimestamp      // Local time when request was sent from local host.
+	ReceiveTimestamp   NTPTimestamp      // Local time (on server) that request arrived at server host.
+	TransmitTimestamp  NTPTimestamp      // Local time (on server) that request departed server host.
 
 	// FIX: This package should analyse the extension fields and represent the extension fields too.
 	ExtensionBytes []byte // Just put extensions in a byte slice.
@@ -260,7 +254,6 @@ type NTP struct {
 //******************************************************************************
 
 // LayerType returns the layer type of the NTP object, which is LayerTypeNTP.
-//
 func (d *NTP) LayerType() gopacket.LayerType {
 	return LayerTypeNTP
 }
@@ -274,11 +267,9 @@ func (d *NTP) LayerType() gopacket.LayerType {
 // If it fails, it returns an error (non nil).
 //
 // This function is employed in layertypes.go to register the NTP layer.
-//
 func decodeNTP(data []byte, p gopacket.PacketBuilder) error {
 
 	// Attempt to decode the byte slice.
-	//
 	d := &NTP{}
 	err := d.DecodeFromBytes(data, p)
 	if err != nil {
@@ -287,7 +278,6 @@ func decodeNTP(data []byte, p gopacket.PacketBuilder) error {
 
 	// If the decoding worked, add the layer to the packet and set it
 	// as the application layer too, if there isn't already one.
-	//
 	p.AddLayer(d)
 	p.SetApplicationLayer(d)
 
@@ -302,11 +292,9 @@ func decodeNTP(data []byte, p gopacket.PacketBuilder) error {
 // Upon succeeds, it loads the NTP object with information about the packet
 // and returns nil.
 // Upon failure, it returns an error (non nil).
-//
 func (d *NTP) DecodeFromBytes(data []byte, df gopacket.DecodeFeedback) error {
 
 	// If the data block is too short to be a NTP record, then return an error.
-	//
 	if len(data) < ntpMinimumRecordSizeInBytes {
 		df.SetTruncated()
 		return fmt.Errorf("NTP packet too short")
@@ -326,7 +314,6 @@ func (d *NTP) DecodeFromBytes(data []byte, df gopacket.DecodeFeedback) error {
 	//    Contents is supposed to contain the bytes of the data at this level.
 	//    Payload is supposed to contain the payload of this level.
 	// Here we set the baselayer to be the bytes of the NTP record.
-	//
 	d.BaseLayer = BaseLayer{Contents: data[:len(data)]}
 
 	// Extract the fields from the block of bytes.
@@ -339,17 +326,17 @@ func (d *NTP) DecodeFromBytes(data []byte, df gopacket.DecodeFeedback) error {
 	d.Version = NTPVersion((f & 0x38000000) >> 27)
 	d.Mode = NTPMode((f & 0x07000000) >> 24)
 	d.Stratum = NTPStratum((f & 0x00FF0000) >> 16)
-	d.Poll = NTPPoll((f & 0x0000FF00) >> 8)
-	d.Precision = NTPPrecision((f & 0x000000FF) >> 0)
+	d.Poll = NTPLog2Seconds((f & 0x0000FF00) >> 8)
+	d.Precision = NTPLog2Seconds((f & 0x000000FF) >> 0)
 
 	// The remaining fields can just be copied in big endian order.
 	d.RootDelay = NTPRootDelay(binary.BigEndian.Uint32(data[4:8]))
 	d.RootDispersion = NTPRootDispersion(binary.BigEndian.Uint32(data[8:12]))
 	d.ReferenceID = NTPReferenceID(binary.BigEndian.Uint32(data[12:16]))
-	d.ReferenceTimestamp = NTPReferenceTimestamp(binary.BigEndian.Uint64(data[16:24]))
-	d.OriginTimestamp = NTPOriginTimestamp(binary.BigEndian.Uint64(data[24:32]))
-	d.ReceiveTimestamp = NTPReceiveTimestamp(binary.BigEndian.Uint64(data[32:40]))
-	d.TransmitTimestamp = NTPTransmitTimestamp(binary.BigEndian.Uint64(data[40:48]))
+	d.ReferenceTimestamp = NTPTimestamp(binary.BigEndian.Uint64(data[16:24]))
+	d.OriginTimestamp = NTPTimestamp(binary.BigEndian.Uint64(data[24:32]))
+	d.ReceiveTimestamp = NTPTimestamp(binary.BigEndian.Uint64(data[32:40]))
+	d.TransmitTimestamp = NTPTimestamp(binary.BigEndian.Uint64(data[40:48]))
 
 	// This layer does not attempt to analyse the extension bytes.
 	// But if there are any, we'd like the user to know. So we just
@@ -365,7 +352,6 @@ func (d *NTP) DecodeFromBytes(data []byte, df gopacket.DecodeFeedback) error {
 // CanDecode returns a set of layers that NTP objects can decode.
 // As NTP objects can only decide the NTP layer, we can return just that layer.
 // Apparently a single layer type implements LayerClass.
-//
 func (d *NTP) CanDecode() gopacket.LayerClass {
 	return LayerTypeNTP
 }
@@ -375,7 +361,6 @@ func (d *NTP) CanDecode() gopacket.LayerClass {
 // NextLayerType specifies the next layer that GoPacket should attempt to
 // analyse after this (NTP) layer. As NTP packets do not contain any payload
 // bytes, there are no further layers to analyse.
-//
 func (d *NTP) NextLayerType() gopacket.LayerType {
 	return gopacket.LayerTypeZero
 }
@@ -385,7 +370,6 @@ func (d *NTP) NextLayerType() gopacket.LayerType {
 // NTP packets do not carry any data payload, so the empty byte slice is retured.
 // In Go, a nil slice is functionally identical to an empty slice, so we
 // return nil to avoid a heap allocation.
-//
 func (d *NTP) Payload() []byte {
 	return nil
 }
