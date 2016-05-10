@@ -8,6 +8,7 @@ package layers
 
 import (
 	"encoding/binary"
+
 	"github.com/google/gopacket"
 )
 
@@ -20,6 +21,7 @@ type GRE struct {
 	Checksum, Offset                                                           uint16
 	Key, Seq                                                                   uint32
 	*GRERouting
+	tcpipchecksum
 }
 
 // GRERouting is GRE routing information, present if the RoutingPresent flag is
@@ -77,6 +79,88 @@ func (g *GRE) DecodeFromBytes(data []byte, df gopacket.DecodeFeedback) error {
 		}
 	}
 	g.BaseLayer = BaseLayer{data[:offset], data[offset:]}
+	return nil
+}
+
+// SerializeTo writes the serialized form of this layer into the SerializationBuffer,
+// implementing gopacket.SerializableLayer. See the docs for gopacket.SerializableLayer for more info.
+func (g *GRE) SerializeTo(b gopacket.SerializeBuffer, opts gopacket.SerializeOptions) error {
+	size := 4
+	if g.ChecksumPresent || g.RoutingPresent {
+		size += 4
+	}
+	if g.KeyPresent {
+		size += 4
+	}
+	if g.SeqPresent {
+		size += 4
+	}
+	if g.RoutingPresent {
+		r := g.GRERouting
+		for r != nil {
+			size += 4 + int(r.SRELength)
+			r = r.Next
+		}
+	}
+	buf, err := b.PrependBytes(size)
+	if err != nil {
+		return err
+	}
+	if g.ChecksumPresent {
+		buf[0] |= 0x80
+	}
+	if g.RoutingPresent {
+		buf[0] |= 0x40
+	}
+	if g.KeyPresent {
+		buf[0] |= 0x20
+	}
+	if g.SeqPresent {
+		buf[0] |= 0x10
+	}
+	if g.StrictSourceRoute {
+		buf[0] |= 0x08
+	}
+	buf[0] |= g.RecursionControl
+	buf[1] |= g.Flags << 3
+	buf[1] |= g.Version
+	binary.BigEndian.PutUint16(buf[2:4], uint16(g.Protocol))
+	offset := 4
+	if g.ChecksumPresent || g.RoutingPresent {
+		binary.BigEndian.PutUint16(buf[offset:offset+2], g.Checksum)
+		binary.BigEndian.PutUint16(buf[offset+2:offset+4], g.Offset)
+		offset += 4
+	}
+	if g.KeyPresent {
+		binary.BigEndian.PutUint32(buf[offset:offset+4], g.Key)
+		offset += 4
+	}
+	if g.SeqPresent {
+		binary.BigEndian.PutUint32(buf[offset:offset+4], g.Seq)
+		offset += 4
+	}
+	if g.RoutingPresent {
+		sre := g.GRERouting
+		for sre != nil {
+			binary.BigEndian.PutUint16(buf[offset:offset+2], sre.AddressFamily)
+			buf[offset+2] = sre.SREOffset
+			buf[offset+3] = sre.SRELength
+			copy(buf[offset+4:offset+4+int(sre.SRELength)], sre.RoutingInformation)
+			offset += 4 + int(sre.SRELength)
+			sre = sre.Next
+		}
+	}
+	if opts.ComputeChecksums && g.ChecksumPresent {
+		// zero out checksum bytes
+		buf[4] = 0
+		buf[5] = 0
+		csum, err := g.computeChecksum(b.Bytes(), IPProtocolGRE)
+		if err != nil {
+			return err
+		}
+		g.Checksum = csum
+		binary.BigEndian.PutUint16(buf[4:6], g.Checksum)
+	}
 	return nil
 }
 

@@ -6,9 +6,11 @@
 package layers
 
 import (
-	"github.com/google/gopacket"
+	"net"
 	"reflect"
 	"testing"
+
+	"github.com/google/gopacket"
 )
 
 // testPacketGRE is the packet:
@@ -55,6 +57,79 @@ func BenchmarkDecodePacketGRE(b *testing.B) {
 	}
 }
 
+var testIPv4OverGRE = []gopacket.SerializableLayer{
+	&Ethernet{
+		SrcMAC:       net.HardwareAddr{142, 122, 18, 195, 169, 113},
+		DstMAC:       net.HardwareAddr{58, 86, 107, 105, 89, 94},
+		EthernetType: EthernetTypeIPv4,
+	},
+	&IPv4{
+		Version:  4,
+		SrcIP:    net.IP{192, 168, 1, 1},
+		DstIP:    net.IP{192, 168, 1, 2},
+		Protocol: IPProtocolGRE,
+		Flags:    IPv4DontFragment,
+		TTL:      64,
+		Id:       33852,
+		IHL:      5,
+	},
+	&GRE{
+		Protocol: EthernetTypeIPv4,
+	},
+	&IPv4{
+		Version:  4,
+		SrcIP:    net.IP{172, 16, 1, 1},
+		DstIP:    net.IP{172, 16, 2, 1},
+		Protocol: IPProtocolICMPv4,
+		Flags:    IPv4DontFragment,
+		TTL:      64,
+		IHL:      5,
+		Id:       1160,
+	},
+	&ICMPv4{
+		TypeCode: CreateICMPv4TypeCode(ICMPv4TypeEchoRequest, 0),
+		Id:       4724,
+		Seq:      1,
+	},
+	gopacket.Payload{
+		0xc8, 0x92, 0xa3, 0x54, 0x00, 0x00, 0x00, 0x00, 0x38, 0x0c, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+		0x10, 0x11, 0x12, 0x13, 0x14, 0x15, 0x16, 0x17, 0x18, 0x19, 0x1a, 0x1b, 0x1c, 0x1d, 0x1e, 0x1f,
+		0x20, 0x21, 0x22, 0x23, 0x24, 0x25, 0x26, 0x27, 0x28, 0x29, 0x2a, 0x2b, 0x2c, 0x2d, 0x2e, 0x2f,
+		0x30, 0x31, 0x32, 0x33, 0x34, 0x35, 0x36, 0x37,
+	},
+}
+
+func TestIPv4OverGREEncode(t *testing.T) {
+	b := gopacket.NewSerializeBuffer()
+	opts := gopacket.SerializeOptions{
+		ComputeChecksums: true,
+		FixLengths:       true,
+	}
+	if err := gopacket.SerializeLayers(b, opts, testIPv4OverGRE...); err != nil {
+		t.Errorf("Unable to reserialize: %v", err)
+	}
+	p := gopacket.NewPacket(b.Bytes(), LinkTypeEthernet, gopacket.Default)
+	if p.ErrorLayer() != nil {
+		t.Error("Failed to decode packet:", p.ErrorLayer().Error())
+	}
+	checkLayers(p, []gopacket.LayerType{LayerTypeEthernet, LayerTypeIPv4, LayerTypeGRE, LayerTypeIPv4, LayerTypeICMPv4, gopacket.LayerTypePayload}, t)
+	if got, want := b.Bytes(), testPacketGRE; !reflect.DeepEqual(want, got) {
+		t.Errorf("Encoding mismatch, \nwant: %v\ngot %v\n", want, got)
+	}
+}
+
+func BenchmarkEncodePacketGRE(b *testing.B) {
+	buf := gopacket.NewSerializeBuffer()
+	opts := gopacket.SerializeOptions{
+		ComputeChecksums: true,
+		FixLengths:       true,
+	}
+	for i := 0; i < b.N; i++ {
+		gopacket.SerializeLayers(buf, opts, testIPv4OverGRE...)
+		buf.Clear()
+	}
+}
+
 // testPacketEthernetOverGRE is the packet:
 //   11:01:38.124768 IP 192.168.1.1 > 192.168.1.2: GREv0, length 102: IP 172.16.1.1 > 172.16.1.2: ICMP echo request, id 3842, seq 1, length 64
 //      0x0000:  ea6b 4cd3 5513 d6b9 d880 56ef 0800 4500  .kL.U.....V...E.
@@ -98,5 +173,83 @@ func TestPacketEthernetOverGRE(t *testing.T) {
 func BenchmarkDecodePacketEthernetOverGRE(b *testing.B) {
 	for i := 0; i < b.N; i++ {
 		gopacket.NewPacket(testPacketEthernetOverGRE, LinkTypeEthernet, gopacket.NoCopy)
+	}
+}
+
+var testEthernetOverGRE = []gopacket.SerializableLayer{
+	&Ethernet{
+		SrcMAC:       net.HardwareAddr{0xd6, 0xb9, 0xd8, 0x80, 0x56, 0xef},
+		DstMAC:       net.HardwareAddr{0xea, 0x6b, 0x4c, 0xd3, 0x55, 0x13},
+		EthernetType: EthernetTypeIPv4,
+	},
+	&IPv4{
+		Version:  4,
+		SrcIP:    net.IP{192, 168, 1, 1},
+		DstIP:    net.IP{192, 168, 1, 2},
+		Protocol: IPProtocolGRE,
+		Flags:    IPv4DontFragment,
+		TTL:      64,
+		Id:       2765,
+		IHL:      5,
+	},
+	&GRE{
+		Protocol: EthernetTypeTransparentEthernetBridging,
+	},
+	&Ethernet{
+		SrcMAC:       net.HardwareAddr{0x6e, 0x32, 0x3e, 0xc7, 0x9d, 0xef},
+		DstMAC:       net.HardwareAddr{0xaa, 0x6a, 0x36, 0xe6, 0xc6, 0x30},
+		EthernetType: EthernetTypeIPv4,
+	},
+	&IPv4{
+		Version:  4,
+		SrcIP:    net.IP{172, 16, 1, 1},
+		DstIP:    net.IP{172, 16, 1, 2},
+		Protocol: IPProtocolICMPv4,
+		Flags:    IPv4DontFragment,
+		TTL:      64,
+		IHL:      5,
+		Id:       55664,
+	},
+	&ICMPv4{
+		TypeCode: CreateICMPv4TypeCode(ICMPv4TypeEchoRequest, 0),
+		Id:       3842,
+		Seq:      1,
+	},
+	gopacket.Payload{
+		0x82, 0xd9, 0xb1, 0x54, 0x00, 0x00, 0x00, 0x00, 0xb5, 0xe6, 0x01, 0x00, 0x00, 0x00, 0x00, 0x00,
+		0x10, 0x11, 0x12, 0x13, 0x14, 0x15, 0x16, 0x17, 0x18, 0x19, 0x1a, 0x1b, 0x1c, 0x1d, 0x1e, 0x1f,
+		0x20, 0x21, 0x22, 0x23, 0x24, 0x25, 0x26, 0x27, 0x28, 0x29, 0x2a, 0x2b, 0x2c, 0x2d, 0x2e, 0x2f,
+		0x30, 0x31, 0x32, 0x33, 0x34, 0x35, 0x36, 0x37,
+	},
+}
+
+func TestEthernetOverGREEncode(t *testing.T) {
+	b := gopacket.NewSerializeBuffer()
+	opts := gopacket.SerializeOptions{
+		ComputeChecksums: true,
+		FixLengths:       true,
+	}
+	if err := gopacket.SerializeLayers(b, opts, testEthernetOverGRE...); err != nil {
+		t.Errorf("Unable to reserialize: %v", err)
+	}
+	p := gopacket.NewPacket(b.Bytes(), LinkTypeEthernet, gopacket.Default)
+	if p.ErrorLayer() != nil {
+		t.Error("Failed to decode packet:", p.ErrorLayer().Error())
+	}
+	checkLayers(p, []gopacket.LayerType{LayerTypeEthernet, LayerTypeIPv4, LayerTypeGRE, LayerTypeEthernet, LayerTypeIPv4, LayerTypeICMPv4, gopacket.LayerTypePayload}, t)
+	if got, want := b.Bytes(), testPacketEthernetOverGRE; !reflect.DeepEqual(want, got) {
+		t.Errorf("Encoding mismatch, \nwant: %v\ngot %v\n", want, got)
+	}
+}
+
+func BenchmarkEncodePacketEthernetOverGRE(b *testing.B) {
+	buf := gopacket.NewSerializeBuffer()
+	opts := gopacket.SerializeOptions{
+		ComputeChecksums: true,
+		FixLengths:       true,
+	}
+	for i := 0; i < b.N; i++ {
+		gopacket.SerializeLayers(buf, opts, testEthernetOverGRE...)
+		buf.Clear()
 	}
 }
