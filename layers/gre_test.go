@@ -6,6 +6,7 @@
 package layers
 
 import (
+	"fmt"
 	"net"
 	"reflect"
 	"testing"
@@ -106,7 +107,7 @@ func TestIPv4OverGREEncode(t *testing.T) {
 		FixLengths:       true,
 	}
 	if err := gopacket.SerializeLayers(b, opts, testIPv4OverGRE...); err != nil {
-		t.Errorf("Unable to reserialize: %v", err)
+		t.Errorf("Unable to serialize: %v", err)
 	}
 	p := gopacket.NewPacket(b.Bytes(), LinkTypeEthernet, gopacket.Default)
 	if p.ErrorLayer() != nil {
@@ -230,7 +231,7 @@ func TestEthernetOverGREEncode(t *testing.T) {
 		FixLengths:       true,
 	}
 	if err := gopacket.SerializeLayers(b, opts, testEthernetOverGRE...); err != nil {
-		t.Errorf("Unable to reserialize: %v", err)
+		t.Errorf("Unable to serialize: %v", err)
 	}
 	p := gopacket.NewPacket(b.Bytes(), LinkTypeEthernet, gopacket.Default)
 	if p.ErrorLayer() != nil {
@@ -252,4 +253,139 @@ func BenchmarkEncodePacketEthernetOverGRE(b *testing.B) {
 		gopacket.SerializeLayers(buf, opts, testEthernetOverGRE...)
 		buf.Clear()
 	}
+}
+
+var testGREChecksum = map[uint16][]gopacket.SerializableLayer{
+	0x77ff: {
+		&Ethernet{
+			SrcMAC:       net.HardwareAddr{0xc2, 0x00, 0x57, 0x75, 0x00, 0x00},
+			DstMAC:       net.HardwareAddr{0xc2, 0x01, 0x57, 0x75, 0x00, 0x00},
+			EthernetType: EthernetTypeIPv4,
+		},
+		&IPv4{
+			Version:  4,
+			SrcIP:    net.IP{10, 0, 0, 1},
+			DstIP:    net.IP{10, 0, 0, 2},
+			Protocol: IPProtocolGRE,
+			TTL:      255,
+			Id:       10,
+			IHL:      5,
+		},
+		&GRE{
+			Protocol:        EthernetTypeIPv4,
+			ChecksumPresent: true,
+		},
+		&IPv4{
+			Version:  4,
+			SrcIP:    net.IP{1, 1, 1, 1},
+			DstIP:    net.IP{2, 2, 2, 2},
+			Protocol: IPProtocolICMPv4,
+			TTL:      255,
+			IHL:      5,
+			Id:       10,
+		},
+		&ICMPv4{
+			TypeCode: CreateICMPv4TypeCode(ICMPv4TypeEchoRequest, 0),
+			Id:       2,
+			Seq:      0,
+		},
+		gopacket.Payload{
+			0x00, 0x00, 0x00, 0x00, 0x00, 0x03, 0xbe, 0x70, 0xab, 0xcd, 0xab, 0xcd, 0xab, 0xcd, 0xab, 0xcd,
+			0xab, 0xcd, 0xab, 0xcd, 0xab, 0xcd, 0xab, 0xcd, 0xab, 0xcd, 0xab, 0xcd, 0xab, 0xcd, 0xab, 0xcd,
+			0xab, 0xcd, 0xab, 0xcd, 0xab, 0xcd, 0xab, 0xcd, 0xab, 0xcd, 0xab, 0xcd, 0xab, 0xcd, 0xab, 0xcd,
+			0xab, 0xcd, 0xab, 0xcd, 0xab, 0xcd, 0xab, 0xcd, 0xab, 0xcd, 0xab, 0xcd, 0xab, 0xcd, 0xab, 0xcd,
+			0xab, 0xcd, 0xab, 0xcd, 0xab, 0xcd, 0xab, 0xcd,
+		},
+	},
+	0x8475: {
+		&Ethernet{
+			SrcMAC:       net.HardwareAddr{0xc2, 0x00, 0x57, 0x75, 0x00, 0x00},
+			DstMAC:       net.HardwareAddr{0xc2, 0x01, 0x57, 0x75, 0x00, 0x00},
+			EthernetType: EthernetTypeIPv4,
+		},
+		&IPv4{
+			Version:  4,
+			SrcIP:    net.IP{10, 0, 0, 1},
+			DstIP:    net.IP{10, 0, 0, 2},
+			Protocol: IPProtocolGRE,
+			TTL:      255,
+			Id:       10,
+			IHL:      5,
+		},
+		&GRE{
+			Protocol:        EthernetTypeIPv4,
+			ChecksumPresent: true,
+		},
+		&IPv4{
+			Version:  4,
+			SrcIP:    net.IP{2, 3, 4, 5},
+			DstIP:    net.IP{2, 3, 4, 50},
+			Protocol: IPProtocolUDP,
+			TTL:      1,
+			IHL:      5,
+			Flags:    IPv4DontFragment,
+			Id:       964,
+		},
+		&UDP{
+			SrcPort: 41781,
+			DstPort: 33434,
+		},
+		gopacket.Payload{
+			0x40, 0x41, 0x42, 0x43, 0x44, 0x45, 0x46, 0x47, 0x48, 0x49, 0x4a, 0x4b, 0x4c, 0x4d, 0x4e, 0x4f,
+			0x50, 0x51, 0x52, 0x53, 0x54, 0x55, 0x56, 0x57, 0x58, 0x59, 0x5a, 0x5b, 0x5c, 0x5d, 0x5e, 0x5f,
+		},
+	},
+}
+
+func TestGREChecksum(t *testing.T) {
+	buf := gopacket.NewSerializeBuffer()
+	opts := gopacket.SerializeOptions{
+		ComputeChecksums: true,
+		FixLengths:       true,
+	}
+	for cksum, packet := range testGREChecksum {
+		buf.Clear()
+		if err := setNetworkLayer(packet); err != nil {
+			t.Errorf("Failed to set network layer: %v", err)
+			continue
+		}
+		if err := gopacket.SerializeLayers(buf, opts, packet...); err != nil {
+			t.Errorf("Failed to serialize packet: %v", err)
+			continue
+		}
+		p := gopacket.NewPacket(buf.Bytes(), LinkTypeEthernet, gopacket.Default)
+		t.Log(p)
+		if p.ErrorLayer() != nil {
+			t.Error("Failed to decode packet:", p.ErrorLayer().Error())
+			continue
+		}
+		if got, ok := p.Layer(LayerTypeGRE).(*GRE); ok {
+			if got.Checksum != cksum {
+				t.Errorf("Incorrect checksum calculated for GRE packet: want %v, got %v", cksum, got.Checksum)
+			}
+		}
+	}
+}
+
+func setNetworkLayer(layers []gopacket.SerializableLayer) error {
+	type setNetworkLayerForChecksum interface {
+		SetNetworkLayerForChecksum(gopacket.NetworkLayer) error
+	}
+	var l gopacket.NetworkLayer
+	for _, layer := range layers {
+		n, ok := layer.(gopacket.NetworkLayer)
+		if ok {
+			l = n
+		}
+		s, ok := layer.(setNetworkLayerForChecksum)
+		if ok {
+			if l == nil {
+				return fmt.Errorf("no enclosing network layer found before: %v", s)
+			}
+			if err := s.SetNetworkLayerForChecksum(l); err != nil {
+				return fmt.Errorf("failed to set network layer(%v) on layer(%v): %v", l, s, err)
+			}
+		}
+	}
+	return nil
 }

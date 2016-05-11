@@ -21,7 +21,6 @@ type GRE struct {
 	Checksum, Offset                                                           uint16
 	Key, Seq                                                                   uint32
 	*GRERouting
-	tcpipchecksum
 }
 
 // GRERouting is GRE routing information, present if the RoutingPresent flag is
@@ -106,6 +105,9 @@ func (g *GRE) SerializeTo(b gopacket.SerializeBuffer, opts gopacket.SerializeOpt
 	if err != nil {
 		return err
 	}
+	// Reset any potentially dirty memory in the first 2 bytes, as these use OR to set flags.
+	buf[0] = 0
+	buf[1] = 0
 	if g.ChecksumPresent {
 		buf[0] |= 0x80
 	}
@@ -154,11 +156,8 @@ func (g *GRE) SerializeTo(b gopacket.SerializeBuffer, opts gopacket.SerializeOpt
 		// zero out checksum bytes
 		buf[4] = 0
 		buf[5] = 0
-		csum, err := g.computeChecksum(b.Bytes(), IPProtocolGRE)
-		if err != nil {
-			return err
-		}
-		g.Checksum = csum
+
+		g.Checksum = tcpipChecksum(b.Bytes(), 0)
 		binary.BigEndian.PutUint16(buf[4:6], g.Checksum)
 	}
 	return nil
