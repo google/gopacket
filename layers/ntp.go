@@ -225,8 +225,7 @@ type NTPVersion uint8
 type NTPMode uint8
 type NTPStratum uint8
 type NTPLog2Seconds int8
-type NTPRootDelay uint32
-type NTPRootDispersion uint32
+type NTPFixed16Seconds uint32
 type NTPReferenceID uint32
 type NTPTimestamp uint64
 
@@ -239,8 +238,8 @@ type NTP struct {
 	Stratum            NTPStratum        // [0,255]. Stratum of time server in the server tree.
 	Poll               NTPLog2Seconds    // [-128,127]. The maximum interval between successive messages, in log2 seconds.
 	Precision          NTPLog2Seconds    // [-128,127]. The precision of the system clock, in log2 seconds.
-	RootDelay          NTPRootDelay      // [0,2^32-1]. Total round trip delay to the reference clock in seconds times 2^16.
-	RootDispersion     NTPRootDispersion // [0,2^32-1]. Total dispersion to the reference clock, in seconds times 2^16.
+	RootDelay          NTPFixed16Seconds // [0,2^32-1]. Total round trip delay to the reference clock in seconds times 2^16.
+	RootDispersion     NTPFixed16Seconds // [0,2^32-1]. Total dispersion to the reference clock, in seconds times 2^16.
 	ReferenceID        NTPReferenceID    // ID code of reference clock [0,2^32-1].
 	ReferenceTimestamp NTPTimestamp      // Most recent timestamp from the reference clock.
 	OriginTimestamp    NTPTimestamp      // Local time when request was sent from local host.
@@ -330,8 +329,8 @@ func (d *NTP) DecodeFromBytes(data []byte, df gopacket.DecodeFeedback) error {
 	d.Precision = NTPLog2Seconds((f & 0x000000FF) >> 0)
 
 	// The remaining fields can just be copied in big endian order.
-	d.RootDelay = NTPRootDelay(binary.BigEndian.Uint32(data[4:8]))
-	d.RootDispersion = NTPRootDispersion(binary.BigEndian.Uint32(data[8:12]))
+	d.RootDelay = NTPFixed16Seconds(binary.BigEndian.Uint32(data[4:8]))
+	d.RootDispersion = NTPFixed16Seconds(binary.BigEndian.Uint32(data[8:12]))
 	d.ReferenceID = NTPReferenceID(binary.BigEndian.Uint32(data[12:16]))
 	d.ReferenceTimestamp = NTPTimestamp(binary.BigEndian.Uint64(data[16:24]))
 	d.OriginTimestamp = NTPTimestamp(binary.BigEndian.Uint64(data[24:32]))
