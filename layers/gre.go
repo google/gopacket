@@ -131,6 +131,9 @@ func (g *GRE) SerializeTo(b gopacket.SerializeBuffer, opts gopacket.SerializeOpt
 	if g.ChecksumPresent || g.RoutingPresent {
 		// Don't write the checksum value yet, as we may need to compute it,
 		// which requires the entire header be complete.
+		// Instead we zeroize the memory in case it is dirty.
+		buf[offset] = 0
+		buf[offset+1] = 0
 		binary.BigEndian.PutUint16(buf[offset+2:offset+4], g.Offset)
 		offset += 4
 	}
@@ -155,9 +158,6 @@ func (g *GRE) SerializeTo(b gopacket.SerializeBuffer, opts gopacket.SerializeOpt
 	}
 	if g.ChecksumPresent {
 		if opts.ComputeChecksums {
-			// zero out checksum bytes for computation.
-			buf[4] = 0
-			buf[5] = 0
 			g.Checksum = tcpipChecksum(b.Bytes(), 0)
 		}
 
