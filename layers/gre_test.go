@@ -373,12 +373,10 @@ func setNetworkLayer(layers []gopacket.SerializableLayer) error {
 	}
 	var l gopacket.NetworkLayer
 	for _, layer := range layers {
-		n, ok := layer.(gopacket.NetworkLayer)
-		if ok {
+		if n, ok := layer.(gopacket.NetworkLayer); ok {
 			l = n
 		}
-		s, ok := layer.(setNetworkLayerForChecksum)
-		if ok {
+		if s, ok := layer.(setNetworkLayerForChecksum); ok {
 			if l == nil {
 				return fmt.Errorf("no enclosing network layer found before: %v", s)
 			}

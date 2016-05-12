@@ -129,7 +129,8 @@ func (g *GRE) SerializeTo(b gopacket.SerializeBuffer, opts gopacket.SerializeOpt
 	binary.BigEndian.PutUint16(buf[2:4], uint16(g.Protocol))
 	offset := 4
 	if g.ChecksumPresent || g.RoutingPresent {
-		binary.BigEndian.PutUint16(buf[offset:offset+2], g.Checksum)
+		// Don't write the checksum value yet, as we may need to compute it,
+		// which requires the entire header be complete.
 		binary.BigEndian.PutUint16(buf[offset+2:offset+4], g.Offset)
 		offset += 4
 	}
@@ -152,12 +153,14 @@ func (g *GRE) SerializeTo(b gopacket.SerializeBuffer, opts gopacket.SerializeOpt
 			sre = sre.Next
 		}
 	}
-	if opts.ComputeChecksums && g.ChecksumPresent {
-		// zero out checksum bytes
-		buf[4] = 0
-		buf[5] = 0
+	if g.ChecksumPresent {
+		if opts.ComputeChecksums {
+			// zero out checksum bytes for computation.
+			buf[4] = 0
+			buf[5] = 0
+			g.Checksum = tcpipChecksum(b.Bytes(), 0)
+		}
 
-		g.Checksum = tcpipChecksum(b.Bytes(), 0)
 		binary.BigEndian.PutUint16(buf[4:6], g.Checksum)
 	}
 	return nil
