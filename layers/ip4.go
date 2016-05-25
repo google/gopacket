@@ -10,9 +10,10 @@ package layers
 import (
 	"encoding/binary"
 	"fmt"
-	"github.com/google/gopacket"
 	"net"
 	"strings"
+
+	"github.com/google/gopacket"
 )
 
 type IPv4Flag uint8
@@ -139,7 +140,7 @@ func (ip *IPv4) SerializeTo(b gopacket.SerializeBuffer, opts gopacket.SerializeO
 
 			// sanity checking to protect us from buffer overrun
 			if len(opt.OptionData) > int(opt.OptionLength-2) {
-				fmt.Errorf("option length is smaller than length of option data")
+				return fmt.Errorf("option length is smaller than length of option data")
 			}
 			copy(bytes[curLocation+2:curLocation+int(opt.OptionLength)], opt.OptionData)
 			curLocation += int(opt.OptionLength)
