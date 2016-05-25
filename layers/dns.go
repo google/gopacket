@@ -10,8 +10,9 @@ import (
 	"encoding/binary"
 	"errors"
 	"fmt"
-	"github.com/google/gopacket"
 	"net"
+
+	"github.com/google/gopacket"
 )
 
 type DNSClass uint16
@@ -50,6 +51,7 @@ const (
 type DNSResponseCode uint8
 
 const (
+	DNSResponseCodeNoErr    DNSResponseCode = 0  // No error
 	DNSResponseCodeFormErr  DNSResponseCode = 1  // Format Error                       [RFC1035]
 	DNSResponseCodeServFail DNSResponseCode = 2  // Server Failure                     [RFC1035]
 	DNSResponseCodeNXDomain DNSResponseCode = 3  // Non-Existent Domain                [RFC1035]
@@ -74,6 +76,8 @@ func (drc DNSResponseCode) String() string {
 	switch drc {
 	default:
 		return "Unknown"
+	case DNSResponseCodeNoErr:
+		return "No Error"
 	case DNSResponseCodeFormErr:
 		return "Format Error"
 	case DNSResponseCodeServFail:
@@ -298,6 +302,97 @@ func (d *DNS) Payload() []byte {
 	return nil
 }
 
+func b2i(b bool) int {
+	if b {
+		return 1
+	}
+	return 0
+}
+
+func computeSize(recs []DNSResourceRecord) int {
+	sz := 0
+	for _, rr := range recs {
+		sz += len(rr.Name) + 14
+		switch rr.Type {
+		case DNSTypeA:
+			sz += 4
+		case DNSTypeAAAA:
+			sz += 16
+		case DNSTypeCNAME:
+			sz += len(rr.CNAME) + 1
+		}
+	}
+	return sz
+}
+
+// SerializeTo writes the serialized form of this layer into the
+// SerializationBuffer, implementing gopacket.SerializableLayer.
+func (d *DNS) SerializeTo(b gopacket.SerializeBuffer, opts gopacket.SerializeOptions) error {
+	dsz := 0
+	for _, q := range d.Questions {
+		dsz += len(q.Name) + 6
+	}
+	dsz += computeSize(d.Answers)
+	dsz += computeSize(d.Authorities)
+	dsz += computeSize(d.Additionals)
+	dsz += computeSize(d.Additionals)
+
+	bytes, err := b.PrependBytes(12 + dsz)
+	if err != nil {
+		return err
+	}
+	binary.BigEndian.PutUint16(bytes, d.ID)
+	bytes[2] = byte((b2i(d.QR) << 7) | (int(d.OpCode) << 3) | (b2i(d.AA) << 2) | (b2i(d.TC) << 1) | b2i(d.RD))
+	bytes[3] = byte((b2i(d.RA) << 7) | (int(d.Z) << 4) | int(d.ResponseCode))
+
+	if opts.FixLengths {
+		d.QDCount = uint16(len(d.Questions))
+		d.ANCount = uint16(len(d.Answers))
+		d.NSCount = uint16(len(d.Authorities))
+		d.ARCount = uint16(len(d.Additionals))
+	}
+	binary.BigEndian.PutUint16(bytes[4:], d.QDCount)
+	binary.BigEndian.PutUint16(bytes[6:], d.ANCount)
+	binary.BigEndian.PutUint16(bytes[8:], d.NSCount)
+	binary.BigEndian.PutUint16(bytes[10:], d.ARCount)
+
+	off := 12
+	for _, qd := range d.Questions {
+		n := qd.encode(bytes, off)
+		off += n
+	}
+
+	for i := range d.Answers {
+		// done this way so we can modify DNSResourceRecord to fix
+		// lengths if requested
+		qa := &d.Answers[i]
+		n, err := qa.encode(bytes, off, opts)
+		if err != nil {
+			return err
+		}
+		off += n
+	}
+
+	for i := range d.Authorities {
+		qa := &d.Answers[i]
+		n, err := qa.encode(bytes, off, opts)
+		if err != nil {
+			return err
+		}
+		off += n
+	}
+	for i := range d.Additionals {
+		qa := &d.Answers[i]
+		n, err := qa.encode(bytes, off, opts)
+		if err != nil {
+			return err
+		}
+		off += n
+	}
+
+	return nil
+}
+
 var maxRecursion = errors.New("max DNS recursion level hit")
 
 const maxRecursionLevel = 255
@@ -396,6 +491,13 @@ func (q *DNSQuestion) decode(data []byte, offset int, df gopacket.DecodeFeedback
 	return endq + 4, nil
 }
 
+func (q *DNSQuestion) encode(data []byte, offset int) int {
+	noff := encodeName(q.Name, data, offset)
+	binary.BigEndian.PutUint16(data[noff:], uint16(q.Type))
+	binary.BigEndian.PutUint16(data[noff+2:], uint16(q.Class))
+	return len(q.Name) + 6
+}
+
 //  DNSResourceRecord
 //  0  1  2  3  4  5  6  7  8  9  0  1  2  3  4  5
 //  +--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+
@@ -459,6 +561,56 @@ func (rr *DNSResourceRecord) decode(data []byte, offset int, df gopacket.DecodeF
 	}
 
 	return endq + 10 + int(rr.DataLength), nil
+}
+
+func encodeName(name []byte, data []byte, offset int) int {
+	l := 0
+	for i := range name {
+		if name[i] == '.' {
+			data[offset+i-l] = byte(l)
+			l = 0
+		} else {
+			// skip one to write the length
+			data[offset+i+1] = name[i]
+			l++
+		}
+	}
+	// length for final portion
+	data[offset+len(name)-l] = byte(l)
+	data[offset+len(name)+1] = 0x00 // terminal
+	return offset + len(name) + 2
+}
+
+func (rr *DNSResourceRecord) encode(data []byte, offset int, opts gopacket.SerializeOptions) (int, error) {
+
+	noff := encodeName(rr.Name, data, offset)
+
+	binary.BigEndian.PutUint16(data[noff:], uint16(rr.Type))
+	binary.BigEndian.PutUint16(data[noff+2:], uint16(rr.Class))
+	binary.BigEndian.PutUint32(data[noff+4:], uint32(rr.TTL))
+
+	var dSz int
+	switch rr.Type {
+	case DNSTypeA:
+		dSz = 4
+		copy(data[noff+10:], rr.IP)
+	case DNSTypeAAAA:
+		dSz = 16
+		copy(data[noff+10:], rr.IP)
+	case DNSTypeCNAME:
+		dSz = len(rr.CNAME) + 1
+		encodeName(rr.CNAME, data, noff+10)
+	default:
+		return 0, fmt.Errorf("serializing resource record of type %v not supported", rr.Type)
+	}
+	// DataLength
+	binary.BigEndian.PutUint16(data[noff+8:], uint16(dSz))
+
+	if opts.FixLengths {
+		rr.DataLength = uint16(dSz)
+	}
+
+	return len(rr.Name) + 1 + 11 + dSz, nil
 }
 
 func (rr *DNSResourceRecord) String() string {
