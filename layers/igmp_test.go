@@ -7,8 +7,9 @@
 package layers
 
 import (
-	"github.com/google/gopacket"
 	"testing"
+
+	"github.com/google/gopacket"
 )
 
 // igmpv1MembershipReportPacket is the packet:
@@ -30,6 +31,11 @@ func TestIGMPv1MembershipReportPacket(t *testing.T) {
 		t.Error("Failed to decode packet:", p.ErrorLayer().Error())
 	}
 	checkLayers(p, []gopacket.LayerType{LayerTypeEthernet, LayerTypeIPv4, LayerTypeIGMP}, t)
+
+	igmp := p.Layer(LayerTypeIGMP).(*IGMPv1or2)
+	if igmp.Type != IGMPMembershipReportV1 {
+		t.Fatal("Invalid IGMP type")
+	}
 }
 
 func BenchmarkDecodeigmpv1MembershipReportPacket(b *testing.B) {
@@ -57,6 +63,11 @@ func TestIGMPv2MembershipQuery(t *testing.T) {
 		t.Error("Failed to decode packet:", p.ErrorLayer().Error())
 	}
 	checkLayers(p, []gopacket.LayerType{LayerTypeEthernet, LayerTypeIPv4, LayerTypeIGMP}, t)
+
+	igmp := p.Layer(LayerTypeIGMP).(*IGMPv1or2)
+	if igmp.Type != IGMPMembershipQuery {
+		t.Fatal("Invalid IGMP type")
+	}
 }
 func BenchmarkDecodeigmpv2MembershipQueryPacket(b *testing.B) {
 	for i := 0; i < b.N; i++ {
@@ -83,6 +94,11 @@ func TestIGMPv2MembershipReport(t *testing.T) {
 		t.Error("Failed to decode packet:", p.ErrorLayer().Error())
 	}
 	checkLayers(p, []gopacket.LayerType{LayerTypeEthernet, LayerTypeIPv4, LayerTypeIGMP}, t)
+
+	igmp := p.Layer(LayerTypeIGMP).(*IGMPv1or2)
+	if igmp.Type != IGMPMembershipReportV2 {
+		t.Fatal("Invalid IGMP type")
+	}
 }
 func BenchmarkDecodeigmpv2MembershipReportPacket(b *testing.B) {
 	for i := 0; i < b.N; i++ {
@@ -109,6 +125,11 @@ func TestIGMPv3MembershipQuery(t *testing.T) {
 		t.Error("Failed to decode packet:", p.ErrorLayer().Error())
 	}
 	checkLayers(p, []gopacket.LayerType{LayerTypeEthernet, LayerTypeIPv4, LayerTypeIGMP}, t)
+
+	igmp := p.Layer(LayerTypeIGMP).(*IGMP)
+	if igmp.Type != IGMPMembershipQuery {
+		t.Fatal("Invalid IGMP type")
+	}
 }
 
 func BenchmarkDecodeigmp3v3MembershipQueryPacket(b *testing.B) {
@@ -136,7 +157,13 @@ func TestIGMPv3MembershipReport2Records(t *testing.T) {
 		t.Error("Failed to decode packet:", p.ErrorLayer().Error())
 	}
 	checkLayers(p, []gopacket.LayerType{LayerTypeEthernet, LayerTypeIPv4, LayerTypeIGMP}, t)
+
+	igmp := p.Layer(LayerTypeIGMP).(*IGMP)
+	if igmp.Type != IGMPMembershipReportV3 {
+		t.Fatal("Invalid IGMP type")
+	}
 }
+
 func BenchmarkDecodeigmpv3MembershipReport2Records(b *testing.B) {
 	for i := 0; i < b.N; i++ {
 		gopacket.NewPacket(igmpv3MembershipReport2Records, LinkTypeEthernet, gopacket.NoCopy)
