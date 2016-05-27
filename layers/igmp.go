@@ -168,19 +168,22 @@ func (i *IGMP) decodeIGMPv3MembershipReport(data []byte) error {
 	i.Checksum = binary.BigEndian.Uint16(data[2:4])
 	i.NumberOfGroupRecords = binary.BigEndian.Uint16(data[6:8])
 
+	recordOffset := 8
 	for j := 0; j < int(i.NumberOfGroupRecords); j++ {
 		var gr IGMPv3GroupRecord
-		gr.Type = IGMPv3GroupRecordType(data[8])
-		gr.AuxDataLen = data[9]
-		gr.NumberOfSources = binary.BigEndian.Uint16(data[10:12])
-		gr.MulticastAddress = net.IP(data[12:16])
+		gr.Type = IGMPv3GroupRecordType(data[recordOffset])
+		gr.AuxDataLen = data[recordOffset+1]
+		gr.NumberOfSources = binary.BigEndian.Uint16(data[recordOffset+2 : recordOffset+4])
+		gr.MulticastAddress = net.IP(data[recordOffset+4 : recordOffset+8])
 
 		// append source address records.
 		for i := 0; i < int(gr.NumberOfSources); i++ {
-			gr.SourceAddresses = append(gr.SourceAddresses, net.IP(data[16+i*4:20+i*4]))
+			sourceAddr := net.IP(data[recordOffset+8+i*4 : recordOffset+12+i*4])
+			gr.SourceAddresses = append(gr.SourceAddresses, sourceAddr)
 		}
 
 		i.GroupRecords = append(i.GroupRecords, gr)
+		recordOffset += 8 + 4*int(gr.NumberOfSources)
 	}
 	return nil
 }
