@@ -321,6 +321,15 @@ func TestDNSEncodeResponse(t *testing.T) {
 			CNAME: []byte("example2.com"),
 		})
 
+	dns.Authorities = append(dns.Authorities,
+		DNSResourceRecord{
+			Name:  []byte("www.example2.com"),
+			Type:  DNSTypeNS,
+			Class: DNSClassIN,
+			TTL:   1024,
+			NS:    []byte("ns.example2.com"),
+		})
+
 	buf := gopacket.NewSerializeBuffer()
 	opts := gopacket.SerializeOptions{FixLengths: true}
 	err := gopacket.SerializeLayers(buf, opts, dns)
