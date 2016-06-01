@@ -8,11 +8,11 @@ package layers
 
 import (
 	"bytes"
-	_ "fmt"
-	"github.com/google/gopacket"
 	"net"
 	"reflect"
 	"testing"
+
+	"github.com/google/gopacket"
 )
 
 // Generator: python layers/test_creator.py --layerType=LayerTypeRadioTap --linkType=LinkTypeIEEE80211Radio --name=Dot11%s ~/Downloads/mesh.pcap
@@ -419,7 +419,7 @@ func TestPacketDot11DataIP(t *testing.T) {
 	if p.ErrorLayer() != nil {
 		t.Error("Failed to decode packet:", p.ErrorLayer().Error())
 	}
-	checkLayers(p, []gopacket.LayerType{LayerTypeRadioTap, LayerTypeDot11, LayerTypeDot11Data, LayerTypeLLC, LayerTypeSNAP, LayerTypeIPv4, LayerTypeUDP, gopacket.LayerTypePayload}, t)
+	checkLayers(p, []gopacket.LayerType{LayerTypeRadioTap, LayerTypeDot11, LayerTypeDot11Data, LayerTypeLLC, LayerTypeSNAP, LayerTypeIPv4, LayerTypeUDP, LayerTypeDHCPv4}, t)
 }
 func BenchmarkDecodePacketDot11DataIP(b *testing.B) {
 	for i := 0; i < b.N; i++ {
