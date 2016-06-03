@@ -373,7 +373,7 @@ func (d *DNS) SerializeTo(b gopacket.SerializeBuffer, opts gopacket.SerializeOpt
 	}
 
 	for i := range d.Authorities {
-		qa := &d.Answers[i]
+		qa := &d.Authorities[i]
 		n, err := qa.encode(bytes, off, opts)
 		if err != nil {
 			return err
@@ -381,7 +381,7 @@ func (d *DNS) SerializeTo(b gopacket.SerializeBuffer, opts gopacket.SerializeOpt
 		off += n
 	}
 	for i := range d.Additionals {
-		qa := &d.Answers[i]
+		qa := &d.Additionals[i]
 		n, err := qa.encode(bytes, off, opts)
 		if err != nil {
 			return err
