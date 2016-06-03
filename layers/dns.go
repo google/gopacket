@@ -609,8 +609,12 @@ func (rr *DNSResourceRecord) encode(data []byte, offset int, opts gopacket.Seria
 		copy(data[noff+10:], rr.IP)
 	case DNSTypeAAAA:
 		copy(data[noff+10:], rr.IP)
+	case DNSTypeNS:
+		encodeName(rr.NS, data, noff+10)
 	case DNSTypeCNAME:
 		encodeName(rr.CNAME, data, noff+10)
+	case DNSTypePTR:
+		encodeName(rr.PTR, data, noff+10)
 	case DNSTypeSOA:
 		noff2 := encodeName(rr.SOA.MName, data, noff+10)
 		noff2 = encodeName(rr.SOA.RName, data, noff2)
@@ -619,6 +623,14 @@ func (rr *DNSResourceRecord) encode(data []byte, offset int, opts gopacket.Seria
 		binary.BigEndian.PutUint32(data[noff2+8:], rr.SOA.Retry)
 		binary.BigEndian.PutUint32(data[noff2+12:], rr.SOA.Expire)
 		binary.BigEndian.PutUint32(data[noff2+16:], rr.SOA.Minimum)
+	case DNSTypeMX:
+		binary.BigEndian.PutUint16(data[noff+10:], rr.MX.Preference)
+		encodeName(rr.MX.Name, data, noff+12)
+	case DNSTypeSRV:
+		binary.BigEndian.PutUint16(data[noff+10:], rr.SRV.Priority)
+		binary.BigEndian.PutUint16(data[noff+12:], rr.SRV.Weight)
+		binary.BigEndian.PutUint16(data[noff+14:], rr.SRV.Port)
+		encodeName(rr.SRV.Name, data, noff+16)
 	default:
 		return 0, fmt.Errorf("serializing resource record of type %v not supported", rr.Type)
 	}
