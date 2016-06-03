@@ -122,8 +122,6 @@ func (i *IGMPv1or2) decodeResponse(data []byte) error {
 	return nil
 }
 
-// IGMPv3GroupRecord stores individual group records for a V3 Membership Report message.
-//
 //  0                   1                   2                   3
 //  0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1
 // +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
@@ -143,7 +141,7 @@ func (i *IGMPv1or2) decodeResponse(data []byte) error {
 // .                        Group Record [M]                       .
 // |                                                               |
 // +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-//
+
 // +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
 // |  Record Type  |  Aux Data Len |     Number of Sources (N)     |
 // +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
@@ -159,6 +157,8 @@ func (i *IGMPv1or2) decodeResponse(data []byte) error {
 // .                         Auxiliary Data                        .
 // |                                                               |
 // +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+
+// IGMPv3GroupRecord stores individual group records for a V3 Membership Report message.
 type IGMPv3GroupRecord struct {
 	Type             IGMPv3GroupRecordType
 	AuxDataLen       uint8 // this should always be 0 as per IGMPv3 spec.
@@ -204,8 +204,6 @@ func (i *IGMP) decodeIGMPv3MembershipReport(data []byte) error {
 	return nil
 }
 
-// decodeIGMPv3MembershipQuery parses the IGMPv3 message of type 0x11
-//
 //  0                   1                   2                   3
 //  0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1
 // +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
@@ -221,6 +219,8 @@ func (i *IGMP) decodeIGMPv3MembershipReport(data []byte) error {
 // +-                              .                              -+
 // |                       Source Address [N]                      |
 // +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+//
+// decodeIGMPv3MembershipQuery parses the IGMPv3 message of type 0x11
 func (i *IGMP) decodeIGMPv3MembershipQuery(data []byte) error {
 	if len(data) < 12 {
 		return fmt.Errorf("IGMPv3 Membership Query too small #1")
