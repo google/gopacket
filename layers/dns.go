@@ -320,6 +320,8 @@ func computeSize(recs []DNSResourceRecord) int {
 			sz += 16
 		case DNSTypeCNAME:
 			sz += len(rr.CNAME) + 1
+		case DNSTypeSOA:
+			sz += len(rr.SOA.MName) + 1 + len(rr.SOA.RName) + 1 + 20
 		}
 	}
 	return sz
@@ -599,6 +601,15 @@ func (rr *DNSResourceRecord) encode(data []byte, offset int, opts gopacket.Seria
 	case DNSTypeCNAME:
 		dSz = len(rr.CNAME) + 1
 		encodeName(rr.CNAME, data, noff+10)
+	case DNSTypeSOA:
+		dSz = len(rr.SOA.MName) + 1 + len(rr.SOA.RName) + 1 + 20
+		noff2 := encodeName(rr.SOA.MName, data, noff+10)
+		noff2 = encodeName(rr.SOA.RName, data, noff2)
+		binary.BigEndian.PutUint32(data[noff2:], rr.SOA.Serial)
+		binary.BigEndian.PutUint32(data[noff2+4:], rr.SOA.Refresh)
+		binary.BigEndian.PutUint32(data[noff2+8:], rr.SOA.Retry)
+		binary.BigEndian.PutUint32(data[noff2+12:], rr.SOA.Expire)
+		binary.BigEndian.PutUint32(data[noff2+16:], rr.SOA.Minimum)
 	default:
 		return 0, fmt.Errorf("serializing resource record of type %v not supported", rr.Type)
 	}
