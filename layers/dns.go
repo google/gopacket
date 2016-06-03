@@ -335,7 +335,6 @@ func (d *DNS) SerializeTo(b gopacket.SerializeBuffer, opts gopacket.SerializeOpt
 	dsz += computeSize(d.Answers)
 	dsz += computeSize(d.Authorities)
 	dsz += computeSize(d.Additionals)
-	dsz += computeSize(d.Additionals)
 
 	bytes, err := b.PrependBytes(12 + dsz)
 	if err != nil {
