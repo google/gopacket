@@ -187,6 +187,52 @@ var SFlowTestPacket2 = []byte{
 	0x00, 0x0f, 0x84, 0x7d, 0x00, 0x50,
 }
 
+// processor counter sample
+var SFlowTestPacket3 = []byte{
+	0x00, 0x00, 0x00, 0x05, 0x00, 0x00, 0x00, 0x01,
+	0x0a, 0x14, 0x04, 0x00, 0x00, 0x00, 0x00, 0x64,
+	0x00, 0x01, 0x78, 0xe0, 0x73, 0x03, 0x48, 0x78,
+	0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x04,
+	0x00, 0x00, 0x00, 0x34, 0x00, 0x01, 0x78, 0xe0,
+	0x00, 0x00, 0x00, 0x02, 0x00, 0x00, 0x00, 0x01,
+	0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x03, 0xe9,
+	0x00, 0x00, 0x00, 0x1c, 0x00, 0x00, 0x05, 0xaa,
+	0x00, 0x00, 0x05, 0x5a, 0x00, 0x00, 0x05, 0x32,
+	0x00, 0x00, 0x00, 0x00, 0xe7, 0x8d, 0x70, 0x00,
+	0x00, 0x00, 0x00, 0x00, 0x55, 0xe7, 0x70, 0x00,
+}
+
+// expanded flow sample - extended switch flow record
+var SFlowTestPacket4 = []byte{
+	0x00, 0x00, 0x00, 0x05, 0x00, 0x00, 0x00, 0x01,
+	0xc0, 0xa8, 0x01, 0x07, 0x00, 0x00, 0x00, 0x00,
+	0x00, 0x00, 0x02, 0x7e, 0x32, 0xe0, 0xe4, 0x7c,
+	0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x01,
+	0x00, 0x00, 0x00, 0x38, 0x00, 0x00, 0x01, 0x23,
+	0x00, 0x00, 0x00, 0x1d, 0x00, 0x00, 0x01, 0x00,
+	0x00, 0x00, 0x03, 0x37, 0x00, 0x00, 0x56, 0x23,
+	0x00, 0x00, 0x00, 0x1d, 0x00, 0x00, 0x00, 0x04,
+	0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x03, 0xe9,
+	0x00, 0x00, 0x00, 0x10, 0x00, 0x00, 0x00, 0x03,
+	0x00, 0x00, 0x00, 0x02, 0x00, 0x00, 0x00, 0x05,
+	0xff, 0xff, 0xff, 0xff,
+}
+
+// expanded flow sample - extended router flow record
+var SFlowTestPacket5 = []byte{
+	0x00, 0x00, 0x00, 0x05, 0x00, 0x00, 0x00, 0x01,
+	0xc0, 0xa8, 0x01, 0x12, 0x00, 0x00, 0x00, 0x00,
+	0x00, 0x00, 0x02, 0x7e, 0x32, 0xe0, 0xe4, 0x7c,
+	0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x01,
+	0x00, 0x00, 0x00, 0x34, 0x00, 0x00, 0x01, 0x23,
+	0x00, 0x00, 0x00, 0x1d, 0x00, 0x00, 0x01, 0x00,
+	0x00, 0x00, 0x03, 0x34, 0x00, 0x00, 0x56, 0x02,
+	0x00, 0x00, 0x00, 0x1d, 0x00, 0x00, 0x00, 0x04,
+	0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x03, 0xea,
+	0x00, 0x00, 0x00, 0x0c, 0xc0, 0xa8, 0x01, 0x21,
+	0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0x80,
+}
+
 func TestDecodeUDPSFlow(t *testing.T) {
 	p := gopacket.NewPacket(SFlowTestPacket1, LayerTypeEthernet, gopacket.Default)
 	if p.ErrorLayer() != nil {
@@ -793,6 +839,158 @@ func TestPacketPacket0(t *testing.T) {
 	}
 }
 
+func TestDecodeProcessorCounter(t *testing.T) {
+	p := gopacket.NewPacket(SFlowTestPacket3, LayerTypeSFlow, gopacket.Default)
+
+	if p.ErrorLayer() != nil {
+		t.Error("Failed to decode packet:", p.ErrorLayer().Error())
+	}
+	checkLayers(p, []gopacket.LayerType{LayerTypeSFlow}, t)
+
+	got := p.ApplicationLayer().(*SFlowDatagram)
+
+	want := &SFlowDatagram{
+		DatagramVersion: uint32(5),
+		AgentAddress:    []byte{0x0a, 0x14, 0x04, 0x00},
+		SubAgentID:      uint32(0x64),
+		SequenceNumber:  uint32(96480),
+		AgentUptime:     uint32(1929595000),
+		SampleCount:     uint32(1),
+		CounterSamples: []SFlowCounterSample{
+			SFlowCounterSample{
+				Format:         SFlowTypeExpandedCounterSample,
+				SampleLength:   0x34,
+				SequenceNumber: 0x0178e0,
+				SourceIDClass:  0x00,
+				SourceIDIndex:  0x01,
+				RecordCount:    0x01,
+				Records: []SFlowRecord{
+					SFlowProcessorCounters{
+						SFlowBaseCounterRecord: SFlowBaseCounterRecord{
+							EnterpriseID:   0x0,
+							Format:         SFlowTypeProcessorCounters,
+							FlowDataLength: 0x1c,
+						},
+						FiveSecCpu:  0x05aa,
+						OneMinCpu:   0x055a,
+						FiveMinCpu:  0x0532,
+						TotalMemory: 0xe78d7000,
+						FreeMemory:  0x55e77000,
+					},
+				},
+			},
+		},
+	}
+	if !reflect.DeepEqual(want, got) {
+		t.Errorf("SFlow layer mismatch, \nwant:\n\n%#v\ngot:\n\n\n%#v\n\n", want, got)
+	}
+}
+
+func TestDecodeExtendedSwitchFlow(t *testing.T) {
+	p := gopacket.NewPacket(SFlowTestPacket4, LayerTypeSFlow, gopacket.Default)
+
+	if p.ErrorLayer() != nil {
+		t.Error("Failed to decode packet:", p.ErrorLayer().Error())
+	}
+	checkLayers(p, []gopacket.LayerType{LayerTypeSFlow}, t)
+
+	got := p.ApplicationLayer().(*SFlowDatagram)
+
+	want := &SFlowDatagram{
+		DatagramVersion: uint32(5),
+		AgentAddress:    []byte{0xc0, 0xa8, 0x01, 0x07},
+		SubAgentID:      uint32(0x00),
+		SequenceNumber:  uint32(0x027e),
+		AgentUptime:     uint32(0x32e0e47c),
+		SampleCount:     uint32(1),
+		FlowSamples: []SFlowFlowSample{
+			SFlowFlowSample{
+				Format:                SFlowTypeFlowSample,
+				SampleLength:          0x38,
+				SequenceNumber:        0x123,
+				SourceIDClass:         0x00,
+				SourceIDIndex:         0x1d,
+				SamplingRate:          0x100,
+				SamplePool:            0x337,
+				Dropped:               0x5623,
+				InputInterfaceFormat:  0x00,
+				InputInterface:        0x1d,
+				OutputInterfaceFormat: 0x00,
+				OutputInterface:       0x04,
+				RecordCount:           0x01,
+				Records: []SFlowRecord{
+					SFlowExtendedSwitchFlowRecord{
+						SFlowBaseFlowRecord: SFlowBaseFlowRecord{
+							EnterpriseID:   0x0,
+							Format:         SFlowTypeExtendedSwitchFlow,
+							FlowDataLength: 0x10,
+						},
+						IncomingVLAN:         0x03,
+						IncomingVLANPriority: 0x02,
+						OutgoingVLAN:         0x05,
+						OutgoingVLANPriority: 0xffffffff,
+					},
+				},
+			},
+		},
+	}
+	if !reflect.DeepEqual(want, got) {
+		t.Errorf("SFlow layer mismatch, \nwant:\n\n%#v\ngot:\n\n\n%#v\n\n", want, got)
+	}
+}
+
+func TestDecodeExtendedRouterFlow(t *testing.T) {
+	p := gopacket.NewPacket(SFlowTestPacket5, LayerTypeSFlow, gopacket.Default)
+
+	if p.ErrorLayer() != nil {
+		t.Error("Failed to decode packet:", p.ErrorLayer().Error())
+	}
+	checkLayers(p, []gopacket.LayerType{LayerTypeSFlow}, t)
+
+	got := p.ApplicationLayer().(*SFlowDatagram)
+
+	want := &SFlowDatagram{
+		DatagramVersion: uint32(5),
+		AgentAddress:    []byte{0xc0, 0xa8, 0x01, 0x12},
+		SubAgentID:      uint32(0x00),
+		SequenceNumber:  uint32(0x027e),
+		AgentUptime:     uint32(0x32e0e47c),
+		SampleCount:     uint32(1),
+		FlowSamples: []SFlowFlowSample{
+			SFlowFlowSample{
+				Format:                SFlowTypeFlowSample,
+				SampleLength:          0x34,
+				SequenceNumber:        0x123,
+				SourceIDClass:         0x00,
+				SourceIDIndex:         0x1d,
+				SamplingRate:          0x100,
+				SamplePool:            0x334,
+				Dropped:               0x5602,
+				InputInterfaceFormat:  0x00,
+				InputInterface:        0x1d,
+				OutputInterfaceFormat: 0x00,
+				OutputInterface:       0x04,
+				RecordCount:           0x01,
+				Records: []SFlowRecord{
+					SFlowExtendedRouterFlowRecord{
+						SFlowBaseFlowRecord: SFlowBaseFlowRecord{
+							EnterpriseID:   0x0,
+							Format:         SFlowTypeExtendedRouterFlow,
+							FlowDataLength: 0xc,
+						},
+						NextHop:                []byte{0xc0, 0xa8, 0x01, 0x21},
+						NextHopSourceMask:      0xffffffff,
+						NextHopDestinationMask: 0xffffff80,
+					},
+				},
+			},
+		},
+	}
+	if !reflect.DeepEqual(want, got) {
+		t.Errorf("SFlow layer mismatch, \nwant:\n\n%#v\ngot:\n\n\n%#v\n\n", want, got)
+	}
+}
+
 func BenchmarkDecodeSFlowPacket1(b *testing.B) {
 	for i := 0; i < b.N; i++ {
 		gopacket.NewPacket(SFlowTestPacket1, LinkTypeEthernet, gopacket.NoCopy)
@@ -802,6 +1000,18 @@ func BenchmarkDecodeSFlowPacket1(b *testing.B) {
 func BenchmarkDecodeSFlowPacket2(b *testing.B) {
 	for i := 0; i < b.N; i++ {
 		gopacket.NewPacket(SFlowTestPacket2, LinkTypeEthernet, gopacket.NoCopy)
+	}
+}
+
+func BenchmarkDecodeSFlowPacket3(b *testing.B) {
+	for i := 0; i < b.N; i++ {
+		gopacket.NewPacket(SFlowTestPacket3, LinkTypeEthernet, gopacket.NoCopy)
+	}
+}
+
+func BenchmarkDecodeSFlowPacket4(b *testing.B) {
+	for i := 0; i < b.N; i++ {
+		gopacket.NewPacket(SFlowTestPacket4, LinkTypeEthernet, gopacket.NoCopy)
 	}
 }
 
