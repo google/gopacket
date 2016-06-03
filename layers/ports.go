@@ -64,6 +64,8 @@ func (a UDPPort) LayerType() gopacket.LayerType {
 	switch a {
 	case 53:
 		return LayerTypeDNS
+	case 123:
+		return LayerTypeNTP
 	case 4789:
 		return LayerTypeVXLAN
 	case 6343:
