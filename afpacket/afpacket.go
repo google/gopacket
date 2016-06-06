@@ -26,6 +26,7 @@ import (
 )
 
 /*
+#include <linux/filter.h>  // sock_filter, sock_fprog
 #include <linux/if_packet.h>  // AF_PACKET, sockaddr_ll
 #include <linux/if_ether.h>  // ETH_P_ALL
 #include <sys/socket.h>  // socket()
@@ -33,6 +34,7 @@ import (
 #include <arpa/inet.h>  // htons()
 #include <sys/mman.h>  // mmap(), munmap()
 #include <poll.h>  // poll()
+#include <stdlib.h> // calloc() free()
 */
 import "C"
 
@@ -429,4 +431,46 @@ func (h *TPacket) SetFanout(t FanoutType, id uint16) error {
 func (h *TPacket) WritePacketData(pkt []byte) error {
 	_, err := C.write(h.fd, unsafe.Pointer(&pkt[0]), C.size_t(len(pkt)))
 	return err
+}
+
+const MaxLpfInstructions = 4096
+
+// 8 bytes per instruction, max 4096 instructions
+const lpfInstructionBufferSize = 8 * MaxLpfInstructions
+
+// LPFInstruction is a byte encoded structure holding a LPF instruction
+type LPFInstruction struct {
+	Code uint16
+	Jt   uint8
+	Jf   uint8
+	K    uint32
+}
+
+// Sets a compiled LPF filter on the socket
+func (h *TPacket) SetLPFFilter(lpfIsns []LPFInstruction) error {
+	lpf, err := lpfInstructionFilter(lpfIsns)
+	if err != nil {
+		return err
+	}
+	_, err = C.setsockopt(h.fd, C.SOL_SOCKET, C.SO_ATTACH_FILTER, unsafe.Pointer(&lpf), C.socklen_t(unsafe.Sizeof(lpf)))
+	C.free(unsafe.Pointer(lpf.filter))
+	return err
+}
+
+func lpfInstructionFilter(lpfInstructions []LPFInstruction) (lpf C.struct_sock_fprog, err error) {
+	if len(lpfInstructions) < 1 {
+		return lpf, errors.New("lpfInstructions must not be empty")
+	}
+
+	if len(lpfInstructions) > MaxLpfInstructions {
+		return lpf, fmt.Errorf("lpfInstructions must not be larger than %d", MaxLpfInstructions)
+	}
+
+	lpf.len = C.ushort(len(lpfInstructions))
+	clpfInsns := C.calloc(C.size_t(len(lpfInstructions)), C.size_t(unsafe.Sizeof(lpfInstructions[0])))
+
+	copy((*[lpfInstructionBufferSize]LPFInstruction)(clpfInsns)[0:len(lpfInstructions)], lpfInstructions)
+	lpf.filter = (*C.struct_sock_filter)(clpfInsns)
+
+	return
 }
