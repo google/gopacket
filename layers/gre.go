@@ -100,6 +100,7 @@ func (g *GRE) SerializeTo(b gopacket.SerializeBuffer, opts gopacket.SerializeOpt
 			size += 4 + int(r.SRELength)
 			r = r.Next
 		}
+		size += 4
 	}
 	buf, err := b.PrependBytes(size)
 	if err != nil {
@@ -155,6 +156,8 @@ func (g *GRE) SerializeTo(b gopacket.SerializeBuffer, opts gopacket.SerializeOpt
 			offset += 4 + int(sre.SRELength)
 			sre = sre.Next
 		}
+		// Terminate routing field with a "NULL" SRE.
+		binary.BigEndian.PutUint32(buf[offset:offset+4], 0)
 	}
 	if g.ChecksumPresent {
 		if opts.ComputeChecksums {
