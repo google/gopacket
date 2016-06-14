@@ -312,14 +312,19 @@ func b2i(b bool) int {
 func computeSize(recs []DNSResourceRecord) int {
 	sz := 0
 	for _, rr := range recs {
-		sz += len(rr.Name) + 14
+		sz += len(rr.Name) + 12
 		switch rr.Type {
 		case DNSTypeA:
 			sz += 4
 		case DNSTypeAAAA:
 			sz += 16
+		case DNSTypePTR:
+			sz += len(rr.PTR) + 2
 		case DNSTypeCNAME:
-			sz += len(rr.CNAME) + 1
+			sz += len(rr.CNAME) + 2
+		case DNSTypeNS:
+			sz += len(rr.NS) + 2
+
 		}
 	}
 	return sz
@@ -374,7 +379,7 @@ func (d *DNS) SerializeTo(b gopacket.SerializeBuffer, opts gopacket.SerializeOpt
 	}
 
 	for i := range d.Authorities {
-		qa := &d.Answers[i]
+		qa := &d.Authorities[i]
 		n, err := qa.encode(bytes, off, opts)
 		if err != nil {
 			return err
@@ -382,7 +387,7 @@ func (d *DNS) SerializeTo(b gopacket.SerializeBuffer, opts gopacket.SerializeOpt
 		off += n
 	}
 	for i := range d.Additionals {
-		qa := &d.Answers[i]
+		qa := &d.Additionals[i]
 		n, err := qa.encode(bytes, off, opts)
 		if err != nil {
 			return err
@@ -575,6 +580,7 @@ func encodeName(name []byte, data []byte, offset int) int {
 			l++
 		}
 	}
+
 	// length for final portion
 	data[offset+len(name)-l] = byte(l)
 	data[offset+len(name)+1] = 0x00 // terminal
@@ -582,7 +588,6 @@ func encodeName(name []byte, data []byte, offset int) int {
 }
 
 func (rr *DNSResourceRecord) encode(data []byte, offset int, opts gopacket.SerializeOptions) (int, error) {
-
 	noff := encodeName(rr.Name, data, offset)
 
 	binary.BigEndian.PutUint16(data[noff:], uint16(rr.Type))
@@ -590,6 +595,7 @@ func (rr *DNSResourceRecord) encode(data []byte, offset int, opts gopacket.Seria
 	binary.BigEndian.PutUint32(data[noff+4:], uint32(rr.TTL))
 
 	var dSz int
+	// new record types here need to be matched up with new code in computeSize
 	switch rr.Type {
 	case DNSTypeA:
 		dSz = 4
@@ -597,9 +603,15 @@ func (rr *DNSResourceRecord) encode(data []byte, offset int, opts gopacket.Seria
 	case DNSTypeAAAA:
 		dSz = 16
 		copy(data[noff+10:], rr.IP)
+	case DNSTypePTR:
+		dSz = len(rr.PTR) + 2
+		encodeName(rr.PTR, data, noff+10)
 	case DNSTypeCNAME:
-		dSz = len(rr.CNAME) + 1
+		dSz = len(rr.CNAME) + 2
 		encodeName(rr.CNAME, data, noff+10)
+	case DNSTypeNS:
+		dSz = len(rr.NS) + 2
+		encodeName(rr.NS, data, noff+10)
 	default:
 		return 0, fmt.Errorf("serializing resource record of type %v not supported", rr.Type)
 	}
