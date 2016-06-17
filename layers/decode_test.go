@@ -291,7 +291,7 @@ func BenchmarkFmtVerboseString(b *testing.B) {
 	p := gopacket.NewPacket(testSimpleTCPPacket, LinkTypeEthernet, testDecodeOptions)
 	b.StartTimer()
 	for i := 0; i < b.N; i++ {
-		fmt.Sprintf("%#v", p)
+		_ = fmt.Sprintf("%#v", p)
 	}
 }
 
@@ -300,7 +300,7 @@ func BenchmarkPacketString(b *testing.B) {
 	p := gopacket.NewPacket(testSimpleTCPPacket, LinkTypeEthernet, testDecodeOptions)
 	b.StartTimer()
 	for i := 0; i < b.N; i++ {
-		p.String()
+		_ = p.String()
 	}
 }
 
@@ -309,7 +309,7 @@ func BenchmarkPacketDumpString(b *testing.B) {
 	p := gopacket.NewPacket(testSimpleTCPPacket, LinkTypeEthernet, testDecodeOptions)
 	b.StartTimer()
 	for i := 0; i < b.N; i++ {
-		p.String()
+		_ = p.String()
 	}
 }
 
