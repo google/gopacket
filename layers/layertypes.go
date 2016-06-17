@@ -119,6 +119,7 @@ var (
 	LayerTypePrismHeader                 = gopacket.RegisterLayerType(115, gopacket.LayerTypeMetadata{"Prism monitor mode header", gopacket.DecodeFunc(decodePrismHeader)})
 	LayerTypeVXLAN                       = gopacket.RegisterLayerType(116, gopacket.LayerTypeMetadata{"VXLAN", gopacket.DecodeFunc(decodeVXLAN)})
 	LayerTypeNTP                         = gopacket.RegisterLayerType(117, gopacket.LayerTypeMetadata{"NTP", gopacket.DecodeFunc(decodeNTP)})
+	LayerTypeDHCPv4                      = gopacket.RegisterLayerType(118, gopacket.LayerTypeMetadata{"DHCPv4", gopacket.DecodeFunc(decodeDHCPv4)})
 )
 
 var (
