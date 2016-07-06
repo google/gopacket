@@ -105,8 +105,8 @@ import (
 	"time"
 	"unsafe"
 
-	"github.com/google/gopacket"
-	"github.com/google/gopacket/layers"
+	"github.com/postwait/gopacket"
+	"github.com/postwait/gopacket/layers"
 )
 
 const errorBufferSize = 256

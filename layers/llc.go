@@ -9,7 +9,7 @@ package layers
 import (
 	"encoding/binary"
 	"fmt"
-	"github.com/google/gopacket"
+	"github.com/postwait/gopacket"
 )
 
 // LLC is the layer used for 802.2 Logical Link Control headers.

@@ -13,7 +13,7 @@ import (
 	"net"
 	"strings"
 
-	"github.com/google/gopacket"
+	"github.com/postwait/gopacket"
 )
 
 type IPv4Flag uint8
