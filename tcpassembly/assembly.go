@@ -256,6 +256,38 @@ func (a *Assembler) FlushOlderThan(t time.Time) (flushed, closed int) {
 	return flushes, closes
 }
 
+// This is much like FlushOlderThan, but doesn't close empty streams...
+// This is useful to get stream moving where don't expect long delays on
+// out-of-order packets, but you do expect long idle sessions or significant
+// time to elapse between a request and response between two correlated streams.
+func (a *Assembler) FlushNoCloseOlderThan(t time.Time) (flushed, closed int) {
+	conns := a.connPool.connections()
+	closes := 0
+	flushes := 0
+	for _, conn := range conns {
+		flushed := false
+		conn.mu.Lock()
+		if conn.closed {
+			// Already closed connection, nothing to do here.
+			conn.mu.Unlock()
+			continue
+		}
+		for conn.first != nil && conn.first.Seen.Before(t) {
+			a.skipFlush(conn)
+			flushed = true
+			if conn.closed {
+				closes++
+				break
+			}
+		}
+		if flushed {
+			flushes++
+		}
+		conn.mu.Unlock()
+	}
+	return flushes, closes
+}
+
 // FlushAll flushes all remaining data into all remaining connections, closing
 // those connections.  It returns the total number of connections flushed/closed
 // by the call.
