@@ -117,3 +117,50 @@ func TestPacketNano(t *testing.T) {
 		t.Errorf("buf mismatch:\nwant: %+v\ngot:  %+v", want, data)
 	}
 }
+
+func TestGzipPacket(t *testing.T) {
+	test := []byte{
+		0x1f, 0x8b, 0x08, 0x08, 0x92, 0x4d, 0x81, 0x57,
+		0x00, 0x03, 0x74, 0x65, 0x73, 0x74, 0x00, 0xbb,
+		0x72, 0x78, 0xd3, 0x42, 0x26, 0x06, 0x16, 0x06,
+		0x18, 0xf8, 0xff, 0x9f, 0x81, 0x81, 0x11, 0x48,
+		0x47, 0x9d, 0x91, 0x0a, 0x01, 0xd1, 0x20, 0x19,
+		0x0e, 0x20, 0x66, 0x64, 0x62, 0x66, 0x01, 0x00,
+		0xe4, 0x76, 0x9b, 0x75, 0x2c, 0x00, 0x00, 0x00,
+	}
+	buf := bytes.NewBuffer(test)
+	r, err := NewReader(buf)
+	if err != nil {
+		t.Error("Unexpected error returned:", err)
+		t.FailNow()
+	}
+
+	data, ci, err := r.ReadPacketData()
+	if err != nil {
+		t.Error(err)
+		t.FailNow()
+	}
+	if !ci.Timestamp.Equal(time.Date(2014, 9, 18, 12, 13, 14, 1000, time.UTC)) {
+		t.Error("Invalid time read")
+		t.FailNow()
+	}
+	if ci.CaptureLength != 4 || ci.Length != 8 {
+		t.Error("Invalid CapLen or Len")
+	}
+	want := []byte{1, 2, 3, 4}
+	if !bytes.Equal(data, want) {
+		t.Errorf("buf mismatch:\nwant: %+v\ngot:  %+v", want, data)
+	}
+}
+
+func TestTruncatedGzipPacket(t *testing.T) {
+	test := []byte{
+		0x1f, 0x8b, 0x08,
+	}
+	buf := bytes.NewBuffer(test)
+	_, err := NewReader(buf)
+	if err == nil {
+		t.Error("Should fail but did not")
+		t.FailNow()
+	}
+}
