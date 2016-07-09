@@ -79,7 +79,7 @@ func (r *Reader) readHeader() error {
 		r.byteOrder = binary.BigEndian
 		r.nanoSecsFactor = 1000
 	} else {
-		return errors.New(fmt.Sprintf("Unknown maigc %x", magic))
+		return errors.New(fmt.Sprintf("Unknown magic %x", magic))
 	}
 	if r.versionMajor = r.byteOrder.Uint16(buf[4:6]); r.versionMajor != versionMajor {
 		return errors.New(fmt.Sprintf("Unknown major version %d", r.versionMajor))
