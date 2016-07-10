@@ -13,10 +13,10 @@ import (
 	"io"
 	"time"
 
+	"bufio"
+	"compress/gzip"
 	"github.com/google/gopacket"
 	"github.com/google/gopacket/layers"
-	"compress/gzip"
-	"bufio"
 )
 
 // Reader wraps an underlying io.Reader to read packet data in PCAP
@@ -45,7 +45,6 @@ const magicNanosecondsBigendian = 0x4D3CB2A1
 
 const magicGzip1 = 0x1f
 const magicGzip2 = 0x8b
-
 
 // NewReader returns a new reader object, for reading packet data from
 // the given reader. The reader must be open and header data is
