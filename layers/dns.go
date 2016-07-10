@@ -614,10 +614,23 @@ func (rr *DNSResourceRecord) encode(data []byte, offset int, opts gopacket.Seria
 }
 
 func (rr *DNSResourceRecord) String() string {
-	if (rr.Class == DNSClassIN) && ((rr.Type == DNSTypeA) || (rr.Type == DNSTypeAAAA)) {
-		return net.IP(rr.Data).String()
+
+	if rr.Class == DNSClassIN {
+		switch rr.Type {
+		case DNSTypeA, DNSTypeAAAA:
+			return rr.IP.String()
+		case DNSTypeNS:
+			return "NS " + string(rr.NS)
+		case DNSTypeCNAME:
+			return "CNAME " + string(rr.CNAME)
+		case DNSTypePTR:
+			return "PTR " + string(rr.PTR)
+		case DNSTypeTXT:
+			return "TXT " + string(rr.TXT)
+		}
 	}
-	return "..."
+
+	return fmt.Sprintf("<%s, %s>", rr.Class, rr.Type)
 }
 
 func decodeCharacterStrings(data []byte) ([][]byte, error) {
