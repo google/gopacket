@@ -87,7 +87,7 @@ type VRRPv2 struct {
 	IPAddress    []net.IP       // one or more IP addresses associated with the virtual router. Specified in the CountIPAddr field.
 }
 
-// LayerType returns LayerTypeVRRP for VRRP v2 or a CARP message protocol formats.
+// LayerType returns LayerTypeVRRP for VRRP v2 message.
 func (v *VRRPv2) LayerType() gopacket.LayerType { return LayerTypeVRRP }
 
 func (v *VRRPv2) DecodeFromBytes(data []byte, df gopacket.DecodeFeedback) error {
