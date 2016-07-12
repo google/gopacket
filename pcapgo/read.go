@@ -25,6 +25,9 @@ import (
 //
 // We currenty read v2.4 file format with nanosecond and microsecdond
 // timestamp resolution in little-endian and big-endian encoding.
+//
+// If the PCAP data is gzip compressed it is transparently uncompressed
+// by wrapping the given io.Reader with a gzip.Reader.
 type Reader struct {
 	r              io.Reader
 	byteOrder      binary.ByteOrder
