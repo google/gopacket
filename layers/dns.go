@@ -325,6 +325,12 @@ func recSize(rr *DNSResourceRecord) int {
 		return len(rr.SOA.MName) + 2 + len(rr.SOA.RName) + 2 + 20
 	case DNSTypeMX:
 		return 2 + len(rr.MX.Name) + 2
+	case DNSTypeTXT:
+		l := len(rr.TXTs)
+		for _, txt := range rr.TXTs {
+			l += len(txt)
+		}
+		return l
 	case DNSTypeSRV:
 		return 6 + len(rr.SRV.Name) + 2
 	}
@@ -626,6 +632,13 @@ func (rr *DNSResourceRecord) encode(data []byte, offset int, opts gopacket.Seria
 	case DNSTypeMX:
 		binary.BigEndian.PutUint16(data[noff+10:], rr.MX.Preference)
 		encodeName(rr.MX.Name, data, noff+12)
+	case DNSTypeTXT:
+		noff2 := noff + 10
+		for _, txt := range rr.TXTs {
+			data[noff2] = byte(len(txt))
+			copy(data[noff2+1:], txt)
+			noff2 += 1 + len(txt)
+		}
 	case DNSTypeSRV:
 		binary.BigEndian.PutUint16(data[noff+10:], rr.SRV.Priority)
 		binary.BigEndian.PutUint16(data[noff+12:], rr.SRV.Weight)
