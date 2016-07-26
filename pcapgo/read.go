@@ -13,6 +13,8 @@ import (
 	"io"
 	"time"
 
+	"bufio"
+	"compress/gzip"
 	"github.com/google/gopacket"
 	"github.com/google/gopacket/layers"
 )
@@ -23,6 +25,9 @@ import (
 //
 // We currenty read v2.4 file format with nanosecond and microsecdond
 // timestamp resolution in little-endian and big-endian encoding.
+//
+// If the PCAP data is gzip compressed it is transparently uncompressed
+// by wrapping the given io.Reader with a gzip.Reader.
 type Reader struct {
 	r              io.Reader
 	byteOrder      binary.ByteOrder
@@ -40,6 +45,9 @@ type Reader struct {
 const magicNanoseconds = 0xA1B23C4D
 const magicMicrosecondsBigendian = 0xD4C3B2A1
 const magicNanosecondsBigendian = 0x4D3CB2A1
+
+const magicGzip1 = 0x1f
+const magicGzip2 = 0x8b
 
 // NewReader returns a new reader object, for reading packet data from
 // the given reader. The reader must be open and header data is
@@ -60,6 +68,20 @@ func NewReader(r io.Reader) (*Reader, error) {
 }
 
 func (r *Reader) readHeader() error {
+	br := bufio.NewReader(r.r)
+	gzipMagic, err := br.Peek(2)
+	if err != nil {
+		return err
+	}
+
+	if gzipMagic[0] == magicGzip1 && gzipMagic[1] == magicGzip2 {
+		if r.r, err = gzip.NewReader(br); err != nil {
+			return err
+		}
+	} else {
+		r.r = br
+	}
+
 	buf := make([]byte, 24)
 	if n, err := io.ReadFull(r.r, buf); err != nil {
 		return err
@@ -79,7 +101,7 @@ func (r *Reader) readHeader() error {
 		r.byteOrder = binary.BigEndian
 		r.nanoSecsFactor = 1000
 	} else {
-		return errors.New(fmt.Sprintf("Unknown maigc %x", magic))
+		return errors.New(fmt.Sprintf("Unknown magic %x", magic))
 	}
 	if r.versionMajor = r.byteOrder.Uint16(buf[4:6]); r.versionMajor != versionMajor {
 		return errors.New(fmt.Sprintf("Unknown major version %d", r.versionMajor))
