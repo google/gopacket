@@ -606,7 +606,7 @@ func (rr *DNSResourceRecord) encode(data []byte, offset int, opts gopacket.Seria
 
 	switch rr.Type {
 	case DNSTypeA:
-		copy(data[noff+10:], rr.IP)
+		copy(data[noff+10:], rr.IP.To4())
 	case DNSTypeAAAA:
 		copy(data[noff+10:], rr.IP)
 	case DNSTypeNS:
