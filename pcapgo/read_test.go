@@ -164,3 +164,40 @@ func TestTruncatedGzipPacket(t *testing.T) {
 		t.FailNow()
 	}
 }
+
+func TestPacketBufferReuse(t *testing.T) {
+	test := []byte{
+		0xd4, 0xc3, 0xb2, 0xa1, 0x02, 0x00, 0x04, 0x00, // magic, maj, min
+		0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, // tz, sigfigs
+		0xff, 0xff, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, // snaplen, linkType
+		0x5A, 0xCC, 0x1A, 0x54, 0x01, 0x00, 0x00, 0x00, // sec, usec
+		0x04, 0x00, 0x00, 0x00, 0x08, 0x00, 0x00, 0x00, // cap len, full len
+		0x01, 0x02, 0x03, 0x04, // data
+		0x5A, 0xCC, 0x1A, 0x54, 0x01, 0x00, 0x00, 0x00, // sec, usec
+		0x04, 0x00, 0x00, 0x00, 0x08, 0x00, 0x00, 0x00, // cap len, full len
+		0x01, 0x02, 0x03, 0x04, // data
+	}
+
+	buf := bytes.NewBuffer(test)
+	r, err := NewReader(buf)
+
+	data1, _, err := r.ReadPacketData()
+	if err != nil {
+		t.Error(err)
+		t.FailNow()
+	}
+	if want := []byte{1, 2, 3, 4}; !bytes.Equal(data1, want) {
+		t.Errorf("buf mismatch:\nwant: %+v\ngot:  %+v", want, data1)
+	}
+	data2, _, err := r.ReadPacketData()
+	if err != nil {
+		t.Error(err)
+		t.FailNow()
+	}
+	for i := range data1 {
+		data1[i] = 0xff // modify data1 after getting data2, make sure we don't overlap buffers.
+	}
+	if want := []byte{1, 2, 3, 4}; !bytes.Equal(data2, want) {
+		t.Errorf("buf mismatch:\nwant: %+v\ngot:  %+v", want, data2)
+	}
+}
