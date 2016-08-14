@@ -9,8 +9,9 @@ package layers
 import (
 	"encoding/binary"
 	"fmt"
-	"github.com/google/gopacket"
 	"hash/crc32"
+
+	"github.com/google/gopacket"
 )
 
 // SCTP contains information on the top level of an SCTP packet.
@@ -26,17 +27,13 @@ type SCTP struct {
 func (s *SCTP) LayerType() gopacket.LayerType { return LayerTypeSCTP }
 
 func decodeSCTP(data []byte, p gopacket.PacketBuilder) error {
-	sctp := &SCTP{
-		SrcPort:         SCTPPort(binary.BigEndian.Uint16(data[:2])),
-		sPort:           data[:2],
-		DstPort:         SCTPPort(binary.BigEndian.Uint16(data[2:4])),
-		dPort:           data[2:4],
-		VerificationTag: binary.BigEndian.Uint32(data[4:8]),
-		Checksum:        binary.BigEndian.Uint32(data[8:12]),
-		BaseLayer:       BaseLayer{data[:12], data[12:]},
-	}
+	sctp := &SCTP{}
+	err := sctp.DecodeFromBytes(data, p)
 	p.AddLayer(sctp)
 	p.SetTransportLayer(sctp)
+	if err != nil {
+		return err
+	}
 	return p.NextDecoder(sctpChunkTypePrefixDecoder)
 }
 
@@ -68,6 +65,29 @@ func (s SCTP) SerializeTo(b gopacket.SerializeBuffer, opts gopacket.SerializeOpt
 		binary.LittleEndian.PutUint32(bytes[8:12], crc32.Checksum(b.Bytes(), crc32.MakeTable(crc32.Castagnoli)))
 	}
 	return nil
+}
+
+func (sctp *SCTP) DecodeFromBytes(data []byte, df gopacket.DecodeFeedback) error {
+	if len(data) < 12 {
+		return fmt.Errorf("Invalid SCTP common header length")
+	}
+	sctp.SrcPort = SCTPPort(binary.BigEndian.Uint16(data[:2]))
+	sctp.sPort = data[:2]
+	sctp.DstPort = SCTPPort(binary.BigEndian.Uint16(data[2:4]))
+	sctp.dPort = data[2:4]
+	sctp.VerificationTag = binary.BigEndian.Uint32(data[4:8])
+	sctp.Checksum = binary.BigEndian.Uint32(data[8:12])
+	sctp.BaseLayer = BaseLayer{data[:12], data[12:]}
+
+	return nil
+}
+
+func (t *SCTP) CanDecode() gopacket.LayerClass {
+	return LayerTypeSCTP
+}
+
+func (t *SCTP) NextLayerType() gopacket.LayerType {
+	return gopacket.LayerTypePayload
 }
 
 // SCTPChunk contains the common fields in all SCTP chunks.
