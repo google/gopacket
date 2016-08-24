@@ -6,7 +6,11 @@
 
 package layers
 
-import "testing"
+import (
+	"testing"
+
+	"github.com/google/gopacket"
+)
 
 func TestTCPOptionKindString(t *testing.T) {
 	testData := []struct {
@@ -35,5 +39,22 @@ func TestTCPOptionKindString(t *testing.T) {
 		if s := tc.o.String(); s != tc.s {
 			t.Errorf("expected %#v string to be %s, got %s", tc.o, tc.s, s)
 		}
+	}
+}
+
+func TestTCPSerializePadding(t *testing.T) {
+	tcp := &TCP{}
+	tcp.Options = append(tcp.Options, TCPOption{
+		OptionType:   TCPOptionKindNop,
+		OptionLength: 1,
+	})
+	buf := gopacket.NewSerializeBuffer()
+	opts := gopacket.SerializeOptions{FixLengths: true}
+	err := gopacket.SerializeLayers(buf, opts, tcp)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(buf.Bytes())%4 != 0 {
+		t.Errorf("TCP data of len %d not padding to 32 bit boundary", len(buf.Bytes()))
 	}
 }
