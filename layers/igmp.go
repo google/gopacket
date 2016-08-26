@@ -262,7 +262,7 @@ func (i *IGMPv1or2) LayerType() gopacket.LayerType { return LayerTypeIGMP }
 
 func (i *IGMPv1or2) DecodeFromBytes(data []byte, df gopacket.DecodeFeedback) error {
 	if len(data) < 8 {
-		fmt.Errorf("IGMP Packet too small")
+		return fmt.Errorf("IGMP Packet too small")
 	}
 
 	i.Type = IGMPType(data[0])
