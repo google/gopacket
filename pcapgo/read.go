@@ -121,7 +121,7 @@ func (r *Reader) ReadPacketData() (data []byte, ci gopacket.CaptureInfo, err err
 		return
 	}
 	if ci.CaptureLength > int(r.snaplen) {
-		err = fmt.Errorf("capture length exceeds snap length: %d > %d", 16+ci.CaptureLength, len(r.buf))
+		err = fmt.Errorf("capture length exceeds snap length: %d > %d", 16+ci.CaptureLength, len(r.snaplen))
 		return
 	}
 	data = make([]byte, ci.CaptureLength)
