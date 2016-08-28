@@ -39,7 +39,7 @@ type Reader struct {
 	snaplen  uint32
 	linkType layers.LinkType
 	// reusable buffer
-	buf []byte
+	buf [16]byte
 }
 
 const magicNanoseconds = 0xA1B23C4D
@@ -111,7 +111,6 @@ func (r *Reader) readHeader() error {
 	}
 	// ignore timezone 8:12 and sigfigs 12:16
 	r.snaplen = r.byteOrder.Uint32(buf[16:20])
-	r.buf = make([]byte, r.snaplen+16)
 	r.linkType = layers.LinkType(r.byteOrder.Uint32(buf[20:24]))
 	return nil
 }
@@ -121,27 +120,17 @@ func (r *Reader) ReadPacketData() (data []byte, ci gopacket.CaptureInfo, err err
 	if ci, err = r.readPacketHeader(); err != nil {
 		return
 	}
-
-	var n int
-	if 16+ci.CaptureLength > len(r.buf) {
-		err = fmt.Errorf("capture length with header exceeds buffer size: %d > %d", 16+ci.CaptureLength, len(r.buf))
+	if ci.CaptureLength > int(r.snaplen) {
+		err = fmt.Errorf("capture length exceeds snap length: %d > %d", 16+ci.CaptureLength, len(r.snaplen))
 		return
 	}
-	data = r.buf[16 : 16+ci.CaptureLength]
-	if n, err = io.ReadFull(r.r, data); err != nil {
-		return
-	} else if n < ci.CaptureLength {
-		err = io.ErrUnexpectedEOF
-	}
-	return
+	data = make([]byte, ci.CaptureLength)
+	_, err = io.ReadFull(r.r, data)
+	return data, ci, err
 }
 
 func (r *Reader) readPacketHeader() (ci gopacket.CaptureInfo, err error) {
-	var n int
-	if n, err = io.ReadFull(r.r, r.buf[0:16]); err != nil {
-		return
-	} else if n < 16 {
-		err = io.ErrUnexpectedEOF
+	if _, err = io.ReadFull(r.r, r.buf[:]); err != nil {
 		return
 	}
 	ci.Timestamp = time.Unix(int64(r.byteOrder.Uint32(r.buf[0:4])), int64(r.byteOrder.Uint32(r.buf[4:8])*r.nanoSecsFactor)).UTC()
