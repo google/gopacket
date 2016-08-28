@@ -98,7 +98,7 @@ func (v *VRRPv2) DecodeFromBytes(data []byte, df gopacket.DecodeFeedback) error 
 	v.Type = VRRPv2Type(data[0] & 0x0F) // low nibble == VRRP type. Expecting 1 (advertisement)
 	if v.Type != 1 {
 		// rfc3768: A packet with unknown type MUST be discarded.
-		fmt.Errorf("Unrecognized VRRPv2 type field.")
+		return fmt.Errorf("Unrecognized VRRPv2 type field.")
 	}
 
 	v.VirtualRtrID = data[1]
@@ -106,7 +106,7 @@ func (v *VRRPv2) DecodeFromBytes(data []byte, df gopacket.DecodeFeedback) error 
 
 	v.CountIPAddr = data[3]
 	if v.CountIPAddr < 1 {
-		fmt.Errorf("VRRPv2 number of IP addresses is not valid.")
+		return fmt.Errorf("VRRPv2 number of IP addresses is not valid.")
 	}
 
 	v.AuthType = VRRPv2AuthType(data[4])
