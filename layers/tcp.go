@@ -142,7 +142,9 @@ func (t *TCP) SerializeTo(b gopacket.SerializeBuffer, opts gopacket.SerializeOpt
 		}
 	}
 	if opts.FixLengths {
-		t.Padding = lotsOfZeros[:optionLength%4]
+		if rem := optionLength % 4; rem != 0 {
+			t.Padding = lotsOfZeros[:4-rem]
+		}
 		t.DataOffset = uint8((len(t.Padding) + optionLength + 20) / 4)
 	}
 	bytes, err := b.PrependBytes(20 + optionLength + len(t.Padding))
