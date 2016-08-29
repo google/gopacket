@@ -309,18 +309,40 @@ func b2i(b bool) int {
 	return 0
 }
 
+func recSize(rr *DNSResourceRecord) int {
+	switch rr.Type {
+	case DNSTypeA:
+		return 4
+	case DNSTypeAAAA:
+		return 16
+	case DNSTypeNS:
+		return len(rr.NS) + 2
+	case DNSTypeCNAME:
+		return len(rr.CNAME) + 2
+	case DNSTypePTR:
+		return len(rr.PTR) + 2
+	case DNSTypeSOA:
+		return len(rr.SOA.MName) + 2 + len(rr.SOA.RName) + 2 + 20
+	case DNSTypeMX:
+		return 2 + len(rr.MX.Name) + 2
+	case DNSTypeTXT:
+		l := len(rr.TXTs)
+		for _, txt := range rr.TXTs {
+			l += len(txt)
+		}
+		return l
+	case DNSTypeSRV:
+		return 6 + len(rr.SRV.Name) + 2
+	}
+
+	return 0
+}
+
 func computeSize(recs []DNSResourceRecord) int {
 	sz := 0
 	for _, rr := range recs {
 		sz += len(rr.Name) + 14
-		switch rr.Type {
-		case DNSTypeA:
-			sz += 4
-		case DNSTypeAAAA:
-			sz += 16
-		case DNSTypeCNAME:
-			sz += len(rr.CNAME) + 1
-		}
+		sz += recSize(&rr)
 	}
 	return sz
 }
@@ -334,7 +356,6 @@ func (d *DNS) SerializeTo(b gopacket.SerializeBuffer, opts gopacket.SerializeOpt
 	}
 	dsz += computeSize(d.Answers)
 	dsz += computeSize(d.Authorities)
-	dsz += computeSize(d.Additionals)
 	dsz += computeSize(d.Additionals)
 
 	bytes, err := b.PrependBytes(12 + dsz)
@@ -374,7 +395,7 @@ func (d *DNS) SerializeTo(b gopacket.SerializeBuffer, opts gopacket.SerializeOpt
 	}
 
 	for i := range d.Authorities {
-		qa := &d.Answers[i]
+		qa := &d.Authorities[i]
 		n, err := qa.encode(bytes, off, opts)
 		if err != nil {
 			return err
@@ -382,7 +403,7 @@ func (d *DNS) SerializeTo(b gopacket.SerializeBuffer, opts gopacket.SerializeOpt
 		off += n
 	}
 	for i := range d.Additionals {
-		qa := &d.Answers[i]
+		qa := &d.Additionals[i]
 		n, err := qa.encode(bytes, off, opts)
 		if err != nil {
 			return err
@@ -589,21 +610,46 @@ func (rr *DNSResourceRecord) encode(data []byte, offset int, opts gopacket.Seria
 	binary.BigEndian.PutUint16(data[noff+2:], uint16(rr.Class))
 	binary.BigEndian.PutUint32(data[noff+4:], uint32(rr.TTL))
 
-	var dSz int
 	switch rr.Type {
 	case DNSTypeA:
-		dSz = 4
-		copy(data[noff+10:], rr.IP)
+		copy(data[noff+10:], rr.IP.To4())
 	case DNSTypeAAAA:
-		dSz = 16
 		copy(data[noff+10:], rr.IP)
+	case DNSTypeNS:
+		encodeName(rr.NS, data, noff+10)
 	case DNSTypeCNAME:
-		dSz = len(rr.CNAME) + 1
 		encodeName(rr.CNAME, data, noff+10)
+	case DNSTypePTR:
+		encodeName(rr.PTR, data, noff+10)
+	case DNSTypeSOA:
+		noff2 := encodeName(rr.SOA.MName, data, noff+10)
+		noff2 = encodeName(rr.SOA.RName, data, noff2)
+		binary.BigEndian.PutUint32(data[noff2:], rr.SOA.Serial)
+		binary.BigEndian.PutUint32(data[noff2+4:], rr.SOA.Refresh)
+		binary.BigEndian.PutUint32(data[noff2+8:], rr.SOA.Retry)
+		binary.BigEndian.PutUint32(data[noff2+12:], rr.SOA.Expire)
+		binary.BigEndian.PutUint32(data[noff2+16:], rr.SOA.Minimum)
+	case DNSTypeMX:
+		binary.BigEndian.PutUint16(data[noff+10:], rr.MX.Preference)
+		encodeName(rr.MX.Name, data, noff+12)
+	case DNSTypeTXT:
+		noff2 := noff + 10
+		for _, txt := range rr.TXTs {
+			data[noff2] = byte(len(txt))
+			copy(data[noff2+1:], txt)
+			noff2 += 1 + len(txt)
+		}
+	case DNSTypeSRV:
+		binary.BigEndian.PutUint16(data[noff+10:], rr.SRV.Priority)
+		binary.BigEndian.PutUint16(data[noff+12:], rr.SRV.Weight)
+		binary.BigEndian.PutUint16(data[noff+14:], rr.SRV.Port)
+		encodeName(rr.SRV.Name, data, noff+16)
 	default:
 		return 0, fmt.Errorf("serializing resource record of type %v not supported", rr.Type)
 	}
+
 	// DataLength
+	dSz := recSize(rr)
 	binary.BigEndian.PutUint16(data[noff+8:], uint16(dSz))
 
 	if opts.FixLengths {
