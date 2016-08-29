@@ -196,7 +196,7 @@ type SCTPData struct {
 	TSN                                   uint32
 	StreamId                              uint16
 	StreamSequence                        uint16
-	PayloadProtocol                       uint32
+	PayloadProtocol                       SCTPPayloadProtocol
 	PayloadData                           []byte
 }
 
@@ -208,6 +208,76 @@ func (s *SCTPData) Payload() []byte {
 	return s.PayloadData
 }
 
+// SCTPPayloadProtocol represents a payload protocol
+type SCTPPayloadProtocol uint32
+
+// SCTPPayloadProtocol constonts from http://www.iana.org/assignments/sctp-parameters/sctp-parameters.xhtml
+const (
+	SCTPProtocolReserved  SCTPPayloadProtocol = 0
+	SCTPPayloadUIA                            = 1
+	SCTPPayloadM2UA                           = 2
+	SCTPPayloadM3UA                           = 3
+	SCTPPayloadSUA                            = 4
+	SCTPPayloadM2PA                           = 5
+	SCTPPayloadV5UA                           = 6
+	SCTPPayloadH248                           = 7
+	SCTPPayloadBICC                           = 8
+	SCTPPayloadTALI                           = 9
+	SCTPPayloadDUA                            = 10
+	SCTPPayloadASAP                           = 11
+	SCTPPayloadENRP                           = 12
+	SCTPPayloadH323                           = 13
+	SCTPPayloadQIPC                           = 14
+	SCTPPayloadSIMCO                          = 15
+	SCTPPayloadDDPSegment                     = 16
+	SCTPPayloadDDPStream                      = 17
+	SCTPPayloadS1AP                           = 18
+)
+
+func (p SCTPPayloadProtocol) String() string {
+	switch p {
+	case SCTPProtocolReserved:
+		return "Reserved"
+	case SCTPPayloadUIA:
+		return "UIA"
+	case SCTPPayloadM2UA:
+		return "M2UA"
+	case SCTPPayloadM3UA:
+		return "M3UA"
+	case SCTPPayloadSUA:
+		return "SUA"
+	case SCTPPayloadM2PA:
+		return "M2PA"
+	case SCTPPayloadV5UA:
+		return "V5UA"
+	case SCTPPayloadH248:
+		return "H.248"
+	case SCTPPayloadBICC:
+		return "BICC"
+	case SCTPPayloadTALI:
+		return "TALI"
+	case SCTPPayloadDUA:
+		return "DUA"
+	case SCTPPayloadASAP:
+		return "ASAP"
+	case SCTPPayloadENRP:
+		return "ENRP"
+	case SCTPPayloadH323:
+		return "H.323"
+	case SCTPPayloadQIPC:
+		return "QIPC"
+	case SCTPPayloadSIMCO:
+		return "SIMCO"
+	case SCTPPayloadDDPSegment:
+		return "DDPSegment"
+	case SCTPPayloadDDPStream:
+		return "DDPStream"
+	case SCTPPayloadS1AP:
+		return "S1AP"
+	}
+	return fmt.Sprintf("Unknown(%d)", p)
+}
+
 func decodeSCTPData(data []byte, p gopacket.PacketBuilder) error {
 	sc := &SCTPData{
 		SCTPChunk:       decodeSCTPChunk(data),
@@ -217,7 +287,7 @@ func decodeSCTPData(data []byte, p gopacket.PacketBuilder) error {
 		TSN:             binary.BigEndian.Uint32(data[4:8]),
 		StreamId:        binary.BigEndian.Uint16(data[8:10]),
 		StreamSequence:  binary.BigEndian.Uint16(data[10:12]),
-		PayloadProtocol: binary.BigEndian.Uint32(data[12:16]),
+		PayloadProtocol: SCTPPayloadProtocol(binary.BigEndian.Uint32(data[12:16])),
 	}
 	// Length is the length in bytes of the data, INCLUDING the 16-byte header.
 	sc.PayloadData = data[16:sc.Length]
@@ -249,7 +319,7 @@ func (sc SCTPData) SerializeTo(b gopacket.SerializeBuffer, opts gopacket.Seriali
 	binary.BigEndian.PutUint32(bytes[4:8], sc.TSN)
 	binary.BigEndian.PutUint16(bytes[8:10], sc.StreamId)
 	binary.BigEndian.PutUint16(bytes[10:12], sc.StreamSequence)
-	binary.BigEndian.PutUint32(bytes[12:16], sc.PayloadProtocol)
+	binary.BigEndian.PutUint32(bytes[12:16], uint32(sc.PayloadProtocol))
 	copy(bytes[16:], sc.PayloadData)
 	return nil
 }
