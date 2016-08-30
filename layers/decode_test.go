@@ -594,9 +594,9 @@ func TestDecodeSCTPPackets(t *testing.T) {
 	wantLayers := [][]gopacket.LayerType{
 		[]gopacket.LayerType{LayerTypeSCTPInit},
 		[]gopacket.LayerType{LayerTypeSCTPInitAck},
-		[]gopacket.LayerType{LayerTypeSCTPCookieEcho, LayerTypeSCTPData},
+		[]gopacket.LayerType{LayerTypeSCTPCookieEcho, LayerTypeSCTPData, gopacket.LayerTypePayload},
 		[]gopacket.LayerType{LayerTypeSCTPCookieAck, LayerTypeSCTPSack},
-		[]gopacket.LayerType{LayerTypeSCTPData},
+		[]gopacket.LayerType{LayerTypeSCTPData, gopacket.LayerTypePayload},
 		[]gopacket.LayerType{LayerTypeSCTPSack},
 		[]gopacket.LayerType{LayerTypeSCTPShutdown},
 		[]gopacket.LayerType{LayerTypeSCTPShutdownAck},
@@ -1207,4 +1207,16 @@ func TestPacketIPv4Fragmented(t *testing.T) {
 	}
 	checkLayers(p, []gopacket.LayerType{LayerTypeEthernet, LayerTypeIPv4, gopacket.LayerTypeFragment}, t)
 	testSerializationWithOpts(t, p, testPacketIPv4Fragmented, gopacket.SerializeOptions{FixLengths: true, ComputeChecksums: true})
+}
+
+// TestSCTPChunkBadLength tests for issue #146
+func TestSCTPChunkBadLength(t *testing.T) {
+	data := []byte(
+		"0000\xad9$e\x11\xe4\xaeo\b\x00E\x00\x018\xb4\xa3" +
+			"\x00\x00Y\x84\xc4@\x11gz\xc0\xa8\xee\x01\xc0\xa8" +
+			"\xeeD\x007le\x03\x01\xc0\f\xdf\b\x01\x00\x00")
+
+	// this panic'd previously due to a zero length chunk getting
+	// repeatedly read
+	gopacket.NewPacket(data, LinkTypeEthernet, gopacket.Default)
 }
