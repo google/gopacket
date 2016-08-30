@@ -111,8 +111,11 @@ func roundUpToNearest4(i int) int {
 	return i + 4 - (i % 4)
 }
 
-func decodeSCTPChunk(data []byte) SCTPChunk {
+func decodeSCTPChunk(data []byte) (SCTPChunk, error) {
 	length := binary.BigEndian.Uint16(data[2:4])
+	if length < 4 {
+		return SCTPChunk{}, fmt.Errorf("invalid SCTP chunk length")
+	}
 	actual := roundUpToNearest4(int(length))
 	ct := SCTPChunkType(data[0])
 
@@ -129,7 +132,7 @@ func decodeSCTPChunk(data []byte) SCTPChunk {
 		Length:       length,
 		ActualLength: actual,
 		BaseLayer:    BaseLayer{data[:actual], data[actual : len(data)-delta]},
-	}
+	}, nil
 }
 
 // SCTPParameter is a TLV parameter inside a SCTPChunk.
@@ -169,7 +172,11 @@ type SCTPUnknownChunkType struct {
 }
 
 func decodeSCTPChunkTypeUnknown(data []byte, p gopacket.PacketBuilder) error {
-	sc := &SCTPUnknownChunkType{SCTPChunk: decodeSCTPChunk(data)}
+	chunk, err := decodeSCTPChunk(data)
+	if err != nil {
+		return err
+	}
+	sc := &SCTPUnknownChunkType{SCTPChunk: chunk}
 	sc.bytes = data[:sc.ActualLength]
 	p.AddLayer(sc)
 	p.SetErrorLayer(sc)
@@ -282,8 +289,12 @@ func (p SCTPPayloadProtocol) String() string {
 }
 
 func decodeSCTPData(data []byte, p gopacket.PacketBuilder) error {
+	chunk, err := decodeSCTPChunk(data)
+	if err != nil {
+		return err
+	}
 	sc := &SCTPData{
-		SCTPChunk:       decodeSCTPChunk(data),
+		SCTPChunk:       chunk,
 		Unordered:       data[1]&0x4 != 0,
 		BeginFragment:   data[1]&0x2 != 0,
 		EndFragment:     data[1]&0x1 != 0,
@@ -353,8 +364,12 @@ func (sc *SCTPInit) LayerType() gopacket.LayerType {
 }
 
 func decodeSCTPInit(data []byte, p gopacket.PacketBuilder) error {
+	chunk, err := decodeSCTPChunk(data)
+	if err != nil {
+		return err
+	}
 	sc := &SCTPInit{
-		SCTPChunk:                      decodeSCTPChunk(data),
+		SCTPChunk:                      chunk,
 		InitiateTag:                    binary.BigEndian.Uint32(data[4:8]),
 		AdvertisedReceiverWindowCredit: binary.BigEndian.Uint32(data[8:12]),
 		OutboundStreams:                binary.BigEndian.Uint16(data[12:14]),
@@ -410,8 +425,12 @@ func (sc *SCTPSack) LayerType() gopacket.LayerType {
 }
 
 func decodeSCTPSack(data []byte, p gopacket.PacketBuilder) error {
+	chunk, err := decodeSCTPChunk(data)
+	if err != nil {
+		return err
+	}
 	sc := &SCTPSack{
-		SCTPChunk:                      decodeSCTPChunk(data),
+		SCTPChunk:                      chunk,
 		CumulativeTSNAck:               binary.BigEndian.Uint32(data[4:8]),
 		AdvertisedReceiverWindowCredit: binary.BigEndian.Uint32(data[8:12]),
 		NumGapACKs:                     binary.BigEndian.Uint16(data[12:14]),
@@ -490,8 +509,12 @@ func (sc *SCTPHeartbeat) LayerType() gopacket.LayerType {
 }
 
 func decodeSCTPHeartbeat(data []byte, p gopacket.PacketBuilder) error {
+	chunk, err := decodeSCTPChunk(data)
+	if err != nil {
+		return err
+	}
 	sc := &SCTPHeartbeat{
-		SCTPChunk: decodeSCTPChunk(data),
+		SCTPChunk: chunk,
 	}
 	paramData := data[4:sc.Length]
 	for len(paramData) > 0 {
@@ -541,9 +564,13 @@ func (sc *SCTPError) LayerType() gopacket.LayerType {
 }
 
 func decodeSCTPError(data []byte, p gopacket.PacketBuilder) error {
-	// remarkably similarot decodeSCTPHeartbeat ;)
+	// remarkably similar to decodeSCTPHeartbeat ;)
+	chunk, err := decodeSCTPChunk(data)
+	if err != nil {
+		return err
+	}
 	sc := &SCTPError{
-		SCTPChunk: decodeSCTPChunk(data),
+		SCTPChunk: chunk,
 	}
 	paramData := data[4:sc.Length]
 	for len(paramData) > 0 {
@@ -584,8 +611,12 @@ type SCTPShutdown struct {
 func (sc *SCTPShutdown) LayerType() gopacket.LayerType { return LayerTypeSCTPShutdown }
 
 func decodeSCTPShutdown(data []byte, p gopacket.PacketBuilder) error {
+	chunk, err := decodeSCTPChunk(data)
+	if err != nil {
+		return err
+	}
 	sc := &SCTPShutdown{
-		SCTPChunk:        decodeSCTPChunk(data),
+		SCTPChunk:        chunk,
 		CumulativeTSNAck: binary.BigEndian.Uint32(data[4:8]),
 	}
 	p.AddLayer(sc)
@@ -614,8 +645,12 @@ type SCTPShutdownAck struct {
 func (sc *SCTPShutdownAck) LayerType() gopacket.LayerType { return LayerTypeSCTPShutdownAck }
 
 func decodeSCTPShutdownAck(data []byte, p gopacket.PacketBuilder) error {
+	chunk, err := decodeSCTPChunk(data)
+	if err != nil {
+		return err
+	}
 	sc := &SCTPShutdownAck{
-		SCTPChunk: decodeSCTPChunk(data),
+		SCTPChunk: chunk,
 	}
 	p.AddLayer(sc)
 	return p.NextDecoder(gopacket.DecodeFunc(decodeWithSCTPChunkTypePrefix))
@@ -643,8 +678,12 @@ type SCTPCookieEcho struct {
 func (sc *SCTPCookieEcho) LayerType() gopacket.LayerType { return LayerTypeSCTPCookieEcho }
 
 func decodeSCTPCookieEcho(data []byte, p gopacket.PacketBuilder) error {
+	chunk, err := decodeSCTPChunk(data)
+	if err != nil {
+		return err
+	}
 	sc := &SCTPCookieEcho{
-		SCTPChunk: decodeSCTPChunk(data),
+		SCTPChunk: chunk,
 	}
 	sc.Cookie = data[4:sc.Length]
 	p.AddLayer(sc)
@@ -682,8 +721,12 @@ func (sc *SCTPEmptyLayer) LayerType() gopacket.LayerType {
 }
 
 func decodeSCTPEmptyLayer(data []byte, p gopacket.PacketBuilder) error {
+	chunk, err := decodeSCTPChunk(data)
+	if err != nil {
+		return err
+	}
 	sc := &SCTPEmptyLayer{
-		SCTPChunk: decodeSCTPChunk(data),
+		SCTPChunk: chunk,
 	}
 	p.AddLayer(sc)
 	return p.NextDecoder(gopacket.DecodeFunc(decodeWithSCTPChunkTypePrefix))
