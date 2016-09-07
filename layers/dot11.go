@@ -13,7 +13,7 @@ import (
 	"bytes"
 	"encoding/binary"
 	"fmt"
-	"github.com/postwait/gopacket"
+	"github.com/google/gopacket"
 	"hash/crc32"
 	"net"
 )

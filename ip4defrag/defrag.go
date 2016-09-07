@@ -10,8 +10,8 @@ import (
 	"sync"
 	"time"
 
-	"github.com/postwait/gopacket"
-	"github.com/postwait/gopacket/layers"
+	"github.com/google/gopacket"
+	"github.com/google/gopacket/layers"
 )
 
 // Quick and Easy to use debug code to trace

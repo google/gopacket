@@ -11,7 +11,7 @@ package layers
 
 import (
 	"fmt"
-	"github.com/postwait/gopacket"
+	"github.com/google/gopacket"
 	"net"
 )
 

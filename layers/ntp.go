@@ -11,7 +11,7 @@ package layers
 import (
 	"encoding/binary"
 	"fmt"
-	"github.com/postwait/gopacket"
+	"github.com/google/gopacket"
 )
 
 //******************************************************************************

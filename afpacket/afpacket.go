@@ -22,7 +22,7 @@ import (
 	"time"
 	"unsafe"
 
-	"github.com/postwait/gopacket"
+	"github.com/google/gopacket"
 )
 
 /*
