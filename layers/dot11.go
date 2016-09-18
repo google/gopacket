@@ -13,9 +13,10 @@ import (
 	"bytes"
 	"encoding/binary"
 	"fmt"
-	"github.com/google/gopacket"
 	"hash/crc32"
 	"net"
+
+	"github.com/google/gopacket"
 )
 
 // Dot11Flags contains the set of 8 flags in the IEEE 802.11 frame control
@@ -1129,6 +1130,20 @@ func (m *Dot11MgmtBeacon) DecodeFromBytes(data []byte, df gopacket.DecodeFeedbac
 }
 
 func (m *Dot11MgmtBeacon) NextLayerType() gopacket.LayerType { return LayerTypeDot11InformationElement }
+
+func (m Dot11MgmtBeacon) SerializeTo(b gopacket.SerializeBuffer, opts gopacket.SerializeOptions) error {
+	buf, err := b.PrependBytes(12)
+
+	if err != nil {
+		return err
+	}
+
+	binary.LittleEndian.PutUint64(buf[0:8], m.Timestamp)
+	binary.LittleEndian.PutUint16(buf[8:10], m.Interval)
+	binary.LittleEndian.PutUint16(buf[10:12], m.Flags)
+
+	return nil
+}
 
 type Dot11MgmtATIM struct {
 	Dot11Mgmt
