@@ -398,6 +398,47 @@ func (m *Dot11) ChecksumValid() bool {
 	return m.Checksum == h.Sum32()
 }
 
+func (m Dot11) SerializeTo(b gopacket.SerializeBuffer, opts gopacket.SerializeOptions) error {
+	buf, err := b.PrependBytes(24)
+
+	if err != nil {
+		return err
+	}
+
+	buf[0] = (uint8(m.Type) << 2) | m.Proto
+	buf[1] = uint8(m.Flags)
+
+	binary.LittleEndian.PutUint16(buf[2:4], m.DurationID)
+
+	copy(buf[4:10], m.Address1)
+
+	offset := 10
+
+	switch m.Type.MainType() {
+	case Dot11TypeCtrl:
+		switch m.Type {
+		case Dot11TypeCtrlRTS, Dot11TypeCtrlPowersavePoll, Dot11TypeCtrlCFEnd, Dot11TypeCtrlCFEndAck:
+			copy(buf[offset:offset+6], m.Address2)
+			offset += 6
+		}
+	case Dot11TypeMgmt, Dot11TypeData:
+		copy(buf[offset:offset+6], m.Address2)
+		offset += 6
+		copy(buf[offset:offset+6], m.Address3)
+		offset += 6
+
+		binary.LittleEndian.PutUint16(buf[offset:offset+2], (m.SequenceNumber<<4)|m.FragmentNumber)
+		offset += 2
+	}
+
+	if m.Type.MainType() == Dot11TypeData && m.Flags.FromDS() && m.Flags.ToDS() {
+		copy(buf[offset:offset+6], m.Address4)
+		offset += 6
+	}
+
+	return nil
+}
+
 // Dot11Mgmt is a base for all IEEE 802.11 management layers.
 type Dot11Mgmt struct {
 	BaseLayer
