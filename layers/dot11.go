@@ -1157,6 +1157,9 @@ func (m *Dot11MgmtProbeReq) NextLayerType() gopacket.LayerType {
 
 type Dot11MgmtProbeResp struct {
 	Dot11Mgmt
+	Timestamp uint64
+	Interval  uint16
+	Flags     uint16
 }
 
 func decodeDot11MgmtProbeResp(data []byte, p gopacket.PacketBuilder) error {
@@ -1166,8 +1169,37 @@ func decodeDot11MgmtProbeResp(data []byte, p gopacket.PacketBuilder) error {
 
 func (m *Dot11MgmtProbeResp) LayerType() gopacket.LayerType  { return LayerTypeDot11MgmtProbeResp }
 func (m *Dot11MgmtProbeResp) CanDecode() gopacket.LayerClass { return LayerTypeDot11MgmtProbeResp }
+func (m *Dot11MgmtProbeResp) DecodeFromBytes(data []byte, df gopacket.DecodeFeedback) error {
+	if len(data) < 12 {
+		df.SetTruncated()
+
+		return fmt.Errorf("Dot11MgmtProbeResp length %v too short, %v required", len(data), 12)
+	}
+
+	m.Timestamp = binary.LittleEndian.Uint64(data[0:8])
+	m.Interval = binary.LittleEndian.Uint16(data[8:10])
+	m.Flags = binary.LittleEndian.Uint16(data[10:12])
+	m.Payload = data[12:]
+
+	return m.Dot11Mgmt.DecodeFromBytes(data, df)
+}
+
 func (m *Dot11MgmtProbeResp) NextLayerType() gopacket.LayerType {
 	return LayerTypeDot11InformationElement
+}
+
+func (m Dot11MgmtProbeResp) SerializeTo(b gopacket.SerializeBuffer, opts gopacket.SerializeOptions) error {
+	buf, err := b.PrependBytes(12)
+
+	if err != nil {
+		return err
+	}
+
+	binary.LittleEndian.PutUint64(buf[0:8], m.Timestamp)
+	binary.LittleEndian.PutUint16(buf[8:10], m.Interval)
+	binary.LittleEndian.PutUint16(buf[10:12], m.Flags)
+
+	return nil
 }
 
 type Dot11MgmtMeasurementPilot struct {
