@@ -1223,6 +1223,18 @@ func (m *Dot11MgmtDisassociation) DecodeFromBytes(data []byte, df gopacket.Decod
 	return m.Dot11Mgmt.DecodeFromBytes(data, df)
 }
 
+func (m Dot11MgmtDisassociation) SerializeTo(b gopacket.SerializeBuffer, opts gopacket.SerializeOptions) error {
+	buf, err := b.PrependBytes(2)
+
+	if err != nil {
+		return err
+	}
+
+	binary.LittleEndian.PutUint16(buf[0:2], uint16(m.Reason))
+
+	return nil
+}
+
 type Dot11MgmtAuthentication struct {
 	Dot11Mgmt
 	Algorithm Dot11Algorithm
