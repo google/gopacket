@@ -1059,6 +1059,20 @@ func (m *Dot11MgmtAssociationResp) DecodeFromBytes(data []byte, df gopacket.Deco
 	return m.Dot11Mgmt.DecodeFromBytes(data, df)
 }
 
+func (m Dot11MgmtAssociationResp) SerializeTo(b gopacket.SerializeBuffer, opts gopacket.SerializeOptions) error {
+	buf, err := b.PrependBytes(6)
+
+	if err != nil {
+		return err
+	}
+
+	binary.LittleEndian.PutUint16(buf[0:2], m.CapabilityInfo)
+	binary.LittleEndian.PutUint16(buf[2:4], uint16(m.Status))
+	binary.LittleEndian.PutUint16(buf[4:6], m.AID)
+
+	return nil
+}
+
 type Dot11MgmtReassociationReq struct {
 	Dot11Mgmt
 	CapabilityInfo   uint16
