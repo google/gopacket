@@ -157,7 +157,13 @@ func (ip *IPv4) SerializeTo(b gopacket.SerializeBuffer, opts gopacket.SerializeO
 			csum += uint32(bytes[i]) << 8
 			csum += uint32(bytes[i+1])
 		}
-		ip.Checksum = ^uint16((csum >> 16) + csum)
+		for {
+			if csum <= 65535 {
+				break
+			}
+			csum = (csum >> 16) + uint32(uint16(csum))
+		}
+		ip.Checksum = ^uint16(csum)
 	}
 	binary.BigEndian.PutUint16(bytes[10:], ip.Checksum)
 	return nil
