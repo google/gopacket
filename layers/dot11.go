@@ -1381,6 +1381,18 @@ func (m *Dot11MgmtDeauthentication) DecodeFromBytes(data []byte, df gopacket.Dec
 	return m.Dot11Mgmt.DecodeFromBytes(data, df)
 }
 
+func (m Dot11MgmtDeauthentication) SerializeTo(b gopacket.SerializeBuffer, opts gopacket.SerializeOptions) error {
+	buf, err := b.PrependBytes(2)
+
+	if err != nil {
+		return err
+	}
+
+	binary.LittleEndian.PutUint16(buf[0:2], uint16(m.Reason))
+
+	return nil
+}
+
 type Dot11MgmtAction struct {
 	Dot11Mgmt
 }
