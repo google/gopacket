@@ -124,7 +124,7 @@ func (c *pageCache) grow() {
 	pages := make([]page, c.pcSize)
 	c.pages = append(c.pages, pages)
 	c.size += c.pcSize
-	for i, _ := range pages {
+	for i := range pages {
 		c.free = append(c.free, &pages[i])
 	}
 	if *memLog {
@@ -307,7 +307,7 @@ type StreamPool struct {
 func (p *StreamPool) grow() {
 	conns := make([]connection, p.nextAlloc)
 	p.all = append(p.all, conns)
-	for i, _ := range conns {
+	for i := range conns {
 		p.free = append(p.free, &conns[i])
 	}
 	if *memLog {
@@ -666,8 +666,8 @@ func (a *Assembler) closeConnection(conn *connection) {
 // starting at the highest sequence number and going down, since we assume the
 // common case is that TCP packets for a stream will appear in-order, with
 // minimal loss or packet reordering.
-func (conn *connection) traverseConn(seq Sequence) (prev, current *page) {
-	prev = conn.last
+func (c *connection) traverseConn(seq Sequence) (prev, current *page) {
+	prev = c.last
 	for prev != nil && prev.seq.Difference(seq) < 0 {
 		current = prev
 		prev = current.prev
@@ -679,16 +679,16 @@ func (conn *connection) traverseConn(seq Sequence) (prev, current *page) {
 // nodes prev-next in another doubly-linked list.  If prev is nil, makes first
 // the new first page in the connection's list.  If next is nil, makes last the
 // new last page in the list.  first/last may point to the same page.
-func (conn *connection) pushBetween(prev, next, first, last *page) {
+func (c *connection) pushBetween(prev, next, first, last *page) {
 	// Maintain our doubly linked list
-	if next == nil || conn.last == nil {
-		conn.last = last
+	if next == nil || c.last == nil {
+		c.last = last
 	} else {
 		last.next = next
 		next.prev = last
 	}
-	if prev == nil || conn.first == nil {
-		conn.first = first
+	if prev == nil || c.first == nil {
+		c.first = first
 	} else {
 		first.prev = prev
 		prev.next = first
@@ -699,7 +699,7 @@ func (a *Assembler) insertIntoConn(t *layers.TCP, conn *connection, ts time.Time
 	if conn.first != nil && conn.first.seq == conn.nextSeq {
 		panic("wtf")
 	}
-	p, p2, numPages := a.pagesFromTcp(t, ts)
+	p, p2, numPages := a.pagesFromTCP(t, ts)
 	prev, current := conn.traverseConn(Sequence(t.Seq))
 	conn.pushBetween(prev, current, p, p2)
 	conn.pages += numPages
@@ -712,12 +712,12 @@ func (a *Assembler) insertIntoConn(t *layers.TCP, conn *connection, ts time.Time
 	}
 }
 
-// pagesFromTcp creates a page (or set of pages) from a TCP packet.  Note that
+// pagesFromTCP creates a page (or set of pages) from a TCP packet.  Note that
 // it should NEVER receive a SYN packet, as it doesn't handle sequences
 // correctly.
 //
 // It returns the first and last page in its doubly-linked list of new pages.
-func (a *Assembler) pagesFromTcp(t *layers.TCP, ts time.Time) (p, p2 *page, numPages int) {
+func (a *Assembler) pagesFromTCP(t *layers.TCP, ts time.Time) (p, p2 *page, numPages int) {
 	first := a.pc.next(ts)
 	current := first
 	numPages++
