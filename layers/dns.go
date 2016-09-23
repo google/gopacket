@@ -676,7 +676,7 @@ func (rr *DNSResourceRecord) String() string {
 		}
 	}
 
-	return fmt.Sprintf("<%s, %s>", rr.Class, rr.Type)
+	return fmt.Sprintf("<%v, %v>", rr.Class, rr.Type)
 }
 
 func decodeCharacterStrings(data []byte) ([][]byte, error) {
