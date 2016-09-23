@@ -9,6 +9,8 @@
 package layers
 
 import (
+	"encoding/binary"
+	"encoding/hex"
 	"testing"
 )
 
@@ -51,5 +53,37 @@ func TestGetIPOptLengthOptionEndOfList(t *testing.T) {
 	length := ip.getIPv4OptionSize()
 	if length != 12 {
 		t.Fatalf("The list should have 12 length.  Actual %d", length)
+	}
+}
+
+// Test the function checksum
+func TestChecksum(t *testing.T) {
+	testData := []struct {
+		name   string
+		header string
+		want   string
+	}{{
+		name:   "sum has two carries",
+		header: "4540005800000000ff11ffff0aeb1d070aed8877",
+		want:   "fffe",
+	}, {
+		name:   "wikipedia case",
+		header: "45000073000040004011b861c0a80001c0a800c7",
+		want:   "b861",
+	}}
+
+	for _, test := range testData {
+		bytes, err := hex.DecodeString(test.header)
+		if err != nil {
+			t.Fatalf("Failed to Decode header: %v", err)
+		}
+		wantBytes, err := hex.DecodeString(test.want)
+		if err != nil {
+			t.Fatalf("Failed to decode want checksum: %v", err)
+		}
+
+		if got, want := checksum(bytes), binary.BigEndian.Uint16(wantBytes); got != want {
+			t.Errorf("In test %q, got incorrect checksum: got(%x), want(%x)", test.name, got, want)
+		}
 	}
 }
