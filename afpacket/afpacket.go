@@ -59,6 +59,7 @@ type SocketStats C.struct_tpacket_stats
 // SocketStatsV3 is a struct where socket stats for TPacketV3 are stored
 type SocketStatsV3 C.struct_tpacket_stats_v3
 
+// TPacket implements packet receiving for Linux AF_PACKET versions 1, 2, and 3.
 type TPacket struct {
 	// fd is the C file descriptor.
 	fd C.int
@@ -267,11 +268,11 @@ func (h *TPacket) Stats() (Stats, error) {
 	return h.stats, nil
 }
 
-// Clear socket counters and return empty stats
+// InitSocketStats clears socket counters and return empty stats.
 func (h *TPacket) InitSocketStats() error {
 	if h.tpVersion == TPacketVersion3 {
 		socklen := unsafe.Sizeof(h.socketStatsV3)
-		var slt C.socklen_t = C.socklen_t(socklen)
+		slt := C.socklen_t(socklen)
 		var ssv3 SocketStatsV3
 
 		_, err := C.getsockopt(h.fd, C.SOL_PACKET, C.PACKET_STATISTICS, unsafe.Pointer(&ssv3), &slt)
@@ -281,7 +282,7 @@ func (h *TPacket) InitSocketStats() error {
 		h.socketStatsV3 = SocketStatsV3{}
 	} else {
 		socklen := unsafe.Sizeof(h.socketStats)
-		var slt C.socklen_t = C.socklen_t(socklen)
+		slt := C.socklen_t(socklen)
 		var ss SocketStats
 
 		_, err := C.getsockopt(h.fd, C.SOL_PACKET, C.PACKET_STATISTICS, unsafe.Pointer(&ss), &slt)
@@ -293,14 +294,14 @@ func (h *TPacket) InitSocketStats() error {
 	return nil
 }
 
-// Saves stats from the socket to the TPacket instance
+// SocketStats saves stats from the socket to the TPacket instance.
 func (h *TPacket) SocketStats() (SocketStats, SocketStatsV3, error) {
 	h.mu.Lock()
 	defer h.mu.Unlock()
 	// We need to save the counters since asking for the stats will clear them
 	if h.tpVersion == TPacketVersion3 {
 		socklen := unsafe.Sizeof(h.socketStatsV3)
-		var slt C.socklen_t = C.socklen_t(socklen)
+		slt := C.socklen_t(socklen)
 		var ssv3 SocketStatsV3
 
 		_, err := C.getsockopt(h.fd, C.SOL_PACKET, C.PACKET_STATISTICS, unsafe.Pointer(&ssv3), &slt)
@@ -312,20 +313,19 @@ func (h *TPacket) SocketStats() (SocketStats, SocketStatsV3, error) {
 		h.socketStatsV3.tp_drops += ssv3.tp_drops
 		h.socketStatsV3.tp_freeze_q_cnt += ssv3.tp_freeze_q_cnt
 		return h.socketStats, h.socketStatsV3, nil
-	} else {
-		socklen := unsafe.Sizeof(h.socketStats)
-		var slt C.socklen_t = C.socklen_t(socklen)
-		var ss SocketStats
-
-		_, err := C.getsockopt(h.fd, C.SOL_PACKET, C.PACKET_STATISTICS, unsafe.Pointer(&ss), &slt)
-		if err != nil {
-			return SocketStats{}, SocketStatsV3{}, err
-		}
-
-		h.socketStats.tp_packets += ss.tp_packets
-		h.socketStats.tp_drops += ss.tp_drops
-		return h.socketStats, h.socketStatsV3, nil
 	}
+	socklen := unsafe.Sizeof(h.socketStats)
+	slt := C.socklen_t(socklen)
+	var ss SocketStats
+
+	_, err := C.getsockopt(h.fd, C.SOL_PACKET, C.PACKET_STATISTICS, unsafe.Pointer(&ss), &slt)
+	if err != nil {
+		return SocketStats{}, SocketStatsV3{}, err
+	}
+
+	h.socketStats.tp_packets += ss.tp_packets
+	h.socketStats.tp_drops += ss.tp_drops
+	return h.socketStats, h.socketStatsV3, nil
 }
 
 // ReadPacketDataTo reads packet data into a user-supplied buffer.
@@ -401,6 +401,7 @@ func (h *TPacket) pollForFirstPacket(hdr header) error {
 // FanoutType determines the type of fanout to use with a TPacket SetFanout call.
 type FanoutType int
 
+// FanoutType values.
 const (
 	FanoutHash FanoutType = 0
 	// It appears that defrag only works with FanoutHash, see:
