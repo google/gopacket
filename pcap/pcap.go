@@ -111,7 +111,7 @@ import (
 
 const errorBufferSize = 256
 
-// Maximum number of BPF instructions supported (BPF_MAXINSNS),
+// MaxBpfInstructions is the maximum number of BPF instructions supported (BPF_MAXINSNS),
 // taken from Linux kernel: include/uapi/linux/bpf_common.h
 //
 // https://github.com/torvalds/linux/blob/master/include/uapi/linux/bpf_common.h
@@ -136,8 +136,8 @@ type Handle struct {
 	// they're declared locally then the Go compiler thinks they may have
 	// escaped into C-land, so it allocates them on the heap.  This causes a
 	// huge memory hit, so to handle that we store them here instead.
-	pkthdr  *C.struct_pcap_pkthdr
-	buf_ptr *C.u_char
+	pkthdr *C.struct_pcap_pkthdr
+	bufptr *C.u_char
 }
 
 // Stats contains statistics on how many packets were handled by a pcap handle,
@@ -184,8 +184,8 @@ type BPFInstruction struct {
 	K    uint32
 }
 
-// BlockForever, when passed into OpenLive/SetTimeout, causes it to block forever
-// waiting for packets, while still returning incoming packets to userland relatively
+// BlockForever causes it to block forever waiting for packets, when passed
+// into SetTimeout or OpenLive, while still returning incoming packets to userland relatively
 // quickly.
 const BlockForever = -time.Millisecond * 10
 
@@ -271,6 +271,7 @@ func (n NextError) Error() string {
 	return strconv.Itoa(int(n))
 }
 
+// NextError values.
 const (
 	NextErrorOk             NextError = 1
 	NextErrorTimeoutExpired NextError = 0
@@ -281,14 +282,14 @@ const (
 	NextErrorNotActivated  NextError = -3
 )
 
-// NextError returns the next packet read from the pcap handle, along with an error
+// ReadPacketData returns the next packet read from the pcap handle, along with an error
 // code associated with that packet.  If the packet is read successfully, the
 // returned error is nil.
 func (p *Handle) ReadPacketData() (data []byte, ci gopacket.CaptureInfo, err error) {
 	p.mu.Lock()
 	err = p.getNextBufPtrLocked(&ci)
 	if err == nil {
-		data = C.GoBytes(unsafe.Pointer(p.buf_ptr), C.int(ci.CaptureLength))
+		data = C.GoBytes(unsafe.Pointer(p.bufptr), C.int(ci.CaptureLength))
 	}
 	p.mu.Unlock()
 	if err == NextErrorTimeoutExpired {
@@ -335,7 +336,7 @@ func (p *Handle) getNextBufPtrLocked(ci *gopacket.CaptureInfo) error {
 	}
 	var result NextError
 	for {
-		result = NextError(C.pcap_next_ex(p.cptr, &p.pkthdr, &p.buf_ptr))
+		result = NextError(C.pcap_next_ex(p.cptr, &p.pkthdr, &p.bufptr))
 		if p.blockForever && result == NextErrorTimeoutExpired {
 			continue
 		}
@@ -344,9 +345,8 @@ func (p *Handle) getNextBufPtrLocked(ci *gopacket.CaptureInfo) error {
 	if result != NextErrorOk {
 		if result == NextErrorNoMorePackets {
 			return io.EOF
-		} else {
-			return result
 		}
+		return result
 	}
 	ci.Timestamp = time.Unix(int64(p.pkthdr.ts.tv_sec),
 		int64(p.pkthdr.ts.tv_usec)*1000) // convert micros to nanos
@@ -371,7 +371,7 @@ func (p *Handle) ZeroCopyReadPacketData() (data []byte, ci gopacket.CaptureInfo,
 	err = p.getNextBufPtrLocked(&ci)
 	if err == nil {
 		slice := (*reflect.SliceHeader)(unsafe.Pointer(&data))
-		slice.Data = uintptr(unsafe.Pointer(p.buf_ptr))
+		slice.Data = uintptr(unsafe.Pointer(p.bufptr))
 		slice.Len = ci.CaptureLength
 		slice.Cap = ci.CaptureLength
 	}
@@ -411,20 +411,20 @@ func (p *Handle) Stats() (stat *Stats, err error) {
 	}, nil
 }
 
-// Obtains a list of all possible data link types supported for an interface.
+// ListDataLinks obtains a list of all possible data link types supported for an interface.
 func (p *Handle) ListDataLinks() (datalinks []Datalink, err error) {
-	var dlt_buf *C.int
+	var dltbuf *C.int
 
-	n := int(C.pcap_list_datalinks(p.cptr, &dlt_buf))
+	n := int(C.pcap_list_datalinks(p.cptr, &dltbuf))
 	if -1 == n {
 		return nil, p.Error()
 	}
 
-	defer C.pcap_free_datalinks(dlt_buf)
+	defer C.pcap_free_datalinks(dltbuf)
 
 	datalinks = make([]Datalink, n)
 
-	dltArray := (*[100]C.int)(unsafe.Pointer(dlt_buf))
+	dltArray := (*[100]C.int)(unsafe.Pointer(dltbuf))
 
 	for i := 0; i < n; i++ {
 		expr := C.pcap_datalink_val_to_name((*dltArray)[i])
@@ -690,14 +690,14 @@ func findalladdresses(addresses *_Ctype_struct_pcap_addr) (retval []InterfaceAdd
 		}
 		var a InterfaceAddress
 		var err error
-		if a.IP, err = sockaddr_to_IP((*syscall.RawSockaddr)(unsafe.Pointer(curaddr.addr))); err != nil {
+		if a.IP, err = sockaddrToIP((*syscall.RawSockaddr)(unsafe.Pointer(curaddr.addr))); err != nil {
 			continue
 		}
 		// To be safe, we'll also check for netmask.
 		if curaddr.netmask == nil {
 			continue
 		}
-		if a.Netmask, err = sockaddr_to_IP((*syscall.RawSockaddr)(unsafe.Pointer(curaddr.netmask))); err != nil {
+		if a.Netmask, err = sockaddrToIP((*syscall.RawSockaddr)(unsafe.Pointer(curaddr.netmask))); err != nil {
 			// If we got an IP address but we can't get a netmask, just return the IP
 			// address.
 			a.Netmask = nil
@@ -707,7 +707,7 @@ func findalladdresses(addresses *_Ctype_struct_pcap_addr) (retval []InterfaceAdd
 	return
 }
 
-func sockaddr_to_IP(rsa *syscall.RawSockaddr) (IP []byte, err error) {
+func sockaddrToIP(rsa *syscall.RawSockaddr) (IP []byte, err error) {
 	switch rsa.Family {
 	case syscall.AF_INET:
 		pp := (*syscall.RawSockaddrInet4)(unsafe.Pointer(rsa))
@@ -739,6 +739,7 @@ func (p *Handle) WritePacketData(data []byte) (err error) {
 // Direction is used by Handle.SetDirection.
 type Direction uint8
 
+// Direction values for Handle.SetDirection.
 const (
 	DirectionIn    Direction = C.PCAP_D_IN
 	DirectionOut   Direction = C.PCAP_D_OUT
