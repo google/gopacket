@@ -3,7 +3,7 @@
 cd "$(dirname $0)"
 
 go get github.com/golang/lint/golint
-DIRS=". tcpassembly"
+DIRS=". tcpassembly ip4defrag"
 # Add subdirectories here as we clean up golint on each.
 for subdir in $DIRS; do
   pushd $subdir

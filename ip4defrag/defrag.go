@@ -29,11 +29,12 @@ func (d debugging) Printf(format string, args ...interface{}) {
 	}
 }
 
+// Constants determining how to handle fragments.
 const (
-	IPv4MinimumFragmentSize    = 576
-	IPv4MaximumSize            = 65535
-	IPv4MaximumFragmentOffset  = 8189
-	IPv4MaximumFragmentListLen = 8
+	IPv4MinimumFragmentSize    = 576   // Minimum size of a single fragment
+	IPv4MaximumSize            = 65535 // Maximum size of a fragment (2^16)
+	IPv4MaximumFragmentOffset  = 8189  // Maximum offset of a fragment
+	IPv4MaximumFragmentListLen = 8     // Back out if we get more than this many fragments
 )
 
 // DefragIPv4 takes in an IPv4 packet with a fragment payload.
@@ -232,7 +233,7 @@ func (f *fragmentList) insert(in *layers.IPv4) (*layers.IPv4, error) {
 // See Insert for more details.
 func (f *fragmentList) build(in *layers.IPv4) (*layers.IPv4, error) {
 	var final []byte
-	var currentOffset uint16 = 0
+	var currentOffset uint16
 
 	debug.Printf("defrag: building the datagram \n")
 	for e := f.List.Front(); e != nil; e = e.Next() {
