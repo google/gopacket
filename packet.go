@@ -359,7 +359,7 @@ func layerGoString(i interface{}, b *bytes.Buffer) {
 		t := v.Type()
 		b.WriteString(t.String())
 		b.WriteByte('{')
-		for i := 0; i < v.NumField(); i += 1 {
+		for i := 0; i < v.NumField(); i++ {
 			if i > 0 {
 				b.WriteString(", ")
 			}
@@ -424,11 +424,11 @@ type eagerPacket struct {
 	packet
 }
 
-var nilDecoderError = errors.New("NextDecoder passed nil decoder, probably an unsupported decode type")
+var errNilDecoder = errors.New("NextDecoder passed nil decoder, probably an unsupported decode type")
 
 func (p *eagerPacket) NextDecoder(next Decoder) error {
 	if next == nil {
-		return nilDecoderError
+		return errNilDecoder
 	}
 	if p.last == nil {
 		return errors.New("NextDecoder called, but no layers added yet")
@@ -495,7 +495,7 @@ type lazyPacket struct {
 
 func (p *lazyPacket) NextDecoder(next Decoder) error {
 	if next == nil {
-		return nilDecoderError
+		return errNilDecoder
 	}
 	p.next = next
 	return nil
@@ -624,13 +624,13 @@ type DecodeOptions struct {
 // though, so beware.  If you can guarantee that the packet will only be used
 // by one goroutine at a time, set Lazy decoding.  If you can guarantee that
 // the underlying slice won't change, set NoCopy decoding.
-var Default DecodeOptions = DecodeOptions{}
+var Default = DecodeOptions{}
 
 // Lazy is a DecodeOptions with just Lazy set.
-var Lazy DecodeOptions = DecodeOptions{Lazy: true}
+var Lazy = DecodeOptions{Lazy: true}
 
 // NoCopy is a DecodeOptions with just NoCopy set.
-var NoCopy DecodeOptions = DecodeOptions{NoCopy: true}
+var NoCopy = DecodeOptions{NoCopy: true}
 
 // NewPacket creates a new Packet object from a set of bytes.  The
 // firstLayerDecoder tells it how to interpret the first layer from the bytes,
