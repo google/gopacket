@@ -8,3 +8,5 @@ script:
  - go test github.com/google/gopacket/layers
  - go test github.com/google/gopacket/tcpassembly
  - ./.travis.gofmt.sh
+ - ./.travis.govet.sh
+ - ./.travis.golint.sh
