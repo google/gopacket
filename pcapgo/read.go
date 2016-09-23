@@ -101,13 +101,13 @@ func (r *Reader) readHeader() error {
 		r.byteOrder = binary.BigEndian
 		r.nanoSecsFactor = 1000
 	} else {
-		return errors.New(fmt.Sprintf("Unknown magic %x", magic))
+		return fmt.Errorf("Unknown magic %x", magic)
 	}
 	if r.versionMajor = r.byteOrder.Uint16(buf[4:6]); r.versionMajor != versionMajor {
-		return errors.New(fmt.Sprintf("Unknown major version %d", r.versionMajor))
+		return fmt.Errorf("Unknown major version %d", r.versionMajor)
 	}
 	if r.versionMinor = r.byteOrder.Uint16(buf[6:8]); r.versionMinor != versionMinor {
-		return errors.New(fmt.Sprintf("Unknown minor version %d", r.versionMinor))
+		return fmt.Errorf("Unknown minor version %d", r.versionMinor)
 	}
 	// ignore timezone 8:12 and sigfigs 12:16
 	r.snaplen = r.byteOrder.Uint32(buf[16:20])
@@ -115,7 +115,7 @@ func (r *Reader) readHeader() error {
 	return nil
 }
 
-// Read next packet from file
+// ReadPacketData reads next packet from file.
 func (r *Reader) ReadPacketData() (data []byte, ci gopacket.CaptureInfo, err error) {
 	if ci, err = r.readPacketHeader(); err != nil {
 		return
