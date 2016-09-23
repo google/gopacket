@@ -1,5 +1,9 @@
 // Copyright 2013 Google, Inc. All rights reserved.
 //
+// Use of this source code is governed by a BSD-style license
+// that can be found in the LICENSE file in the root of the source
+// tree.
+
 // Package ip4defrag implements a IPv4 defragmenter
 package ip4defrag
 
