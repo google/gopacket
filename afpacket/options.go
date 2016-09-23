@@ -36,7 +36,7 @@ func (t OptTPacketVersion) String() string {
 	return "InvalidVersion"
 }
 
-// OptSockType is the socket type used to open the TPacket socket.
+// OptSocketType is the socket type used to open the TPacket socket.
 type OptSocketType int
 
 func (t OptSocketType) String() string {
@@ -49,6 +49,7 @@ func (t OptSocketType) String() string {
 	return "UnknownSocketType"
 }
 
+// TPacket version numbers for use with NewHandle.
 const (
 	// TPacketVersionHighestAvailable tells NewHandle to use the highest available version of tpacket the kernel has available.
 	// This is the default, should a version number not be given in NewHandle's options.
@@ -86,6 +87,7 @@ type OptNumBlocks int
 // It can be passed into NewTPacket.
 type OptBlockTimeout time.Duration
 
+// Default constants used by options.
 const (
 	DefaultFrameSize    = 4096                   // Default value for OptFrameSize.
 	DefaultBlockSize    = DefaultFrameSize * 128 // Default value for OptBlockSize.
