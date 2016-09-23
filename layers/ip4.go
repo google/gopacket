@@ -173,7 +173,7 @@ func checksum(bytes []byte) uint16 {
 		// Add carry to the sum
 		csum = (csum >> 16) + uint32(uint16(csum))
 	}
-	// flip all the bits.
+	// Flip all the bits
 	return ^uint16(csum)
 }
 
