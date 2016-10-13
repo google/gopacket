@@ -207,7 +207,8 @@ loop:
 	}
 	sort.Sort(rtr.v4)
 	sort.Sort(rtr.v6)
-	if ifaces, err := net.Interfaces(); err != nil {
+	ifaces, err := net.Interfaces()
+	if err != nil {
 		return nil, err
 	}
 	for i, iface := range ifaces {
@@ -216,7 +217,8 @@ loop:
 		}
 		rtr.ifaces = append(rtr.ifaces, iface)
 		var addrs ipAddrs
-		if ifaceAddrs, err := iface.Addrs(); err != nil {
+		ifaceAddrs, err := iface.Addrs()
+		if err != nil {
 			return nil, err
 		}
 		for _, addr := range ifaceAddrs {
