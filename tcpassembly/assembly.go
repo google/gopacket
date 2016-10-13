@@ -201,6 +201,7 @@ func (p *StreamPool) connections() []*connection {
 	return conns
 }
 
+// FlushOptions provide options for flushing connections.
 type FlushOptions struct {
 	T        time.Time // If nonzero, only connections with data older than T are flushed
 	CloseAll bool      // If true, ALL connections are closed post flush, not just those that correctly see FIN/RST.
@@ -232,7 +233,6 @@ type FlushOptions struct {
 //
 // Returns the number of connections flushed, and of those, the number closed
 // because of the flush.
-
 func (a *Assembler) FlushWithOptions(opt FlushOptions) (flushed, closed int) {
 	conns := a.connPool.connections()
 	closes := 0
