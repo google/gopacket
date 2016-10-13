@@ -180,6 +180,10 @@ if [ -f /usr/include/pfring.h ]; then
   popd
 fi
 
+for travis_script in `ls .travis.*.sh`; do
+  ./$travis_script
+done
+
 # Run our initial commit
 git commit "$@"
 
