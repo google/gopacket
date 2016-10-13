@@ -90,7 +90,11 @@ func pcapInfo(filename string) (start time.Time, end time.Time, packets int, siz
 			}
 		}
 	}
-	fmt.Printf("Avg packet rate %d/s\n", packets/int(deltaTotal.Seconds()))
+	sec := int(deltaTotal.Seconds())
+	if sec == 0 {
+		sec = 1
+	}
+	fmt.Printf("Avg packet rate %d/s\n", packets/sec)
 	return start, end, packets, size
 }
 
