@@ -58,12 +58,14 @@ type Ring struct {
 	// they're declared locally then the Go compiler thinks they may have
 	// escaped into C-land, so it allocates them on the heap.  This causes a
 	// huge memory hit, so to handle that we store them here instead.
-	pkthdr  C.struct_pfring_pkthdr
-	buf_ptr *C.u_char
+	pkthdr C.struct_pfring_pkthdr
+	bufPtr *C.u_char
 }
 
+// Flag provides a set of boolean flags to use when creating a new ring.
 type Flag uint32
 
+// Set of flags that can be passed (OR'd together) to NewRing.
 const (
 	FlagReentrant       Flag = C.PF_RING_REENTRANT
 	FlagLongHeader      Flag = C.PF_RING_LONG_HEADER
@@ -107,6 +109,7 @@ func (r *Ring) Close() {
 // NextResult is the return code from a call to Next.
 type NextResult int32
 
+// Set of results that could be returned from a call to get another packet.
 const (
 	NextNoPacketNonblocking NextResult = 0
 	NextError               NextResult = -1
@@ -134,11 +137,11 @@ func (n NextResult) Error() string {
 // passed-in slice.
 // The number of bytes read into data will be returned in ci.CaptureLength.
 func (r *Ring) ReadPacketDataTo(data []byte) (ci gopacket.CaptureInfo, err error) {
-	// This tricky buf_ptr points to the start of our slice data, so pfring_recv
+	// This tricky bufPtr points to the start of our slice data, so pfring_recv
 	// will actually write directly into our Go slice.  Nice!
 	r.mu.Lock()
-	r.buf_ptr = (*C.u_char)(unsafe.Pointer(&data[0]))
-	result := NextResult(C.pfring_readpacketdatato_wrapper(r.cptr, r.buf_ptr, C.u_int(len(data)), &r.pkthdr))
+	r.bufPtr = (*C.u_char)(unsafe.Pointer(&data[0]))
+	result := NextResult(C.pfring_readpacketdatato_wrapper(r.cptr, r.bufPtr, C.u_int(len(data)), &r.pkthdr))
 	if result != NextOk {
 		err = result
 		r.mu.Unlock()
@@ -171,6 +174,8 @@ func (r *Ring) ReadPacketData() (data []byte, ci gopacket.CaptureInfo, err error
 	return
 }
 
+// ClusterType is a type of clustering used when balancing across multiple
+// rings.
 type ClusterType C.cluster_type
 
 const (
@@ -219,8 +224,8 @@ func (r *Ring) SetSamplingRate(rate int) error {
 }
 
 // SetBPFFilter sets the BPF filter for the ring.
-func (r *Ring) SetBPFFilter(bpf_filter string) error {
-	filter := C.CString(bpf_filter)
+func (r *Ring) SetBPFFilter(bpfFilter string) error {
+	filter := C.CString(bpfFilter)
 	defer C.free(unsafe.Pointer(filter))
 	if rv := C.pfring_set_bpf_filter(r.cptr, filter); rv != 0 {
 		return fmt.Errorf("Unable to set BPF filter, got error code %d", rv)
@@ -263,6 +268,7 @@ func (r *Ring) Disable() error {
 	return nil
 }
 
+// Stats provides simple statistics on a ring.
 type Stats struct {
 	Received, Dropped uint64
 }
@@ -279,6 +285,8 @@ func (r *Ring) Stats() (s Stats, err error) {
 	return
 }
 
+// Direction is a simple enum to set which packets (TX, RX, or both) a ring
+// captures.
 type Direction C.packet_direction
 
 const (
@@ -301,6 +309,7 @@ func (r *Ring) SetDirection(d Direction) error {
 	return nil
 }
 
+// SocketMode is an enum for setting whether a ring should read, write, or both.
 type SocketMode C.socket_mode
 
 const (
