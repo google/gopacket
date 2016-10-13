@@ -209,33 +209,31 @@ loop:
 	sort.Sort(rtr.v6)
 	if ifaces, err := net.Interfaces(); err != nil {
 		return nil, err
-	} else {
-		for i, iface := range ifaces {
-			if i != iface.Index-1 {
-				return nil, fmt.Errorf("out of order iface %d = %v", i, iface)
-			}
-			rtr.ifaces = append(rtr.ifaces, iface)
-			var addrs ipAddrs
-			if ifaceAddrs, err := iface.Addrs(); err != nil {
-				return nil, err
-			} else {
-				for _, addr := range ifaceAddrs {
-					if inet, ok := addr.(*net.IPNet); ok {
-						// Go has a nasty habit of giving you IPv4s as ::ffff:1.2.3.4 instead of 1.2.3.4.
-						// We want to use mapped v4 addresses as v4 preferred addresses, never as v6
-						// preferred addresses.
-						if v4 := inet.IP.To4(); v4 != nil {
-							if addrs.v4 == nil {
-								addrs.v4 = v4
-							}
-						} else if addrs.v6 == nil {
-							addrs.v6 = inet.IP
-						}
+	}
+	for i, iface := range ifaces {
+		if i != iface.Index-1 {
+			return nil, fmt.Errorf("out of order iface %d = %v", i, iface)
+		}
+		rtr.ifaces = append(rtr.ifaces, iface)
+		var addrs ipAddrs
+		if ifaceAddrs, err := iface.Addrs(); err != nil {
+			return nil, err
+		}
+		for _, addr := range ifaceAddrs {
+			if inet, ok := addr.(*net.IPNet); ok {
+				// Go has a nasty habit of giving you IPv4s as ::ffff:1.2.3.4 instead of 1.2.3.4.
+				// We want to use mapped v4 addresses as v4 preferred addresses, never as v6
+				// preferred addresses.
+				if v4 := inet.IP.To4(); v4 != nil {
+					if addrs.v4 == nil {
+						addrs.v4 = v4
 					}
+				} else if addrs.v6 == nil {
+					addrs.v6 = inet.IP
 				}
 			}
-			rtr.addrs = append(rtr.addrs, addrs)
 		}
+		rtr.addrs = append(rtr.addrs, addrs)
 	}
 	return rtr, nil
 }
