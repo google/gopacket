@@ -73,9 +73,11 @@ package layers
 
 import (
 	"encoding/binary"
+	"errors"
 	"fmt"
-	"github.com/google/gopacket"
 	"net"
+
+	"github.com/google/gopacket"
 )
 
 // SFlowRecord holds both flow sample records and counter sample records.
@@ -526,43 +528,43 @@ func decodeFlowSample(data *[]byte, expanded bool) (SFlowFlowSample, error) {
 		case SFlowTypeEthernetFrameFlow:
 			// TODO
 			skipRecord(data)
-			return s, fmt.Errorf("skipping TypeEthernetFrameFlow")
+			return s, errors.New("skipping TypeEthernetFrameFlow")
 		case SFlowTypeIpv4Flow:
 			// TODO
 			skipRecord(data)
-			return s, fmt.Errorf("skipping TypeIpv4Flow")
+			return s, errors.New("skipping TypeIpv4Flow")
 		case SFlowTypeIpv6Flow:
 			// TODO
 			skipRecord(data)
-			return s, fmt.Errorf("skipping TypeIpv6Flow")
+			return s, errors.New("skipping TypeIpv6Flow")
 		case SFlowTypeExtendedMlpsFlow:
 			// TODO
 			skipRecord(data)
-			return s, fmt.Errorf("skipping TypeExtendedMlpsFlow")
+			return s, errors.New("skipping TypeExtendedMlpsFlow")
 		case SFlowTypeExtendedNatFlow:
 			// TODO
 			skipRecord(data)
-			return s, fmt.Errorf("skipping TypeExtendedNatFlow")
+			return s, errors.New("skipping TypeExtendedNatFlow")
 		case SFlowTypeExtendedMlpsTunnelFlow:
 			// TODO
 			skipRecord(data)
-			return s, fmt.Errorf("skipping TypeExtendedMlpsTunnelFlow")
+			return s, errors.New("skipping TypeExtendedMlpsTunnelFlow")
 		case SFlowTypeExtendedMlpsVcFlow:
 			// TODO
 			skipRecord(data)
-			return s, fmt.Errorf("skipping TypeExtendedMlpsVcFlow")
+			return s, errors.New("skipping TypeExtendedMlpsVcFlow")
 		case SFlowTypeExtendedMlpsFecFlow:
 			// TODO
 			skipRecord(data)
-			return s, fmt.Errorf("skipping TypeExtendedMlpsFecFlow")
+			return s, errors.New("skipping TypeExtendedMlpsFecFlow")
 		case SFlowTypeExtendedMlpsLvpFecFlow:
 			// TODO
 			skipRecord(data)
-			return s, fmt.Errorf("skipping TypeExtendedMlpsLvpFecFlow")
+			return s, errors.New("skipping TypeExtendedMlpsLvpFecFlow")
 		case SFlowTypeExtendedVlanFlow:
 			// TODO
 			skipRecord(data)
-			return s, fmt.Errorf("skipping TypeExtendedVlanFlow")
+			return s, errors.New("skipping TypeExtendedVlanFlow")
 		default:
 			return s, fmt.Errorf("Unsupported flow record type: %d", flowRecordType)
 		}
@@ -690,13 +692,13 @@ func decodeCounterSample(data *[]byte, expanded bool) (SFlowCounterSample, error
 			}
 		case SFlowTypeTokenRingInterfaceCounters:
 			skipRecord(data)
-			return s, fmt.Errorf("skipping TypeTokenRingInterfaceCounters")
+			return s, errors.New("skipping TypeTokenRingInterfaceCounters")
 		case SFlowType100BaseVGInterfaceCounters:
 			skipRecord(data)
-			return s, fmt.Errorf("skipping Type100BaseVGInterfaceCounters")
+			return s, errors.New("skipping Type100BaseVGInterfaceCounters")
 		case SFlowTypeVLANCounters:
 			skipRecord(data)
-			return s, fmt.Errorf("skipping TypeVLANCounters")
+			return s, errors.New("skipping TypeVLANCounters")
 		case SFlowTypeProcessorCounters:
 			if record, err := decodeProcessorCounters(data); err == nil {
 				s.Records = append(s.Records, record)
