@@ -9,6 +9,7 @@
 package afpacket
 
 import (
+	"errors"
 	"fmt"
 	"time"
 )
@@ -134,7 +135,7 @@ func parseOptions(opts ...interface{}) (ret options, err error) {
 		case OptSocketType:
 			ret.socktype = v
 		default:
-			err = fmt.Errorf("unknown type in options")
+			err = errors.New("unknown type in options")
 			return
 		}
 	}

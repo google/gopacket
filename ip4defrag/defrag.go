@@ -9,6 +9,7 @@ package ip4defrag
 
 import (
 	"container/list"
+	"errors"
 	"fmt"
 	"log"
 	"sync"
@@ -248,7 +249,7 @@ func (f *fragmentList) build(in *layers.IPv4) (*layers.IPv4, error) {
 			debug.Printf("defrag: building - overlapping, starting at %d\n",
 				startAt)
 			if startAt > frag.Length-20 {
-				return nil, fmt.Errorf("defrag: building - invalid fragment")
+				return nil, errors.New("defrag: building - invalid fragment")
 			}
 			final = append(final, frag.Payload[startAt:]...)
 			currentOffset = currentOffset + frag.FragOffset*8
@@ -256,7 +257,7 @@ func (f *fragmentList) build(in *layers.IPv4) (*layers.IPv4, error) {
 			// Houston - we have an hole !
 			debug.Printf("defrag: hole found while building, " +
 				"stopping the defrag process\n")
-			return nil, fmt.Errorf("defrag: building - hole found")
+			return nil, errors.New("defrag: building - hole found")
 		}
 		debug.Printf("defrag: building - next is %d\n", currentOffset)
 	}
