@@ -19,8 +19,8 @@ package main
 
 import (
 	"bytes"
+	"errors"
 	"flag"
-	"fmt"
 	"log"
 	"net"
 	"time"
@@ -119,7 +119,7 @@ func (s *scanner) getHwAddr() (net.HardwareAddr, error) {
 	// Wait 3 seconds for an ARP reply.
 	for {
 		if time.Since(start) > time.Second*3 {
-			return nil, fmt.Errorf("timeout getting ARP reply")
+			return nil, errors.New("timeout getting ARP reply")
 		}
 		data, _, err := s.handle.ReadPacketData()
 		if err == pcap.NextErrorTimeoutExpired {

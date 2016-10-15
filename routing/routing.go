@@ -18,6 +18,7 @@ package routing
 
 import (
 	"bytes"
+	"errors"
 	"fmt"
 	"net"
 	"sort"
@@ -99,7 +100,7 @@ func (r *router) RouteWithSrc(input net.HardwareAddr, src, dst net.IP) (iface *n
 	case 16:
 		ifaceIndex, gateway, preferredSrc, err = r.route(r.v6, input, src, dst)
 	default:
-		err = fmt.Errorf("IP length is not 4 or 16")
+		err = errors.New("IP length is not 4 or 16")
 		return
 	}
 

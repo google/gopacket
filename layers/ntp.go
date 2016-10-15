@@ -10,7 +10,8 @@ package layers
 
 import (
 	"encoding/binary"
-	"fmt"
+	"errors"
+
 	"github.com/google/gopacket"
 )
 
@@ -296,7 +297,7 @@ func (d *NTP) DecodeFromBytes(data []byte, df gopacket.DecodeFeedback) error {
 	// If the data block is too short to be a NTP record, then return an error.
 	if len(data) < ntpMinimumRecordSizeInBytes {
 		df.SetTruncated()
-		return fmt.Errorf("NTP packet too short")
+		return errors.New("NTP packet too short")
 	}
 
 	// RFC 5905 does not appear to define a maximum NTP record length.

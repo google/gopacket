@@ -209,7 +209,7 @@ func (d *DNS) DecodeFromBytes(data []byte, df gopacket.DecodeFeedback) error {
 
 	if len(data) < 12 {
 		df.SetTruncated()
-		return fmt.Errorf("DNS packet too short")
+		return errors.New("DNS packet too short")
 	}
 
 	// since there are no further layers, the baselayer's content is
@@ -442,7 +442,7 @@ loop:
 			index2 := index + int(data[index]) + 1
 			if index2-offset > 255 {
 				return nil, 0,
-					fmt.Errorf("dns name is too long")
+					errors.New("dns name is too long")
 			}
 			*buffer = append(*buffer, '.')
 			*buffer = append(*buffer, data[index+1:index2]...)
