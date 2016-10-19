@@ -15,3 +15,11 @@ for subdir in $DIRS; do
   fi
   popd
 done
+
+pushd layers
+for file in $(cat .linted); do
+  if golint $file | grep .; then
+    exit 1
+  fi
+done
+popd
