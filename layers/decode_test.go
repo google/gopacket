@@ -20,7 +20,7 @@ import (
 	"github.com/google/gopacket/bytediff"
 )
 
-var testSimpleTCPPacket []byte = []byte{
+var testSimpleTCPPacket = []byte{
 	0x00, 0x00, 0x0c, 0x9f, 0xf0, 0x20, 0xbc, 0x30, 0x5b, 0xe8, 0xd3, 0x49,
 	0x08, 0x00, 0x45, 0x00, 0x01, 0xa4, 0x39, 0xdf, 0x40, 0x00, 0x40, 0x06,
 	0x55, 0x5a, 0xac, 0x11, 0x51, 0x49, 0xad, 0xde, 0xfe, 0xe1, 0xc5, 0xf7,
@@ -177,7 +177,7 @@ func BenchmarkLazyNoCopy(b *testing.B) {
 
 func BenchmarkKnownStack(b *testing.B) {
 	stack := []gopacket.DecodingLayer{&Ethernet{}, &IPv4{}, &TCP{}, &gopacket.Payload{}}
-	var nf gopacket.DecodeFeedback = gopacket.NilDecodeFeedback
+	nf := gopacket.NilDecodeFeedback
 	for i := 0; i < b.N; i++ {
 		data := testSimpleTCPPacket[:]
 		for _, d := range stack {
@@ -1074,7 +1074,7 @@ func BenchmarkDecodeMPLS(b *testing.B) {
 	}
 }
 
-// testPPPoE_ICMPv6 is the packet:
+// testPPPoEICMPv6 is the packet:
 //   07:43:31.091560 PPPoE  [ses 0x11] IP6 fe80::c801:eff:fe88:8 > ff02::1: ICMP6, neighbor advertisement, tgt is fe80::c801:eff:fe88:8, length 24
 //      0x0000:  cc05 0e88 0000 ca01 0e88 0006 8864 1100  .............d..
 //      0x0010:  0011 0042 0057 6e00 0000 0018 3aff fe80  ...B.Wn.....:...
@@ -1082,7 +1082,7 @@ func BenchmarkDecodeMPLS(b *testing.B) {
 //      0x0030:  0000 0000 0000 0000 0000 0000 0001 8800  ................
 //      0x0040:  5083 8000 0000 fe80 0000 0000 0000 c801  P...............
 //      0x0050:  0eff fe88 0008                           ......
-var testPPPoE_ICMPv6 = []byte{
+var testPPPoEICMPv6 = []byte{
 	0xcc, 0x05, 0x0e, 0x88, 0x00, 0x00, 0xca, 0x01, 0x0e, 0x88, 0x00, 0x06, 0x88, 0x64, 0x11, 0x00,
 	0x00, 0x11, 0x00, 0x42, 0x00, 0x57, 0x6e, 0x00, 0x00, 0x00, 0x00, 0x18, 0x3a, 0xff, 0xfe, 0x80,
 	0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xc8, 0x01, 0x0e, 0xff, 0xfe, 0x88, 0x00, 0x08, 0xff, 0x02,
@@ -1091,8 +1091,8 @@ var testPPPoE_ICMPv6 = []byte{
 	0x0e, 0xff, 0xfe, 0x88, 0x00, 0x08,
 }
 
-func TestPPPoE_ICMPv6(t *testing.T) {
-	p := gopacket.NewPacket(testPPPoE_ICMPv6, LinkTypeEthernet, testDecodeOptions)
+func TestPPPoEICMPv6(t *testing.T) {
+	p := gopacket.NewPacket(testPPPoEICMPv6, LinkTypeEthernet, testDecodeOptions)
 	if p.ErrorLayer() != nil {
 		t.Error("Failed to decode packet:", p.ErrorLayer().Error())
 	}
@@ -1104,15 +1104,15 @@ func TestPPPoE_ICMPv6(t *testing.T) {
 		LayerTypeICMPv6,
 		gopacket.LayerTypePayload,
 	}, t)
-	testSerialization(t, p, testPPPoE_ICMPv6)
+	testSerialization(t, p, testPPPoEICMPv6)
 }
-func BenchmarkDecodePPPoE_ICMPv6(b *testing.B) {
+func BenchmarkDecodePPPoEICMPv6(b *testing.B) {
 	for i := 0; i < b.N; i++ {
-		gopacket.NewPacket(testPPPoE_ICMPv6, LinkTypeEthernet, gopacket.NoCopy)
+		gopacket.NewPacket(testPPPoEICMPv6, LinkTypeEthernet, gopacket.NoCopy)
 	}
 }
 
-var testPFLog_UDP = []byte{
+var testPFLogUDP = []byte{
 	0x3d, 0x02, 0x00, 0x00, 0x65, 0x6e, 0x30, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
 	0x00, 0x00, 0x00, 0x00, 0x6c, 0x6f, 0x67, 0x67, 0x69, 0x6e, 0x67, 0x00, 0x00, 0x00, 0x00, 0x00,
 	0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xae, 0xff, 0xff, 0xff, 0x7f,
@@ -1122,8 +1122,8 @@ var testPFLog_UDP = []byte{
 	0x01, 0x02, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
 }
 
-func TestPFLog_UDP(t *testing.T) {
-	p := gopacket.NewPacket(testPFLog_UDP, LinkTypePFLog, testDecodeOptions)
+func TestPFLogUDP(t *testing.T) {
+	p := gopacket.NewPacket(testPFLogUDP, LinkTypePFLog, testDecodeOptions)
 	if p.ErrorLayer() != nil {
 		t.Error("Failed to decode packet:", p.ErrorLayer().Error())
 	}
