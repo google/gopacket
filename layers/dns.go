@@ -436,6 +436,9 @@ func decodeName(data []byte, offset int, buffer *[]byte, level int) ([]byte, int
 		return nil, 0, errMaxRecursion
 	}
 	start := len(*buffer)
+	if len(data) < offset {
+		return nil, 0, fmt.Errorf("data length %d less than offset %d", len(data), offset)
+	}
 	index := offset
 	if data[index] == 0x00 {
 		return nil, index + 1, nil
