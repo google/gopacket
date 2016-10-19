@@ -15,8 +15,11 @@ import (
 	"github.com/google/gopacket"
 )
 
+// DNSClass defines the class associated with a request/response.  Different DNS
+// classes can be thought of as an array of parallel namespace trees.
 type DNSClass uint16
 
+// DNSClass known values.
 const (
 	DNSClassIN  DNSClass = 1   // Internet
 	DNSClassCS  DNSClass = 2   // the CSNET class (Obsolete)
@@ -25,8 +28,11 @@ const (
 	DNSClassAny DNSClass = 255 // AnyClass
 )
 
+// DNSType defines the type of data being requested/returned in a
+// question/answer.
 type DNSType uint16
 
+// DNSType known values.
 const (
 	DNSTypeA     DNSType = 1  // a host address
 	DNSTypeNS    DNSType = 2  // an authoritative name server
@@ -48,8 +54,10 @@ const (
 	DNSTypeSRV   DNSType = 33 // server discovery [RFC2782] [RFC6195]
 )
 
+// DNSResponseCode provides response codes for question answers.
 type DNSResponseCode uint8
 
+// DNSResponseCode known values.
 const (
 	DNSResponseCodeNoErr    DNSResponseCode = 0  // No error
 	DNSResponseCodeFormErr  DNSResponseCode = 1  // Format Error                       [RFC1035]
@@ -115,8 +123,10 @@ func (drc DNSResponseCode) String() string {
 	}
 }
 
+// DNSOpCode defines a set of different operation types.
 type DNSOpCode uint8
 
+// DNSOpCode known values.
 const (
 	DNSOpCodeQuery  DNSOpCode = 0 // Query                  [RFC1035]
 	DNSOpCodeIQuery DNSOpCode = 1 // Inverse Query Obsolete [RFC3425]
@@ -290,14 +300,17 @@ func (d *DNS) DecodeFromBytes(data []byte, df gopacket.DecodeFeedback) error {
 	return nil
 }
 
+// CanDecode implements gopacket.DecodingLayer.
 func (d *DNS) CanDecode() gopacket.LayerClass {
 	return LayerTypeDNS
 }
 
+// NextLayerType implements gopacket.DecodingLayer.
 func (d *DNS) NextLayerType() gopacket.LayerType {
 	return gopacket.LayerTypePayload
 }
 
+// Payload returns nil.
 func (d *DNS) Payload() []byte {
 	return nil
 }
@@ -414,13 +427,13 @@ func (d *DNS) SerializeTo(b gopacket.SerializeBuffer, opts gopacket.SerializeOpt
 	return nil
 }
 
-var maxRecursion = errors.New("max DNS recursion level hit")
+var errMaxRecursion = errors.New("max DNS recursion level hit")
 
 const maxRecursionLevel = 255
 
 func decodeName(data []byte, offset int, buffer *[]byte, level int) ([]byte, int, error) {
 	if level > maxRecursionLevel {
-		return nil, 0, maxRecursion
+		return nil, 0, errMaxRecursion
 	}
 	start := len(*buffer)
 	index := offset
@@ -493,6 +506,7 @@ loop:
 	return (*buffer)[start+1:], index + 1, nil
 }
 
+// DNSQuestion wraps a single request (question) within a DNS query.
 type DNSQuestion struct {
 	Name  []byte
 	Type  DNSType
@@ -540,6 +554,8 @@ func (q *DNSQuestion) encode(data []byte, offset int) int {
 //  /                                               /
 //  +--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+
 
+// DNSResourceRecord wraps the data from a single DNS resource within a
+// response.
 type DNSResourceRecord struct {
 	// Header
 	Name  []byte
@@ -759,16 +775,22 @@ func (rr *DNSResourceRecord) decodeRData(data []byte, offset int, buffer *[]byte
 	return nil
 }
 
+// DNSSOA is a Start of Authority record.  Each domain requires a SOA record at
+// the cutover where a domain is delegated from its parent.
 type DNSSOA struct {
 	MName, RName                            []byte
 	Serial, Refresh, Retry, Expire, Minimum uint32
 }
 
+// DNSSRV is a Service record, defining a location (hostname/port) of a
+// server/service.
 type DNSSRV struct {
 	Priority, Weight, Port uint16
 	Name                   []byte
 }
 
+// DNSMX is a mail exchange record, defining a mail server for a recipient's
+// domain.
 type DNSMX struct {
 	Preference uint16
 	Name       []byte
