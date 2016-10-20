@@ -68,13 +68,19 @@ func (a UDPPort) LayerType() gopacket.LayerType {
 	return gopacket.LayerTypePayload
 }
 
-var udpPortLayerType [65536]gopacket.LayerType
+var udpPortLayerType = [65536]gopacket.LayerType{
+	53:   LayerTypeDNS,
+	123:  LayerTypeNTP,
+	4789: LayerTypeVXLAN,
+	67:   LayerTypeDHCPv4,
+	68:   LayerTypeDHCPv4,
+	6343: LayerTypeSFlow,
+}
 
 // RegisterUDPPortLayerType create a new mapping between an UDPPort
 // and an underlaying LayerType.
-func RegisterUDPPortLayerType(portNum uint16, layerType gopacket.LayerType) uint16 {
-	udpPortLayerType[portNum] = layerType
-	return portNum
+func RegisterUDPPortLayerType(port UDPPort, layerType gopacket.LayerType) {
+	udpPortLayerType[port] = layerType
 }
 
 // String returns the port as "number(name)" if there's a well-known port name,
@@ -105,13 +111,4 @@ func (a UDPLitePort) String() string {
 		return fmt.Sprintf("%d(%s)", a, name)
 	}
 	return strconv.Itoa(int(a))
-}
-
-func init() {
-	RegisterUDPPortLayerType(53, LayerTypeDNS)
-	RegisterUDPPortLayerType(123, LayerTypeNTP)
-	RegisterUDPPortLayerType(4789, LayerTypeVXLAN)
-	RegisterUDPPortLayerType(67, LayerTypeDHCPv4)
-	RegisterUDPPortLayerType(68, LayerTypeDHCPv4)
-	RegisterUDPPortLayerType(6343, LayerTypeSFlow)
 }
