@@ -96,5 +96,11 @@ PCAP File Writing
 
 This package does not implement PCAP file writing.  However, gopacket/pcapgo
 does!  Look there if you'd like to write PCAP files.
+
+Note For Windows 10 Users
+
+If you're trying to use 64-bit winpcap on Windows 10, you might have to do
+the crazy hijinks detailed at
+http://stackoverflow.com/questions/38047858/compile-gopacket-on-windows-64bit
 */
 package pcap
