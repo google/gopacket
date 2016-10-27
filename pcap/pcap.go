@@ -437,6 +437,9 @@ func (p *Handle) ListDataLinks() (datalinks []Datalink, err error) {
 	return datalinks, nil
 }
 
+// pcap_compile is NOT thread-safe, so protect it.
+var pcapCompileMu sync.Mutex
+
 // compileBPFFilter always returns an allocated _Ctype_struct_bpf_program
 // It is the callers responsibility to free the memory again, e.g.
 //
@@ -469,6 +472,8 @@ func (p *Handle) compileBPFFilter(expr string) (_Ctype_struct_bpf_program, error
 	cexpr := C.CString(expr)
 	defer C.free(unsafe.Pointer(cexpr))
 
+	pcapCompileMu.Lock()
+	defer pcapCompileMu.Unlock()
 	if -1 == C.pcap_compile(p.cptr, &bpf, cexpr, 1, C.bpf_u_int32(maskp)) {
 		return bpf, p.Error()
 	}
@@ -584,6 +589,8 @@ func (p *Handle) NewBPF(expr string) (*BPF, error) {
 	cexpr := C.CString(expr)
 	defer C.free(unsafe.Pointer(cexpr))
 
+	pcapCompileMu.Lock()
+	defer pcapCompileMu.Unlock()
 	if C.pcap_compile(p.cptr, &bpf.bpf, cexpr /* optimize */, 1, C.PCAP_NETMASK_UNKNOWN) != 0 {
 		return nil, p.Error()
 	}

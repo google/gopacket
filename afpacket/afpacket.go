@@ -390,6 +390,9 @@ func (h *TPacket) pollForFirstPacket(hdr header) error {
 		h.pollset.revents = 0
 		_, err := C.poll(&h.pollset, 1, -1)
 		h.stats.Polls++
+		if h.pollset.revents&C.POLLERR > 0 {
+			return errors.New("poll error condition")
+		}
 		if err != nil {
 			return err
 		}
