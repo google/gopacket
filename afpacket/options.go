@@ -88,12 +88,17 @@ type OptNumBlocks int
 // It can be passed into NewTPacket.
 type OptBlockTimeout time.Duration
 
+// OptPollTimeout is the number of milliseconds that poll() should block waiting  for a file
+// descriptor to become ready. Specifying a negative value in  time‐out means an infinite timeout.
+type OptPollTimeout time.Duration
+
 // Default constants used by options.
 const (
 	DefaultFrameSize    = 4096                   // Default value for OptFrameSize.
 	DefaultBlockSize    = DefaultFrameSize * 128 // Default value for OptBlockSize.
 	DefaultNumBlocks    = 128                    // Default value for OptNumBlocks.
 	DefaultBlockTimeout = 64 * time.Millisecond  // Default value for OptBlockTimeout.
+	DefaultPollTimeout  = -1 * time.Millisecond  // Default value for OptPollTimeout. This blocks forever.
 )
 
 type options struct {
@@ -102,6 +107,7 @@ type options struct {
 	blockSize      int
 	numBlocks      int
 	blockTimeout   time.Duration
+	pollTimeout    time.Duration
 	version        OptTPacketVersion
 	socktype       OptSocketType
 	iface          string
@@ -112,6 +118,7 @@ var defaultOpts = options{
 	blockSize:    DefaultBlockSize,
 	numBlocks:    DefaultNumBlocks,
 	blockTimeout: DefaultBlockTimeout,
+	pollTimeout:  DefaultPollTimeout,
 	version:      TPacketVersionHighestAvailable,
 	socktype:     SocketRaw,
 }
@@ -128,6 +135,8 @@ func parseOptions(opts ...interface{}) (ret options, err error) {
 			ret.numBlocks = int(v)
 		case OptBlockTimeout:
 			ret.blockTimeout = time.Duration(v)
+		case OptPollTimeout:
+			ret.pollTimeout = time.Duration(v)
 		case OptTPacketVersion:
 			ret.version = v
 		case OptInterface:
