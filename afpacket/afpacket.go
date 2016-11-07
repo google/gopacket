@@ -39,6 +39,12 @@ import "C"
 var pageSize = int(C.getpagesize())
 var tpacketAlignment = uint(C.TPACKET_ALIGNMENT)
 
+// ErrPoll returned by poll
+var ErrPoll = errors.New("packet poll failed")
+
+// ErrTimeout returned on poll timeout
+var ErrTimeout = errors.New("packet poll timeout expired")
+
 func tpacketAlign(v int) int {
 	return int((uint(v) + tpacketAlignment - 1) & ((^tpacketAlignment) - 1))
 }
@@ -389,14 +395,19 @@ func (h *TPacket) getTPacketHeader() header {
 }
 
 func (h *TPacket) pollForFirstPacket(hdr header) error {
+	tm := C.int(h.opts.pollTimeout / time.Millisecond)
 	for hdr.getStatus()&C.TP_STATUS_USER == 0 {
 		h.pollset.fd = h.fd
 		h.pollset.events = C.POLLIN
 		h.pollset.revents = 0
-		_, err := C.poll(&h.pollset, 1, -1)
+		n, err := C.poll(&h.pollset, 1, tm)
+		if n == 0 {
+			return ErrTimeout
+		}
+
 		h.stats.Polls++
 		if h.pollset.revents&C.POLLERR > 0 {
-			return errors.New("poll error condition")
+			return ErrPoll
 		}
 		if err != nil {
 			return err
