@@ -241,6 +241,7 @@ func (h *TPacket) releaseCurrentPacket() error {
 //  data2, _, _ := tp.ZeroCopyReadPacketData()  // invalidates bytes in data1
 func (h *TPacket) ZeroCopyReadPacketData() (data []byte, ci gopacket.CaptureInfo, err error) {
 	h.mu.Lock()
+retry:
 	if h.current == nil || !h.current.next() {
 		if h.shouldReleasePacket {
 			h.releaseCurrentPacket()
@@ -249,6 +250,10 @@ func (h *TPacket) ZeroCopyReadPacketData() (data []byte, ci gopacket.CaptureInfo
 		if err = h.pollForFirstPacket(h.current); err != nil {
 			h.mu.Unlock()
 			return
+		}
+		// We can recieved empty block
+		if h.current.getLength() == 0 {
+			goto retry
 		}
 	}
 	data = h.current.getData()
