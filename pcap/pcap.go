@@ -124,6 +124,7 @@ import (
 	"runtime"
 	"strconv"
 	"sync"
+	"sync/atomic"
 	"syscall"
 	"time"
 	"unsafe"
@@ -156,9 +157,9 @@ type Handle struct {
 	deviceIndex int
 	mu          sync.Mutex
 	closeMu     sync.Mutex
-	// stop is closed by Handle.Close to signal to getNextBufPtrLocked to stop
-	// trying to read packets
-	stop chan bool
+	// stop is set to a non-zero value by Handle.Close to signal to
+	// getNextBufPtrLocked to stop trying to read packets
+	stop uint64
 
 	// Since pointers to these objects are passed into a C function, if
 	// they're declared locally then the Go compiler thinks they may have
@@ -229,14 +230,6 @@ func timeoutMillis(timeout time.Duration) C.int {
 	return C.int(timeout / time.Millisecond)
 }
 
-func newHandle(cptr *C.pcap_t, timeout time.Duration) *Handle {
-	return &Handle{
-		cptr:    cptr,
-		timeout: timeout,
-		stop:    make(chan bool),
-	}
-}
-
 // OpenLive opens a device and returns a *Handle.
 // It takes as arguments the name of the device ("eth0"), the maximum size to
 // read for each packet (snaplen), whether to put the interface in promiscuous
@@ -251,8 +244,7 @@ func OpenLive(device string, snaplen int32, promisc bool, timeout time.Duration)
 	if promisc {
 		pro = 1
 	}
-	p := newHandle(nil, timeout)
-	p.device = device
+	p := &Handle{timeout: timeout, device: device}
 
 	ifc, err := net.InterfaceByName(device)
 	if err != nil {
@@ -291,7 +283,7 @@ func OpenOffline(file string) (handle *Handle, err error) {
 	if cptr == nil {
 		return nil, errors.New(C.GoString(buf))
 	}
-	return newHandle(cptr, 0), nil
+	return &Handle{cptr: cptr}, nil
 }
 
 // NextError is the return code from a call to Next.
@@ -377,16 +369,34 @@ func (p *Handle) getNextBufPtrLocked(ci *gopacket.CaptureInfo) error {
 	if p.cptr == nil {
 		return io.EOF
 	}
-	var result NextError
-	for {
-		// test if we need to stop
-		select {
-		case <-p.stop:
+
+	for atomic.LoadUint64(&p.stop) == 0 {
+		// try to read a packet if one is immediately available
+		result := NextError(C.pcap_next_ex(p.cptr, &p.pkthdr, &p.bufptr))
+
+		if result == NextErrorOk {
+			// got a packet, set capture info and return
+			sec := int64(p.pkthdr.ts.tv_sec)
+			// convert micros to nanos
+			nanos := int64(p.pkthdr.ts.tv_usec) * 1000
+
+			ci.Timestamp = time.Unix(sec, nanos)
+			ci.CaptureLength = int(p.pkthdr.caplen)
+			ci.Length = int(p.pkthdr.len)
+			ci.InterfaceIndex = p.deviceIndex
+
+			return nil
+		} else if result == NextErrorNoMorePackets {
+			// no more packets, return EOF rather than libpcap-specific error
 			return io.EOF
-		default:
+		} else if result != NextErrorTimeoutExpired {
+			// we got a non-timeout error
+			return result
 		}
 
-		if p.timeout < 0 {
+		// must have had a timeout... check to see how long we should wait
+		// before trying again
+		if p.timeout == BlockForever {
 			C.pcap_wait(p.cptr, 0)
 		} else {
 			// need to wait less than the read timeout according to pcap
@@ -397,25 +407,10 @@ func (p *Handle) getNextBufPtrLocked(ci *gopacket.CaptureInfo) error {
 
 			C.pcap_wait(p.cptr, usec)
 		}
+	}
 
-		result = NextError(C.pcap_next_ex(p.cptr, &p.pkthdr, &p.bufptr))
-		if p.timeout < 0 && result == NextErrorTimeoutExpired {
-			continue
-		}
-		break
-	}
-	if result != NextErrorOk {
-		if result == NextErrorNoMorePackets {
-			return io.EOF
-		}
-		return result
-	}
-	ci.Timestamp = time.Unix(int64(p.pkthdr.ts.tv_sec),
-		int64(p.pkthdr.ts.tv_usec)*1000) // convert micros to nanos
-	ci.CaptureLength = int(p.pkthdr.caplen)
-	ci.Length = int(p.pkthdr.len)
-	ci.InterfaceIndex = p.deviceIndex
-	return nil
+	// stop must be set
+	return io.EOF
 }
 
 // ZeroCopyReadPacketData reads the next packet off the wire, and returns its data.
@@ -453,7 +448,7 @@ func (p *Handle) Close() {
 		return
 	}
 
-	close(p.stop)
+	atomic.StoreUint64(&p.stop, 1)
 
 	// wait for packet reader to stop
 	p.mu.Lock()
@@ -873,9 +868,12 @@ func (p *InactiveHandle) Activate() (*Handle, error) {
 	if err != aeNoError {
 		return nil, err
 	}
-	h := newHandle(p.cptr, p.timeout)
-	h.device = p.device
-	h.deviceIndex = p.deviceIndex
+	h := &Handle{
+		cptr:        p.cptr,
+		timeout:     p.timeout,
+		device:      p.device,
+		deviceIndex: p.deviceIndex,
+	}
 	p.cptr = nil
 	return h, nil
 }
