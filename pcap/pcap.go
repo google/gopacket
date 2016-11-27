@@ -89,29 +89,6 @@ int pcap_set_rfmon(pcap_t *p, int rfmon) {
 #define gopacket_time_secs_t time_t
 #define gopacket_time_usecs_t suseconds_t
 #endif
-int pcap_wait(pcap_t *p, int usec) {
-	fd_set fds;
-	int fd;
-	struct timeval tv;
-
-	fd = pcap_get_selectable_fd(p);
-	if(fd < 0) {
-		return fd;
-	}
-
-	FD_ZERO(&fds);
-	FD_SET(fd, &fds);
-
-	tv.tv_sec = 0;
-	tv.tv_usec = usec;
-
-	if(usec != 0) {
-		return select(1, &fds, NULL, NULL, &tv);
-	}
-
-	// block indefinitely if no timeout provided
-	return select(1, &fds, NULL, NULL, NULL);
-}
 */
 import "C"
 
@@ -263,10 +240,9 @@ func OpenLive(device string, snaplen int32, promisc bool, timeout time.Duration)
 		return nil, errors.New(C.GoString(buf))
 	}
 
-	// Change the device to non-blocking, we'll use pcap_wait to wait until the
-	// handle is ready to read.
-	if v := C.pcap_setnonblock(p.cptr, 1, buf); v == -1 {
-		return nil, errors.New(C.GoString(buf))
+	if err := p.openLive(); err != nil {
+		C.pcap_close(p.cptr)
+		return nil, err
 	}
 
 	return p, nil
@@ -394,19 +370,8 @@ func (p *Handle) getNextBufPtrLocked(ci *gopacket.CaptureInfo) error {
 			return result
 		}
 
-		// must have had a timeout... check to see how long we should wait
-		// before trying again
-		if p.timeout == BlockForever {
-			C.pcap_wait(p.cptr, 0)
-		} else {
-			// need to wait less than the read timeout according to pcap
-			// documentation. timeoutMillis rounds up to at least one
-			// millisecond so we can safely subtract up to a millisecond.
-			usec := timeoutMillis(p.timeout) * 1000
-			usec -= 100
-
-			C.pcap_wait(p.cptr, usec)
-		}
+		// must have had a timeout... wait before trying again
+		p.waitForPacket()
 	}
 
 	// stop must be set
