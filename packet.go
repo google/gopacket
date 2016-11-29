@@ -120,6 +120,8 @@ type packet struct {
 	transport   TransportLayer
 	application ApplicationLayer
 	failure     ErrorLayer
+
+	lastNetwork NetworkLayer
 }
 
 func (p *packet) SetTruncated() {
@@ -136,6 +138,7 @@ func (p *packet) SetNetworkLayer(l NetworkLayer) {
 	if p.network == nil {
 		p.network = l
 	}
+	p.lastNetwork = l
 }
 
 func (p *packet) SetTransportLayer(l TransportLayer) {
@@ -462,6 +465,9 @@ func (p *eagerPacket) ApplicationLayer() ApplicationLayer {
 func (p *eagerPacket) ErrorLayer() ErrorLayer {
 	return p.failure
 }
+func (p *eagerPacket) LastNetworkLayer() NetworkLayer {
+	return p.lastNetwork
+}
 func (p *eagerPacket) Layers() []Layer {
 	return p.layers
 }
@@ -550,6 +556,9 @@ func (p *lazyPacket) ErrorLayer() ErrorLayer {
 		p.decodeNextLayer()
 	}
 	return p.failure
+}
+func (p *lazyPacket) LastNetworkLayer() NetworkLayer {
+	return p.lastNetwork
 }
 func (p *lazyPacket) Layers() []Layer {
 	for p.next != nil {
