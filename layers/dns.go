@@ -28,6 +28,23 @@ const (
 	DNSClassAny DNSClass = 255 // AnyClass
 )
 
+func (dc DNSClass) String() string {
+	switch dc {
+	default:
+		return "Unknown"
+	case DNSClassIN:
+		return "IN"
+	case DNSClassCS:
+		return "CS"
+	case DNSClassCH:
+		return "CH"
+	case DNSClassHS:
+		return "HS"
+	case DNSClassAny:
+		return "Any"
+	}
+}
+
 // DNSType defines the type of data being requested/returned in a
 // question/answer.
 type DNSType uint16
@@ -53,6 +70,49 @@ const (
 	DNSTypeAAAA  DNSType = 28 // a IPv6 host address [RFC3596]
 	DNSTypeSRV   DNSType = 33 // server discovery [RFC2782] [RFC6195]
 )
+
+func (dt DNSType) String() string {
+	switch dt {
+	default:
+		return "Unknown"
+	case DNSTypeA:
+		return "A"
+	case DNSTypeNS:
+		return "NS"
+	case DNSTypeMD:
+		return "MD"
+	case DNSTypeMF:
+		return "MF"
+	case DNSTypeCNAME:
+		return "CNAME"
+	case DNSTypeSOA:
+		return "SOA"
+	case DNSTypeMB:
+		return "MB"
+	case DNSTypeMG:
+		return "MG"
+	case DNSTypeMR:
+		return "MR"
+	case DNSTypeNULL:
+		return "NULL"
+	case DNSTypeWKS:
+		return "WKS"
+	case DNSTypePTR:
+		return "PTR"
+	case DNSTypeHINFO:
+		return "HINFO"
+	case DNSTypeMINFO:
+		return "MINFO"
+	case DNSTypeMX:
+		return "MX"
+	case DNSTypeTXT:
+		return "TXT"
+	case DNSTypeAAAA:
+		return "AAAA"
+	case DNSTypeSRV:
+		return "SRV"
+	}
+}
 
 // DNSResponseCode provides response codes for question answers.
 type DNSResponseCode uint8
@@ -134,6 +194,23 @@ const (
 	DNSOpCodeNotify DNSOpCode = 4 // Notify                 [RFC1996]
 	DNSOpCodeUpdate DNSOpCode = 5 // Update                 [RFC2136]
 )
+
+func (doc DNSOpCode) String() string {
+	switch doc {
+	default:
+		return "Unknown"
+	case DNSOpCodeQuery:
+		return "Query"
+	case DNSOpCodeIQuery:
+		return "Inverse Query"
+	case DNSOpCodeStatus:
+		return "Status"
+	case DNSOpCodeNotify:
+		return "Notify"
+	case DNSOpCodeUpdate:
+		return "Update"
+	}
+}
 
 // DNS is specified in RFC 1034 / RFC 1035
 // +---------------------+
