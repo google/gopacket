@@ -738,10 +738,13 @@ func sockaddrToIP(rsa *syscall.RawSockaddr) (IP []byte, err error) {
 	return
 }
 
-// WritePacketData calls pcap_sendpacket, injecting the given data into the pcap handle.
-func (p *Handle) WritePacketData(data []byte) (err error) {
-	if -1 == C.pcap_sendpacket(p.cptr, (*C.u_char)(&data[0]), (C.int)(len(data))) {
+// WritePacketData calls pcap_inject, injecting the given data into the pcap handle.
+// It returns number of bytes written to the pcap handle.
+func (p *Handle) WritePacketData(data []byte) (n int, err error) {
+	n = int(C.pcap_inject(p.cptr, (unsafe.Pointer)(&data[0]), (C.size_t)(len(data))))
+	if n == -1 {
 		err = p.Error()
+		n = 0
 	}
 	return
 }
