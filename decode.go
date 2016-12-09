@@ -16,11 +16,15 @@ type DecodeFeedback interface {
 	// is shorter than internal layer variables (HeaderLength, or the like) say it
 	// should be.  It sets packet.Metadata().Truncated.
 	SetTruncated()
+	// SetConsumed should be called when all payload has not been consumed
+	// Currently useful for TCP only
+	SetConsumed(uint)
 }
 
 type nilDecodeFeedback struct{}
 
-func (nilDecodeFeedback) SetTruncated() {}
+func (nilDecodeFeedback) SetTruncated()    {}
+func (nilDecodeFeedback) SetConsumed(uint) {}
 
 // NilDecodeFeedback implements DecodeFeedback by doing nothing.
 var NilDecodeFeedback DecodeFeedback = nilDecodeFeedback{}
@@ -63,6 +67,10 @@ type PacketBuilder interface {
 	// data will be dumped to stderr so you can create a test.  This should never
 	// be called from a production decoder.
 	DumpPacketData()
+	// DecodeApplicationLayers returns true if the packet was
+	// created with a decode option to enable application-level
+	// decoding (currently only checked by the TCP decoder).
+	DecodeApplicationLayers() bool
 }
 
 // Decoder is an interface for logic to decode a packet layer.  Users may
