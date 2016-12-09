@@ -42,6 +42,8 @@ type PacketMetadata struct {
 	// This is also set automatically for packets captured off the wire if
 	// CaptureInfo.CaptureLength < CaptureInfo.Length.
 	Truncated bool
+	// Holds consumed bytes
+	Consumed uint
 }
 
 // Packet is the primary object used by gopacket.  Packets are created by a
@@ -114,6 +116,12 @@ type packet struct {
 	// decoding and set a DecodeFailure layer.
 	recoverPanics bool
 
+	// decodeApplicationLayers is true if we should try go decode
+	// layers after TCP in single packets. This is disabled by
+	// default because the reassembly package drives the decoding
+	// of TCP payload data after reassembly.
+	decodeApplicationLayers bool
+
 	// Pointers to the various important layers
 	link        LinkLayer
 	network     NetworkLayer
@@ -124,6 +132,9 @@ type packet struct {
 
 func (p *packet) SetTruncated() {
 	p.metadata.Truncated = true
+}
+func (p *packet) SetConsumed(consumed uint) {
+	p.metadata.Consumed = consumed
 }
 
 func (p *packet) SetLinkLayer(l LinkLayer) {
@@ -484,6 +495,8 @@ func (p *eagerPacket) LayerClass(lc LayerClass) Layer {
 func (p *eagerPacket) String() string { return p.packetString() }
 func (p *eagerPacket) Dump() string   { return p.packetDump() }
 
+func (p *eagerPacket) DecodeApplicationLayers() bool { return p.decodeApplicationLayers }
+
 // lazyPacket does lazy decoding on its packet data.  On construction it does
 // no initial decoding.  For each function call, it decodes only as many layers
 // as are necessary to compute the return value for that function.
@@ -596,6 +609,8 @@ func (p *lazyPacket) LayerClass(lc LayerClass) Layer {
 func (p *lazyPacket) String() string { p.Layers(); return p.packetString() }
 func (p *lazyPacket) Dump() string   { p.Layers(); return p.packetDump() }
 
+func (p *lazyPacket) DecodeApplicationLayers() bool { return false }
+
 // DecodeOptions tells gopacket how to decode a packet.
 type DecodeOptions struct {
 	// Lazy decoding decodes the minimum number of layers needed to return data
@@ -615,6 +630,11 @@ type DecodeOptions struct {
 	// the issue.  If this flag is set, panics are instead allowed to continue up
 	// the stack.
 	SkipDecodeRecovery bool
+	// DecodeApplicationLayers enables routing of
+	// application-level layers in the TCP decoder.  This is
+	// disabled by default as decoding is driven by the reassembly
+	// package, on reassembled TCP payload data.
+	DecodeApplicationLayers bool
 }
 
 // Default decoding provides the safest (but slowest) method for decoding
@@ -631,6 +651,9 @@ var Lazy = DecodeOptions{Lazy: true}
 
 // NoCopy is a DecodeOptions with just NoCopy set.
 var NoCopy = DecodeOptions{NoCopy: true}
+
+// DecodeApplicationLayers is a DecodeOptions with just DecodeApplicationLayers set.
+var DecodeApplicationLayers = DecodeOptions{DecodeApplicationLayers: true}
 
 // NewPacket creates a new Packet object from a set of bytes.  The
 // firstLayerDecoder tells it how to interpret the first layer from the bytes,
@@ -665,6 +688,7 @@ func NewPacket(data []byte, firstLayerDecoder Decoder, options DecodeOptions) Pa
 	}
 	p.layers = p.initialLayers[:0]
 	p.recoverPanics = !options.SkipDecodeRecovery
+	p.decodeApplicationLayers = options.DecodeApplicationLayers
 	p.initialDecode(firstLayerDecoder)
 	return p
 }
