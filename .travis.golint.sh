@@ -3,7 +3,7 @@
 cd "$(dirname $0)"
 
 go get github.com/golang/lint/golint
-DIRS=". tcpassembly tcpassembly/tcpreader ip4defrag macs pcapgo pcap afpacket pfring routing"
+DIRS=". tcpassembly tcpassembly/tcpreader ip4defrag reassembly macs pcapgo pcap afpacket pfring routing"
 # Add subdirectories here as we clean up golint on each.
 for subdir in $DIRS; do
   pushd $subdir
