@@ -8,7 +8,6 @@ package layers
 
 import (
 	"bytes"
-	"fmt"
 	"net"
 	"testing"
 
@@ -64,7 +63,6 @@ func TestDHCPv4EncodeResponse(t *testing.T) {
 	p2 := gopacket.NewPacket(buf.Bytes(), LayerTypeDHCPv4, testDecodeOptions)
 	dhcp2 := p2.Layer(LayerTypeDHCPv4).(*DHCPv4)
 	testDHCPEqual(t, dhcp, dhcp2)
-	fmt.Print(p2)
 }
 
 func testDHCPEqual(t *testing.T, d1, d2 *DHCPv4) {
