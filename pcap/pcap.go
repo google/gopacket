@@ -85,6 +85,9 @@ int pcap_set_rfmon(pcap_t *p, int rfmon) {
 #elif __GLIBC__
 #define gopacket_time_secs_t __time_t
 #define gopacket_time_usecs_t __suseconds_t
+#elif __OpenBSD__
+#define gopacket_time_secs_t u_int32_t
+#define gopacket_time_usecs_t u_int32_t
 #else
 #define gopacket_time_secs_t time_t
 #define gopacket_time_usecs_t suseconds_t
@@ -735,10 +738,13 @@ func sockaddrToIP(rsa *syscall.RawSockaddr) (IP []byte, err error) {
 	return
 }
 
-// WritePacketData calls pcap_sendpacket, injecting the given data into the pcap handle.
-func (p *Handle) WritePacketData(data []byte) (err error) {
-	if -1 == C.pcap_sendpacket(p.cptr, (*C.u_char)(&data[0]), (C.int)(len(data))) {
+// WritePacketData calls pcap_inject, injecting the given data into the pcap handle.
+// It returns number of bytes written to the pcap handle.
+func (p *Handle) WritePacketData(data []byte) (n int, err error) {
+	n = int(C.pcap_inject(p.cptr, (unsafe.Pointer)(&data[0]), (C.size_t)(len(data))))
+	if n == -1 {
 		err = p.Error()
+		n = 0
 	}
 	return
 }
