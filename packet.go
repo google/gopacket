@@ -684,6 +684,31 @@ type PacketDataSource interface {
 	ReadPacketData() (data []byte, ci CaptureInfo, err error)
 }
 
+// ConcatFinitePacketDataSources returns a PacketDataSource that wraps a set
+// of internal PacketDataSources, each of which will stop with io.EOF after
+// reading a finite number of packets.  The returned PacketDataSource will
+// return all packets from the first finite source, followed by all packets from
+// the second, etc.  Once all finite sources have returned io.EOF, the returned
+// source will as well.
+func ConcatFinitePacketDataSources(pds ...PacketDataSource) PacketDataSource {
+	c := concat(pds)
+	return &c
+}
+
+type concat []PacketDataSource
+
+func (c *concat) ReadPacketData() (data []byte, ci CaptureInfo, err error) {
+	for len(*c) > 0 {
+		data, ci, err = (*c)[0].ReadPacketData()
+		if err == io.EOF {
+			*c = (*c)[1:]
+			continue
+		}
+		return
+	}
+	return nil, CaptureInfo{}, io.EOF
+}
+
 // ZeroCopyPacketDataSource is an interface to pull packet data from sources
 // that allow data to be returned without copying to a user-controlled buffer.
 // It's very similar to PacketDataSource, except that the caller must be more
