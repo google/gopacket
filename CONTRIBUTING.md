@@ -29,13 +29,15 @@ How To Submit Code
 gopacket uses the Git version control system.  If you want to
 make a new change, you'll first have to get our code:
 
-    go get github.com/google/gopacket
-    cd $GOROOT/src/pkg/github.com/google/gopacket
-    git checkout -b <mynewfeature>  # create a new branch to work from
-    ... code code code ...
-    ./gc  # Run this to do local commits, it performs a number of checks
-    ... code code code ...
-    ./gc --benchmark  # Run this whenever your commit could affect performance
+```sh
+go get github.com/google/gopacket
+cd $GOROOT/src/pkg/github.com/google/gopacket
+git checkout -b <mynewfeature>  # create a new branch to work from
+... code code code ...
+./gc  # Run this to do local commits, it performs a number of checks
+... code code code ...
+./gc --benchmark  # Run this whenever your commit could affect performance
+```
 
 Now that you're in the gopacket code directory, you can start making your initial
 change.  PLEASE make sure you're using a new branch to develop whatever feature
