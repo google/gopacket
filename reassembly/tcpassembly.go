@@ -92,7 +92,7 @@ type TCPAssemblyStats struct {
 type ScatterGather interface {
 	// Returns the length of available bytes and saved bytes
 	Lengths() (int, int)
-	// Returns the bytes up to length
+	// Returns the bytes up to length (shall be <= available bytes)
 	Fetch(length int) []byte
 	// Tell to keep from offset
 	KeepFrom(offset int)
@@ -141,10 +141,10 @@ func (rl *reassemblyObject) Lengths() (int, int) {
 }
 
 func (rl *reassemblyObject) Fetch(l int) []byte {
-	if len(rl.all) == 1 && l == rl.all[0].Length() {
-		return rl.all[0].Bytes()
+	if l <= rl.all[0].Length() {
+		return rl.all[0].Bytes()[:l]
 	}
-	bytes := []byte{}
+	bytes := make([]byte, 0, l)
 	for _, bc := range rl.all {
 		bytes = append(bytes, bc.Bytes()...)
 	}
@@ -361,11 +361,13 @@ func (lp *livePacket) Release(*pageCache) int {
 type Stream interface {
 	// Tell whether the TCP packet should be accepted, start could be modified to force a start even if no SYN have been seen
 	Accept(tcp *layers.TCP, ci gopacket.CaptureInfo, dir TCPFlowDirection, ackSeq Sequence, start *bool, ac AssemblerContext) bool
+
 	// ReassembledSG is called zero or more times.
-	// Reassembly objects are reused after each Reassembled call,
-	// so it's important to copy anything you need out of them
-	// or to not call Release() to keep those bytes
+	// ScatterGather is reused after each Reassembled call,
+	// so it's important to copy anything you need out of it,
+	// especially bytes (or use KeepFrom())
 	ReassembledSG(sg ScatterGather, ac AssemblerContext)
+
 	// ReassemblyComplete is called when assembly decides there is
 	// no more data for this Stream, either because a FIN or RST packet
 	// was seen, or because the stream has timed out without any new
@@ -609,18 +611,16 @@ type AssemblerContext interface {
 }
 
 // Implements AssemblerContext for Assemble()
-type assemblerSimpleContext struct {
-	CaptureInfo gopacket.CaptureInfo
-}
+type assemblerSimpleContext gopacket.CaptureInfo
 
 func (asc *assemblerSimpleContext) GetCaptureInfo() gopacket.CaptureInfo {
-	return asc.CaptureInfo
+	return gopacket.CaptureInfo(*asc)
 }
 
 // Assemble calls AssembleWithContext with the current timestamp, useful for
 // packets being read directly off the wire.
 func (a *Assembler) Assemble(netFlow gopacket.Flow, t *layers.TCP) {
-	ctx := assemblerSimpleContext{CaptureInfo: gopacket.CaptureInfo{Timestamp: time.Now()}}
+	ctx := assemblerSimpleContext(gopacket.CaptureInfo{Timestamp: time.Now()})
 	a.AssembleWithContext(netFlow, t, &ctx)
 }
 

@@ -8,7 +8,6 @@ package reassembly
 
 import (
 	"flag"
-	"fmt"
 	"log"
 	"sync"
 	"time"
@@ -91,13 +90,11 @@ func (c *pageCache) next(ts time.Time) (p *page) {
 	}
 	i := len(c.free) - 1
 	p, c.free = c.free[i], c.free[:i]
-	p.prev = nil
-	p.next = nil
 	p.seen = ts
 	p.bytes = p.buf[:0]
 	c.used++
 	if *memLog {
-		fmt.Printf("allocator returns %s\n", p)
+		log.Printf("allocator returns %s\n", p)
 	}
 	c.ops++
 	if c.ops > c.nextShrink {
@@ -112,8 +109,10 @@ func (c *pageCache) next(ts time.Time) (p *page) {
 func (c *pageCache) replace(p *page) {
 	c.used--
 	if *memLog {
-		fmt.Printf("replacing %s\n", p)
+		log.Printf("replacing %s\n", p)
 	}
+	p.prev = nil
+	p.next = nil
 	c.free = append(c.free, p)
 }
 
@@ -161,6 +160,8 @@ func (p *StreamPool) grow() {
 
 // Dump logs all connections
 func (p *StreamPool) Dump() {
+	p.mu.Lock()
+	defer p.mu.Unlock()
 	log.Printf("Remaining %d connections: ", len(p.conns))
 	for _, conn := range p.conns {
 		log.Printf("%v %s", conn.key, conn)
@@ -211,9 +212,6 @@ func (p *StreamPool) newConnection(k key, s Stream, ts time.Time) (c *connection
 	return c, &c.c2s, &c.s2c
 }
 
-// getConnection returns a connection.  If end is true and a connection
-// does not already exist, returns nil.  This allows us to check for a
-// connection without actually creating one if it doesn't already exist.
 func (p *StreamPool) getHalf(k key) (*connection, *halfconnection, *halfconnection) {
 	conn := p.conns[k]
 	if conn != nil {
@@ -227,6 +225,9 @@ func (p *StreamPool) getHalf(k key) (*connection, *halfconnection, *halfconnecti
 	return nil, nil, nil
 }
 
+// getConnection returns a connection.  If end is true and a connection
+// does not already exist, returns nil.  This allows us to check for a
+// connection without actually creating one if it doesn't already exist.
 func (p *StreamPool) getConnection(k key, end bool, ts time.Time, tcp *layers.TCP, ac AssemblerContext) (*connection, *halfconnection, *halfconnection) {
 	p.mu.RLock()
 	conn, half, rev := p.getHalf(k)

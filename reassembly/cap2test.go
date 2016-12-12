@@ -23,8 +23,6 @@ import (
 
 var input = flag.String("i", "", "Input filename")
 
-//var output = flag.String("output", "", "Output filename")
-
 func main() {
 	var handler *pcap.Handle
 	var err error
