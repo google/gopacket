@@ -319,7 +319,7 @@ func (t *TCP) TransportFlow() gopacket.Flow {
 }
 
 // For testing only
-func (t *TCP) SetInternalPorts() {
+func (t *TCP) SetInternalPortsForTesting() {
 	t.sPort = make([]byte, 2)
 	t.dPort = make([]byte, 2)
 	binary.BigEndian.PutUint16(t.sPort, uint16(t.SrcPort))
