@@ -85,9 +85,15 @@ int pcap_set_rfmon(pcap_t *p, int rfmon) {
 #elif __GLIBC__
 #define gopacket_time_secs_t __time_t
 #define gopacket_time_usecs_t __suseconds_t
+#else  // Some form of linux/bsd/etc...
+#include <sys/param.h>
+#ifdef __OpenBSD__
+#define gopacket_time_secs_t u_int32_t
+#define gopacket_time_usecs_t u_int32_t
 #else
 #define gopacket_time_secs_t time_t
 #define gopacket_time_usecs_t suseconds_t
+#endif
 #endif
 */
 import "C"
