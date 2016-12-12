@@ -531,8 +531,9 @@ loop:
 			*/
 			index2 := index + int(data[index]) + 1
 			if index2-offset > 255 {
-				return nil, 0,
-					errors.New("dns name is too long")
+				return nil, 0, errors.New("dns name is too long")
+			} else if index2 < index+1 || index2 > len(data) {
+				return nil, 0, errors.New("dns name uncomputable: invalid index")
 			}
 			*buffer = append(*buffer, '.')
 			*buffer = append(*buffer, data[index+1:index2]...)

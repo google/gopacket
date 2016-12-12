@@ -9,6 +9,7 @@ package layers
 import (
 	"bytes"
 	"net"
+	"strings"
 	"testing"
 
 	"github.com/google/gopacket"
@@ -339,4 +340,28 @@ func TestDNSEncodeResponse(t *testing.T) {
 	p2 := gopacket.NewPacket(buf.Bytes(), LayerTypeDNS, testDecodeOptions)
 	dns2 := p2.Layer(LayerTypeDNS).(*DNS)
 	testDNSEqual(t, dns, dns2)
+}
+
+// testDNSMalformedPacket is the packet:
+//   10:30:00.389666 IP 10.77.43.131.60718 > 10.1.0.17.53: 18245 updateD [b2&3=0x5420] [18516a] [12064q] [21584n] [12081au][|domain]
+//   	0x0000:  0000 0101 0000 4e96 1476 afa1 0800 4500  ......N..v....E.
+//   	0x0010:  0039 d431 0000 f311 b3a0 0a4d 2b83 0a01  .9.1.......M+...
+//   	0x0020:  0011 ed2e 0035 0025 0832 4745 5420 2f20  .....5.%.2GET./.
+//   	0x0030:  4854 5450 2f31 2e31 0d0a 486f 7374 3a20  HTTP/1.1..Host:.
+//   	0x0040:  7777 770d 0a0d 0a                        www....
+var testDNSMalformedPacket = []byte{
+	0x00, 0x00, 0x01, 0x01, 0x00, 0x00, 0x4e, 0x96, 0x14, 0x76, 0xaf, 0xa1, 0x08, 0x00, 0x45, 0x00,
+	0x00, 0x39, 0xd4, 0x31, 0x00, 0x00, 0xf3, 0x11, 0xb3, 0xa0, 0x0a, 0x4d, 0x2b, 0x83, 0x0a, 0x01,
+	0x00, 0x11, 0xed, 0x2e, 0x00, 0x35, 0x00, 0x25, 0x08, 0x32, 0x47, 0x45, 0x54, 0x20, 0x2f, 0x20,
+	0x48, 0x54, 0x54, 0x50, 0x2f, 0x31, 0x2e, 0x31, 0x0d, 0x0a, 0x48, 0x6f, 0x73, 0x74, 0x3a, 0x20,
+	0x77, 0x77, 0x77, 0x0d, 0x0a, 0x0d, 0x0a,
+}
+
+func TestDNSMalformedPacket(t *testing.T) {
+	p := gopacket.NewPacket(testDNSMalformedPacket, LinkTypeEthernet, testDecodeOptions)
+	if errLayer := p.ErrorLayer(); errLayer == nil {
+		t.Error("No error layer on invalid DNS name")
+	} else if err := errLayer.Error(); !strings.Contains(err.Error(), "invalid index") {
+		t.Error("unexpected error message: %v", err)
+	}
 }
