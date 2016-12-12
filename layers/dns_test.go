@@ -362,6 +362,6 @@ func TestDNSMalformedPacket(t *testing.T) {
 	if errLayer := p.ErrorLayer(); errLayer == nil {
 		t.Error("No error layer on invalid DNS name")
 	} else if err := errLayer.Error(); !strings.Contains(err.Error(), "invalid index") {
-		t.Error("unexpected error message: %v", err)
+		t.Errorf("unexpected error message: %v", err)
 	}
 }
