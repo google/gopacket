@@ -16,8 +16,8 @@ type DecodeFeedback interface {
 	// is shorter than internal layer variables (HeaderLength, or the like) say it
 	// should be.  It sets packet.Metadata().Truncated.
 	SetTruncated()
-	// SetConsumed should be called when all payload has not been consumed
-	// Currently useful for TCP only
+	// SetConsumed should be called for streams to mention that only a part of
+	// the payload has been consumed (currently useful for TCP only).
 	SetConsumed(uint)
 }
 

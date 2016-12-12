@@ -768,7 +768,7 @@ func testKeep(t *testing.T, s []testKeepSequence) {
 			dir = dir.Reverse()
 			flow = flow.Reverse()
 		}
-		test.tcp.SetInternalPorts()
+		test.tcp.SetInternalPortsForTesting()
 		fact.keep = test.keep
 		fact.bytes = []byte{}
 		if testDebug {
@@ -1041,7 +1041,7 @@ func testFSM(t *testing.T, s []testFSMSequence) {
 			dir = dir.Reverse()
 			flow = flow.Reverse()
 		}
-		test.tcp.SetInternalPorts()
+		test.tcp.SetInternalPortsForTesting()
 		a.AssembleWithContext(flow, &test.tcp, &test)
 		if fact.nb != test.nb {
 			t.Fatalf("#%d: packet rejected: got %d, expected %d", i, fact.nb, test.nb)
