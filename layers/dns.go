@@ -561,6 +561,9 @@ loop:
 			*/
 
 			offsetp := int(binary.BigEndian.Uint16(data[index:index+2]) & 0x3fff)
+			if offsetp > len(data) {
+				return nil, 0, errors.New("dns offset pointer too high")
+			}
 			// This looks a little tricky, but actually isn't.  Because of how
 			// decodeName is written, calling it appends the decoded name to the
 			// current buffer.  We already have the start of the buffer, then, so
