@@ -563,7 +563,9 @@ loop:
 			      - a pointer
 			      - a sequence of labels ending with a pointer
 			*/
-
+			if index+2 > len(data) {
+				return nil, 0, errors.New("dns offset pointer too high")
+			}
 			offsetp := int(binary.BigEndian.Uint16(data[index:index+2]) & 0x3fff)
 			if offsetp > len(data) {
 				return nil, 0, errors.New("dns offset pointer too high")
