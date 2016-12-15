@@ -130,7 +130,7 @@ func (s *scanner) getHwAddr() (net.HardwareAddr, error) {
 		packet := gopacket.NewPacket(data, layers.LayerTypeEthernet, gopacket.NoCopy)
 		if arpLayer := packet.Layer(layers.LayerTypeARP); arpLayer != nil {
 			arp := arpLayer.(*layers.ARP)
-			if bytes.Equal(arp.SourceProtAddress, arpDst) {
+			if arp.SourceProtAddress.Equal(arpDst) {
 				return net.HardwareAddr(arp.SourceHwAddress), nil
 			}
 		}
