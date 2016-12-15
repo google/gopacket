@@ -511,6 +511,10 @@ const maxRecursionLevel = 255
 func decodeName(data []byte, offset int, buffer *[]byte, level int) ([]byte, int, error) {
 	if level > maxRecursionLevel {
 		return nil, 0, errMaxRecursion
+	} else if offset >= len(data) {
+		return nil, 0, fmt.Errorf("dns name offset too high")
+	} else if offset < 0 {
+		return nil, 0, fmt.Errorf("dns name offset is negative")
 	}
 	start := len(*buffer)
 	index := offset
