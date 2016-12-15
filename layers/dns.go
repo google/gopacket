@@ -512,9 +512,9 @@ func decodeName(data []byte, offset int, buffer *[]byte, level int) ([]byte, int
 	if level > maxRecursionLevel {
 		return nil, 0, errMaxRecursion
 	} else if offset >= len(data) {
-		return nil, 0, fmt.Errorf("dns name offset too high")
+		return nil, 0, errors.New("dns name offset too high")
 	} else if offset < 0 {
-		return nil, 0, fmt.Errorf("dns name offset is negative")
+		return nil, 0, errors.New("dns name offset is negative")
 	}
 	start := len(*buffer)
 	index := offset
@@ -587,9 +587,12 @@ loop:
 			return nil, 0, fmt.Errorf("qname '0x80' unsupported yet (data=%x index=%d)",
 				data[index], index)
 		}
+		if index >= len(data) {
+			return nil, 0, errors.New("dns index walked out of range")
+		}
 	}
 	if len(*buffer) <= start {
-		return nil, 0, fmt.Errorf("no dns data found for name")
+		return nil, 0, errors.New("no dns data found for name")
 	}
 	return (*buffer)[start+1:], index + 1, nil
 }
