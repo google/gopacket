@@ -584,6 +584,9 @@ loop:
 				data[index], index)
 		}
 	}
+	if len(*buffer) <= start {
+		return nil, 0, fmt.Errorf("no dns data found for name")
+	}
 	return (*buffer)[start+1:], index + 1, nil
 }
 
