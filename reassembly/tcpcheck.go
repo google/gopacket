@@ -107,6 +107,11 @@ func (t *TCPOptionCheck) Accept(tcp *layers.TCP, ci gopacket.CaptureInfo, dir TC
 
 // TCPSimpleFSM implements a very simple TCP state machine
 //
+// Usage:
+// When implementing a Stream interface and to avoid to consider packets that
+// would be rejected due to client/server's TCP stack, the  Accept() can call
+// TCPSimpleFSM.CheckState().
+//
 // Limitations:
 // - packet should be received in-order.
 // - no check on sequence number is performed

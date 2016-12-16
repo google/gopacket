@@ -44,7 +44,7 @@ func Run(src gopacket.PacketDataSource) {
 	source := gopacket.NewPacketSource(src, dec)
 	source.Lazy = *lazy
 	source.NoCopy = true
-	source.DecodeApplicationLayers = true
+	source.DecodeStreamsAsDatagrams = true
 	fmt.Fprintln(os.Stderr, "Starting to read packets")
 	count := 0
 	bytes := int64(0)
