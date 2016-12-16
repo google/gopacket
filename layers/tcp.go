@@ -307,7 +307,7 @@ func decodeTCP(data []byte, p gopacket.PacketBuilder) error {
 	if err != nil {
 		return err
 	}
-	if p.DecodeApplicationLayers() {
+	if p.DecodeOptions().DecodeStreamsAsDatagrams {
 		return p.NextDecoder(tcp.NextLayerType())
 	} else {
 		return p.NextDecoder(gopacket.LayerTypePayload)

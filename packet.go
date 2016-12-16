@@ -112,15 +112,7 @@ type packet struct {
 	// metadata is the PacketMetadata for this packet
 	metadata PacketMetadata
 
-	// recoverPanics is true if we should recover from panics we see while
-	// decoding and set a DecodeFailure layer.
-	recoverPanics bool
-
-	// decodeApplicationLayers is true if we should try go decode
-	// layers after TCP in single packets. This is disabled by
-	// default because the reassembly package drives the decoding
-	// of TCP payload data after reassembly.
-	decodeApplicationLayers bool
+	decodeOptions DecodeOptions
 
 	// Pointers to the various important layers
 	link        LinkLayer
@@ -185,6 +177,10 @@ func (p *packet) Data() []byte {
 	return p.data
 }
 
+func (p *packet) DecodeOptions() *DecodeOptions {
+	return &p.decodeOptions
+}
+
 func (p *packet) addFinalDecodeError(err error, stack []byte) {
 	fail := &DecodeFailure{err: err, stack: stack}
 	if p.last == nil {
@@ -197,7 +193,7 @@ func (p *packet) addFinalDecodeError(err error, stack []byte) {
 }
 
 func (p *packet) recoverDecodeError() {
-	if p.recoverPanics {
+	if !p.decodeOptions.SkipDecodeRecovery {
 		if r := recover(); r != nil {
 			p.addFinalDecodeError(fmt.Errorf("%v", r), debug.Stack())
 		}
@@ -495,8 +491,6 @@ func (p *eagerPacket) LayerClass(lc LayerClass) Layer {
 func (p *eagerPacket) String() string { return p.packetString() }
 func (p *eagerPacket) Dump() string   { return p.packetDump() }
 
-func (p *eagerPacket) DecodeApplicationLayers() bool { return p.decodeApplicationLayers }
-
 // lazyPacket does lazy decoding on its packet data.  On construction it does
 // no initial decoding.  For each function call, it decodes only as many layers
 // as are necessary to compute the return value for that function.
@@ -609,8 +603,6 @@ func (p *lazyPacket) LayerClass(lc LayerClass) Layer {
 func (p *lazyPacket) String() string { p.Layers(); return p.packetString() }
 func (p *lazyPacket) Dump() string   { p.Layers(); return p.packetDump() }
 
-func (p *lazyPacket) DecodeApplicationLayers() bool { return false }
-
 // DecodeOptions tells gopacket how to decode a packet.
 type DecodeOptions struct {
 	// Lazy decoding decodes the minimum number of layers needed to return data
@@ -630,11 +622,11 @@ type DecodeOptions struct {
 	// the issue.  If this flag is set, panics are instead allowed to continue up
 	// the stack.
 	SkipDecodeRecovery bool
-	// DecodeApplicationLayers enables routing of
-	// application-level layers in the TCP decoder.  This is
-	// disabled by default as decoding is driven by the reassembly
-	// package, on reassembled TCP payload data.
-	DecodeApplicationLayers bool
+	// DecodeStreamsAsDatagrams enables routing of application-level layers in the TCP
+	// decoder. If true, we should try to decode layers after TCP in single packets.
+	// This is disabled by default because the reassembly package drives the decoding
+	// of TCP payload data after reassembly.
+	DecodeStreamsAsDatagrams bool
 }
 
 // Default decoding provides the safest (but slowest) method for decoding
@@ -652,8 +644,8 @@ var Lazy = DecodeOptions{Lazy: true}
 // NoCopy is a DecodeOptions with just NoCopy set.
 var NoCopy = DecodeOptions{NoCopy: true}
 
-// DecodeApplicationLayers is a DecodeOptions with just DecodeApplicationLayers set.
-var DecodeApplicationLayers = DecodeOptions{DecodeApplicationLayers: true}
+// DecodeStreamsAsDatagrams is a DecodeOptions with just DecodeStreamsAsDatagrams set.
+var DecodeStreamsAsDatagrams = DecodeOptions{DecodeStreamsAsDatagrams: true}
 
 // NewPacket creates a new Packet object from a set of bytes.  The
 // firstLayerDecoder tells it how to interpret the first layer from the bytes,
@@ -666,11 +658,10 @@ func NewPacket(data []byte, firstLayerDecoder Decoder, options DecodeOptions) Pa
 	}
 	if options.Lazy {
 		p := &lazyPacket{
-			packet: packet{data: data},
+			packet: packet{data: data, decodeOptions: options},
 			next:   firstLayerDecoder,
 		}
 		p.layers = p.initialLayers[:0]
-		p.recoverPanics = !options.SkipDecodeRecovery
 		// Crazy craziness:
 		// If the following return statemet is REMOVED, and Lazy is FALSE, then
 		// eager packet processing becomes 17% FASTER.  No, there is no logical
@@ -684,11 +675,9 @@ func NewPacket(data []byte, firstLayerDecoder Decoder, options DecodeOptions) Pa
 		return p
 	}
 	p := &eagerPacket{
-		packet: packet{data: data},
+		packet: packet{data: data, decodeOptions: options},
 	}
 	p.layers = p.initialLayers[:0]
-	p.recoverPanics = !options.SkipDecodeRecovery
-	p.decodeApplicationLayers = options.DecodeApplicationLayers
 	p.initialDecode(firstLayerDecoder)
 	return p
 }
