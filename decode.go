@@ -67,10 +67,8 @@ type PacketBuilder interface {
 	// data will be dumped to stderr so you can create a test.  This should never
 	// be called from a production decoder.
 	DumpPacketData()
-	// DecodeApplicationLayers returns true if the packet was
-	// created with a decode option to enable application-level
-	// decoding (currently only checked by the TCP decoder).
-	DecodeApplicationLayers() bool
+	// DecodeOptions returns the decode options
+	DecodeOptions() *DecodeOptions
 }
 
 // Decoder is an interface for logic to decode a packet layer.  Users may

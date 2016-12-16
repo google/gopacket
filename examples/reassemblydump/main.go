@@ -588,7 +588,7 @@ func main() {
 		}
 		if count%*statsevery == 0 {
 			ref := packet.Metadata().CaptureInfo.Timestamp
-			flushed, closed := assembler.FlushCloseOlderThan(ref.Add(-timeout), ref.Add(-closeTimeout))
+			flushed, closed := assembler.FlushWithOptions(reassembly.FlushOptions{T: ref.Add(-timeout), TC: ref.Add(-closeTimeout)})
 			Debug("Forced flush: %d flushed, %d closed (%s)", flushed, closed, ref)
 		}
 
