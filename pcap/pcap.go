@@ -781,7 +781,9 @@ func (t TimestampSource) String() string {
 // TimestampSourceFromString translates a string into a timestamp type, case
 // insensitive.
 func TimestampSourceFromString(s string) (TimestampSource, error) {
-	t := C.pcap_tstamp_type_name_to_val(C.CString(s))
+	cs := C.CString(s)
+	defer C.free(unsafe.Pointer(cs))
+	t := C.pcap_tstamp_type_name_to_val(cs)
 	if t < 0 {
 		return 0, statusError(t)
 	}
