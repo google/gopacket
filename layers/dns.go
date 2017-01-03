@@ -684,7 +684,11 @@ func (rr *DNSResourceRecord) decode(data []byte, offset int, df gopacket.DecodeF
 	rr.Class = DNSClass(binary.BigEndian.Uint16(data[endq+2 : endq+4]))
 	rr.TTL = binary.BigEndian.Uint32(data[endq+4 : endq+8])
 	rr.DataLength = binary.BigEndian.Uint16(data[endq+8 : endq+10])
-	rr.Data = data[endq+10 : endq+10+int(rr.DataLength)]
+	end := endq + 10 + int(rr.DataLength)
+	if end > len(data) {
+		return 0, fmt.Errorf("resource record length exceeds data")
+	}
+	rr.Data = data[endq+10 : end]
 
 	if err = rr.decodeRData(data, endq+10, buffer); err != nil {
 		return 0, err
