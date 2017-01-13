@@ -15,6 +15,7 @@ package main
 
 import (
 	"bufio"
+	"bytes"
 	"encoding/hex"
 	"flag"
 	"fmt"
@@ -22,6 +23,7 @@ import (
 	"net/http"
 	"os"
 	"regexp"
+	"sort"
 	"time"
 )
 
@@ -46,6 +48,17 @@ var validMACPrefixMap = map[[3]byte]string{
 
 var url = flag.String("url", "http://standards.ieee.org/develop/regauth/oui/oui.txt", "URL to fetch MACs from")
 
+type mac struct {
+	prefix  [3]byte
+	company string
+}
+
+type macs []mac
+
+func (m macs) Len() int           { return len(m) }
+func (m macs) Less(i, j int) bool { return bytes.Compare(m[i].prefix[:], m[j].prefix[:]) < 0 }
+func (m macs) Swap(i, j int)      { m[i], m[j] = m[j], m[i] }
+
 func main() {
 	fmt.Fprintf(os.Stderr, "Fetching MACs from %q\n", *url)
 	resp, err := http.Get(*url)
@@ -55,8 +68,7 @@ func main() {
 	defer resp.Body.Close()
 	buffered := bufio.NewReader(resp.Body)
 	finder := regexp.MustCompile(`^\s*([0-9A-F]{6})\s+\(base 16\)\s+(.*)`)
-	fmt.Fprintln(os.Stderr, "Starting write to standard output")
-	fmt.Printf(header, time.Now(), *url)
+	got := macs{}
 	for {
 		line, err := buffered.ReadString('\n')
 		if err == io.EOF {
@@ -65,14 +77,22 @@ func main() {
 			panic(err)
 		}
 		if matches := finder.FindStringSubmatch(line); matches != nil {
-			bytes := make([]byte, 3)
-			hex.Decode(bytes, []byte(matches[1]))
+			var prefix [3]byte
+			hex.Decode(prefix[:], []byte(matches[1]))
 			company := matches[2]
 			if company == "" {
 				company = "PRIVATE"
 			}
-			fmt.Printf("\t[3]byte{%d, %d, %d}: %q,\n", bytes[0], bytes[1], bytes[2], company)
+			fmt.Fprint(os.Stderr, "*")
+			got = append(got, mac{prefix: prefix, company: company})
 		}
+	}
+	fmt.Fprintln(os.Stderr, "\nSorting macs")
+	sort.Sort(got)
+	fmt.Fprintln(os.Stderr, "Starting write to standard output")
+	fmt.Printf(header, time.Now(), *url)
+	for _, m := range got {
+		fmt.Printf("\t[3]byte{%d, %d, %d}: %q,\n", m.prefix[0], m.prefix[1], m.prefix[2], m.company)
 	}
 	fmt.Println("}")
 }
