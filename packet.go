@@ -42,8 +42,6 @@ type PacketMetadata struct {
 	// This is also set automatically for packets captured off the wire if
 	// CaptureInfo.CaptureLength < CaptureInfo.Length.
 	Truncated bool
-	// Holds consumed bytes
-	Consumed uint
 }
 
 // Packet is the primary object used by gopacket.  Packets are created by a
@@ -124,9 +122,6 @@ type packet struct {
 
 func (p *packet) SetTruncated() {
 	p.metadata.Truncated = true
-}
-func (p *packet) SetConsumed(consumed uint) {
-	p.metadata.Consumed = consumed
 }
 
 func (p *packet) SetLinkLayer(l LinkLayer) {
