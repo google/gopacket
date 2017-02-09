@@ -16,15 +16,11 @@ type DecodeFeedback interface {
 	// is shorter than internal layer variables (HeaderLength, or the like) say it
 	// should be.  It sets packet.Metadata().Truncated.
 	SetTruncated()
-	// SetConsumed should be called for streams to mention that only a part of
-	// the payload has been consumed (currently useful for TCP only).
-	SetConsumed(uint)
 }
 
 type nilDecodeFeedback struct{}
 
-func (nilDecodeFeedback) SetTruncated()    {}
-func (nilDecodeFeedback) SetConsumed(uint) {}
+func (nilDecodeFeedback) SetTruncated() {}
 
 // NilDecodeFeedback implements DecodeFeedback by doing nothing.
 var NilDecodeFeedback DecodeFeedback = nilDecodeFeedback{}

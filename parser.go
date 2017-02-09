@@ -51,8 +51,6 @@ type DecodingLayerParser struct {
 	// Truncated is set when a decode layer detects that the packet has been
 	// truncated.
 	Truncated bool
-	// Consumed holds the number of consumed bytes
-	Consumed uint
 }
 
 // AddDecodingLayer adds a decoding layer to the parser.  This adds support for
@@ -69,12 +67,6 @@ func (l *DecodingLayerParser) AddDecodingLayer(d DecodingLayer) {
 // DecodeLayers.
 func (l *DecodingLayerParser) SetTruncated() {
 	l.Truncated = true
-}
-
-// SetConsumed is used by DecodingLayers to inform all payload has not been
-// parsed
-func (l *DecodingLayerParser) SetConsumed(consumed uint) {
-	l.Consumed = consumed
 }
 
 // NewDecodingLayerParser creates a new DecodingLayerParser and adds in all
