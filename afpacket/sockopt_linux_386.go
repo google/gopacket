@@ -6,7 +6,7 @@
 
 // +build linux,386
 
-package raw
+package afpacket
 
 import (
 	"unsafe"
