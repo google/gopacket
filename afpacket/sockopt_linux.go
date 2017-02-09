@@ -5,6 +5,7 @@
 // tree.
 
 // +build linux
+
 package afpacket
 
 import (
