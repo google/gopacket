@@ -487,6 +487,18 @@ func (p *Handle) compileBPFFilter(expr string) (_Ctype_struct_bpf_program, error
 	return bpf, nil
 }
 
+// CompileBPFFilter compiles and returns a BPF filter with given a link type and capture length.
+func CompileBPFFilter(linkType layers.LinkType, captureLength int, expr string) ([]BPFInstruction, error) {
+	cptr := C.pcap_open_dead(C.int(linkType), C.int(captureLength))
+	if cptr == nil {
+		return nil, errors.New("error opening dead capture")
+	}
+
+	h := Handle{cptr: cptr}
+	defer h.Close()
+	return h.CompileBPFFilter(expr)
+}
+
 // CompileBPFFilter compiles and returns a BPF filter for the pcap handle.
 func (p *Handle) CompileBPFFilter(expr string) ([]BPFInstruction, error) {
 	bpf, err := p.compileBPFFilter(expr)
