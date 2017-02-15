@@ -1,17 +1,20 @@
-// Package ip6defrag implements a IPv6 defragmenter
-package main
-
+// Copyright 2013 Google, Inc. All rights reserved.
+//
+// Use of this source code is governed by a BSD-style license
+// that can be found in the LICENSE file in the root of the source
+// tree.
+package ipv6defrag
 import (
 	"container/list"
 	"fmt"
-	"github.com/google/gopacket"
-	"github.com/google/gopacket/layers"
 	"log"
 	"sync"
 	"time"
+		
+	"github.com/google/gopacket"
+	"github.com/google/gopacket/layers"
 )
 
-//need to check
 const (
 	IPv6MaximumSize            = 65535
 	IPv6MaximumFragmentOffset  = 8191
@@ -54,6 +57,43 @@ func newIpv6(packet gopacket.Packet) ipv6 {
 		id:  frag.Identification,
 	}
 }
+//Defragv6 takes in packets with ipv6 fragements 
+//
+// It do not modify the pakcets in place, 'in' remains untouched
+// It returns a packet with all ipv6 fragent ressembled
+
+// If the passed-in paket is NOT fragmented, it will
+// immediately return it without modifying the layer.
+//
+// If the IPv4 paket is a fragment and we don't have all
+// fragments, it will return nil and store whatever internal
+// information it needs to eventually defrag the packet.
+//
+// If the paket's ipv6 fragment is the last fragment needed to reconstruct
+// the packet, a new pakect will be returned.
+//
+// It use a map of all the running flows
+// 
+//the reason to use packet as input is that gopacket treat ipv6 fragment as a 
+//seperate layer, so we need get both IPv6Fragment layer and IPv6 layer when defrag
+//To make the function symmetrical, we use the packet as the return structure too
+//
+// Usage example:
+//
+// func HandlePacket(in *gopacket.Packet) err {
+//     defragger := ip6defrag.NewIPv4Defragmenter()
+//     in, err := defragger.DefragIPv6(in)
+//     if err != nil {
+//         return err
+//     } else if in == nil {
+//         return nil  // packet fragment, we don't have whole packet yet.
+//     }
+//     // At this point, we know that 'in' is defragmented.
+//     //It may be the same 'in' passed to
+//	   // HandlePacket, or it may not, but we don't really care :)
+//	   ... do stuff to 'in' ...
+//}
+//
 
 func (d *IPv6Defragmenter) DefragIPv6(in gopacket.Packet) (gopacket.Packet, error) {
 	// check if we need to defrag
@@ -159,7 +199,6 @@ func (f *fragmentList) insert(in gopacket.Packet) (gopacket.Packet, error) {
 	return nil, nil
 }
 
-//need work
 func (f *fragmentList) build(in gopacket.Packet) (gopacket.Packet, error) {
 	var final []byte
 	var currentOffset uint16 = 0
