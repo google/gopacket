@@ -153,6 +153,9 @@ popd
 pushd tcpassembly
 go test ./...
 popd
+pushd reassembly
+go test ./...
+popd
 pushd layers
 gofmt -w gen.go
 go build gen.go
