@@ -22,6 +22,7 @@ import (
 	"time"
 	"unsafe"
 
+	"golang.org/x/net/bpf"
 	"golang.org/x/sys/unix"
 
 	"github.com/google/gopacket"
@@ -227,6 +228,18 @@ func NewTPacket(opts ...interface{}) (h *TPacket, err error) {
 errlbl:
 	h.Close()
 	return nil, err
+}
+
+// SetBPF attaches a BPF filter to the underlying socket
+func (h *TPacket) SetBPF(filter []bpf.RawInstruction) error {
+	var p unix.SockFprog
+	if len(filter) > int(^uint16(0)) {
+		return errors.New("filter too large")
+	}
+	p.Len = uint16(len(filter))
+	p.Filter = (*unix.SockFilter)(unsafe.Pointer(&filter[0]))
+
+	return setsockopt(h.fd, unix.SOL_SOCKET, unix.SO_ATTACH_FILTER, unsafe.Pointer(&p), unix.SizeofSockFprog)
 }
 
 func (h *TPacket) releaseCurrentPacket() error {
