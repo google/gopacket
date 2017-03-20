@@ -206,6 +206,18 @@ func (f *fragmentList) insert(in *layers.IPv4) (*layers.IPv4, error) {
 		for e := f.List.Front(); e != nil; e = e.Next() {
 			frag, _ := e.Value.(*layers.IPv4)
 			if in.FragOffset == frag.FragOffset {
+				// TODO: what if we receive a fragment
+				// that begins with duplicate data but
+				// *also* has new data? For example:
+				//
+				// AAAA
+				//     BB
+				//     BBCC
+				//         DDDD
+				//
+				// In this situation we completely
+				// ignore CC and the complete packet can
+				// never be reassembled.
 				debug.Printf("defrag: ignoring frag %d as we already have it (duplicate?)\n",
 					fragOffset)
 				return nil, nil
