@@ -84,3 +84,25 @@ func BenchmarkDecodePacketVXLAN(b *testing.B) {
 		gopacket.NewPacket(testPacketVXLAN, LinkTypeEthernet, gopacket.NoCopy)
 	}
 }
+
+func TestIsomorphicPacketVXLAN(t *testing.T) {
+	vx := &VXLAN{
+		ValidIDFlag:      true,
+		VNI:              255,
+		GBPExtension:     true,
+		GBPApplied:       true,
+		GBPDontLearn:     true,
+		GBPGroupPolicyID: 777,
+	}
+
+	b := gopacket.NewSerializeBuffer()
+	vx.SerializeTo(b, gopacket.SerializeOptions{})
+
+	p := gopacket.NewPacket(b.Bytes(), gopacket.DecodeFunc(decodeVXLAN), gopacket.Default)
+	vxTranslated := p.Layer(LayerTypeVXLAN).(*VXLAN)
+	vxTranslated.BaseLayer = BaseLayer{}
+
+	if !reflect.DeepEqual(vx, vxTranslated) {
+		t.Errorf("VXLAN isomorph mismatch, \nwant %#v\ngot %#v\n", vx, vxTranslated)
+	}
+}
