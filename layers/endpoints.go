@@ -50,12 +50,16 @@ var (
 // NewIPEndpoint creates a new IP (v4 or v6) endpoint from a net.IP address.
 // It returns gopacket.InvalidEndpoint if the IP address is invalid.
 func NewIPEndpoint(a net.IP) gopacket.Endpoint {
-	switch len(a) {
-	case 4:
-		return gopacket.NewEndpoint(EndpointIPv4, []byte(a))
-	case 16:
-		return gopacket.NewEndpoint(EndpointIPv6, []byte(a))
+	ipv4 := a.To4()
+	if ipv4 != nil {
+		return gopacket.NewEndpoint(EndpointIPv4, []byte(ipv4))
 	}
+
+	ipv6 := a.To16()
+	if ipv6 != nil {
+		return gopacket.NewEndpoint(EndpointIPv6, []byte(ipv6))
+	}
+
 	return gopacket.InvalidEndpoint
 }
 
