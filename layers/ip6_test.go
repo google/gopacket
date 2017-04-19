@@ -196,6 +196,126 @@ func TestPacketIPv6HopByHop0Decode(t *testing.T) {
 	}
 }
 
+// testPacketIPv6Fragment0 is the packet:
+//   01:17:28.274032 IP6 2001:db8::1 > 2001:db8::2: frag (1024|16)
+//   	0x0000:  6000 0000 0018 2c40 2001 0db8 0000 0000  `.....,@........
+//   	0x0010:  0000 0000 0000 0001 2001 0db8 0000 0000  ................
+//   	0x0020:  0000 0000 0000 0002 3b00 0401 1122 3344  ........;...."3D
+//   	0x0030:  fefe fefe fefe fefe fefe fefe fefe fefe  ................
+var testPacketIPv6Fragment0 = []byte{
+	0x60, 0x00, 0x00, 0x00, 0x00, 0x18, 0x2c, 0x40, 0x20, 0x01, 0x0d, 0xb8, 0x00, 0x00, 0x00, 0x00,
+	0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x01, 0x20, 0x01, 0x0d, 0xb8, 0x00, 0x00, 0x00, 0x00,
+	0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02, 0x3b, 0x00, 0x04, 0x01, 0x11, 0x22, 0x33, 0x44,
+	0xfe, 0xfe, 0xfe, 0xfe, 0xfe, 0xfe, 0xfe, 0xfe, 0xfe, 0xfe, 0xfe, 0xfe, 0xfe, 0xfe, 0xfe, 0xfe,
+}
+
+func TestPacketIPv6Fragment0Serialize(t *testing.T) {
+	var serialize []gopacket.SerializableLayer = make([]gopacket.SerializableLayer, 0, 2)
+	var err error
+
+	ip6 := &IPv6{}
+	ip6.Version = 6
+	ip6.NextHeader = IPProtocolIPv6Fragment
+	ip6.HopLimit = 64
+	ip6.SrcIP = net.ParseIP("2001:db8::1")
+	ip6.DstIP = net.ParseIP("2001:db8::2")
+	serialize = append(serialize, ip6)
+
+	frg := &IPv6Fragment{}
+	frg.NextHeader = IPProtocolNoNextHeader
+	frg.FragmentOffset = 128
+	frg.MoreFragments = true
+	frg.Identification = 0x11223344
+	serialize = append(serialize, frg)
+
+	pld := make([]byte, 16)
+	for c := range pld {
+		pld[c] = 0xfe
+	}
+	serialize = append(serialize, gopacket.Payload(pld))
+
+	buf := gopacket.NewSerializeBuffer()
+	opts := gopacket.SerializeOptions{FixLengths: true}
+	err = gopacket.SerializeLayers(buf, opts, serialize...)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	got := buf.Bytes()
+	want := testPacketIPv6Fragment0
+	if !bytes.Equal(got, want) {
+		t.Errorf("IPv6Fragment serialize failed:\ngot:\n%#v\n\nwant:\n%#v\n\n", got, want)
+	}
+}
+
+func TestPacketIPv6Fragment0Decode(t *testing.T) {
+	ip6 := &IPv6{}
+	ip6.BaseLayer = BaseLayer{
+		Contents: []byte{
+			0x60, 0x00, 0x00, 0x00, 0x00, 0x18, 0x2c, 0x40, 0x20, 0x01, 0x0d, 0xb8, 0x00, 0x00, 0x00, 0x00,
+			0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x01, 0x20, 0x01, 0x0d, 0xb8, 0x00, 0x00, 0x00, 0x00,
+			0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02,
+		},
+		Payload: []byte{0x3b, 0x00, 0x04, 0x01, 0x11, 0x22, 0x33, 0x44,
+			0xfe, 0xfe, 0xfe, 0xfe, 0xfe, 0xfe, 0xfe, 0xfe, 0xfe, 0xfe, 0xfe, 0xfe, 0xfe, 0xfe, 0xfe, 0xfe},
+	}
+	ip6.Version = 6
+	ip6.TrafficClass = 0
+	ip6.FlowLabel = 0
+	ip6.Length = 24
+	ip6.NextHeader = IPProtocolIPv6Fragment
+	ip6.HopLimit = 64
+	ip6.SrcIP = net.IP{0x20, 0x01, 0x0d, 0xb8, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x01}
+	ip6.DstIP = net.IP{0x20, 0x01, 0x0d, 0xb8, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02}
+
+	frg := &IPv6Fragment{}
+	frg.BaseLayer = BaseLayer{
+		Contents: []byte{0x3b, 0x00, 0x04, 0x01, 0x11, 0x22, 0x33, 0x44},
+		Payload:  []byte{0xfe, 0xfe, 0xfe, 0xfe, 0xfe, 0xfe, 0xfe, 0xfe, 0xfe, 0xfe, 0xfe, 0xfe, 0xfe, 0xfe, 0xfe, 0xfe},
+	}
+	frg.NextHeader = IPProtocolNoNextHeader
+	frg.Reserved1 = 0
+	frg.FragmentOffset = 128
+	frg.Reserved2 = 0
+	frg.MoreFragments = true
+	frg.Identification = 0x11223344
+
+	pld := make([]byte, 16)
+	for c := range pld {
+		pld[c] = 0xfe
+	}
+
+	p := gopacket.NewPacket(testPacketIPv6Fragment0, LinkTypeRaw, gopacket.Default)
+	if p.ErrorLayer() != nil {
+		t.Error("Failed to decode packet:", p.ErrorLayer().Error())
+	}
+	checkLayers(p, []gopacket.LayerType{LayerTypeIPv6, LayerTypeIPv6Fragment, gopacket.LayerTypeFragment}, t)
+	if got, ok := p.Layer(LayerTypeIPv6).(*IPv6); ok {
+		want := ip6
+		if !reflect.DeepEqual(got, want) {
+			t.Errorf("IPv6 packet processing failed:\ngot:\n%#v\n\nwant:\n%#v\n\n", got, want)
+		}
+	} else {
+		t.Error("No IPv6 layer type found in packet")
+	}
+	if got, ok := p.Layer(LayerTypeIPv6Fragment).(*IPv6Fragment); ok {
+		want := frg
+		if !reflect.DeepEqual(got, want) {
+			t.Errorf("IPv6Fragment packet processing failed:\ngot:\n%#v\n\nwant:\n%#v\n\n", got, want)
+		}
+	} else {
+		t.Error("No IPv6Fragment layer type found in packet")
+	}
+	if got, ok := p.Layer(gopacket.LayerTypeFragment).(*gopacket.Fragment); ok {
+		want := (*gopacket.Fragment)(&pld)
+		if !reflect.DeepEqual(got, want) {
+			t.Errorf("Payload packet processing failed:\ngot:\n%#v\n\nwant:\n%#v\n\n", got, want)
+		}
+	} else {
+		t.Error("No Payload layer type found in packet")
+	}
+}
+
 // testPacketIPv6Destination0 is the packet:
 //   12:40:14.429409595 IP6 2001:db8::1 > 2001:db8::2: DSTOPT no next header
 //   	0x0000:  6000 0000 0008 3c40 2001 0db8 0000 0000  `.....<@........
