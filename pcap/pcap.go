@@ -529,7 +529,6 @@ func (p *Handle) SetBPFFilter(expr string) (err error) {
 	}
 
 	if -1 == C.pcap_setfilter(p.cptr, &bpf) {
-		C.pcap_freecode(&bpf)
 		return p.Error()
 	}
 
