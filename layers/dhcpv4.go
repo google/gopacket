@@ -161,7 +161,12 @@ func (d *DHCPv4) DecodeFromBytes(data []byte, df gopacket.DecodeFeedback) error 
 			break
 		}
 		d.Options = append(d.Options, o)
-		start += int(o.Length) + 2
+		// Check if the option is a single byte pad
+		if o.Type == DHCPOptPad {
+			start++
+		} else {
+			start += int(o.Length) + 2
+		}
 	}
 	return nil
 }
@@ -215,7 +220,12 @@ func (d *DHCPv4) SerializeTo(b gopacket.SerializeBuffer, opts gopacket.Serialize
 			if err := o.encode(data[offset:]); err != nil {
 				return err
 			}
-			offset += 2 + len(o.Data)
+			// A pad option is only a single byte
+			if o.Type == DHCPOptPad {
+				offset++
+			} else {
+				offset += 2 + len(o.Data)
+			}
 		}
 		optend := NewDHCPOption(DHCPOptEnd, nil)
 		if err := optend.encode(data[offset:]); err != nil {
