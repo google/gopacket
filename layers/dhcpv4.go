@@ -175,7 +175,11 @@ func (d *DHCPv4) DecodeFromBytes(data []byte, df gopacket.DecodeFeedback) error 
 func (d *DHCPv4) Len() uint16 {
 	n := uint16(240)
 	for _, o := range d.Options {
-		n += uint16(o.Length) + 2
+		if o.Type == DHCPOptPad {
+			n++
+		} else {
+			n += uint16(o.Length) + 2
+		}
 	}
 	n++ // for opt end
 	return n
@@ -186,9 +190,6 @@ func (d *DHCPv4) Len() uint16 {
 // See the docs for gopacket.SerializableLayer for more info.
 func (d *DHCPv4) SerializeTo(b gopacket.SerializeBuffer, opts gopacket.SerializeOptions) error {
 	plen := int(d.Len())
-	if plen < 300 {
-		plen = 300
-	}
 
 	data, err := b.PrependBytes(plen)
 	if err != nil {
