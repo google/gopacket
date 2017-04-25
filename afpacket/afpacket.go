@@ -89,18 +89,20 @@ type TPacket struct {
 	shouldReleasePacket bool
 	// headerNextNeeded is set to true when header need to move to the next packet. No need to move it case of poll error.
 	headerNextNeeded bool
-	// stats is simple statistics on TPacket's run.
-	stats Stats
-	// socketStats contains stats from the socket
-	socketStats SocketStats
-	// same as socketStats, but with an extra field freeze_q_cnt
-	socketStatsV3 SocketStatsV3
 	// tpVersion is the version of TPacket actually in use, set by setRequestedTPacketVersion.
 	tpVersion OptTPacketVersion
 	// Hackity hack hack hack.  We need to return a pointer to the header with
 	// getTPacketHeader, and we don't want to allocate a v3wrapper every time,
 	// so we leave it in the TPacket object and return a pointer to it.
 	v3 v3wrapper
+
+	statsMu sync.Mutex // guards stats below
+	// stats is simple statistics on TPacket's run.
+	stats Stats
+	// socketStats contains stats from the socket
+	socketStats SocketStats
+	// same as socketStats, but with an extra field freeze_q_cnt
+	socketStatsV3 SocketStatsV3
 }
 
 var _ gopacket.ZeroCopyPacketDataSource = &TPacket{}
@@ -293,8 +295,8 @@ retry:
 
 // Stats returns statistics on the packets the TPacket has seen so far.
 func (h *TPacket) Stats() (Stats, error) {
-	h.mu.Lock()
-	defer h.mu.Unlock()
+	h.statsMu.Lock()
+	defer h.statsMu.Unlock()
 	return h.stats, nil
 }
 
@@ -326,8 +328,8 @@ func (h *TPacket) InitSocketStats() error {
 
 // SocketStats saves stats from the socket to the TPacket instance.
 func (h *TPacket) SocketStats() (SocketStats, SocketStatsV3, error) {
-	h.mu.Lock()
-	defer h.mu.Unlock()
+	h.statsMu.Lock()
+	defer h.statsMu.Unlock()
 	// We need to save the counters since asking for the stats will clear them
 	if h.tpVersion == TPacketVersion3 {
 		socklen := unsafe.Sizeof(h.socketStatsV3)
