@@ -19,6 +19,7 @@ import (
 	"net"
 	"runtime"
 	"sync"
+	"sync/atomic"
 	"time"
 	"unsafe"
 
@@ -287,17 +288,19 @@ retry:
 	ci.CaptureLength = len(data)
 	ci.Length = h.current.getLength()
 	ci.InterfaceIndex = h.current.getIfaceIndex()
-	h.stats.Packets++
+	atomic.AddInt64(&h.stats.Packets, 1)
 	h.headerNextNeeded = true
 	h.mu.Unlock()
+
 	return
 }
 
 // Stats returns statistics on the packets the TPacket has seen so far.
 func (h *TPacket) Stats() (Stats, error) {
-	h.statsMu.Lock()
-	defer h.statsMu.Unlock()
-	return h.stats, nil
+	return Stats{
+		Polls:   atomic.LoadInt64(&h.stats.Polls),
+		Packets: atomic.LoadInt64(&h.stats.Packets),
+	}, nil
 }
 
 // InitSocketStats clears socket counters and return empty stats.
@@ -426,7 +429,7 @@ func (h *TPacket) pollForFirstPacket(hdr header) error {
 			return ErrTimeout
 		}
 
-		h.stats.Polls++
+		atomic.AddInt64(&h.stats.Polls, 1)
 		if h.pollset.Revents&unix.POLLERR > 0 {
 			return ErrPoll
 		}
