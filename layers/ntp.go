@@ -321,13 +321,13 @@ func (d *NTP) DecodeFromBytes(data []byte, df gopacket.DecodeFeedback) error {
 	// above and the section on endian conventions.
 
 	// The first few fields are all packed into the first 32 bits. Unpack them.
-	f := binary.BigEndian.Uint32(data[0:4])
-	d.LeapIndicator = NTPLeapIndicator((f & 0xC0000000) >> 30)
-	d.Version = NTPVersion((f & 0x38000000) >> 27)
-	d.Mode = NTPMode((f & 0x07000000) >> 24)
-	d.Stratum = NTPStratum((f & 0x00FF0000) >> 16)
-	d.Poll = NTPLog2Seconds((f & 0x0000FF00) >> 8)
-	d.Precision = NTPLog2Seconds((f & 0x000000FF) >> 0)
+	f := data[0]
+	d.LeapIndicator = NTPLeapIndicator((f & 0xC0) >> 6)
+	d.Version = NTPVersion((f & 0x38) >> 3)
+	d.Mode = NTPMode(f & 0x07)
+	d.Stratum = NTPStratum(data[1])
+	d.Poll = NTPLog2Seconds(data[2])
+	d.Precision = NTPLog2Seconds(data[3])
 
 	// The remaining fields can just be copied in big endian order.
 	d.RootDelay = NTPFixed16Seconds(binary.BigEndian.Uint32(data[4:8]))
