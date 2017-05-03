@@ -357,14 +357,14 @@ func (d *NTP) SerializeTo(b gopacket.SerializeBuffer, opts gopacket.SerializeOpt
 	}
 
 	// Pack the first few fields into the first 32 bits.
-	h := uint32(0)
-	h |= (uint32(d.LeapIndicator) << 30) & 0xC0000000
-	h |= (uint32(d.Version) << 27) & 0x38000000
-	h |= (uint32(d.Mode) << 24) & 0x07000000
-	h |= (uint32(d.Stratum) << 16) & 0x00FF0000
-	h |= (uint32(d.Poll) << 8) & 0x0000FF00
-	h |= (uint32(d.Precision) << 0) & 0x000000FF
-	binary.BigEndian.PutUint32(data[0:4], h)
+	h := uint8(0)
+	h |= (uint8(d.LeapIndicator) << 6) & 0xC0
+	h |= (uint8(d.Version) << 3) & 0x38
+	h |= (uint8(d.Mode)) & 0x07
+	data[0] = byte(h)
+	data[1] = byte(d.Stratum)
+	data[2] = byte(d.Poll)
+	data[3] = byte(d.Precision)
 
 	// The remaining fields can just be copied in big endian order.
 	binary.BigEndian.PutUint32(data[4:8], uint32(d.RootDelay))
