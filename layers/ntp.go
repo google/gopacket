@@ -347,6 +347,43 @@ func (d *NTP) DecodeFromBytes(data []byte, df gopacket.DecodeFeedback) error {
 	return nil
 }
 
+// SerializeTo writes the serialized form of this layer into the
+// SerializationBuffer, implementing gopacket.SerializableLayer.
+// See the docs for gopacket.SerializableLayer for more info.
+func (d *NTP) SerializeTo(b gopacket.SerializeBuffer, opts gopacket.SerializeOptions) error {
+	data, err := b.PrependBytes(ntpMinimumRecordSizeInBytes)
+	if err != nil {
+		return err
+	}
+
+	// Pack the first few fields into the first 32 bits.
+	h := uint32(0)
+	h |= (uint32(d.LeapIndicator) << 30) & 0xC0000000
+	h |= (uint32(d.Version) << 27) & 0x38000000
+	h |= (uint32(d.Mode) << 24) & 0x07000000
+	h |= (uint32(d.Stratum) << 16) & 0x00FF0000
+	h |= (uint32(d.Poll) << 8) & 0x0000FF00
+	h |= (uint32(d.Precision) << 0) & 0x000000FF
+	binary.BigEndian.PutUint32(data[0:4], h)
+
+	// The remaining fields can just be copied in big endian order.
+	binary.BigEndian.PutUint32(data[4:8], uint32(d.RootDelay))
+	binary.BigEndian.PutUint32(data[8:12], uint32(d.RootDispersion))
+	binary.BigEndian.PutUint32(data[12:16], uint32(d.ReferenceID))
+	binary.BigEndian.PutUint64(data[16:24], uint64(d.ReferenceTimestamp))
+	binary.BigEndian.PutUint64(data[24:32], uint64(d.OriginTimestamp))
+	binary.BigEndian.PutUint64(data[32:40], uint64(d.ReceiveTimestamp))
+	binary.BigEndian.PutUint64(data[40:48], uint64(d.TransmitTimestamp))
+
+	ex, err := b.AppendBytes(len(d.ExtensionBytes))
+	if err != nil {
+		return err
+	}
+	copy(ex, d.ExtensionBytes)
+
+	return nil
+}
+
 //******************************************************************************
 
 // CanDecode returns a set of layers that NTP objects can decode.
