@@ -88,7 +88,7 @@ type SerializeBuffer interface {
 	// overwritten by the caller.  The caller must only call PrependBytes if they
 	// know they're going to immediately overwrite all bytes returned.
 	PrependBytes(num int) ([]byte, error)
-	// AppendBytes returns a set of bytes which prepends the current bytes in this
+	// AppendBytes returns a set of bytes which appends the current bytes in this
 	// buffer.  These bytes start in an indeterminate state, so they should be
 	// overwritten by the caller.  The caller must only call AppendBytes if they
 	// know they're going to immediately overwrite all bytes returned.
