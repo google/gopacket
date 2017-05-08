@@ -6,7 +6,9 @@
 
 package gopacket
 
-import ()
+import (
+	"fmt"
+)
 
 // SerializableLayer allows its implementations to be written out as a set of bytes,
 // so those bytes may be sent on the wire or otherwise used by the caller.
@@ -193,4 +195,19 @@ func SerializeLayers(w SerializeBuffer, opts SerializeOptions, layers ...Seriali
 		}
 	}
 	return nil
+}
+
+// SerializePacket is a convenience function that calls SerializeLayers
+// on packet's Layers().
+// It returns an error if one of the packet layers is not a SerializebleLayer.
+func SerializePacket(buf SerializeBuffer, opts SerializeOptions, packet Packet) error {
+	sls := []SerializableLayer{}
+	for _, layer := range packet.Layers() {
+		sl, ok := layer.(SerializableLayer)
+		if !ok {
+			return fmt.Errorf("layer %s is not serializable", layer.LayerType().String())
+		}
+		sls = append(sls, sl)
+	}
+	return SerializeLayers(buf, opts, sls...)
 }
