@@ -17,6 +17,7 @@ package pcap
 #cgo windows CFLAGS: -I C:/WpdPack/Include
 #cgo windows,386 LDFLAGS: -L C:/WpdPack/Lib -lwpcap
 #cgo windows,amd64 LDFLAGS: -L C:/WpdPack/Lib/x64 -lwpcap
+#include <stdio.h>
 #include <stdlib.h>
 #include <pcap.h>
 
@@ -103,6 +104,7 @@ import (
 	"fmt"
 	"io"
 	"net"
+	"os"
 	"reflect"
 	"runtime"
 	"strconv"
@@ -257,6 +259,30 @@ func OpenOffline(file string) (handle *Handle, err error) {
 	return &Handle{cptr: cptr}, nil
 }
 
+// FOpenOffline takes an already open file and return its contents as a *Handle.
+func FOpenOffline(file *os.File) (handle *Handle, err error) {
+	cfile, err := C.fdopen(C.int(file.Fd()), C.CString("rb"))
+	if cfile == nil {
+		return nil, err
+	}
+
+	buf := (*C.char)(C.calloc(errorBufferSize, 1))
+	if buf == nil {
+		// WARNING: this will close the open file passed in
+		C.fclose(cfile)
+		return nil, errors.New("out of memory")
+	}
+	defer C.free(unsafe.Pointer(buf))
+
+	cptr := C.pcap_fopen_offline(cfile, buf)
+	if cptr == nil {
+		// WARNING: this will close the open file passed in
+		C.fclose(cfile)
+		return nil, errors.New(C.GoString(buf))
+	}
+	return &Handle{cptr: cptr}, nil
+}
+
 // NextError is the return code from a call to Next.
 type NextError int32
 
@@ -392,11 +418,11 @@ func (p *Handle) ZeroCopyReadPacketData() (data []byte, ci gopacket.CaptureInfo,
 func (p *Handle) Close() {
 	p.mu.Lock()
 	defer p.mu.Unlock()
-	if p.cptr == nil {
-		return
+	if p.cptr != nil {
+		// Note that this also closes the underlying *FILE if FOpenOffline() was used
+		C.pcap_close(p.cptr)
+		p.cptr = nil
 	}
-	C.pcap_close(p.cptr)
-	p.cptr = nil
 }
 
 // Error returns the current error associated with a pcap handle (pcap_geterr).
