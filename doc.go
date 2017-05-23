@@ -212,7 +212,7 @@ based on endpoint criteria:
 
 For load-balancing purposes, both Flow and Endpoint have FastHash() functions,
 which provide quick, non-cryptographic hashes of their contents.  Of particular
-importance is the fact that Flow FastHash() is symetric: A->B will have the same
+importance is the fact that Flow FastHash() is symmetric: A->B will have the same
 hash as B->A.  An example usage could be:
 
  channels := [8]chan gopacket.Packet
