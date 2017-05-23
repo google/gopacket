@@ -35,7 +35,7 @@ import (
 type scanner struct {
 	// iface is the interface to send packets on.
 	iface *net.Interface
-	// destination, gateway (if applicable), and soruce IP addresses to use.
+	// destination, gateway (if applicable), and source IP addresses to use.
 	dst, gw, src net.IP
 
 	handle *pcap.Handle
