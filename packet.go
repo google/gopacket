@@ -762,7 +762,7 @@ type ZeroCopyPacketDataSource interface {
 // importantly the io.EOF error in cases where packets are being read from
 // a file.
 //  for {
-//    packet, err := packetSource.NextPacket() {
+//    packet, err := packetSource.NextPacket()
 //    if err == io.EOF {
 //      break
 //    } else if err != nil {
