@@ -93,7 +93,7 @@ const (
 type LinkType uint8
 
 const (
-	// According to pcap-linktype(7) and http://www.tcpdump.org/linktypes.html
+	// According to pcap-linktype(7) and http://www.tcpdump.org/linktypes.html with fixes from pcap/bpf.h
 	LinkTypeNull           LinkType = 0
 	LinkTypeEthernet       LinkType = 1
 	LinkTypeAX25           LinkType = 3
@@ -102,10 +102,12 @@ const (
 	LinkTypeSLIP           LinkType = 8
 	LinkTypePPP            LinkType = 9
 	LinkTypeFDDI           LinkType = 10
+	LinkTypeRawLinux       LinkType = 12
+	LinkTypeRawOpenBSD     LinkType = 14
 	LinkTypePPP_HDLC       LinkType = 50
 	LinkTypePPPEthernet    LinkType = 51
 	LinkTypeATM_RFC1483    LinkType = 100
-	LinkTypeRaw            LinkType = 101
+	LinkTypeRaw            LinkType = 102
 	LinkTypeC_HDLC         LinkType = 104
 	LinkTypeIEEE802_11     LinkType = 105
 	LinkTypeFRelay         LinkType = 107
@@ -500,6 +502,8 @@ func init() {
 	LinkTypeMetadata[LinkTypeLoop] = EnumMetadata{DecodeWith: gopacket.DecodeFunc(decodeLoopback), Name: "Loop"}
 	LinkTypeMetadata[LinkTypeIEEE802_11] = EnumMetadata{DecodeWith: gopacket.DecodeFunc(decodeDot11), Name: "802.11"}
 	LinkTypeMetadata[LinkTypeRaw] = EnumMetadata{DecodeWith: gopacket.DecodeFunc(decodeIPv4or6), Name: "Raw"}
+	LinkTypeMetadata[LinkTypeRawLinux] = EnumMetadata{DecodeWith: gopacket.DecodeFunc(decodeIPv4or6), Name: "Raw"}
+	LinkTypeMetadata[LinkTypeRawOpenBSD] = EnumMetadata{DecodeWith: gopacket.DecodeFunc(decodeIPv4or6), Name: "Raw"}
 	LinkTypeMetadata[LinkTypePFLog] = EnumMetadata{DecodeWith: gopacket.DecodeFunc(decodePFLog), Name: "PFLog"}
 	LinkTypeMetadata[LinkTypeIEEE80211Radio] = EnumMetadata{DecodeWith: gopacket.DecodeFunc(decodeRadioTap), Name: "RadioTap"}
 	LinkTypeMetadata[LinkTypeLinuxUSB] = EnumMetadata{DecodeWith: gopacket.DecodeFunc(decodeUSB), Name: "USB"}
