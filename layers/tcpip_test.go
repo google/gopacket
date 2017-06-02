@@ -78,7 +78,7 @@ func TestIPv4UDPChecksum(t *testing.T) {
 	if p.ErrorLayer() != nil {
 		t.Fatal("Failed to decode packet:", p.ErrorLayer().Error())
 	}
-	checkLayers(p, []gopacket.LayerType{LayerTypeIPv4, LayerTypeUDP}, t)
+	checkLayers(p, []gopacket.LayerType{LayerTypeRaw, LayerTypeIPv4, LayerTypeUDP}, t)
 
 	if l, ok := p.Layer(LayerTypeUDP).(*UDP); !ok {
 		t.Fatal("No UDP layer type found in packet")
@@ -120,7 +120,7 @@ func TestIPv6UDPChecksumWithIPv6DstOpts(t *testing.T) {
 	if p.ErrorLayer() != nil {
 		t.Fatal("Failed to decode packet:", p.ErrorLayer().Error())
 	}
-	checkLayers(p, []gopacket.LayerType{LayerTypeIPv6, LayerTypeIPv6Destination, LayerTypeUDP}, t)
+	checkLayers(p, []gopacket.LayerType{LayerTypeRaw, LayerTypeIPv6, LayerTypeIPv6Destination, LayerTypeUDP}, t)
 
 	if l, ok := p.Layer(LayerTypeUDP).(*UDP); !ok {
 		t.Fatal("No UDP layer type found in packet")
@@ -170,7 +170,7 @@ func TestIPv6JumbogramUDPChecksum(t *testing.T) {
 	if p.ErrorLayer() != nil {
 		t.Fatal("Failed to decode packet:", p.ErrorLayer().Error())
 	}
-	checkLayers(p, []gopacket.LayerType{LayerTypeIPv6, LayerTypeIPv6HopByHop, LayerTypeUDP, gopacket.LayerTypePayload}, t)
+	checkLayers(p, []gopacket.LayerType{LayerTypeRaw, LayerTypeIPv6, LayerTypeIPv6HopByHop, LayerTypeUDP, gopacket.LayerTypePayload}, t)
 
 	if l, ok := p.Layer(LayerTypeUDP).(*UDP); !ok {
 		t.Fatal("No UDP layer type found in packet")

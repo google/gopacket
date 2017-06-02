@@ -374,18 +374,6 @@ func (a Dot11Type) LayerType() gopacket.LayerType {
 	return Dot11TypeMetadata[a].LayerType
 }
 
-// Decode a raw v4 or v6 IP packet.
-func decodeIPv4or6(data []byte, p gopacket.PacketBuilder) error {
-	version := data[0] >> 4
-	switch version {
-	case 4:
-		return decodeIPv4(data, p)
-	case 6:
-		return decodeIPv6(data, p)
-	}
-	return fmt.Errorf("Invalid IP packet version %v", version)
-}
-
 func init() {
 	// Here we link up all enumerations with their respective names and decoders.
 	for i := 0; i < 65536; i++ {
@@ -501,9 +489,9 @@ func init() {
 	LinkTypeMetadata[LinkTypeIEEE802_11] = EnumMetadata{DecodeWith: gopacket.DecodeFunc(decodeDot11), Name: "Dot11"}
 	LinkTypeMetadata[LinkTypeLoop] = EnumMetadata{DecodeWith: gopacket.DecodeFunc(decodeLoopback), Name: "Loop"}
 	LinkTypeMetadata[LinkTypeIEEE802_11] = EnumMetadata{DecodeWith: gopacket.DecodeFunc(decodeDot11), Name: "802.11"}
-	LinkTypeMetadata[LinkTypeRaw] = EnumMetadata{DecodeWith: gopacket.DecodeFunc(decodeIPv4or6), Name: "Raw"}
-	LinkTypeMetadata[LinkTypeRawLinux] = EnumMetadata{DecodeWith: gopacket.DecodeFunc(decodeIPv4or6), Name: "Raw"}
-	LinkTypeMetadata[LinkTypeRawOpenBSD] = EnumMetadata{DecodeWith: gopacket.DecodeFunc(decodeIPv4or6), Name: "Raw"}
+	LinkTypeMetadata[LinkTypeRaw] = EnumMetadata{DecodeWith: gopacket.DecodeFunc(decodeRawIP), Name: "Raw"}
+	LinkTypeMetadata[LinkTypeRawLinux] = EnumMetadata{DecodeWith: gopacket.DecodeFunc(decodeRawIP), Name: "Raw"}
+	LinkTypeMetadata[LinkTypeRawOpenBSD] = EnumMetadata{DecodeWith: gopacket.DecodeFunc(decodeRawIP), Name: "Raw"}
 	LinkTypeMetadata[LinkTypePFLog] = EnumMetadata{DecodeWith: gopacket.DecodeFunc(decodePFLog), Name: "PFLog"}
 	LinkTypeMetadata[LinkTypeIEEE80211Radio] = EnumMetadata{DecodeWith: gopacket.DecodeFunc(decodeRadioTap), Name: "RadioTap"}
 	LinkTypeMetadata[LinkTypeLinuxUSB] = EnumMetadata{DecodeWith: gopacket.DecodeFunc(decodeUSB), Name: "USB"}

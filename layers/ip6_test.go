@@ -176,7 +176,7 @@ func TestPacketIPv6HopByHop0Decode(t *testing.T) {
 	if p.ErrorLayer() != nil {
 		t.Error("Failed to decode packet:", p.ErrorLayer().Error())
 	}
-	checkLayers(p, []gopacket.LayerType{LayerTypeIPv6, LayerTypeIPv6HopByHop}, t)
+	checkLayers(p, []gopacket.LayerType{LayerTypeRaw, LayerTypeIPv6, LayerTypeIPv6HopByHop}, t)
 	if got, ok := p.Layer(LayerTypeIPv6).(*IPv6); ok {
 		want := ip6
 		want.HopByHop = got.HopByHop // avoid comparing pointers
@@ -282,7 +282,7 @@ func TestPacketIPv6Destination0Decode(t *testing.T) {
 	if p.ErrorLayer() != nil {
 		t.Error("Failed to decode packet:", p.ErrorLayer().Error())
 	}
-	checkLayers(p, []gopacket.LayerType{LayerTypeIPv6, LayerTypeIPv6Destination}, t)
+	checkLayers(p, []gopacket.LayerType{LayerTypeRaw, LayerTypeIPv6, LayerTypeIPv6Destination}, t)
 	if got, ok := p.Layer(LayerTypeIPv6).(*IPv6); ok {
 		want := ip6
 		if !reflect.DeepEqual(got, want) {
@@ -395,7 +395,7 @@ func TestIPv6JumbogramDecode(t *testing.T) {
 	if p.ErrorLayer() != nil {
 		t.Error("Failed to decode packet:", p.ErrorLayer().Error())
 	}
-	checkLayers(p, []gopacket.LayerType{LayerTypeIPv6, LayerTypeIPv6HopByHop, gopacket.LayerTypePayload}, t)
+	checkLayers(p, []gopacket.LayerType{LayerTypeRaw, LayerTypeIPv6, LayerTypeIPv6HopByHop, gopacket.LayerTypePayload}, t)
 
 	if got, ok := p.Layer(LayerTypeIPv6).(*IPv6); ok {
 		want := ip6
