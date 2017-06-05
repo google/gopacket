@@ -200,6 +200,7 @@ func (ip *IPv4) DecodeFromBytes(data []byte, df gopacket.DecodeFeedback) error {
 	ip.Checksum = binary.BigEndian.Uint16(data[10:12])
 	ip.SrcIP = data[12:16]
 	ip.DstIP = data[16:20]
+	ip.Options = ip.Options[:0]
 	// Set up an initial guess for contents/payload... we'll reset these soon.
 	ip.BaseLayer = BaseLayer{Contents: data}
 
