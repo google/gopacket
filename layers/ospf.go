@@ -41,9 +41,23 @@ func (i OSPFType) String() string {
 	}
 }
 
-// OSPF is a basic OSPF packet header.
+//OSPFv2 extend the OSPF head with version 2 specific fields
+type OSPFv2 struct {
+	AuType         uint16
+	Authentication uint64
+}
+
+// OSPFv3 extend the OSPF head with version 3 specific fields
+type OSPFv3 struct {
+	Instance uint8
+	Reserved uint8
+}
+
+// OSPF is a basic OSPF packet header with common fields of Version 2 and Version 3.
 type OSPF struct {
 	BaseLayer
+	OSPFv2
+	OSPFv3
 	Version      uint8
 	Type         OSPFType
 	PacketLength uint16
@@ -52,22 +66,11 @@ type OSPF struct {
 	Checksum     uint16
 }
 
-// OSPFv3 contains additional OSPF Version 3 packet header fields.
-type OSPFv3 struct {
-	Instance uint8
-	Reserved uint8
-}
-
-func (ospf *OSPF) decodeOSPFv3(data []byte) error {
-	var v3 OSPFv3
-
-	v3.Instance = uint8(data[14])
-	v3.Reserved = uint8(data[15])
-
-	return nil
-}
-
 func (ospf *OSPF) DecodeFromBytes(data []byte, df gopacket.DecodeFeedback) error {
+	if len(data) < 14 {
+		return fmt.Errorf("Packet too smal for OSPF")
+	}
+
 	ospf.Version = uint8(data[0])
 	ospf.Type = OSPFType(data[1])
 	ospf.PacketLength = binary.BigEndian.Uint16(data[2:4])
@@ -76,8 +79,18 @@ func (ospf *OSPF) DecodeFromBytes(data []byte, df gopacket.DecodeFeedback) error
 	ospf.Checksum = binary.BigEndian.Uint16(data[12:14])
 
 	switch ospf.Version {
+	case 2:
+		if len(data) < 24 {
+			return fmt.Errorf("Packet too smal for OSPF Version 2")
+		}
+		ospf.AuType = binary.BigEndian.Uint16(data[14:16])
+		ospf.Authentication = binary.BigEndian.Uint64(data[16:24])
 	case 3:
-		ospf.decodeOSPFv3(data)
+		if len(data) < 16 {
+			return fmt.Errorf("Packet too smal for OSPF Version 3")
+		}
+		ospf.Instance = uint8(data[14])
+		ospf.Reserved = uint8(data[15])
 	default:
 		return fmt.Errorf("Unsupported OSPF version")
 	}
