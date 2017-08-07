@@ -13,6 +13,7 @@ import (
 	"github.com/google/gopacket"
 )
 
+// OSPFType denotes what kind of OSPF type it is
 type OSPFType uint8
 
 // Potential values for OSPF.Type.
@@ -24,6 +25,7 @@ const (
 	OSPFLinkStateAcknowledgment OSPFType = 5
 )
 
+// String conversions for OSPFType
 func (i OSPFType) String() string {
 	switch i {
 	case OSPFHello:
@@ -66,6 +68,7 @@ type OSPF struct {
 	Checksum     uint16
 }
 
+// DecodeFromBytes decodes the given bytes into the OSPF layer.
 func (ospf *OSPF) DecodeFromBytes(data []byte, df gopacket.DecodeFeedback) error {
 	if len(data) < 14 {
 		return fmt.Errorf("Packet too smal for OSPF")
