@@ -117,7 +117,6 @@ func (ospf *OSPF) CanDecode() gopacket.LayerClass {
 }
 
 func decodeOSPF(data []byte, p gopacket.PacketBuilder) error {
-
 	ospf := &OSPF{}
 	return decodingLayerDecoder(ospf, data, p)
 }
