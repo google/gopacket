@@ -28,6 +28,23 @@ const (
 	DNSClassAny DNSClass = 255 // AnyClass
 )
 
+func (dc DNSClass) String() string {
+	switch dc {
+	default:
+		return "Unknown"
+	case DNSClassIN:
+		return "IN"
+	case DNSClassCS:
+		return "CS"
+	case DNSClassCH:
+		return "CH"
+	case DNSClassHS:
+		return "HS"
+	case DNSClassAny:
+		return "Any"
+	}
+}
+
 // DNSType defines the type of data being requested/returned in a
 // question/answer.
 type DNSType uint16
@@ -53,6 +70,49 @@ const (
 	DNSTypeAAAA  DNSType = 28 // a IPv6 host address [RFC3596]
 	DNSTypeSRV   DNSType = 33 // server discovery [RFC2782] [RFC6195]
 )
+
+func (dt DNSType) String() string {
+	switch dt {
+	default:
+		return "Unknown"
+	case DNSTypeA:
+		return "A"
+	case DNSTypeNS:
+		return "NS"
+	case DNSTypeMD:
+		return "MD"
+	case DNSTypeMF:
+		return "MF"
+	case DNSTypeCNAME:
+		return "CNAME"
+	case DNSTypeSOA:
+		return "SOA"
+	case DNSTypeMB:
+		return "MB"
+	case DNSTypeMG:
+		return "MG"
+	case DNSTypeMR:
+		return "MR"
+	case DNSTypeNULL:
+		return "NULL"
+	case DNSTypeWKS:
+		return "WKS"
+	case DNSTypePTR:
+		return "PTR"
+	case DNSTypeHINFO:
+		return "HINFO"
+	case DNSTypeMINFO:
+		return "MINFO"
+	case DNSTypeMX:
+		return "MX"
+	case DNSTypeTXT:
+		return "TXT"
+	case DNSTypeAAAA:
+		return "AAAA"
+	case DNSTypeSRV:
+		return "SRV"
+	}
+}
 
 // DNSResponseCode provides response codes for question answers.
 type DNSResponseCode uint8
@@ -134,6 +194,23 @@ const (
 	DNSOpCodeNotify DNSOpCode = 4 // Notify                 [RFC1996]
 	DNSOpCodeUpdate DNSOpCode = 5 // Update                 [RFC2136]
 )
+
+func (doc DNSOpCode) String() string {
+	switch doc {
+	default:
+		return "Unknown"
+	case DNSOpCodeQuery:
+		return "Query"
+	case DNSOpCodeIQuery:
+		return "Inverse Query"
+	case DNSOpCodeStatus:
+		return "Status"
+	case DNSOpCodeNotify:
+		return "Notify"
+	case DNSOpCodeUpdate:
+		return "Update"
+	}
+}
 
 // DNS is specified in RFC 1034 / RFC 1035
 // +---------------------+
@@ -434,6 +511,10 @@ const maxRecursionLevel = 255
 func decodeName(data []byte, offset int, buffer *[]byte, level int) ([]byte, int, error) {
 	if level > maxRecursionLevel {
 		return nil, 0, errMaxRecursion
+	} else if offset >= len(data) {
+		return nil, 0, errors.New("dns name offset too high")
+	} else if offset < 0 {
+		return nil, 0, errors.New("dns name offset is negative")
 	}
 	start := len(*buffer)
 	index := offset
@@ -454,8 +535,9 @@ loop:
 			*/
 			index2 := index + int(data[index]) + 1
 			if index2-offset > 255 {
-				return nil, 0,
-					errors.New("dns name is too long")
+				return nil, 0, errors.New("dns name is too long")
+			} else if index2 < index+1 || index2 > len(data) {
+				return nil, 0, errors.New("dns name uncomputable: invalid index")
 			}
 			*buffer = append(*buffer, '.')
 			*buffer = append(*buffer, data[index+1:index2]...)
@@ -481,8 +563,13 @@ loop:
 			      - a pointer
 			      - a sequence of labels ending with a pointer
 			*/
-
+			if index+2 > len(data) {
+				return nil, 0, errors.New("dns offset pointer too high")
+			}
 			offsetp := int(binary.BigEndian.Uint16(data[index:index+2]) & 0x3fff)
+			if offsetp > len(data) {
+				return nil, 0, errors.New("dns offset pointer too high")
+			}
 			// This looks a little tricky, but actually isn't.  Because of how
 			// decodeName is written, calling it appends the decoded name to the
 			// current buffer.  We already have the start of the buffer, then, so
@@ -502,6 +589,12 @@ loop:
 			return nil, 0, fmt.Errorf("qname '0x80' unsupported yet (data=%x index=%d)",
 				data[index], index)
 		}
+		if index >= len(data) {
+			return nil, 0, errors.New("dns index walked out of range")
+		}
+	}
+	if len(*buffer) <= start {
+		return nil, 0, errors.New("no dns data found for name")
 	}
 	return (*buffer)[start+1:], index + 1, nil
 }
@@ -591,7 +684,11 @@ func (rr *DNSResourceRecord) decode(data []byte, offset int, df gopacket.DecodeF
 	rr.Class = DNSClass(binary.BigEndian.Uint16(data[endq+2 : endq+4]))
 	rr.TTL = binary.BigEndian.Uint32(data[endq+4 : endq+8])
 	rr.DataLength = binary.BigEndian.Uint16(data[endq+8 : endq+10])
-	rr.Data = data[endq+10 : endq+10+int(rr.DataLength)]
+	end := endq + 10 + int(rr.DataLength)
+	if end > len(data) {
+		return 0, fmt.Errorf("resource record length exceeds data")
+	}
+	rr.Data = data[endq+10 : end]
 
 	if err = rr.decodeRData(data, endq+10, buffer); err != nil {
 		return 0, err

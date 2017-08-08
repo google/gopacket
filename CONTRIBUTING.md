@@ -26,37 +26,22 @@ so the code can make it into the master branch as quickly as possible.
 How To Submit Code
 ------------------
 
-gopacket uses the Git version control system.  If you want to
-make a new change, you'll first have to get our code:
+We use github.com's Pull Request feature to receive code contributions from
+external contributors.  See
+https://help.github.com/articles/creating-a-pull-request/ for details on
+how to create a request.
 
-    go get github.com/google/gopacket
-    cd $GOROOT/src/pkg/github.com/google/gopacket
-    git checkout -b <mynewfeature>  # create a new branch to work from
-    ... code code code ...
-    ./gc  # Run this to do local commits, it performs a number of checks
-    ... code code code ...
-    ./gc --benchmark  # Run this whenever your commit could affect performance
+Also, there's a local script `gc` in the base directory of GoPacket that
+runs a local set of checks, which should give you relatively high confidence
+that your pull won't fail github pull checks.
 
-Now that you're in the gopacket code directory, you can start making your initial
-change.  PLEASE make sure you're using a new branch to develop whatever feature
-you're working on.
-
-Once you've got your code to a place where you're ready to have us look at it,
-send an email to gopacket@googlegroups.com, detailing your change.  We'll add
-you as a committer, and you can upload your feature branch to github.com/google/gopacket.
-From there, the other folks working on gopacket can give you code reviews with
-the github.com code review functionality.
-
-The code review will generally be either emails or line-by-line reviews via
-github.com.  One or more folks might review your code.  The review should
-be considered "complete" when at least one of the project Owners (see
-https://github.com/orgs/google/people) gives you permission to merge to
-master.  At that point, you can merge to master yourself, or you can have one of
-the other committers/owners do it for you.
-
-When doing the final merge, please try to capture any interesting comments or
-discussions that came up in code review.  This will help future contributors be
-able to find and reference those discussions later on.
+```sh
+go get github.com/google/gopacket
+cd $GOROOT/src/pkg/github.com/google/gopacket
+git checkout -b <mynewfeature>  # create a new branch to work from
+... code code code ...
+./gc  # Run this to do local commits, it performs a number of checks
+```
 
 To sum up:
 
@@ -64,28 +49,19 @@ To sum up:
     + Pull down the latest version.
     + Make a feature-specific branch.
     + Code using the style and methods discussed in the rest of this document.
-    + Use the ./gc command to do local commits.
-    + Send an email asking us to make you a committer (if you're new).
-    + Push your new feature branch up to github.com.
+    + Use the ./gc command to do local commits or check correctness.
+    + Push your new feature branch up to github.com, as a pull request.
     + Handle comments and requests from reviewers, pushing new commits up to
       your feature branch as problems are addressed.
-    + Get approval from a project Owner to merge to master.
-    + Merge yourself, or have another Committer/Owner do it for you.
     + Put interesting comments and discussions into commit comments.
 * DON'T
-    + Push directly to master.
     + Push to someone else's branch without their permission.
-    + Merge your own code to master without sign-off from others on the project.
-    + Rebase (please merge)
-* OPTIONAL
-    + Review others' code as it comes in (politely :)
-    + Keep contributing!
 
 
 Coding Style
 ------------
 
-* Go code must be run through 'go fmt'.
+* Go code must be run through `go fmt`, `go vet`, and `golint`
 * Follow http://golang.org/doc/effective_go.html as much as possible.
     + In particular, http://golang.org/doc/effective_go.html#mixed-caps.  Enums
       should be be CamelCase, with acronyms capitalized (TCPSourcePort, vs.

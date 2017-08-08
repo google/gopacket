@@ -278,10 +278,7 @@ func decodeIPv6(data []byte, p gopacket.PacketBuilder) error {
 	if err != nil {
 		return err
 	}
-	if ip6.HopByHop != nil {
-		return p.NextDecoder(ip6.HopByHop.NextHeader)
-	}
-	return p.NextDecoder(ip6.NextHeader)
+	return p.NextDecoder(ip6.NextLayerType())
 }
 
 type ipv6HeaderTLVOption struct {

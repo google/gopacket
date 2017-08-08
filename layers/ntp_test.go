@@ -9,7 +9,9 @@
 package layers
 
 import (
+	"crypto/rand"
 	"github.com/google/gopacket"
+	"io"
 	"reflect"
 	"testing"
 )
@@ -18,7 +20,7 @@ import (
 
 // checkNTP() uses the ntp.go code to analyse the packet bytes as an NTP UDP
 // packet and generate an NTP object. It then compares the generated NTP object
-// with the one provided and raises the alarm if there is any difference.
+// with the one provided and throws an error if there is any difference.
 // The desc argument is output with any failure message to identify the test.
 func checkNTP(desc string, t *testing.T, packetBytes []byte, pExpectedNTP *NTP) {
 
@@ -49,6 +51,16 @@ func checkNTP(desc string, t *testing.T, packetBytes []byte, pExpectedNTP *NTP) 
 	if !reflect.DeepEqual(pResultNTP, pExpectedNTP) {
 		t.Errorf("NTP packet processing failed for packet "+desc+
 			":\ngot  :\n%#v\n\nwant :\n%#v\n\n", pResultNTP, pExpectedNTP)
+	}
+	buf := gopacket.NewSerializeBuffer()
+	opts := gopacket.SerializeOptions{}
+	err := pResultNTP.SerializeTo(buf, opts)
+	if err != nil {
+		t.Error(err)
+	}
+	if !reflect.DeepEqual(pResultNTP.BaseLayer.Contents, buf.Bytes()) {
+		t.Errorf("NTP packet serialization failed for packet "+desc+
+			":\ngot  :\n%x\n\nwant :\n%x\n\n", buf.Bytes(), packetBytes)
 	}
 }
 
@@ -220,3 +232,27 @@ func TestNTPThree(t *testing.T) {
 }
 
 //******************************************************************************
+
+// TestNTPIsomorphism tests whether random data gets parsed into NTP layer and
+// gets serialized back from it to the same value.
+func TestNTPIsomorphism(t *testing.T) {
+	NTPData := make([]byte, ntpMinimumRecordSizeInBytes+7)
+	_, err := io.ReadFull(rand.Reader, NTPData)
+	if err != nil {
+		t.Error(err)
+	}
+	ntpLayer := &NTP{}
+	err = ntpLayer.DecodeFromBytes(NTPData, gopacket.NilDecodeFeedback)
+	if err != nil {
+		t.Error(err)
+	}
+	buf := gopacket.NewSerializeBuffer()
+	opts := gopacket.SerializeOptions{}
+	err = ntpLayer.SerializeTo(buf, opts)
+	if err != nil {
+		t.Error(err)
+	}
+	if !reflect.DeepEqual(NTPData, buf.Bytes()) {
+		t.Errorf("NTP packet is not isomorphic:\ngot  :\n%x\n\nwant :\n%x\n\n", buf.Bytes(), NTPData)
+	}
+}

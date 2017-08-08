@@ -85,9 +85,15 @@ int pcap_set_rfmon(pcap_t *p, int rfmon) {
 #elif __GLIBC__
 #define gopacket_time_secs_t __time_t
 #define gopacket_time_usecs_t __suseconds_t
+#else  // Some form of linux/bsd/etc...
+#include <sys/param.h>
+#ifdef __OpenBSD__
+#define gopacket_time_secs_t u_int32_t
+#define gopacket_time_usecs_t u_int32_t
 #else
 #define gopacket_time_secs_t time_t
 #define gopacket_time_usecs_t suseconds_t
+#endif
 #endif
 */
 import "C"
@@ -511,6 +517,18 @@ func (p *Handle) compileBPFFilter(expr string) (_Ctype_struct_bpf_program, error
 	return bpf, nil
 }
 
+// CompileBPFFilter compiles and returns a BPF filter with given a link type and capture length.
+func CompileBPFFilter(linkType layers.LinkType, captureLength int, expr string) ([]BPFInstruction, error) {
+	cptr := C.pcap_open_dead(C.int(linkType), C.int(captureLength))
+	if cptr == nil {
+		return nil, errors.New("error opening dead capture")
+	}
+
+	h := Handle{cptr: cptr}
+	defer h.Close()
+	return h.CompileBPFFilter(expr)
+}
+
 // CompileBPFFilter compiles and returns a BPF filter for the pcap handle.
 func (p *Handle) CompileBPFFilter(expr string) ([]BPFInstruction, error) {
 	bpf, err := p.compileBPFFilter(expr)
@@ -541,7 +559,6 @@ func (p *Handle) SetBPFFilter(expr string) (err error) {
 	}
 
 	if -1 == C.pcap_setfilter(p.cptr, &bpf) {
-		C.pcap_freecode(&bpf)
 		return p.Error()
 	}
 
@@ -805,7 +822,9 @@ func (t TimestampSource) String() string {
 // TimestampSourceFromString translates a string into a timestamp type, case
 // insensitive.
 func TimestampSourceFromString(s string) (TimestampSource, error) {
-	t := C.pcap_tstamp_type_name_to_val(C.CString(s))
+	cs := C.CString(s)
+	defer C.free(unsafe.Pointer(cs))
+	t := C.pcap_tstamp_type_name_to_val(cs)
 	if t < 0 {
 		return 0, statusError(t)
 	}
