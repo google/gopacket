@@ -8,7 +8,6 @@ package layers
 
 import (
 	"bytes"
-	"fmt"
 	"net"
 	"testing"
 
@@ -23,6 +22,7 @@ func TestDHCPv4EncodeRequest(t *testing.T) {
 
 	dhcp.Options = append(dhcp.Options, NewDHCPOption(DHCPOptMessageType, []byte{byte(DHCPMsgTypeDiscover)}))
 	dhcp.Options = append(dhcp.Options, NewDHCPOption(DHCPOptHostname, []byte{'e', 'x', 'a', 'm', 'p', 'l', 'e', '.', 'c', 'o', 'm'}))
+	dhcp.Options = append(dhcp.Options, NewDHCPOption(DHCPOptPad, nil))
 	dhcp.Options = append(dhcp.Options, NewDHCPOption(DHCPOptParamsRequest,
 		[]byte{byte(DHCPOptSubnetMask), byte(DHCPOptBroadcastAddr), byte(DHCPOptTimeOffset),
 			byte(DHCPOptRouter), byte(DHCPOptDomainName), byte(DHCPOptDNS), byte(DHCPOptDomainSearch),
@@ -49,6 +49,7 @@ func TestDHCPv4EncodeResponse(t *testing.T) {
 
 	dhcp.Options = append(dhcp.Options, NewDHCPOption(DHCPOptMessageType, []byte{byte(DHCPMsgTypeOffer)}))
 	dhcp.Options = append(dhcp.Options, NewDHCPOption(DHCPOptSubnetMask, []byte{255, 255, 255, 0}))
+	dhcp.Options = append(dhcp.Options, NewDHCPOption(DHCPOptPad, nil))
 	dhcp.Options = append(dhcp.Options, NewDHCPOption(DHCPOptT1, []byte{0x00, 0x00, 0x0e, 0x10}))
 	dhcp.Options = append(dhcp.Options, NewDHCPOption(DHCPOptT2, []byte{0x00, 0x00, 0x0e, 0x10}))
 	dhcp.Options = append(dhcp.Options, NewDHCPOption(DHCPOptLeaseTime, []byte{0x00, 0x00, 0x0e, 0x10}))
@@ -64,7 +65,6 @@ func TestDHCPv4EncodeResponse(t *testing.T) {
 	p2 := gopacket.NewPacket(buf.Bytes(), LayerTypeDHCPv4, testDecodeOptions)
 	dhcp2 := p2.Layer(LayerTypeDHCPv4).(*DHCPv4)
 	testDHCPEqual(t, dhcp, dhcp2)
-	fmt.Print(p2)
 }
 
 func testDHCPEqual(t *testing.T, d1, d2 *DHCPv4) {

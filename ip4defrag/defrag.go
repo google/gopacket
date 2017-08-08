@@ -21,7 +21,7 @@ import (
 
 // Quick and Easy to use debug code to trace
 // how defrag works.
-var debug debugging = false // or flip to false
+var debug debugging = false // or flip to true
 type debugging bool
 
 func (d debugging) Printf(format string, args ...interface{}) {
@@ -75,26 +75,28 @@ const (
 func (d *IPv4Defragmenter) DefragIPv4(in *layers.IPv4) (*layers.IPv4, error) {
 	// check if we need to defrag
 	if st := d.dontDefrag(in); st == true {
+		debug.Printf("defrag: do nothing, do not need anything")
 		return in, nil
 	}
 	// perfom security checks
 	st, err := d.securityChecks(in)
 	if err != nil || st == false {
+		debug.Printf("defrag: alert security check")
 		return nil, err
 	}
 
 	// ok, got a fragment
-	debug.Printf("defrag: got in.Id=%d in.FragOffset=%d in.Flags=%d\n",
+	debug.Printf("defrag: got a new fragment in.Id=%d in.FragOffset=%d in.Flags=%d\n",
 		in.Id, in.FragOffset*8, in.Flags)
 
-	// do we already has seen a flow between src/dst with that Id
+	// have we already seen a flow between src/dst with that Id?
 	ipf := newIPv4(in)
 	var fl *fragmentList
 	var exist bool
 	d.Lock()
 	fl, exist = d.ipFlows[ipf]
 	if !exist {
-		debug.Printf("defrag: creating a new flow\n")
+		debug.Printf("defrag: unknown flow, creating a new one\n")
 		fl = new(fragmentList)
 		d.ipFlows[ipf] = fl
 	}
@@ -106,17 +108,17 @@ func (d *IPv4Defragmenter) DefragIPv4(in *layers.IPv4) (*layers.IPv4, error) {
 	// without any defrag success, we just drop everything and
 	// raise an error
 	if out == nil && fl.List.Len()+1 > IPv4MaximumFragmentListLen {
-		d.Lock()
-		fl = new(fragmentList)
-		d.ipFlows[ipf] = fl
-		d.Unlock()
+		d.flush(ipf)
 		return nil, fmt.Errorf("defrag: Fragment List hits its maximum"+
-			"size(%d), without sucess. Flushing the list",
+			"size(%d), without success. Flushing the list",
 			IPv4MaximumFragmentListLen)
 	}
 
 	// if we got a packet, it's a new one, and he is defragmented
 	if out != nil {
+		// when defrag is done for a flow between two ip
+		// clean the list
+		d.flush(ipf)
 		return out, nil
 	}
 	return nil, err2
@@ -136,6 +138,14 @@ func (d *IPv4Defragmenter) DiscardOlderThan(t time.Time) int {
 	}
 	d.Unlock()
 	return nb
+}
+
+// flush the fragment list for a particular flow
+func (d *IPv4Defragmenter) flush(ipf ipv4) {
+	d.Lock()
+	fl := new(fragmentList)
+	d.ipFlows[ipf] = fl
+	d.Unlock()
 }
 
 // dontDefrag returns true if the IPv4 packet do not need
@@ -188,15 +198,32 @@ type fragmentList struct {
 // See: http://www.sans.org/reading-room/whitepapers/detection/ip-fragment-reassembly-scapy-33969
 func (f *fragmentList) insert(in *layers.IPv4) (*layers.IPv4, error) {
 	// TODO: should keep a copy of *in in the list
-	// or not (ie the packet source is reliable) ?
+	// or not (ie the packet source is reliable) ? -> depends on Lazy / last packet
 	fragOffset := in.FragOffset * 8
 	if fragOffset >= f.Highest {
 		f.List.PushBack(in)
 	} else {
 		for e := f.List.Front(); e != nil; e = e.Next() {
 			frag, _ := e.Value.(*layers.IPv4)
-			if in.FragOffset <= frag.FragOffset {
-				debug.Printf("defrag: inserting frag %d before existing frag %d \n",
+			if in.FragOffset == frag.FragOffset {
+				// TODO: what if we receive a fragment
+				// that begins with duplicate data but
+				// *also* has new data? For example:
+				//
+				// AAAA
+				//     BB
+				//     BBCC
+				//         DDDD
+				//
+				// In this situation we completely
+				// ignore CC and the complete packet can
+				// never be reassembled.
+				debug.Printf("defrag: ignoring frag %d as we already have it (duplicate?)\n",
+					fragOffset)
+				return nil, nil
+			}
+			if in.FragOffset < frag.FragOffset {
+				debug.Printf("defrag: inserting frag %d before existing frag %d\n",
 					fragOffset, frag.FragOffset*8)
 				f.List.InsertBefore(in, e)
 				break

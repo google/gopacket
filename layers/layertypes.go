@@ -1,4 +1,4 @@
-// Copyright 2012 Google, gopacket.LayerTypeMetadata{Inc. All rights reserved}.
+// Copyright 2012 Google, Inc. All rights reserved.
 //
 // Use of this source code is governed by a BSD-style license
 // that can be found in the LICENSE file in the root of the source
@@ -121,6 +121,7 @@ var (
 	LayerTypeNTP                         = gopacket.RegisterLayerType(117, gopacket.LayerTypeMetadata{Name: "NTP", Decoder: gopacket.DecodeFunc(decodeNTP)})
 	LayerTypeDHCPv4                      = gopacket.RegisterLayerType(118, gopacket.LayerTypeMetadata{Name: "DHCPv4", Decoder: gopacket.DecodeFunc(decodeDHCPv4)})
 	LayerTypeVRRP                        = gopacket.RegisterLayerType(119, gopacket.LayerTypeMetadata{Name: "VRRP", Decoder: gopacket.DecodeFunc(decodeVRRP)})
+	LayerTypeGeneve                      = gopacket.RegisterLayerType(120, gopacket.LayerTypeMetadata{Name: "Geneve", Decoder: gopacket.DecodeFunc(decodeGeneve)})
 )
 
 var (
