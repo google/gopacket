@@ -7,8 +7,13 @@
 
 package pcap
 
+import (
+	"runtime"
+)
+
 func (p *Handle) openLive() error {
 	// do nothing
+	return nil
 }
 
 // waitForPacket waits for a packet or for the timeout to expire.
