@@ -35,18 +35,23 @@ func TestPacketOSPF3Hello(t *testing.T) {
 		t.Error("Failed to decode packet:", p.ErrorLayer().Error())
 	}
 	checkLayers(p, []gopacket.LayerType{LayerTypeEthernet, LayerTypeIPv6, LayerTypeOSPF}, t)
-	if got, ok := p.Layer(LayerTypeOSPF).(*OSPF); ok {
-		want := &OSPF{
-			Version:      3,
-			Type:         OSPFHello,
-			PacketLength: 36,
-			RouterID:     0x1010101,
-			AreaID:       1,
-			Checksum:     0xfb86,
-			OSPFv3: OSPFv3{
-				Instance: 0,
-				Reserved: 0,
+
+	ospf := p.Layer(LayerTypeOSPF).(*OSPFv3)
+	if ospf.Version != 3 {
+		t.Fatal("Invalid OSPF version")
+	}
+	if got, ok := p.Layer(LayerTypeOSPF).(*OSPFv3); ok {
+		want := &OSPFv3{
+			OSPF: OSPF{
+				Version:      3,
+				Type:         OSPFHello,
+				PacketLength: 36,
+				RouterID:     0x1010101,
+				AreaID:       1,
+				Checksum:     0xfb86,
 			},
+			Instance: 0,
+			Reserved: 0,
 		}
 		if !reflect.DeepEqual(got, want) {
 			t.Errorf("OSPF packet processing failed:\ngot  :\n%#v\n\nwant :\n%#v\n\n", got, want)
@@ -84,18 +89,18 @@ func TestPacketOSPF3DBDesc(t *testing.T) {
 		t.Error("Failed to decode packet:", p.ErrorLayer().Error())
 	}
 	checkLayers(p, []gopacket.LayerType{LayerTypeEthernet, LayerTypeIPv6, LayerTypeOSPF}, t)
-	if got, ok := p.Layer(LayerTypeOSPF).(*OSPF); ok {
-		want := &OSPF{
-			Version:      3,
-			Type:         OSPFDatabaseDescription,
-			PacketLength: 28,
-			RouterID:     0x2020202,
-			AreaID:       1,
-			Checksum:     0xd826,
-			OSPFv3: OSPFv3{
-				Instance: 0,
-				Reserved: 0,
+	if got, ok := p.Layer(LayerTypeOSPF).(*OSPFv3); ok {
+		want := &OSPFv3{
+			OSPF: OSPF{
+				Version:      3,
+				Type:         OSPFDatabaseDescription,
+				PacketLength: 28,
+				RouterID:     0x2020202,
+				AreaID:       1,
+				Checksum:     0xd826,
 			},
+			Instance: 0,
+			Reserved: 0,
 		}
 		if !reflect.DeepEqual(got, want) {
 			t.Errorf("OSPF packet processing failed:\ngot  :\n%#v\n\nwant :\n%#v\n\n", got, want)
@@ -141,18 +146,18 @@ func TestPacketOSPF3LSRequest(t *testing.T) {
 		t.Error("Failed to decode packet:", p.ErrorLayer().Error())
 	}
 	checkLayers(p, []gopacket.LayerType{LayerTypeEthernet, LayerTypeIPv6, LayerTypeOSPF}, t)
-	if got, ok := p.Layer(LayerTypeOSPF).(*OSPF); ok {
-		want := &OSPF{
-			Version:      3,
-			Type:         OSPFLinkStateRequest,
-			PacketLength: 100,
-			RouterID:     0x2020202,
-			AreaID:       1,
-			Checksum:     0x2c9a,
-			OSPFv3: OSPFv3{
-				Instance: 0,
-				Reserved: 0,
+	if got, ok := p.Layer(LayerTypeOSPF).(*OSPFv3); ok {
+		want := &OSPFv3{
+			OSPF: OSPF{
+				Version:      3,
+				Type:         OSPFLinkStateRequest,
+				PacketLength: 100,
+				RouterID:     0x2020202,
+				AreaID:       1,
+				Checksum:     0x2c9a,
 			},
+			Instance: 0,
+			Reserved: 0,
 		}
 		if !reflect.DeepEqual(got, want) {
 			t.Errorf("OSPF packet processing failed:\ngot  :\n%#v\n\nwant :\n%#v\n\n", got, want)
@@ -222,18 +227,18 @@ func TestPacketOSPF3LSUpdate(t *testing.T) {
 		t.Error("Failed to decode packet:", p.ErrorLayer().Error())
 	}
 	checkLayers(p, []gopacket.LayerType{LayerTypeEthernet, LayerTypeIPv6, LayerTypeOSPF}, t)
-	if got, ok := p.Layer(LayerTypeOSPF).(*OSPF); ok {
-		want := &OSPF{
-			Version:      3,
-			Type:         OSPFLinkStateUpdate,
-			PacketLength: 288,
-			RouterID:     0x1010101,
-			AreaID:       1,
-			Checksum:     0xe556,
-			OSPFv3: OSPFv3{
-				Instance: 0,
-				Reserved: 0,
+	if got, ok := p.Layer(LayerTypeOSPF).(*OSPFv3); ok {
+		want := &OSPFv3{
+			OSPF: OSPF{
+				Version:      3,
+				Type:         OSPFLinkStateUpdate,
+				PacketLength: 288,
+				RouterID:     0x1010101,
+				AreaID:       1,
+				Checksum:     0xe556,
 			},
+			Instance: 0,
+			Reserved: 0,
 		}
 		if !reflect.DeepEqual(got, want) {
 			t.Errorf("OSPF packet processing failed:\ngot  :\n%#v\n\nwant :\n%#v\n\n", got, want)
@@ -283,18 +288,18 @@ func TestPacketOSPF3LSAck(t *testing.T) {
 		t.Error("Failed to decode packet:", p.ErrorLayer().Error())
 	}
 	checkLayers(p, []gopacket.LayerType{LayerTypeEthernet, LayerTypeIPv6, LayerTypeOSPF}, t)
-	if got, ok := p.Layer(LayerTypeOSPF).(*OSPF); ok {
-		want := &OSPF{
-			Version:      3,
-			Type:         OSPFLinkStateAcknowledgment,
-			PacketLength: 136,
-			RouterID:     0x1010101,
-			AreaID:       1,
-			Checksum:     0x9d2c,
-			OSPFv3: OSPFv3{
-				Instance: 0,
-				Reserved: 0,
+	if got, ok := p.Layer(LayerTypeOSPF).(*OSPFv3); ok {
+		want := &OSPFv3{
+			OSPF: OSPF{
+				Version:      3,
+				Type:         OSPFLinkStateAcknowledgment,
+				PacketLength: 136,
+				RouterID:     0x1010101,
+				AreaID:       1,
+				Checksum:     0x9d2c,
 			},
+			Instance: 0,
+			Reserved: 0,
 		}
 		if !reflect.DeepEqual(got, want) {
 			t.Errorf("OSPF packet processing failed:\ngot  :\n%#v\n\nwant :\n%#v\n\n", got, want)
