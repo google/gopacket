@@ -43,23 +43,8 @@ func (i OSPFType) String() string {
 	}
 }
 
-//OSPFv2 extend the OSPF head with version 2 specific fields
-type OSPFv2 struct {
-	AuType         uint16
-	Authentication uint64
-}
-
-// OSPFv3 extend the OSPF head with version 3 specific fields
-type OSPFv3 struct {
-	Instance uint8
-	Reserved uint8
-}
-
 // OSPF is a basic OSPF packet header with common fields of Version 2 and Version 3.
 type OSPF struct {
-	BaseLayer
-	OSPFv2
-	OSPFv3
 	Version      uint8
 	Type         OSPFType
 	PacketLength uint16
@@ -68,10 +53,26 @@ type OSPF struct {
 	Checksum     uint16
 }
 
+//OSPFv2 extend the OSPF head with version 2 specific fields
+type OSPFv2 struct {
+	BaseLayer
+	OSPF
+	AuType         uint16
+	Authentication uint64
+}
+
+// OSPFv3 extend the OSPF head with version 3 specific fields
+type OSPFv3 struct {
+	BaseLayer
+	OSPF
+	Instance uint8
+	Reserved uint8
+}
+
 // DecodeFromBytes decodes the given bytes into the OSPF layer.
-func (ospf *OSPF) DecodeFromBytes(data []byte, df gopacket.DecodeFeedback) error {
-	if len(data) < 14 {
-		return fmt.Errorf("Packet too smal for OSPF")
+func (ospf *OSPFv2) DecodeFromBytes(data []byte, df gopacket.DecodeFeedback) error {
+	if len(data) < 24 {
+		return fmt.Errorf("Packet too smal for OSPF Version 2")
 	}
 
 	ospf.Version = uint8(data[0])
@@ -80,43 +81,69 @@ func (ospf *OSPF) DecodeFromBytes(data []byte, df gopacket.DecodeFeedback) error
 	ospf.RouterID = binary.BigEndian.Uint32(data[4:8])
 	ospf.AreaID = binary.BigEndian.Uint32(data[8:12])
 	ospf.Checksum = binary.BigEndian.Uint16(data[12:14])
+	ospf.AuType = binary.BigEndian.Uint16(data[14:16])
+	ospf.Authentication = binary.BigEndian.Uint64(data[16:24])
 
-	switch ospf.Version {
-	case 2:
-		if len(data) < 24 {
-			return fmt.Errorf("Packet too smal for OSPF Version 2")
-		}
-		ospf.AuType = binary.BigEndian.Uint16(data[14:16])
-		ospf.Authentication = binary.BigEndian.Uint64(data[16:24])
-	case 3:
-		if len(data) < 16 {
-			return fmt.Errorf("Packet too smal for OSPF Version 3")
-		}
-		ospf.Instance = uint8(data[14])
-		ospf.Reserved = uint8(data[15])
-	default:
-		return fmt.Errorf("Unsupported OSPF version")
+	return nil
+}
+
+// DecodeFromBytes decodes the given bytes into the OSPF layer.
+func (ospf *OSPFv3) DecodeFromBytes(data []byte, df gopacket.DecodeFeedback) error {
+
+	if len(data) < 16 {
+		return fmt.Errorf("Packet too smal for OSPF Version 3")
 	}
+
+	ospf.Version = uint8(data[0])
+	ospf.Type = OSPFType(data[1])
+	ospf.PacketLength = binary.BigEndian.Uint16(data[2:4])
+	ospf.RouterID = binary.BigEndian.Uint32(data[4:8])
+	ospf.AreaID = binary.BigEndian.Uint32(data[8:12])
+	ospf.Checksum = binary.BigEndian.Uint16(data[12:14])
+	ospf.Instance = uint8(data[14])
+	ospf.Reserved = uint8(data[15])
 
 	return nil
 }
 
 // LayerType returns LayerTypeOSPF
-func (ospf *OSPF) LayerType() gopacket.LayerType {
+func (ospf *OSPFv2) LayerType() gopacket.LayerType {
+	return LayerTypeOSPF
+}
+func (ospf *OSPFv3) LayerType() gopacket.LayerType {
 	return LayerTypeOSPF
 }
 
 // NextLayerType returns the layer type contained by this DecodingLayer.
-func (ospf *OSPF) NextLayerType() gopacket.LayerType {
-	return gopacket.LayerTypePayload
+func (ospf *OSPFv2) NextLayerType() gopacket.LayerType {
+	return gopacket.LayerTypeZero
+}
+func (ospf *OSPFv3) NextLayerType() gopacket.LayerType {
+	return gopacket.LayerTypeZero
 }
 
 // CanDecode returns the set of layer types that this DecodingLayer can decode.
-func (ospf *OSPF) CanDecode() gopacket.LayerClass {
+func (ospf *OSPFv2) CanDecode() gopacket.LayerClass {
+	return LayerTypeOSPF
+}
+func (ospf *OSPFv3) CanDecode() gopacket.LayerClass {
 	return LayerTypeOSPF
 }
 
 func decodeOSPF(data []byte, p gopacket.PacketBuilder) error {
-	ospf := &OSPF{}
-	return decodingLayerDecoder(ospf, data, p)
+	if len(data) < 14 {
+		return fmt.Errorf("Packet too smal for OSPF")
+	}
+
+	switch uint8(data[0]) {
+	case 2:
+		ospf := &OSPFv2{}
+		return decodingLayerDecoder(ospf, data, p)
+	case 3:
+		ospf := &OSPFv3{}
+		return decodingLayerDecoder(ospf, data, p)
+	default:
+	}
+
+	return fmt.Errorf("Unable to determine OSPF type.")
 }
