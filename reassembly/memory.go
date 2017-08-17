@@ -170,8 +170,10 @@ func (p *StreamPool) Dump() {
 
 func (p *StreamPool) remove(conn *connection) {
 	p.mu.Lock()
-	delete(p.conns, conn.key)
-	p.free = append(p.free, conn)
+	if _, ok := p.conns[conn.key]; ok {
+		delete(p.conns, conn.key)
+		p.free = append(p.free, conn)
+	}
 	p.mu.Unlock()
 }
 
