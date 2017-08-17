@@ -43,6 +43,22 @@ func (i OSPFType) String() string {
 	}
 }
 
+type HelloPkg struct {
+	InterfaceID              uint32
+	RtrPriority              uint8
+	Options                  uint32
+	HelloInterval            uint16
+	RouterDeadInterval       uint16
+	DesignatedRouterID       uint32
+	BackupDesignatedRouterID uint32
+	NeighborID               []uint32
+}
+
+type HelloPkgV2 struct {
+	HelloPkg
+	NetworkMask uint32
+}
+
 // OSPF is a basic OSPF packet header with common fields of Version 2 and Version 3.
 type OSPF struct {
 	Version      uint8
@@ -51,6 +67,7 @@ type OSPF struct {
 	RouterID     uint32
 	AreaID       uint32
 	Checksum     uint16
+	Content      interface{}
 }
 
 //OSPFv2 extend the OSPF head with version 2 specific fields
@@ -102,6 +119,27 @@ func (ospf *OSPFv3) DecodeFromBytes(data []byte, df gopacket.DecodeFeedback) err
 	ospf.Checksum = binary.BigEndian.Uint16(data[12:14])
 	ospf.Instance = uint8(data[14])
 	ospf.Reserved = uint8(data[15])
+
+	fmt.Println(ospf.PacketLength)
+
+	switch ospf.Type {
+	case OSPFHello:
+		var neighbors []uint32
+		for i := 36; uint16(i+4) <= ospf.PacketLength; i += 4 {
+			neighbors = append(neighbors, binary.BigEndian.Uint32(data[i:i+4]))
+		}
+		ospf.Content = HelloPkg{
+			InterfaceID:              binary.BigEndian.Uint32(data[16:20]),
+			RtrPriority:              uint8(data[20]),
+			Options:                  binary.BigEndian.Uint32(data[21:25]) >> 8,
+			HelloInterval:            binary.BigEndian.Uint16(data[24:26]),
+			RouterDeadInterval:       binary.BigEndian.Uint16(data[26:28]),
+			DesignatedRouterID:       binary.BigEndian.Uint32(data[28:32]),
+			BackupDesignatedRouterID: binary.BigEndian.Uint32(data[32:36]),
+			NeighborID:               neighbors,
+		}
+	default:
+	}
 
 	return nil
 }
