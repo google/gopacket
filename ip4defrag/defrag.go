@@ -73,6 +73,16 @@ const (
 //}
 //
 func (d *IPv4Defragmenter) DefragIPv4(in *layers.IPv4) (*layers.IPv4, error) {
+	return d.DefragIPv4WithTimestamp(in, time.Now())
+}
+
+// DefragIPv4WithTimestamp provides functionality of DefragIPv4 with
+// an additional timestamp parameter which is used for discarding
+// old fragments instead of time.Now()
+//
+// This is useful when operating on pcap files instead of live captured data
+//
+func (d *IPv4Defragmenter) DefragIPv4WithTimestamp(in *layers.IPv4, t time.Time) (*layers.IPv4, error) {
 	// check if we need to defrag
 	if st := d.dontDefrag(in); st == true {
 		debug.Printf("defrag: do nothing, do not need anything")
@@ -102,7 +112,7 @@ func (d *IPv4Defragmenter) DefragIPv4(in *layers.IPv4) (*layers.IPv4, error) {
 	}
 	d.Unlock()
 	// insert, and if final build it
-	out, err2 := fl.insert(in)
+	out, err2 := fl.insert(in, t)
 
 	// at last, if we hit the maximum frag list len
 	// without any defrag success, we just drop everything and
@@ -196,7 +206,7 @@ type fragmentList struct {
 // It use the following strategy : we are inserting fragment based
 // on their offset, latest first. This is sometimes called BSD-Right.
 // See: http://www.sans.org/reading-room/whitepapers/detection/ip-fragment-reassembly-scapy-33969
-func (f *fragmentList) insert(in *layers.IPv4) (*layers.IPv4, error) {
+func (f *fragmentList) insert(in *layers.IPv4, t time.Time) (*layers.IPv4, error) {
 	// TODO: should keep a copy of *in in the list
 	// or not (ie the packet source is reliable) ? -> depends on Lazy / last packet
 	fragOffset := in.FragOffset * 8
@@ -230,9 +240,8 @@ func (f *fragmentList) insert(in *layers.IPv4) (*layers.IPv4, error) {
 			}
 		}
 	}
-	// packet.Metadata().Timestamp should have been better, but
-	// we don't have this info there...
-	f.LastSeen = time.Now()
+
+	f.LastSeen = t
 
 	fragLength := in.Length - 20
 	// After inserting the Fragment, we update the counters
