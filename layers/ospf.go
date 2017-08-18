@@ -43,6 +43,24 @@ func (i OSPFType) String() string {
 	}
 }
 
+type LSAheader struct {
+	LSAge       uint16
+	LSType      uint16
+	LinkStateID uint32
+	AdvRouter   uint32
+	LSSeqNumber uint32
+	LSChecksum  uint16
+	Length      uint16
+}
+
+type DbDescPkg struct {
+	Options      uint32
+	InterfaceMTU uint16
+	Flags        uint16
+	DDSeqNumber  uint32
+	LSAinfo      []LSAheader
+}
+
 type HelloPkg struct {
 	InterfaceID              uint32
 	RtrPriority              uint8
@@ -120,8 +138,6 @@ func (ospf *OSPFv3) DecodeFromBytes(data []byte, df gopacket.DecodeFeedback) err
 	ospf.Instance = uint8(data[14])
 	ospf.Reserved = uint8(data[15])
 
-	fmt.Println(ospf.PacketLength)
-
 	switch ospf.Type {
 	case OSPFHello:
 		var neighbors []uint32
@@ -137,6 +153,28 @@ func (ospf *OSPFv3) DecodeFromBytes(data []byte, df gopacket.DecodeFeedback) err
 			DesignatedRouterID:       binary.BigEndian.Uint32(data[28:32]),
 			BackupDesignatedRouterID: binary.BigEndian.Uint32(data[32:36]),
 			NeighborID:               neighbors,
+		}
+	case OSPFDatabaseDescription:
+		var lsas []LSAheader
+		for i := 28; uint16(i+20) <= ospf.PacketLength; i += 20 {
+			lsa := LSAheader{
+				LSAge:       binary.BigEndian.Uint16(data[i : i+2]),
+				LSType:      binary.BigEndian.Uint16(data[i+2 : i+4]),
+				LinkStateID: binary.BigEndian.Uint32(data[i+4 : i+8]),
+				AdvRouter:   binary.BigEndian.Uint32(data[i+8 : i+12]),
+				LSSeqNumber: binary.BigEndian.Uint32(data[i+12 : i+16]),
+				LSChecksum:  binary.BigEndian.Uint16(data[i+16 : i+18]),
+				Length:      binary.BigEndian.Uint16(data[i+18 : i+20]),
+			}
+			lsas = append(lsas, lsa)
+		}
+		fmt.Println(ospf.PacketLength)
+		ospf.Content = DbDescPkg{
+			Options:      binary.BigEndian.Uint32(data[16:20]) & 0x00FFFFFF,
+			InterfaceMTU: binary.BigEndian.Uint16(data[20:22]),
+			Flags:        binary.BigEndian.Uint16(data[22:24]),
+			DDSeqNumber:  binary.BigEndian.Uint32(data[24:28]),
+			LSAinfo:      lsas,
 		}
 	default:
 	}
