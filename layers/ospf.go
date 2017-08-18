@@ -192,7 +192,21 @@ func (ospf *OSPFv3) DecodeFromBytes(data []byte, df gopacket.DecodeFeedback) err
 			lsrs = append(lsrs, lsr)
 		}
 		ospf.Content = lsrs
-
+	case OSPFLinkStateAcknowledgment:
+		var lsas []LSAheader
+		for i := 16; uint16(i+20) <= ospf.PacketLength; i += 20 {
+			lsa := LSAheader{
+				LSAge:       binary.BigEndian.Uint16(data[i : i+2]),
+				LSType:      binary.BigEndian.Uint16(data[i+2 : i+4]),
+				LinkStateID: binary.BigEndian.Uint32(data[i+4 : i+8]),
+				AdvRouter:   binary.BigEndian.Uint32(data[i+8 : i+12]),
+				LSSeqNumber: binary.BigEndian.Uint32(data[i+12 : i+16]),
+				LSChecksum:  binary.BigEndian.Uint16(data[i+16 : i+18]),
+				Length:      binary.BigEndian.Uint16(data[i+18 : i+20]),
+			}
+			lsas = append(lsas, lsa)
+		}
+		ospf.Content = lsas
 	default:
 	}
 
