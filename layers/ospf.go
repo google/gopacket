@@ -53,6 +53,12 @@ type LSAheader struct {
 	Length      uint16
 }
 
+type LSReq struct {
+	LSType    uint16
+	LSID      uint32
+	AdvRouter uint32
+}
+
 type DbDescPkg struct {
 	Options      uint32
 	InterfaceMTU uint16
@@ -168,7 +174,6 @@ func (ospf *OSPFv3) DecodeFromBytes(data []byte, df gopacket.DecodeFeedback) err
 			}
 			lsas = append(lsas, lsa)
 		}
-		fmt.Println(ospf.PacketLength)
 		ospf.Content = DbDescPkg{
 			Options:      binary.BigEndian.Uint32(data[16:20]) & 0x00FFFFFF,
 			InterfaceMTU: binary.BigEndian.Uint16(data[20:22]),
@@ -176,6 +181,18 @@ func (ospf *OSPFv3) DecodeFromBytes(data []byte, df gopacket.DecodeFeedback) err
 			DDSeqNumber:  binary.BigEndian.Uint32(data[24:28]),
 			LSAinfo:      lsas,
 		}
+	case OSPFLinkStateRequest:
+		var lsrs []LSReq
+		for i := 16; uint16(i+12) <= ospf.PacketLength; i += 12 {
+			lsr := LSReq{
+				LSType:    binary.BigEndian.Uint16(data[i+2 : i+4]),
+				LSID:      binary.BigEndian.Uint32(data[i+4 : i+8]),
+				AdvRouter: binary.BigEndian.Uint32(data[i+8 : i+12]),
+			}
+			lsrs = append(lsrs, lsr)
+		}
+		ospf.Content = lsrs
+
 	default:
 	}
 
