@@ -170,6 +170,43 @@ func TestPacketOSPF3LSRequest(t *testing.T) {
 				RouterID:     0x2020202,
 				AreaID:       1,
 				Checksum:     0x2c9a,
+				Content: []LSReq{
+					LSReq{
+						LSType:    0x2001,
+						LSID:      0x00000000,
+						AdvRouter: 0x01010101,
+					},
+					LSReq{
+						LSType:    0x2003,
+						LSID:      0x00000003,
+						AdvRouter: 0x01010101,
+					},
+					LSReq{
+						LSType:    0x2003,
+						LSID:      0x00000002,
+						AdvRouter: 0x01010101,
+					},
+					LSReq{
+						LSType:    0x2003,
+						LSID:      0x00000001,
+						AdvRouter: 0x01010101,
+					},
+					LSReq{
+						LSType:    0x2003,
+						LSID:      0x00000000,
+						AdvRouter: 0x01010101,
+					},
+					LSReq{
+						LSType:    0x0008,
+						LSID:      0x00000005,
+						AdvRouter: 0x01010101,
+					},
+					LSReq{
+						LSType:    0x2009,
+						LSID:      0x00000000,
+						AdvRouter: 0x01010101,
+					},
+				},
 			},
 			Instance: 0,
 			Reserved: 0,
