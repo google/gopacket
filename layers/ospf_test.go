@@ -288,6 +288,142 @@ func TestPacketOSPF3LSUpdate(t *testing.T) {
 				RouterID:     0x1010101,
 				AreaID:       1,
 				Checksum:     0xe556,
+				Content: LSUpdate{
+					NumOfLSAs: 7,
+					LSAs: []LSA{
+						LSA{
+							LSAheader: LSAheader{
+								LSAge:       40,
+								LSType:      0x2001,
+								LinkStateID: 0x00000000,
+								AdvRouter:   0x01010101,
+								LSSeqNumber: 0x80000002,
+								LSChecksum:  0xd13a,
+								Length:      24,
+							},
+							Content: RouterLSA{
+								Flags:   0x1,
+								Options: 0x33,
+							},
+						},
+						LSA{
+							LSAheader: LSAheader{
+								LSAge:       41,
+								LSType:      0x2003,
+								LinkStateID: 0x00000003,
+								AdvRouter:   0x01010101,
+								LSSeqNumber: 0x80000001,
+								LSChecksum:  0x6259,
+								Length:      36,
+							},
+							Content: InterAreaPrefixLSA{
+								Metric:        74,
+								PrefixLength:  64,
+								PrefixOptions: 0,
+								AddressPrefix: []byte{0x20, 0x01, 0x0d, 0xb8, 0x00, 0x00, 0x00, 0x03},
+							},
+						},
+						LSA{
+							LSAheader: LSAheader{
+								LSAge:       41,
+								LSType:      0x2003,
+								LinkStateID: 0x00000002,
+								AdvRouter:   0x01010101,
+								LSSeqNumber: 0x80000001,
+								LSChecksum:  0xbaf6,
+								Length:      36,
+							},
+							Content: InterAreaPrefixLSA{
+								Metric:        84,
+								PrefixLength:  64,
+								PrefixOptions: 0,
+								AddressPrefix: []byte{0x20, 0x1, 0xd, 0xb8, 0x0, 0x0, 0x0, 0x4},
+							},
+						},
+						LSA{
+							LSAheader: LSAheader{
+								LSAge:       41,
+								LSType:      0x2003,
+								LinkStateID: 0x00000001,
+								AdvRouter:   0x01010101,
+								LSSeqNumber: 0x80000001,
+								LSChecksum:  0xeba0,
+								Length:      36,
+							},
+							Content: InterAreaPrefixLSA{
+								Metric:        74,
+								PrefixLength:  64,
+								PrefixOptions: 0,
+								AddressPrefix: []byte{0x20, 0x1, 0xd, 0xb8, 0x0, 0x0, 0x0, 0x34},
+							},
+						},
+						LSA{
+							LSAheader: LSAheader{
+								LSAge:       41,
+								LSType:      0x2003,
+								LinkStateID: 0x00000000,
+								AdvRouter:   0x01010101,
+								LSSeqNumber: 0x80000001,
+								LSChecksum:  0xebd,
+								Length:      36,
+							},
+							Content: InterAreaPrefixLSA{
+								Metric:        64,
+								PrefixLength:  64,
+								PrefixOptions: 0,
+								AddressPrefix: []byte{0x20, 0x1, 0xd, 0xb8, 0x0, 0x0, 0x0, 0x0},
+							},
+						},
+						LSA{
+							LSAheader: LSAheader{
+								LSAge:       35,
+								LSType:      0x8,
+								LinkStateID: 0x00000005,
+								AdvRouter:   0x01010101,
+								LSSeqNumber: 0x80000002,
+								LSChecksum:  0x3d08,
+								Length:      56,
+							},
+							Content: LinkLSA{
+								RtrPriority:      1,
+								Options:          0x33,
+								LinkLocalAddress: []byte{0xfe, 0x80, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x01},
+								NumOfPrefixes:    1,
+								Prefixes: []Prefix{
+									Prefix{
+										PrefixLength:  64,
+										PrefixOptions: 0,
+										AddressPrefix: []byte{0x20, 0x01, 0x0d, 0xb8, 0x00, 0x00, 0x00, 0x12},
+									},
+								},
+							},
+						},
+						LSA{
+							LSAheader: LSAheader{
+								LSAge:       35,
+								LSType:      0x2009,
+								LinkStateID: 0x00000000,
+								AdvRouter:   0x01010101,
+								LSSeqNumber: 0x80000001,
+								LSChecksum:  0xe8d2,
+								Length:      44,
+							},
+							Content: IntraAreaPrefixLSA{
+								NumOfPrefixes: 1,
+								RefLSType:     0x2001,
+								RefAdvRouter:  0x01010101,
+								Prefixes: []Prefix{
+									Prefix{
+										PrefixLength:  64,
+										PrefixOptions: 0,
+										Metric:        10,
+										AddressPrefix: []byte{0x20, 0x1, 0xd, 0xb8, 0x0, 0x0, 0x0, 0x12},
+									},
+								},
+							},
+						},
+					},
+				},
 			},
 			Instance: 0,
 			Reserved: 0,
