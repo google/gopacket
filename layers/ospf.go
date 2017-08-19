@@ -55,6 +55,7 @@ func (i OSPFType) String() string {
 	}
 }
 
+// Prefix extends IntraAreaPrefixLSA
 type Prefix struct {
 	PrefixLength  uint8
 	PrefixOptions uint8
@@ -62,6 +63,7 @@ type Prefix struct {
 	AddressPrefix []byte
 }
 
+// IntraAreaPrefixLSA is the struct from RFC 5340  A.4.10.
 type IntraAreaPrefixLSA struct {
 	NumOfPrefixes  uint16
 	RefLSType      uint16
@@ -70,6 +72,7 @@ type IntraAreaPrefixLSA struct {
 	Prefixes       []Prefix
 }
 
+// LinkLSA is the struct from RFC 5340  A.4.9.
 type LinkLSA struct {
 	RtrPriority      uint8
 	Options          uint32
@@ -78,6 +81,7 @@ type LinkLSA struct {
 	Prefixes         []Prefix
 }
 
+// ASExternalLSA is the struct from RFC 5340  A.4.7.
 type ASExternalLSA struct {
 	Flags             uint8
 	Metric            uint32
@@ -90,12 +94,14 @@ type ASExternalLSA struct {
 	RefLinkStateID    uint32
 }
 
+// InterAreaRouterLSA is the struct from RFC 5340  A.4.6.
 type InterAreaRouterLSA struct {
 	Options             uint32
 	Metric              uint32
 	DestinationRouterID uint32
 }
 
+// InterAreaPrefixLSA is the struct from RFC 5340  A.4.5.
 type InterAreaPrefixLSA struct {
 	Metric        uint32
 	PrefixLength  uint8
@@ -103,11 +109,13 @@ type InterAreaPrefixLSA struct {
 	AddressPrefix []byte
 }
 
+// NetworkLSA is the struct from RFC 5340  A.4.4.
 type NetworkLSA struct {
 	Options        uint32
 	AttachedRouter []uint32
 }
 
+// Router extends RouterLSA
 type Router struct {
 	Type                uint8
 	Metric              uint16
@@ -116,12 +124,14 @@ type Router struct {
 	NeighborRouterID    uint32
 }
 
+// RouterLSA is the struct from RFC 5340  A.4.3.
 type RouterLSA struct {
 	Flags   uint8
 	Options uint32
 	Routers []Router
 }
 
+// LSAheader is the struct from RFC 5340  A.4.2.
 type LSAheader struct {
 	LSAge       uint16
 	LSType      uint16
@@ -132,22 +142,26 @@ type LSAheader struct {
 	Length      uint16
 }
 
+// LSA links LSAheader with the structs from RFC 5340  A.4.
 type LSA struct {
 	LSAheader
 	Content interface{}
 }
 
+// LSUpdate is the struct from RFC 5340  A.3.5.
 type LSUpdate struct {
 	NumOfLSAs uint32
 	LSAs      []LSA
 }
 
+// LSReq is the struct from RFC 5340  A.3.4.
 type LSReq struct {
 	LSType    uint16
 	LSID      uint32
 	AdvRouter uint32
 }
 
+// DbDescPkg is the struct from RFC 5340  A.3.3.
 type DbDescPkg struct {
 	Options      uint32
 	InterfaceMTU uint16
@@ -156,6 +170,7 @@ type DbDescPkg struct {
 	LSAinfo      []LSAheader
 }
 
+// HelloPkg  is the struct from RFC 5340  A.3.2.
 type HelloPkg struct {
 	InterfaceID              uint32
 	RtrPriority              uint8
@@ -167,6 +182,7 @@ type HelloPkg struct {
 	NeighborID               []uint32
 }
 
+// HelloPkgV2 extends the HelloPkg struct with OSPFv2 information
 type HelloPkgV2 struct {
 	HelloPkg
 	NetworkMask uint32
@@ -199,6 +215,7 @@ type OSPFv3 struct {
 	Reserved uint8
 }
 
+// getLSAs parses the LSA information from the packet
 func getLSAs(num uint32, data []byte) ([]LSA, error) {
 	var lsas []LSA
 	var i uint32 = 0
