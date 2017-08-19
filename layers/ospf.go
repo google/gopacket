@@ -438,7 +438,7 @@ func (ospf *OSPFv3) DecodeFromBytes(data []byte, df gopacket.DecodeFeedback) err
 		num := binary.BigEndian.Uint32(data[16:20])
 		lsas, err := getLSAs(num, data[20:])
 		if err != nil {
-			fmt.Errorf("Cannot parse Link State Update packet.")
+			return fmt.Errorf("Cannot parse Link State Update packet: %v", err)
 		}
 		ospf.Content = LSUpdate{
 			NumOfLSAs: num,
