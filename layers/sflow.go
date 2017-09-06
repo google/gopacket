@@ -1034,7 +1034,10 @@ type SFlowExtendedRouterFlowRecord struct {
 //  +--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+
 //  |                  record length                |
 //  +--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+
-//  |                    Next Hop                   |
+//  |   IP version of next hop router (1=v4|2=v6)   |
+//  +--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+
+//  /     Next Hop address (v4=4byte|v6=16byte)     /
+//  /                                               /
 //  +--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+
 //  |              Next Hop Source Mask             |
 //  +--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+
@@ -1044,11 +1047,21 @@ type SFlowExtendedRouterFlowRecord struct {
 func decodeExtendedRouterFlowRecord(data *[]byte) (SFlowExtendedRouterFlowRecord, error) {
 	er := SFlowExtendedRouterFlowRecord{}
 	var fdf SFlowFlowDataFormat
+	var ipType uint32
 
 	*data, fdf = (*data)[4:], SFlowFlowDataFormat(binary.BigEndian.Uint32((*data)[:4]))
 	er.EnterpriseID, er.Format = fdf.decode()
 	*data, er.FlowDataLength = (*data)[4:], binary.BigEndian.Uint32((*data)[:4])
-	*data, er.NextHop = (*data)[4:], (*data)[:4]
+	*data, ipType = (*data)[4:], binary.BigEndian.Uint32((*data)[:4])
+
+	if ipType == 1 {
+		*data, er.NextHop = (*data)[4:], (*data)[:4]
+	} else if ipType == 2 {
+		*data, er.NextHop = (*data)[16:], (*data)[:16]
+	} else {
+		return er, fmt.Errorf("Unknown Next Hop IP type: %d", ipType)
+	}
+
 	*data, er.NextHopSourceMask = (*data)[4:], binary.BigEndian.Uint32((*data)[:4])
 	*data, er.NextHopDestinationMask = (*data)[4:], binary.BigEndian.Uint32((*data)[:4])
 	return er, nil
