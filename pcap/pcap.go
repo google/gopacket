@@ -357,7 +357,8 @@ func (p *Handle) getNextBufPtrLocked(ci *gopacket.CaptureInfo) error {
 		// try to read a packet if one is immediately available
 		result := NextError(C.pcap_next_ex(p.cptr, &p.pkthdr, &p.bufptr))
 
-		if result == NextErrorOk {
+		switch result {
+		case NextErrorOk:
 			// got a packet, set capture info and return
 			sec := int64(p.pkthdr.ts.tv_sec)
 			// convert micros to nanos
@@ -369,16 +370,20 @@ func (p *Handle) getNextBufPtrLocked(ci *gopacket.CaptureInfo) error {
 			ci.InterfaceIndex = p.deviceIndex
 
 			return nil
-		} else if result == NextErrorNoMorePackets {
+		case NextErrorNoMorePackets:
 			// no more packets, return EOF rather than libpcap-specific error
 			return io.EOF
-		} else if result != NextErrorTimeoutExpired {
-			// we got a non-timeout error
+		case NextErrorTimeoutExpired:
+			// Negative timeout means to loop forever, instead of actually returning
+			// the timeout error.
+			if p.timeout < 0 {
+				// must have had a timeout... wait before trying again
+				p.waitForPacket()
+				continue
+			}
+		default:
 			return result
 		}
-
-		// must have had a timeout... wait before trying again
-		p.waitForPacket()
 	}
 
 	// stop must be set

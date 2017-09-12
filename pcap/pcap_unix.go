@@ -61,11 +61,6 @@ func (p *Handle) openLive() error {
 
 // waitForPacket waits for a packet or for the timeout to expire.
 func (p *Handle) waitForPacket() {
-	if p.timeout == BlockForever {
-		C.pcap_wait(p.cptr, 0)
-		return
-	}
-
 	// need to wait less than the read timeout according to pcap documentation.
 	// timeoutMillis rounds up to at least one millisecond so we can safely
 	// subtract up to a millisecond.
