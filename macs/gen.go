@@ -67,7 +67,7 @@ func main() {
 	}
 	defer resp.Body.Close()
 	buffered := bufio.NewReader(resp.Body)
-	finder := regexp.MustCompile(`^\s*([0-9A-F]{6})\s+\(base 16\)\s+(.*)`)
+	finder := regexp.MustCompile(`^\s*([0-9A-F]{6})\s+\(base 16\)\s+(.*\S)`)
 	got := macs{}
 	for {
 		line, err := buffered.ReadString('\n')
