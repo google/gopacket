@@ -59,8 +59,11 @@ func decodeLLC(data []byte, p gopacket.PacketBuilder) error {
 		l.Payload = data[3:]
 	}
 	p.AddLayer(l)
-	if l.DSAP == 0xAA && l.SSAP == 0xAA {
+	switch {
+	case l.DSAP == 0xAA && l.SSAP == 0xAA:
 		return p.NextDecoder(LayerTypeSNAP)
+	case l.DSAP == 0x42 && l.SSAP == 0x42:
+		return p.NextDecoder(LayerTypeSTP)
 	}
 	return p.NextDecoder(gopacket.DecodeUnknown)
 }
