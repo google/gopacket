@@ -238,14 +238,14 @@ in a 4-byte header.
 
  // Create a layer type, should be unique and high, so it doesn't conflict,
  // giving it a name and a decoder to use.
- var MyLayerType = gopacket.RegisterLayerType(12345, "MyLayerType", gopacket.DecodeFunc(decodeMyLayer))
+ var MyLayerType = gopacket.RegisterLayerType(12345, gopacket.LayerTypeMetadata{Name: "MyLayerType", Decoder: gopacket.DecodeFunc(decodeMyLayer)})
 
  // Implement my layer
  type MyLayer struct {
    StrangeHeader []byte
    payload []byte
  }
- func (m MyLayer) LayerType() LayerType { return MyLayerType }
+ func (m MyLayer) LayerType() gopacket.LayerType { return MyLayerType }
  func (m MyLayer) LayerContents() []byte { return m.StrangeHeader }
  func (m MyLayer) LayerPayload() []byte { return m.payload }
 

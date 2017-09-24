@@ -13,6 +13,7 @@ package pcap
 #cgo dragonfly LDFLAGS: -lpcap
 #cgo freebsd LDFLAGS: -lpcap
 #cgo openbsd LDFLAGS: -lpcap
+#cgo netbsd LDFLAGS: -lpcap
 #cgo darwin LDFLAGS: -lpcap
 #cgo windows CFLAGS: -I C:/WpdPack/Include
 #cgo windows,386 LDFLAGS: -L C:/WpdPack/Lib -lwpcap
@@ -107,6 +108,7 @@ import (
 	"runtime"
 	"strconv"
 	"sync"
+	"sync/atomic"
 	"syscall"
 	"time"
 	"unsafe"
@@ -133,11 +135,16 @@ const bpfInstructionBufferSize = 8 * MaxBpfInstructions
 // Handles are already pcap_activate'd
 type Handle struct {
 	// cptr is the handle for the actual pcap C object.
-	cptr         *C.pcap_t
-	blockForever bool
-	device       string
-	deviceIndex  int
-	mu           sync.Mutex
+	cptr        *C.pcap_t
+	timeout     time.Duration
+	device      string
+	deviceIndex int
+	mu          sync.Mutex
+	closeMu     sync.Mutex
+	// stop is set to a non-zero value by Handle.Close to signal to
+	// getNextBufPtrLocked to stop trying to read packets
+	stop uint64
+
 	// Since pointers to these objects are passed into a C function, if
 	// they're declared locally then the Go compiler thinks they may have
 	// escaped into C-land, so it allocates them on the heap.  This causes a
@@ -216,13 +223,12 @@ func timeoutMillis(timeout time.Duration) C.int {
 func OpenLive(device string, snaplen int32, promisc bool, timeout time.Duration) (handle *Handle, _ error) {
 	buf := (*C.char)(C.calloc(errorBufferSize, 1))
 	defer C.free(unsafe.Pointer(buf))
+
 	var pro C.int
 	if promisc {
 		pro = 1
 	}
-	p := &Handle{}
-	p.blockForever = timeout < 0
-	p.device = device
+	p := &Handle{timeout: timeout, device: device}
 
 	ifc, err := net.InterfaceByName(device)
 	if err != nil {
@@ -240,6 +246,12 @@ func OpenLive(device string, snaplen int32, promisc bool, timeout time.Duration)
 	if p.cptr == nil {
 		return nil, errors.New(C.GoString(buf))
 	}
+
+	if err := p.openLive(); err != nil {
+		C.pcap_close(p.cptr)
+		return nil, err
+	}
+
 	return p, nil
 }
 
@@ -340,26 +352,42 @@ func (p *Handle) getNextBufPtrLocked(ci *gopacket.CaptureInfo) error {
 	if p.cptr == nil {
 		return io.EOF
 	}
-	var result NextError
-	for {
-		result = NextError(C.pcap_next_ex(p.cptr, &p.pkthdr, &p.bufptr))
-		if p.blockForever && result == NextErrorTimeoutExpired {
-			continue
-		}
-		break
-	}
-	if result != NextErrorOk {
-		if result == NextErrorNoMorePackets {
+
+	for atomic.LoadUint64(&p.stop) == 0 {
+		// try to read a packet if one is immediately available
+		result := NextError(C.pcap_next_ex(p.cptr, &p.pkthdr, &p.bufptr))
+
+		switch result {
+		case NextErrorOk:
+			// got a packet, set capture info and return
+			sec := int64(p.pkthdr.ts.tv_sec)
+			// convert micros to nanos
+			nanos := int64(p.pkthdr.ts.tv_usec) * 1000
+
+			ci.Timestamp = time.Unix(sec, nanos)
+			ci.CaptureLength = int(p.pkthdr.caplen)
+			ci.Length = int(p.pkthdr.len)
+			ci.InterfaceIndex = p.deviceIndex
+
+			return nil
+		case NextErrorNoMorePackets:
+			// no more packets, return EOF rather than libpcap-specific error
 			return io.EOF
+		case NextErrorTimeoutExpired:
+			// Negative timeout means to loop forever, instead of actually returning
+			// the timeout error.
+			if p.timeout < 0 {
+				// must have had a timeout... wait before trying again
+				p.waitForPacket()
+				continue
+			}
+		default:
+			return result
 		}
-		return result
 	}
-	ci.Timestamp = time.Unix(int64(p.pkthdr.ts.tv_sec),
-		int64(p.pkthdr.ts.tv_usec)*1000) // convert micros to nanos
-	ci.CaptureLength = int(p.pkthdr.caplen)
-	ci.Length = int(p.pkthdr.len)
-	ci.InterfaceIndex = p.deviceIndex
-	return nil
+
+	// stop must be set
+	return io.EOF
 }
 
 // ZeroCopyReadPacketData reads the next packet off the wire, and returns its data.
@@ -390,11 +418,19 @@ func (p *Handle) ZeroCopyReadPacketData() (data []byte, ci gopacket.CaptureInfo,
 
 // Close closes the underlying pcap handle.
 func (p *Handle) Close() {
-	p.mu.Lock()
-	defer p.mu.Unlock()
+	p.closeMu.Lock()
+	defer p.closeMu.Unlock()
+
 	if p.cptr == nil {
 		return
 	}
+
+	atomic.StoreUint64(&p.stop, 1)
+
+	// wait for packet reader to stop
+	p.mu.Lock()
+	defer p.mu.Unlock()
+
 	C.pcap_close(p.cptr)
 	p.cptr = nil
 }
@@ -809,10 +845,10 @@ func statusError(status C.int) error {
 // handle to set it up just the way you'd like.
 type InactiveHandle struct {
 	// cptr is the handle for the actual pcap C object.
-	cptr         *C.pcap_t
-	device       string
-	deviceIndex  int
-	blockForever bool
+	cptr        *C.pcap_t
+	device      string
+	deviceIndex int
+	timeout     time.Duration
 }
 
 // Activate activates the handle.  The current InactiveHandle becomes invalid
@@ -822,7 +858,12 @@ func (p *InactiveHandle) Activate() (*Handle, error) {
 	if err != aeNoError {
 		return nil, err
 	}
-	h := &Handle{cptr: p.cptr, device: p.device, deviceIndex: p.deviceIndex, blockForever: p.blockForever}
+	h := &Handle{
+		cptr:        p.cptr,
+		timeout:     p.timeout,
+		device:      p.device,
+		deviceIndex: p.deviceIndex,
+	}
 	p.cptr = nil
 	return h, nil
 }
@@ -886,10 +927,10 @@ func (p *InactiveHandle) SetPromisc(promisc bool) error {
 //
 // See the package documentation for important details regarding 'timeout'.
 func (p *InactiveHandle) SetTimeout(timeout time.Duration) error {
-	p.blockForever = timeout < 0
 	if status := C.pcap_set_timeout(p.cptr, timeoutMillis(timeout)); status < 0 {
 		return statusError(status)
 	}
+	p.timeout = timeout
 	return nil
 }
 

@@ -1034,7 +1034,10 @@ type SFlowExtendedRouterFlowRecord struct {
 //  +--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+
 //  |                  record length                |
 //  +--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+
-//  |                    Next Hop                   |
+//  |   IP version of next hop router (1=v4|2=v6)   |
+//  +--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+
+//  /     Next Hop address (v4=4byte|v6=16byte)     /
+//  /                                               /
 //  +--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+
 //  |              Next Hop Source Mask             |
 //  +--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+
@@ -1044,11 +1047,13 @@ type SFlowExtendedRouterFlowRecord struct {
 func decodeExtendedRouterFlowRecord(data *[]byte) (SFlowExtendedRouterFlowRecord, error) {
 	er := SFlowExtendedRouterFlowRecord{}
 	var fdf SFlowFlowDataFormat
+	var extendedRouterAddressType SFlowIPType
 
 	*data, fdf = (*data)[4:], SFlowFlowDataFormat(binary.BigEndian.Uint32((*data)[:4]))
 	er.EnterpriseID, er.Format = fdf.decode()
 	*data, er.FlowDataLength = (*data)[4:], binary.BigEndian.Uint32((*data)[:4])
-	*data, er.NextHop = (*data)[4:], (*data)[:4]
+	*data, extendedRouterAddressType = (*data)[4:], SFlowIPType(binary.BigEndian.Uint32((*data)[:4]))
+	*data, er.NextHop = (*data)[extendedRouterAddressType.Length():], (*data)[:extendedRouterAddressType.Length()]
 	*data, er.NextHopSourceMask = (*data)[4:], binary.BigEndian.Uint32((*data)[:4])
 	*data, er.NextHopDestinationMask = (*data)[4:], binary.BigEndian.Uint32((*data)[:4])
 	return er, nil
@@ -1060,7 +1065,7 @@ func decodeExtendedRouterFlowRecord(data *[]byte) (SFlowExtendedRouterFlowRecord
 // This information is vital because it gives a picture of how much
 // traffic is being sent from / received by various BGP peers.
 
-// Extended gatway records have the following structure:
+// Extended gateway records have the following structure:
 
 //  0                      15                      31
 //  +--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+
@@ -1068,7 +1073,10 @@ func decodeExtendedRouterFlowRecord(data *[]byte) (SFlowExtendedRouterFlowRecord
 //  +--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+
 //  |                  record length                |
 //  +--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+
-//  |                    Next Hop                   |
+//  |   IP version of next hop router (1=v4|2=v6)   |
+//  +--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+
+//  /     Next Hop address (v4=4byte|v6=16byte)     /
+//  /                                               /
 //  +--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+
 //  |                       AS                      |
 //  +--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+
