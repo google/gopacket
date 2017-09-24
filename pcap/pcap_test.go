@@ -16,6 +16,18 @@ import (
 	"github.com/google/gopacket/layers"
 )
 
+func TestPcapNonexistentFile(t *testing.T) {
+	handle, err := OpenOffline("/path/to/nonexistent/file")
+	if err == nil {
+		t.Error("No error returned for nonexistent file open")
+	} else {
+		t.Logf("Error returned for nonexistent file: %v", err)
+	}
+	if handle != nil {
+		t.Error("Non-nil handle returned for nonexistent file open")
+	}
+}
+
 func TestPcapFileRead(t *testing.T) {
 	for _, file := range []struct {
 		filename       string

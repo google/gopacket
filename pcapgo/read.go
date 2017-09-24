@@ -144,6 +144,11 @@ func (r *Reader) LinkType() layers.LinkType {
 	return r.linkType
 }
 
+// Snaplen returns the snapshot length of the capture file.
+func (r *Reader) Snaplen() uint32 {
+	return r.snaplen
+}
+
 // Reader formater
 func (r *Reader) String() string {
 	return fmt.Sprintf("PcapFile  maj: %x min: %x snaplen: %d linktype: %s", r.versionMajor, r.versionMinor, r.snaplen, r.linkType)
