@@ -32,11 +32,11 @@ int pcap_wait(pcap_t *p, int usec) {
 	tv.tv_usec = usec;
 
 	if(usec != 0) {
-		return select(1, &fds, NULL, NULL, &tv);
+		return select(fd+1, &fds, NULL, NULL, &tv);
 	}
 
 	// block indefinitely if no timeout provided
-	return select(1, &fds, NULL, NULL, NULL);
+	return select(fd+1, &fds, NULL, NULL, NULL);
 }
 */
 import "C"
