@@ -309,8 +309,12 @@ func decodeSCTPData(data []byte, p gopacket.PacketBuilder) error {
 		StreamId:        binary.BigEndian.Uint16(data[8:10]),
 		StreamSequence:  binary.BigEndian.Uint16(data[10:12]),
 		PayloadProtocol: SCTPPayloadProtocol(binary.BigEndian.Uint32(data[12:16])),
-		Payload:         data[16:(length - 16)],
 	}
+
+	if length-16 > 0 {
+		sc.Payload = data[16:(length - 16)]
+	}
+
 	// Length is the length in bytes of the data, INCLUDING the 16-byte header.
 	p.AddLayer(sc)
 	return p.NextDecoder(gopacket.DecodeFunc(decodeWithSCTPChunkTypePrefix))
