@@ -210,10 +210,12 @@ func (s *SCTPUnknownChunkType) Error() error {
 type SCTPData struct {
 	SCTPChunk
 	Unordered, BeginFragment, EndFragment bool
+	Length                                uint16
 	TSN                                   uint32
 	StreamId                              uint16
 	StreamSequence                        uint16
 	PayloadProtocol                       SCTPPayloadProtocol
+	Payload                               []byte
 }
 
 // LayerType returns gopacket.LayerTypeSCTPData.
@@ -299,14 +301,16 @@ func decodeSCTPData(data []byte, p gopacket.PacketBuilder) error {
 		Unordered:       data[1]&0x4 != 0,
 		BeginFragment:   data[1]&0x2 != 0,
 		EndFragment:     data[1]&0x1 != 0,
+		Length:          binary.BigEndian.Uint16(data[2:4]),
 		TSN:             binary.BigEndian.Uint32(data[4:8]),
 		StreamId:        binary.BigEndian.Uint16(data[8:10]),
 		StreamSequence:  binary.BigEndian.Uint16(data[10:12]),
 		PayloadProtocol: SCTPPayloadProtocol(binary.BigEndian.Uint32(data[12:16])),
+		Payload:         data[16:(Length - 16)],
 	}
 	// Length is the length in bytes of the data, INCLUDING the 16-byte header.
 	p.AddLayer(sc)
-	return p.NextDecoder(gopacket.LayerTypePayload)
+	return p.NextDecoder(gopacket.DecodeFunc(decodeWithSCTPChunkTypePrefix))
 }
 
 // SerializeTo is for gopacket.SerializableLayer.
