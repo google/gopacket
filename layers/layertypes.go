@@ -124,6 +124,7 @@ var (
 	LayerTypeGeneve                      = gopacket.RegisterLayerType(120, gopacket.LayerTypeMetadata{Name: "Geneve", Decoder: gopacket.DecodeFunc(decodeGeneve)})
 	LayerTypeSTP                         = gopacket.RegisterLayerType(121, gopacket.LayerTypeMetadata{Name: "STP", Decoder: gopacket.DecodeFunc(decodeSTP)})
 	LayerTypeBFD                         = gopacket.RegisterLayerType(122, gopacket.LayerTypeMetadata{Name: "BFD", Decoder: gopacket.DecodeFunc(decodeBFD)})
+	LayerTypeOSPF                        = gopacket.RegisterLayerType(123, gopacket.LayerTypeMetadata{Name: "OSPF", Decoder: gopacket.DecodeFunc(decodeOSPF)})
 )
 
 var (
