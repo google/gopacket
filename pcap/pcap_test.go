@@ -95,6 +95,9 @@ func TestPcapFileRead(t *testing.T) {
 				t.Fatal(err)
 			}
 		} else {
+			if file.err != "" {
+				t.Fatalf("Expected error, got none")
+			}
 			packetSource := gopacket.NewPacketSource(handle, handle.LinkType())
 			for packet := range packetSource.Packets() {
 				packets = append(packets, packet)
