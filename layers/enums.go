@@ -80,6 +80,7 @@ const (
 	IPProtocolICMPv6          IPProtocol = 58
 	IPProtocolNoNextHeader    IPProtocol = 59
 	IPProtocolIPv6Destination IPProtocol = 60
+	IPProtocolOSPF            IPProtocol = 89
 	IPProtocolIPIP            IPProtocol = 94
 	IPProtocolEtherIP         IPProtocol = 97
 	IPProtocolVRRP            IPProtocol = 112
@@ -463,6 +464,7 @@ func init() {
 	IPProtocolMetadata[IPProtocolIPv6Routing] = EnumMetadata{DecodeWith: gopacket.DecodeFunc(decodeIPv6Routing), Name: "IPv6Routing", LayerType: LayerTypeIPv6Routing}
 	IPProtocolMetadata[IPProtocolIPv6Fragment] = EnumMetadata{DecodeWith: gopacket.DecodeFunc(decodeIPv6Fragment), Name: "IPv6Fragment", LayerType: LayerTypeIPv6Fragment}
 	IPProtocolMetadata[IPProtocolIPv6Destination] = EnumMetadata{DecodeWith: gopacket.DecodeFunc(decodeIPv6Destination), Name: "IPv6Destination", LayerType: LayerTypeIPv6Destination}
+	IPProtocolMetadata[IPProtocolOSPF] = EnumMetadata{DecodeWith: gopacket.DecodeFunc(decodeOSPF), Name: "OSPF", LayerType: LayerTypeOSPF}
 	IPProtocolMetadata[IPProtocolAH] = EnumMetadata{DecodeWith: gopacket.DecodeFunc(decodeIPSecAH), Name: "IPSecAH", LayerType: LayerTypeIPSecAH}
 	IPProtocolMetadata[IPProtocolESP] = EnumMetadata{DecodeWith: gopacket.DecodeFunc(decodeIPSecESP), Name: "IPSecESP", LayerType: LayerTypeIPSecESP}
 	IPProtocolMetadata[IPProtocolUDPLite] = EnumMetadata{DecodeWith: gopacket.DecodeFunc(decodeUDPLite), Name: "UDPLite", LayerType: LayerTypeUDPLite}
