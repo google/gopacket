@@ -9,7 +9,9 @@ package pcap
 import (
 	"fmt"
 	"io"
+	"io/ioutil"
 	"log"
+	"os"
 	"testing"
 
 	"github.com/google/gopacket"
@@ -29,43 +31,73 @@ func TestPcapNonexistentFile(t *testing.T) {
 }
 
 func TestPcapFileRead(t *testing.T) {
+	invalidData := []byte{
+		0xAB, 0xAD, 0x1D, 0xEA,
+	}
+
+	invalidPcap, err := ioutil.TempFile("", "invalid.pcap")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer os.Remove(invalidPcap.Name())
+
+	err = ioutil.WriteFile(invalidPcap.Name(), invalidData, 0644)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer invalidPcap.Close()
+
 	for _, file := range []struct {
 		filename       string
 		num            int
 		expectedLayers []gopacket.LayerType
+		err            string
 	}{
-		{"test_loopback.pcap",
-			24,
-			[]gopacket.LayerType{
+		{filename: "test_loopback.pcap",
+			num: 24,
+			expectedLayers: []gopacket.LayerType{
 				layers.LayerTypeLoopback,
 				layers.LayerTypeIPv6,
 				layers.LayerTypeTCP,
 			},
 		},
-		{"test_ethernet.pcap",
-			16,
-			[]gopacket.LayerType{
+		{filename: "test_ethernet.pcap",
+			num: 16,
+			expectedLayers: []gopacket.LayerType{
 				layers.LayerTypeEthernet,
 				layers.LayerTypeIPv4,
 				layers.LayerTypeTCP,
 			},
 		},
-		{"test_dns.pcap",
-			10,
-			[]gopacket.LayerType{
+		{filename: "test_dns.pcap",
+			num: 10,
+			expectedLayers: []gopacket.LayerType{
 				layers.LayerTypeEthernet,
 				layers.LayerTypeIPv4,
 				layers.LayerTypeUDP,
 				layers.LayerTypeDNS,
 			},
 		},
+		{filename: invalidPcap.Name(),
+			num: 0,
+			err: "unknown file format",
+		},
 	} {
 		t.Logf("\n\n\n\nProcessing file %s\n\n\n\n", file.filename)
 
 		packets := []gopacket.Packet{}
 		if handle, err := OpenOffline(file.filename); err != nil {
-			t.Fatal(err)
+			if file.err != "" {
+				if err.Error() != file.err {
+					t.Errorf("expected message %q; got %q", file.err, err.Error())
+				}
+			} else {
+				t.Fatal(err)
+			}
 		} else {
+			if file.err != "" {
+				t.Fatalf("Expected error, got none")
+			}
 			packetSource := gopacket.NewPacketSource(handle, handle.LinkType())
 			for packet := range packetSource.Packets() {
 				packets = append(packets, packet)
