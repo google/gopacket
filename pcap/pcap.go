@@ -165,8 +165,8 @@ type Stats struct {
 type Interface struct {
 	Name        string
 	Description string
+	Flags       uint32
 	Addresses   []InterfaceAddress
-	// TODO: add more elements
 }
 
 // Datalink describes the datalink
@@ -731,7 +731,7 @@ func FindAllDevs() (ifs []Interface, err error) {
 		iface.Name = C.GoString(dev.name)
 		iface.Description = C.GoString(dev.description)
 		iface.Addresses = findalladdresses(dev.addresses)
-		// TODO: add more elements
+		iface.Flags = uint32(dev.flags)
 		ifs[j] = iface
 		j++
 	}
