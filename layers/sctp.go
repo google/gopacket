@@ -300,14 +300,11 @@ func decodeSCTPData(data []byte, p gopacket.PacketBuilder) error {
 	}
 
 	if sc.PayloadProtocol == 0 {
-		sc.Payload = make([]byte, sc.SCTPChunk.Length-16)
-		copy(sc.Payload, data[16:sc.SCTPChunk.Length+1])
-		// Length is the length in bytes of the data, INCLUDING the 16-byte header.
+		sc.Payload = data[16 : sc.SCTPChunk.Length+1]
 		p.AddLayer(sc)
 		return p.NextDecoder(gopacket.DecodeFunc(decodeWithSCTPChunkTypePrefix))
 	}
 
-	// Length is the length in bytes of the data, INCLUDING the 16-byte header.
 	p.AddLayer(sc)
 	return p.NextDecoder(gopacket.LayerTypePayload)
 
