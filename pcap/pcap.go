@@ -178,9 +178,10 @@ type Datalink struct {
 // InterfaceAddress describes an address associated with an Interface.
 // Currently, it's IPv4/6 specific.
 type InterfaceAddress struct {
-	IP      net.IP
-	Netmask net.IPMask // Netmask may be nil if we were unable to retrieve it.
-	// TODO: add broadcast + PtP dst ?
+	IP        net.IP
+	Netmask   net.IPMask // Netmask may be nil if we were unable to retrieve it.
+	Broadaddr net.IP     // Broadcast address for this IP may be nil
+	P2P       net.IP     // P2P destination address for this IP may be nil
 }
 
 // BPF is a compiled filter program, useful for offline packet matching.
@@ -761,6 +762,12 @@ func findalladdresses(addresses *_Ctype_struct_pcap_addr) (retval []InterfaceAdd
 			// If we got an IP address but we can't get a netmask, just return the IP
 			// address.
 			a.Netmask = nil
+		}
+		if a.Broadaddr, err = sockaddrToIP((*syscall.RawSockaddr)(unsafe.Pointer(curaddr.broadaddr))); err != nil {
+			a.Broadaddr = nil
+		}
+		if a.P2P, err = sockaddrToIP((*syscall.RawSockaddr)(unsafe.Pointer(curaddr.dstaddr))); err != nil {
+			a.P2P = nil
 		}
 		retval = append(retval, a)
 	}
