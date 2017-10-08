@@ -775,6 +775,10 @@ func findalladdresses(addresses *_Ctype_struct_pcap_addr) (retval []InterfaceAdd
 }
 
 func sockaddrToIP(rsa *syscall.RawSockaddr) (IP []byte, err error) {
+	if unsafe.Pointer(rsa) == nil {
+		err = errors.New("Value not set")
+		return
+	}
 	switch rsa.Family {
 	case syscall.AF_INET:
 		pp := (*syscall.RawSockaddrInet4)(unsafe.Pointer(rsa))
