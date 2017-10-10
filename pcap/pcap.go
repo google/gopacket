@@ -20,6 +20,7 @@ package pcap
 #cgo windows,amd64 LDFLAGS: -L C:/WpdPack/Lib/x64 -lwpcap
 #include <stdlib.h>
 #include <pcap.h>
+#include <stdint.h>
 
 // Some old versions of pcap don't define this constant.
 #ifndef PCAP_NETMASK_UNKNOWN
@@ -96,6 +97,11 @@ int pcap_set_rfmon(pcap_t *p, int rfmon) {
 #define gopacket_time_usecs_t suseconds_t
 #endif
 #endif
+
+// The things we do to avoid pointers escaping to the heap...
+int pcap_next_ex_escaping(pcap_t *p, uintptr_t pkt_hdr, uintptr_t pkt_data) {
+  return pcap_next_ex(p, (struct pcap_pkthdr**)(pkt_hdr), (const u_char**)(pkt_data));
+}
 */
 import "C"
 
@@ -267,7 +273,8 @@ func OpenOffline(file string) (handle *Handle, err error) {
 	if cptr == nil {
 		return nil, errors.New(C.GoString(buf))
 	}
-	return &Handle{cptr: cptr}, nil
+	h := &Handle{cptr: cptr}
+	return h, nil
 }
 
 // NextError is the return code from a call to Next.
@@ -354,9 +361,16 @@ func (p *Handle) getNextBufPtrLocked(ci *gopacket.CaptureInfo) error {
 		return io.EOF
 	}
 
+	// This horrible magic allows us to pass a ptr-to-ptr to pcap_next_ex
+	// without causing that ptr-to-ptr to itself be allocated on the heap.
+	// Since Handle itself survives through the duration of the pcap_next_ex
+	// call, this should be perfectly safe for GC stuff, etc.
+	pp := C.uintptr_t(uintptr(unsafe.Pointer(&p.pkthdr)))
+	bp := C.uintptr_t(uintptr(unsafe.Pointer(&p.bufptr)))
+
 	for atomic.LoadUint64(&p.stop) == 0 {
 		// try to read a packet if one is immediately available
-		result := NextError(C.pcap_next_ex(p.cptr, &p.pkthdr, &p.bufptr))
+		result := NextError(C.pcap_next_ex_escaping(p.cptr, pp, bp))
 
 		switch result {
 		case NextErrorOk:
