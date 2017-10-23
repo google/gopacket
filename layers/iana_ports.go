@@ -3,7 +3,7 @@
 package layers
 
 // Created by gen.go, don't edit manually
-// Generated at 2017-09-19 13:08:22.987239325 -0600 MDT
+// Generated at 2017-10-23 09:57:28.214859163 -0600 MDT m=+1.011679290
 // Fetched from "http://www.iana.org/assignments/service-names-port-numbers/service-names-port-numbers.xml"
 
 // TCPPortNames contains the port names for all TCP ports.
@@ -3753,6 +3753,7 @@ var tcpPortNames = map[TCPPort]string{
 	4117:  "hillrserv",
 	4118:  "netscript",
 	4119:  "assuria-slm",
+	4120:  "minirem",
 	4121:  "e-builder",
 	4122:  "fprams",
 	4123:  "z-wave",
