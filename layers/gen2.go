@@ -35,15 +35,19 @@ import (
 `
 
 var funcsTmpl = template.Must(template.New("foo").Parse(`
+// Decoder calls {{.Name}}Metadata.DecodeWith's decoder.
 func (a {{.Name}}) Decode(data []byte, p gopacket.PacketBuilder) error {
 	return {{.Name}}Metadata[a].DecodeWith.Decode(data, p)
 }
+// String returns {{.Name}}Metadata.Name.
 func (a {{.Name}}) String() string {
 	return {{.Name}}Metadata[a].Name
 }
+// LayerType returns {{.Name}}Metadata.LayerType.
 func (a {{.Name}}) LayerType() gopacket.LayerType {
 	return {{.Name}}Metadata[a].LayerType
 }
+
 type errorDecoderFor{{.Name}} int
 func (a *errorDecoderFor{{.Name}}) Decode(data []byte, p gopacket.PacketBuilder) error {
   return a

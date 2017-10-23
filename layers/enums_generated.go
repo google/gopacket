@@ -3,7 +3,7 @@
 package layers
 
 // Created by gen2.go, don't edit manually
-// Generated at 2017-10-23 10:13:41.708259103 -0600 MDT m=+0.001033329
+// Generated at 2017-10-23 10:20:24.458771856 -0600 MDT m=+0.001159033
 
 import (
 	"fmt"
@@ -26,12 +26,17 @@ func init() {
 	initActualTypeData()
 }
 
+// Decoder calls LinkTypeMetadata.DecodeWith's decoder.
 func (a LinkType) Decode(data []byte, p gopacket.PacketBuilder) error {
 	return LinkTypeMetadata[a].DecodeWith.Decode(data, p)
 }
+
+// String returns LinkTypeMetadata.Name.
 func (a LinkType) String() string {
 	return LinkTypeMetadata[a].Name
 }
+
+// LayerType returns LinkTypeMetadata.LayerType.
 func (a LinkType) LayerType() gopacket.LayerType {
 	return LinkTypeMetadata[a].LayerType
 }
@@ -58,12 +63,17 @@ func initUnknownTypesForLinkType() {
 	}
 }
 
+// Decoder calls EthernetTypeMetadata.DecodeWith's decoder.
 func (a EthernetType) Decode(data []byte, p gopacket.PacketBuilder) error {
 	return EthernetTypeMetadata[a].DecodeWith.Decode(data, p)
 }
+
+// String returns EthernetTypeMetadata.Name.
 func (a EthernetType) String() string {
 	return EthernetTypeMetadata[a].Name
 }
+
+// LayerType returns EthernetTypeMetadata.LayerType.
 func (a EthernetType) LayerType() gopacket.LayerType {
 	return EthernetTypeMetadata[a].LayerType
 }
@@ -90,12 +100,17 @@ func initUnknownTypesForEthernetType() {
 	}
 }
 
+// Decoder calls PPPTypeMetadata.DecodeWith's decoder.
 func (a PPPType) Decode(data []byte, p gopacket.PacketBuilder) error {
 	return PPPTypeMetadata[a].DecodeWith.Decode(data, p)
 }
+
+// String returns PPPTypeMetadata.Name.
 func (a PPPType) String() string {
 	return PPPTypeMetadata[a].Name
 }
+
+// LayerType returns PPPTypeMetadata.LayerType.
 func (a PPPType) LayerType() gopacket.LayerType {
 	return PPPTypeMetadata[a].LayerType
 }
@@ -122,12 +137,17 @@ func initUnknownTypesForPPPType() {
 	}
 }
 
+// Decoder calls IPProtocolMetadata.DecodeWith's decoder.
 func (a IPProtocol) Decode(data []byte, p gopacket.PacketBuilder) error {
 	return IPProtocolMetadata[a].DecodeWith.Decode(data, p)
 }
+
+// String returns IPProtocolMetadata.Name.
 func (a IPProtocol) String() string {
 	return IPProtocolMetadata[a].Name
 }
+
+// LayerType returns IPProtocolMetadata.LayerType.
 func (a IPProtocol) LayerType() gopacket.LayerType {
 	return IPProtocolMetadata[a].LayerType
 }
@@ -154,12 +174,17 @@ func initUnknownTypesForIPProtocol() {
 	}
 }
 
+// Decoder calls SCTPChunkTypeMetadata.DecodeWith's decoder.
 func (a SCTPChunkType) Decode(data []byte, p gopacket.PacketBuilder) error {
 	return SCTPChunkTypeMetadata[a].DecodeWith.Decode(data, p)
 }
+
+// String returns SCTPChunkTypeMetadata.Name.
 func (a SCTPChunkType) String() string {
 	return SCTPChunkTypeMetadata[a].Name
 }
+
+// LayerType returns SCTPChunkTypeMetadata.LayerType.
 func (a SCTPChunkType) LayerType() gopacket.LayerType {
 	return SCTPChunkTypeMetadata[a].LayerType
 }
@@ -186,12 +211,17 @@ func initUnknownTypesForSCTPChunkType() {
 	}
 }
 
+// Decoder calls PPPoECodeMetadata.DecodeWith's decoder.
 func (a PPPoECode) Decode(data []byte, p gopacket.PacketBuilder) error {
 	return PPPoECodeMetadata[a].DecodeWith.Decode(data, p)
 }
+
+// String returns PPPoECodeMetadata.Name.
 func (a PPPoECode) String() string {
 	return PPPoECodeMetadata[a].Name
 }
+
+// LayerType returns PPPoECodeMetadata.LayerType.
 func (a PPPoECode) LayerType() gopacket.LayerType {
 	return PPPoECodeMetadata[a].LayerType
 }
@@ -218,12 +248,17 @@ func initUnknownTypesForPPPoECode() {
 	}
 }
 
+// Decoder calls FDDIFrameControlMetadata.DecodeWith's decoder.
 func (a FDDIFrameControl) Decode(data []byte, p gopacket.PacketBuilder) error {
 	return FDDIFrameControlMetadata[a].DecodeWith.Decode(data, p)
 }
+
+// String returns FDDIFrameControlMetadata.Name.
 func (a FDDIFrameControl) String() string {
 	return FDDIFrameControlMetadata[a].Name
 }
+
+// LayerType returns FDDIFrameControlMetadata.LayerType.
 func (a FDDIFrameControl) LayerType() gopacket.LayerType {
 	return FDDIFrameControlMetadata[a].LayerType
 }
@@ -250,12 +285,17 @@ func initUnknownTypesForFDDIFrameControl() {
 	}
 }
 
+// Decoder calls EAPOLTypeMetadata.DecodeWith's decoder.
 func (a EAPOLType) Decode(data []byte, p gopacket.PacketBuilder) error {
 	return EAPOLTypeMetadata[a].DecodeWith.Decode(data, p)
 }
+
+// String returns EAPOLTypeMetadata.Name.
 func (a EAPOLType) String() string {
 	return EAPOLTypeMetadata[a].Name
 }
+
+// LayerType returns EAPOLTypeMetadata.LayerType.
 func (a EAPOLType) LayerType() gopacket.LayerType {
 	return EAPOLTypeMetadata[a].LayerType
 }
@@ -282,12 +322,17 @@ func initUnknownTypesForEAPOLType() {
 	}
 }
 
+// Decoder calls ProtocolFamilyMetadata.DecodeWith's decoder.
 func (a ProtocolFamily) Decode(data []byte, p gopacket.PacketBuilder) error {
 	return ProtocolFamilyMetadata[a].DecodeWith.Decode(data, p)
 }
+
+// String returns ProtocolFamilyMetadata.Name.
 func (a ProtocolFamily) String() string {
 	return ProtocolFamilyMetadata[a].Name
 }
+
+// LayerType returns ProtocolFamilyMetadata.LayerType.
 func (a ProtocolFamily) LayerType() gopacket.LayerType {
 	return ProtocolFamilyMetadata[a].LayerType
 }
@@ -314,12 +359,17 @@ func initUnknownTypesForProtocolFamily() {
 	}
 }
 
+// Decoder calls Dot11TypeMetadata.DecodeWith's decoder.
 func (a Dot11Type) Decode(data []byte, p gopacket.PacketBuilder) error {
 	return Dot11TypeMetadata[a].DecodeWith.Decode(data, p)
 }
+
+// String returns Dot11TypeMetadata.Name.
 func (a Dot11Type) String() string {
 	return Dot11TypeMetadata[a].Name
 }
+
+// LayerType returns Dot11TypeMetadata.LayerType.
 func (a Dot11Type) LayerType() gopacket.LayerType {
 	return Dot11TypeMetadata[a].LayerType
 }
@@ -346,12 +396,17 @@ func initUnknownTypesForDot11Type() {
 	}
 }
 
+// Decoder calls USBTransportTypeMetadata.DecodeWith's decoder.
 func (a USBTransportType) Decode(data []byte, p gopacket.PacketBuilder) error {
 	return USBTransportTypeMetadata[a].DecodeWith.Decode(data, p)
 }
+
+// String returns USBTransportTypeMetadata.Name.
 func (a USBTransportType) String() string {
 	return USBTransportTypeMetadata[a].Name
 }
+
+// LayerType returns USBTransportTypeMetadata.LayerType.
 func (a USBTransportType) LayerType() gopacket.LayerType {
 	return USBTransportTypeMetadata[a].LayerType
 }
