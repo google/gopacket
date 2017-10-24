@@ -726,6 +726,23 @@ func (p *Handle) SetLinkType(dlt layers.LinkType) error {
 	return nil
 }
 
+// DatalinkValToName returns pcap_datalink_val_to_name as string
+func DatalinkValToName(dlt int) string {
+	return C.GoString(C.pcap_datalink_val_to_name(C.int(dlt)))
+}
+
+// DatalinkValToDescription returns pcap_datalink_val_to_description as string
+func DatalinkValToDescription(dlt int) string {
+	return C.GoString(C.pcap_datalink_val_to_description(C.int(dlt)))
+}
+
+// DatalinkNameToVal returns pcap_datalink_name_to_val as int
+func DatalinkNameToVal(name string) C.int {
+	cptr := C.CString(name)
+	defer C.free(unsafe.Pointer(cptr))
+	return C.int(C.pcap_datalink_name_to_val(cptr))
+}
+
 // FindAllDevs attempts to enumerate all interfaces on the current machine.
 func FindAllDevs() (ifs []Interface, err error) {
 	var buf *C.char
