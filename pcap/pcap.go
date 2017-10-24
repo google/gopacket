@@ -125,6 +125,9 @@ import (
 
 const errorBufferSize = 256
 
+// ErrNotActive is returned if handle is not activated
+const ErrNotActive = int(C.PCAP_ERROR_NOT_ACTIVATED)
+
 // MaxBpfInstructions is the maximum number of BPF instructions supported (BPF_MAXINSNS),
 // taken from Linux kernel: include/uapi/linux/bpf_common.h
 //
@@ -840,6 +843,12 @@ func (p *Handle) SetDirection(direction Direction) error {
 		return statusError(status)
 	}
 	return nil
+}
+
+// SnapLen returns the snapshot length
+func (p *Handle) SnapLen() int {
+	len := C.pcap_snapshot(p.cptr)
+	return int(len)
 }
 
 // TimestampSource tells PCAP which type of timestamp to use for packets.
