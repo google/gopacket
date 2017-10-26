@@ -327,10 +327,6 @@ func decodeDot11(data []byte, p gopacket.PacketBuilder) error {
 func (m *Dot11) LayerType() gopacket.LayerType  { return LayerTypeDot11 }
 func (m *Dot11) CanDecode() gopacket.LayerClass { return LayerTypeDot11 }
 func (m *Dot11) NextLayerType() gopacket.LayerType {
-	if m.Flags.WEP() {
-		return (LayerTypeDot11WEP)
-	}
-
 	return m.Type.LayerType()
 }
 
