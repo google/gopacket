@@ -625,16 +625,15 @@ type Dot11DataQOS struct {
 }
 
 func (m *Dot11DataQOS) DecodeFromBytes(data []byte, df gopacket.DecodeFeedback) error {
-	if len(data) < 4 {
+	if len(data) < 2 {
 		df.SetTruncated()
-		return fmt.Errorf("Dot11DataQOS length %v too short, %v required", len(data), 4)
+		return fmt.Errorf("Dot11DataQOS length %v too short, %v required", len(data), 2)
 	}
 	m.TID = (uint8(data[0]) & 0x0F)
 	m.EOSP = (uint8(data[0]) & 0x10) == 0x10
 	m.AckPolicy = Dot11AckPolicy((uint8(data[0]) & 0x60) >> 5)
 	m.TXOP = uint8(data[1])
-	// TODO: Mesh Control bytes 2:4
-	m.BaseLayer = BaseLayer{Contents: data[0:4], Payload: data[4:]}
+	m.BaseLayer = BaseLayer{Contents: data[0:2], Payload: data[2:]}
 	return nil
 }
 
