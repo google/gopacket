@@ -257,9 +257,14 @@ func OpenLive(device string, snaplen int32, promisc bool, timeout time.Duration)
 		return nil, errors.New(C.GoString(buf))
 	}
 
-	if err := p.openLive(); err != nil {
-		C.pcap_close(p.cptr)
-		return nil, err
+	// Only set the PCAP handle into non-blocking mode if we have a timeout
+	// greater than zero. If the user wants to block forever, we'll let libpcap
+	// handle that.
+	if p.timeout > 0 {
+		if err := p.setNonBlocking(); err != nil {
+			C.pcap_close(p.cptr)
+			return nil, err
+		}
 	}
 
 	return p, nil
@@ -371,6 +376,9 @@ func (p *Handle) getNextBufPtrLocked(ci *gopacket.CaptureInfo) error {
 	pp := C.uintptr_t(uintptr(unsafe.Pointer(&p.pkthdr)))
 	bp := C.uintptr_t(uintptr(unsafe.Pointer(&p.bufptr)))
 
+	// set after we have call waitForPacket for the first time
+	var waited bool
+
 	for atomic.LoadUint64(&p.stop) == 0 {
 		// try to read a packet if one is immediately available
 		result := NextError(C.pcap_next_ex_escaping(p.cptr, pp, bp))
@@ -392,13 +400,18 @@ func (p *Handle) getNextBufPtrLocked(ci *gopacket.CaptureInfo) error {
 			// no more packets, return EOF rather than libpcap-specific error
 			return io.EOF
 		case NextErrorTimeoutExpired:
-			// Negative timeout means to loop forever, instead of actually returning
-			// the timeout error.
-			if p.timeout < 0 {
-				// must have had a timeout... wait before trying again
-				p.waitForPacket()
-				continue
+			// we've already waited for a packet and we're supposed to time out
+			//
+			// we should never actually hit this if we were passed BlockForever
+			// since we should block on C.pcap_next_ex until there's a packet
+			// to read.
+			if waited && p.timeout > 0 {
+				return result
 			}
+
+			// wait for packet before trying again
+			p.waitForPacket()
+			waited = true
 		default:
 			return result
 		}
