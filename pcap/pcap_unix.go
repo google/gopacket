@@ -46,7 +46,7 @@ import (
 	"unsafe"
 )
 
-func (p *Handle) openLive() error {
+func (p *Handle) setNonBlocking() error {
 	buf := (*C.char)(C.calloc(errorBufferSize, 1))
 	defer C.free(unsafe.Pointer(buf))
 
