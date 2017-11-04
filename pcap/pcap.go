@@ -341,6 +341,7 @@ const (
 	aeNoSuchDevice = C.PCAP_ERROR_NO_SUCH_DEVICE
 	aeDenied       = C.PCAP_ERROR_PERM_DENIED
 	aeNotUp        = C.PCAP_ERROR_IFACE_NOT_UP
+	aeWarning      = C.PCAP_WARNING
 )
 
 func (a activateError) Error() string {
@@ -357,6 +358,8 @@ func (a activateError) Error() string {
 		return "Permission Denied"
 	case aeNotUp:
 		return "Interface Not Up"
+	case aeWarning:
+		return fmt.Sprintf("Warning: %v", activateErrMsg.Error())
 	default:
 		return fmt.Sprintf("unknown activated error: %d", a)
 	}
@@ -915,11 +918,22 @@ type InactiveHandle struct {
 	timeout     time.Duration
 }
 
+// holds the err messoge in case activation returned a Warning
+var activateErrMsg error
+
+// Error returns the current error associated with a pcap handle (pcap_geterr).
+func (p *InactiveHandle) Error() error {
+        return errors.New(C.GoString(C.pcap_geterr(p.cptr)))
+}
+
 // Activate activates the handle.  The current InactiveHandle becomes invalid
 // and all future function calls on it will fail.
 func (p *InactiveHandle) Activate() (*Handle, error) {
 	err := activateError(C.pcap_activate(p.cptr))
 	if err != aeNoError {
+		if err == aeWarning {
+			activateErrMsg = p.Error()
+		}
 		return nil, err
 	}
 	h := &Handle{
