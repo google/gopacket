@@ -923,7 +923,7 @@ var activateErrMsg error
 
 // Error returns the current error associated with a pcap handle (pcap_geterr).
 func (p *InactiveHandle) Error() error {
-        return errors.New(C.GoString(C.pcap_geterr(p.cptr)))
+	return errors.New(C.GoString(C.pcap_geterr(p.cptr)))
 }
 
 // Activate activates the handle.  The current InactiveHandle becomes invalid
