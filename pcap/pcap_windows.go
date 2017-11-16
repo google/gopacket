@@ -11,7 +11,7 @@ import (
 	"runtime"
 )
 
-func (p *Handle) openLive() error {
+func (p *Handle) setNonBlocking() error {
 	// do nothing
 	return nil
 }
