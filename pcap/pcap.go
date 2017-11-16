@@ -257,9 +257,14 @@ func OpenLive(device string, snaplen int32, promisc bool, timeout time.Duration)
 		return nil, errors.New(C.GoString(buf))
 	}
 
-	if err := p.openLive(); err != nil {
-		C.pcap_close(p.cptr)
-		return nil, err
+	// Only set the PCAP handle into non-blocking mode if we have a timeout
+	// greater than zero. If the user wants to block forever, we'll let libpcap
+	// handle that.
+	if p.timeout > 0 {
+		if err := p.setNonBlocking(); err != nil {
+			C.pcap_close(p.cptr)
+			return nil, err
+		}
 	}
 
 	return p, nil
@@ -336,6 +341,7 @@ const (
 	aeNoSuchDevice = C.PCAP_ERROR_NO_SUCH_DEVICE
 	aeDenied       = C.PCAP_ERROR_PERM_DENIED
 	aeNotUp        = C.PCAP_ERROR_IFACE_NOT_UP
+	aeWarning      = C.PCAP_WARNING
 )
 
 func (a activateError) Error() string {
@@ -352,6 +358,8 @@ func (a activateError) Error() string {
 		return "Permission Denied"
 	case aeNotUp:
 		return "Interface Not Up"
+	case aeWarning:
+		return fmt.Sprintf("Warning: %v", activateErrMsg.Error())
 	default:
 		return fmt.Sprintf("unknown activated error: %d", a)
 	}
@@ -370,6 +378,9 @@ func (p *Handle) getNextBufPtrLocked(ci *gopacket.CaptureInfo) error {
 	// call, this should be perfectly safe for GC stuff, etc.
 	pp := C.uintptr_t(uintptr(unsafe.Pointer(&p.pkthdr)))
 	bp := C.uintptr_t(uintptr(unsafe.Pointer(&p.bufptr)))
+
+	// set after we have call waitForPacket for the first time
+	var waited bool
 
 	for atomic.LoadUint64(&p.stop) == 0 {
 		// try to read a packet if one is immediately available
@@ -392,13 +403,18 @@ func (p *Handle) getNextBufPtrLocked(ci *gopacket.CaptureInfo) error {
 			// no more packets, return EOF rather than libpcap-specific error
 			return io.EOF
 		case NextErrorTimeoutExpired:
-			// Negative timeout means to loop forever, instead of actually returning
-			// the timeout error.
-			if p.timeout < 0 {
-				// must have had a timeout... wait before trying again
-				p.waitForPacket()
-				continue
+			// we've already waited for a packet and we're supposed to time out
+			//
+			// we should never actually hit this if we were passed BlockForever
+			// since we should block on C.pcap_next_ex until there's a packet
+			// to read.
+			if waited && p.timeout > 0 {
+				return result
 			}
+
+			// wait for packet before trying again
+			p.waitForPacket()
+			waited = true
 		default:
 			return result
 		}
@@ -902,11 +918,22 @@ type InactiveHandle struct {
 	timeout     time.Duration
 }
 
+// holds the err messoge in case activation returned a Warning
+var activateErrMsg error
+
+// Error returns the current error associated with a pcap handle (pcap_geterr).
+func (p *InactiveHandle) Error() error {
+	return errors.New(C.GoString(C.pcap_geterr(p.cptr)))
+}
+
 // Activate activates the handle.  The current InactiveHandle becomes invalid
 // and all future function calls on it will fail.
 func (p *InactiveHandle) Activate() (*Handle, error) {
 	err := activateError(C.pcap_activate(p.cptr))
 	if err != aeNoError {
+		if err == aeWarning {
+			activateErrMsg = p.Error()
+		}
 		return nil, err
 	}
 	h := &Handle{
