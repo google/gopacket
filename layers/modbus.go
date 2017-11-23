@@ -14,8 +14,8 @@ import (
 )
 
 const (
-	MBAPHeaderLen int = 7
-	MinModbusPacketLen int = MBAPHeaderLen+1
+	MBAPHeaderLen      int = 7
+	MinModbusPacketLen int = MBAPHeaderLen + 1
 )
 
 var (
