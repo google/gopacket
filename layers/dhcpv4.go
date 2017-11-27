@@ -125,6 +125,7 @@ func (d *DHCPv4) LayerType() gopacket.LayerType { return LayerTypeDHCPv4 }
 
 // DecodeFromBytes decodes the given bytes into this layer.
 func (d *DHCPv4) DecodeFromBytes(data []byte, df gopacket.DecodeFeedback) error {
+	d.Options = d.Options[:0]
 	d.Operation = DHCPOp(data[0])
 	d.HardwareType = LinkType(data[1])
 	d.HardwareLen = data[2]
