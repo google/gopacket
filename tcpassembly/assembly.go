@@ -148,8 +148,7 @@ func (c *pageCache) next(ts time.Time) (p *page) {
 	p, c.free = c.free[i], c.free[:i]
 	p.prev = nil
 	p.next = nil
-	p.Seen = ts
-	p.Bytes = p.buf[:0]
+	p.Reassembly = Reassembly{Bytes: p.buf[:0], Seen: ts}
 	c.used++
 	return p
 }
