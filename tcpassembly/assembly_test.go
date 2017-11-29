@@ -459,6 +459,95 @@ func TestCacheLargePacket(t *testing.T) {
 	})
 }
 
+func TestReuseFromCache(t *testing.T) {
+	test(t, []testSequence{
+		{
+			in: layers.TCP{
+				SrcPort:   1,
+				DstPort:   2,
+				Seq:       1000,
+				SYN:       true,
+				BaseLayer: layers.BaseLayer{Payload: []byte{1, 2, 3}},
+			},
+			want: []Reassembly{
+				Reassembly{
+					Start: true,
+					Bytes: []byte{1, 2, 3},
+				},
+			},
+		},
+		{
+			// start allocating pages in connection; this one has Skip: 6
+			in: layers.TCP{
+				SrcPort:   1,
+				DstPort:   2,
+				Seq:       1010,
+				BaseLayer: layers.BaseLayer{Payload: []byte{2, 2, 3}},
+			},
+			want: []Reassembly{},
+		},
+		{
+			// ensure we only release 1 packet from the connection by introducing another Skip: 4
+			in: layers.TCP{
+				SrcPort:   1,
+				DstPort:   2,
+				Seq:       1017,
+				BaseLayer: layers.BaseLayer{Payload: []byte{3, 2, 3}},
+			},
+			want: []Reassembly{},
+		},
+		{
+			in: layers.TCP{
+				SrcPort:   1,
+				DstPort:   2,
+				Seq:       1020,
+				BaseLayer: layers.BaseLayer{Payload: []byte{4, 2, 3}},
+			},
+			want: []Reassembly{},
+		},
+		{
+			in: layers.TCP{
+				SrcPort:   1,
+				DstPort:   2,
+				Seq:       1023,
+				BaseLayer: layers.BaseLayer{Payload: []byte{5, 2, 3}},
+			},
+			want: []Reassembly{
+				// released from connection; goes into the page cache with Skip: 6
+				Reassembly{
+					Skip:  6,
+					Bytes: []byte{2, 2, 3},
+				},
+			},
+		},
+		{
+			// re-uses from page cache
+			in: layers.TCP{
+				SrcPort:   1,
+				DstPort:   2,
+				Seq:       1026,
+				BaseLayer: layers.BaseLayer{Payload: []byte{6, 2, 3}},
+			},
+			want: []Reassembly{
+				Reassembly{
+					Skip:  4,
+					Bytes: []byte{3, 2, 3},
+				},
+				Reassembly{
+					Bytes: []byte{4, 2, 3},
+				},
+				Reassembly{
+					Bytes: []byte{5, 2, 3},
+				},
+				Reassembly{
+					// Should have Skip:0 when it reaches the stream
+					Bytes: []byte{6, 2, 3},
+				},
+			},
+		},
+	})
+}
+
 func BenchmarkSingleStream(b *testing.B) {
 	t := layers.TCP{
 		SrcPort:   1,
