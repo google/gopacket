@@ -831,3 +831,40 @@ func TestPacketDNSPanic7(t *testing.T) {
 		t.Errorf("unexpected error message: %v", err)
 	}
 }
+
+func TestDNSPacketWriteAnswer(t *testing.T) {
+	dns := &DNS{ID: 0x1234, QR: true, OpCode: DNSOpCodeQuery, ResponseCode: DNSResponseCodeNoErr, Answers: []DNSResourceRecord{
+		DNSResourceRecord{
+			Name:  []byte("www.example.com"),
+			Type:  DNSTypeA,
+			Class: DNSClassIN,
+			IP:    net.IPv4(127, 0, 0, 1),
+		},
+		DNSResourceRecord{
+			Name:  []byte("www.example.com"),
+			Type:  DNSTypeAAAA,
+			Class: DNSClassIN,
+			IP:    net.IP{15: 1},
+		},
+	}}
+	buf := gopacket.NewSerializeBuffer()
+	opts := gopacket.SerializeOptions{ComputeChecksums: true, FixLengths: true}
+	if err := gopacket.SerializeLayers(buf, opts, dns); err != nil {
+		t.Fatal(err)
+	}
+	dns2 := &DNS{}
+	if err := dns2.DecodeFromBytes(buf.Bytes(), gopacket.NilDecodeFeedback); err != nil {
+		t.Fatalf("could not decode: %v", err)
+	}
+	if want, got := 2, len(dns2.Answers); want != got {
+		t.Fatalf("num answers, want %d got %d", want, got)
+	} else if got, want := string(dns2.Answers[0].Name), "www.example.com"; got != want {
+		t.Fatalf("unexpected first answer name %q, want %q", got, want)
+	} else if got, want := string(dns2.Answers[1].Name), "www.example.com"; got != want {
+		t.Fatalf("unexpected second answer name %q, want %q", got, want)
+	}
+	t.Log(gopacket.LayerString(dns2))
+	if want, got := 86, len(buf.Bytes()); want != got {
+		t.Fatalf("Encoded size, want %d got %d", want, got)
+	}
+}
