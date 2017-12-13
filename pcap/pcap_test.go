@@ -62,7 +62,7 @@ func TestPcapFileRead(t *testing.T) {
 			},
 		},
 		{filename: "test_ethernet.pcap",
-			num: 16,
+			num: 10,
 			expectedLayers: []gopacket.LayerType{
 				layers.LayerTypeEthernet,
 				layers.LayerTypeIPv4,
@@ -291,12 +291,6 @@ func ExampleBPF() {
 	// Output:
 	// SYN packet
 	// SYN/ACK packet
-	// SYN flag not set
-	// SYN flag not set
-	// SYN flag not set
-	// SYN flag not set
-	// SYN flag not set
-	// SYN flag not set
 	// SYN flag not set
 	// SYN flag not set
 	// SYN flag not set
