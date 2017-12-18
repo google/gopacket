@@ -431,7 +431,7 @@ func recSize(rr *DNSResourceRecord) int {
 func computeSize(recs []DNSResourceRecord) int {
 	sz := 0
 	for _, rr := range recs {
-		sz += len(rr.Name) + 14
+		sz += len(rr.Name) + 12
 		sz += recSize(&rr)
 	}
 	return sz
