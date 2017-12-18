@@ -126,6 +126,7 @@ var (
 	LayerTypeBFD                         = gopacket.RegisterLayerType(122, gopacket.LayerTypeMetadata{Name: "BFD", Decoder: gopacket.DecodeFunc(decodeBFD)})
 	LayerTypeOSPF                        = gopacket.RegisterLayerType(123, gopacket.LayerTypeMetadata{Name: "OSPF", Decoder: gopacket.DecodeFunc(decodeOSPF)})
 	LayerTypeModbus                      = gopacket.RegisterLayerType(124, gopacket.LayerTypeMetadata{Name: "Modbus", Decoder: gopacket.DecodeFunc(decodeModbus)})
+	LayerTypeModbusException             = gopacket.RegisterLayerType(125, gopacket.LayerTypeMetadata{Name: "ModbusException", Decoder: gopacket.DecodeFunc(decodeModbusException)})
 )
 
 var (
