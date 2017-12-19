@@ -43,7 +43,7 @@ type ENIP struct {
 	Length          uint16
 	SessionHandle   uint32
 	Status          uint32
-	SenderContext   [8]byte
+	SenderContext   []byte
 	Options         uint32
 	CommandSpecific ENIPCommandSpecificData
 }
@@ -66,16 +66,9 @@ func (enip *ENIP) DecodeFromBytes(data []byte, df gopacket.DecodeFeedback) error
 	enip.Length = binary.LittleEndian.Uint16(data[2:4])
 	enip.SessionHandle = binary.LittleEndian.Uint32(data[4:8])
 	enip.Status = binary.LittleEndian.Uint32(data[8:12])
-	enip.SenderContext = enip.senderContext(data)
+	enip.SenderContext = data[12:20]
 	enip.Options = binary.LittleEndian.Uint32(data[20:24])
 	return enip.getPayload(data, df)
-}
-
-func (enip *ENIP) senderContext(data []byte) (sc [8]byte) {
-	for i := 0; i < 8; i++ {
-		sc[i] = data[i+12]
-	}
-	return
 }
 
 func (enip *ENIP) getPayload(data []byte, df gopacket.DecodeFeedback) (err error) {
@@ -150,8 +143,8 @@ func (enip *ENIP) getInterfaceHandleNextProto(interfaceHandle uint32) gopacket.L
 	return gopacket.LayerTypePayload
 }
 
-func (enip *ENIP) LayerType() gopacket.LayerType { return LayerTypeENIP }
-func (enip *ENIP) CanDecode() gopacket.LayerType { return LayerTypeENIP }
+func (enip *ENIP) LayerType() gopacket.LayerType  { return LayerTypeENIP }
+func (enip *ENIP) CanDecode() gopacket.LayerClass { return LayerTypeENIP }
 func (enip *ENIP) NextLayerType() (nl gopacket.LayerType) {
 	switch enip.Command {
 	case sendRRData:
@@ -187,4 +180,8 @@ func (csd ENIPCommandSpecificData) NextLayer() (nl gopacket.LayerType) {
 		nl = gopacket.LayerTypePayload
 	}
 	return
+}
+
+func (csd ENIPCommandSpecificData) Data() []byte {
+	return csd.data
 }
