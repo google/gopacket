@@ -151,6 +151,7 @@ func (enip *ENIP) getInterfaceHandleNextProto(interfaceHandle uint32) gopacket.L
 }
 
 func (enip *ENIP) LayerType() gopacket.LayerType { return LayerTypeENIP }
+func (enip *ENIP) CanDecode() gopacket.LayerType { return LayerTypeENIP }
 func (enip *ENIP) NextLayerType() (nl gopacket.LayerType) {
 	switch enip.Command {
 	case sendRRData:
