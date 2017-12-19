@@ -20,7 +20,7 @@ const (
 )
 
 var (
-	ErrDataTooSmall = errors.New("Data too small for Modbus")
+	ErrModbusDataTooSmall = errors.New("Data too small for Modbus")
 )
 
 type FC byte
@@ -45,7 +45,7 @@ func init() {
 func (m *Modbus) DecodeFromBytes(data []byte, df gopacket.DecodeFeedback) error {
 	if len(data) < MinModbusPacketLen {
 		df.SetTruncated()
-		return ErrDataTooSmall
+		return ErrModbusDataTooSmall
 	}
 	m.TransactionID = binary.BigEndian.Uint16(data[0:2])
 	m.ProtocolID = binary.BigEndian.Uint16(data[2:4])
@@ -53,9 +53,7 @@ func (m *Modbus) DecodeFromBytes(data []byte, df gopacket.DecodeFeedback) error 
 	m.UnitID = data[6]
 	m.FunctionCode = FC(data[7])
 	m.Contents = data[:8]
-	if len(data) > 7 {
-		m.Payload = data[8:]
-	}
+	m.Payload = data[8:]
 	return nil
 }
 
@@ -76,7 +74,8 @@ func (m *Modbus) CanDecode() gopacket.LayerClass {
 
 func decodeModbus(data []byte, p gopacket.PacketBuilder) error {
 	if len(data) < MinModbusPacketLen {
-		return ErrDataTooSmall
+		p.SetTruncated()
+		return ErrModbusDataTooSmall
 	}
 	modbus := &Modbus{}
 	return decodingLayerDecoder(modbus, data, p)
@@ -149,7 +148,7 @@ type ModbusException struct {
 
 func decodeModbusException(data []byte, p gopacket.PacketBuilder) error {
 	if len(data) < 1 {
-		return ErrDataTooSmall
+		return ErrModbusDataTooSmall
 	}
 	mbe := &ModbusException{}
 	return decodingLayerDecoder(mbe, data, p)
@@ -162,7 +161,7 @@ func (mbe *ModbusException) NextLayerType() gopacket.LayerType { return gopacket
 func (mbe *ModbusException) DecodeFromBytes(data []byte, df gopacket.DecodeFeedback) error {
 	if len(data) < 1 {
 		df.SetTruncated()
-		return ErrDataTooSmall
+		return ErrModbusDataTooSmall
 	}
 	mbe.Exception = data[0]
 	mbe.Contents = data[:1]
