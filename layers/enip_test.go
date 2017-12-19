@@ -53,7 +53,7 @@ func TestENIPRegisterSession(t *testing.T) {
 			Length:        4,
 			SessionHandle: 0,
 			Status:        0,
-			SenderContext: [8]byte{},
+			SenderContext: []byte{0, 0, 0, 0, 0, 0, 0, 0},
 			Options:       0,
 			CommandSpecific: ENIPCommandSpecificData{
 				cmd:  0x0065,
@@ -119,7 +119,7 @@ func TestENIPSendRRData(t *testing.T) {
 			Length:        66,
 			SessionHandle: 0x0a021100,
 			Status:        0,
-			SenderContext: [8]byte{},
+			SenderContext: []byte{0, 0, 0, 0, 0, 0, 0, 0},
 			Options:       0,
 			CommandSpecific: ENIPCommandSpecificData{
 				cmd: 0x6f,
@@ -190,7 +190,7 @@ func TestENIPSendUnitData(t *testing.T) {
 			Length:        70,
 			SessionHandle: 0x0a021100,
 			Status:        0,
-			SenderContext: [8]byte{},
+			SenderContext: []byte{0, 0, 0, 0, 0, 0, 0, 0},
 			Options:       0,
 			CommandSpecific: ENIPCommandSpecificData{
 				cmd: 0x70,
