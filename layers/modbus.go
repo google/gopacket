@@ -36,6 +36,7 @@ type Modbus struct {
 	BaseLayer
 	MBAP
 	FunctionCode FC
+	ReqResp      []byte
 }
 
 func init() {
@@ -52,8 +53,14 @@ func (m *Modbus) DecodeFromBytes(data []byte, df gopacket.DecodeFeedback) error 
 	m.Length = binary.BigEndian.Uint16(data[4:6])
 	m.UnitID = data[6]
 	m.FunctionCode = FC(data[7])
-	m.Contents = data[:8]
-	m.Payload = data[8:]
+	end := int(m.Length) + 6
+	if len(data) < end {
+		df.SetTruncated()
+		return ErrModbusDataTooSmall
+	}
+	m.ReqResp = data[8:end]
+	m.Contents = data[:end]
+	m.Payload = data[end:]
 	return nil
 }
 
@@ -62,9 +69,6 @@ func (m *Modbus) LayerType() gopacket.LayerType {
 }
 
 func (m *Modbus) NextLayerType() gopacket.LayerType {
-	if m.FunctionCode.exception() {
-		return LayerTypeModbusException
-	}
 	return gopacket.LayerTypeZero
 }
 
@@ -138,57 +142,4 @@ func (fc FC) String() (s string) {
 		s += `UNKNOWN`
 	}
 	return
-}
-
-/* Modbus Exception response structures */
-type ModbusException struct {
-	BaseLayer
-	Exception byte
-}
-
-func decodeModbusException(data []byte, p gopacket.PacketBuilder) error {
-	if len(data) < 1 {
-		return ErrModbusDataTooSmall
-	}
-	mbe := &ModbusException{}
-	return decodingLayerDecoder(mbe, data, p)
-}
-
-func (mbe *ModbusException) LayerType() gopacket.LayerType     { return LayerTypeModbusException }
-func (mbe *ModbusException) CanDecode() gopacket.LayerClass    { return LayerTypeModbusException }
-func (mbe *ModbusException) NextLayerType() gopacket.LayerType { return gopacket.LayerTypeZero }
-
-func (mbe *ModbusException) DecodeFromBytes(data []byte, df gopacket.DecodeFeedback) error {
-	if len(data) < 1 {
-		df.SetTruncated()
-		return ErrModbusDataTooSmall
-	}
-	mbe.Exception = data[0]
-	mbe.Contents = data[:1]
-	mbe.Payload = data[1:]
-	return nil
-}
-
-func (mbe *ModbusException) String() string {
-	switch mbe.Exception {
-	case 1:
-		return `ILLEGAL FUNCTION`
-	case 2:
-		return `ILLEGAL DATA ADDRESS`
-	case 3:
-		return `ILLEGAL DATA VALUE`
-	case 4:
-		return `SLAVE DEVICE FAILURE`
-	case 5:
-		return `ACKNOWLEDGE`
-	case 6:
-		return `SLAVE DEVICE BUSY`
-	case 8:
-		return `MEMORY PARITY ERROR`
-	case 0xA:
-		return `GATEWAY PATH UNAVAILABLE`
-	case 0xB:
-		return `GATEWAY TARGET DEVICE FAILED TO RESPONSE`
-	}
-	return `UNKNOWN EXCEPTION`
 }
