@@ -54,7 +54,7 @@ func (m *Modbus) DecodeFromBytes(data []byte, df gopacket.DecodeFeedback) error 
 	m.UnitID = data[6]
 	m.FunctionCode = FC(data[7])
 	end := int(m.Length) + 6
-	if len(data) < end {
+	if len(data) < end || end < 8 {
 		df.SetTruncated()
 		return ErrModbusDataTooSmall
 	}
