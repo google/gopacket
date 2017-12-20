@@ -126,9 +126,8 @@ var (
 	LayerTypeBFD                         = gopacket.RegisterLayerType(122, gopacket.LayerTypeMetadata{Name: "BFD", Decoder: gopacket.DecodeFunc(decodeBFD)})
 	LayerTypeOSPF                        = gopacket.RegisterLayerType(123, gopacket.LayerTypeMetadata{Name: "OSPF", Decoder: gopacket.DecodeFunc(decodeOSPF)})
 	LayerTypeModbus                      = gopacket.RegisterLayerType(124, gopacket.LayerTypeMetadata{Name: "Modbus", Decoder: gopacket.DecodeFunc(decodeModbus)})
-	LayerTypeModbusException             = gopacket.RegisterLayerType(125, gopacket.LayerTypeMetadata{Name: "ModbusException", Decoder: gopacket.DecodeFunc(decodeModbusException)})
-	LayerTypeENIP                        = gopacket.RegisterLayerType(126, gopacket.LayerTypeMetadata{Name: "Ethernet/IP", Decoder: gopacket.DecodeFunc(decodeENIP)})
-	LayerTypeCIP                         = gopacket.RegisterLayerType(127, gopacket.LayerTypeMetadata{Name: "CIP", Decoder: gopacket.DecodeFunc(decodeCIP)})
+	LayerTypeENIP                        = gopacket.RegisterLayerType(125, gopacket.LayerTypeMetadata{Name: "Ethernet/IP", Decoder: gopacket.DecodeFunc(decodeENIP)})
+	LayerTypeCIP                         = gopacket.RegisterLayerType(126, gopacket.LayerTypeMetadata{Name: "CIP", Decoder: gopacket.DecodeFunc(decodeCIP)})
 )
 
 var (

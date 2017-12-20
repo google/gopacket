@@ -40,8 +40,8 @@ func TestModbusReadCoilRequest(t *testing.T) {
 	if got, ok := p.Layer(LayerTypeModbus).(*Modbus); ok {
 		want := &Modbus{
 			BaseLayer: BaseLayer{
-				Contents: []uint8{0x00, 0x01, 0x00, 0x00, 0x00, 0x06, 0x0a, 0x01},
-				Payload:  []uint8{0x00, 0x02, 0x00, 0x02},
+				Contents: []uint8{0x00, 0x01, 0x00, 0x00, 0x00, 0x06, 0x0a, 0x01, 0x00, 0x02, 0x00, 0x02},
+				Payload:  []uint8{},
 			},
 			MBAP: MBAP{
 				TransactionID: 1,
@@ -50,6 +50,7 @@ func TestModbusReadCoilRequest(t *testing.T) {
 				UnitID:        10,
 			},
 			FunctionCode: 0x01,
+			ReqResp:      []byte{0x00, 0x02, 0x00, 0x02},
 		}
 		if !reflect.DeepEqual(got, want) {
 			t.Error("Modbus Exception packet does not match")
@@ -77,13 +78,13 @@ func TestModbusExceptionResponse(t *testing.T) {
 	if p.ErrorLayer() != nil {
 		t.Error("Failed to decode modbus exception packet:", p.ErrorLayer().Error())
 	}
-	checkLayers(p, []gopacket.LayerType{LayerTypeEthernet, LayerTypeIPv4, LayerTypeTCP, LayerTypeModbus, LayerTypeModbusException}, t)
+	checkLayers(p, []gopacket.LayerType{LayerTypeEthernet, LayerTypeIPv4, LayerTypeTCP, LayerTypeModbus}, t)
 
 	if got, ok := p.Layer(LayerTypeModbus).(*Modbus); ok {
 		want := &Modbus{
 			BaseLayer: BaseLayer{
-				Contents: []uint8{0x00, 0x00, 0x00, 0x00, 0x00, 0x03, 0x0a, 0x88},
-				Payload:  []uint8{0x0b},
+				Contents: []uint8{0x00, 0x00, 0x00, 0x00, 0x00, 0x03, 0x0a, 0x88, 0x0b},
+				Payload:  []uint8{},
 			},
 			MBAP: MBAP{
 				TransactionID: 0,
@@ -92,20 +93,7 @@ func TestModbusExceptionResponse(t *testing.T) {
 				UnitID:        10,
 			},
 			FunctionCode: 0x88,
-		}
-		if !reflect.DeepEqual(got, want) {
-			t.Fatal("Modbus Exception packet does not match")
-		}
-	} else {
-		t.Error("Failed to get modbus layer")
-	}
-	if got, ok := p.Layer(LayerTypeModbusException).(*ModbusException); ok {
-		want := &ModbusException{
-			BaseLayer: BaseLayer{
-				Contents: []uint8{0x0b},
-				Payload:  []uint8{},
-			},
-			Exception: 0x0b,
+			ReqResp:      []uint8{0x0b},
 		}
 		if !reflect.DeepEqual(got, want) {
 			t.Fatal("Modbus Exception packet does not match")
