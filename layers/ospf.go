@@ -27,14 +27,19 @@ const (
 
 // LSA Function Codes for LSAheader.LSType
 const (
-	RouterLSAtype          = 0x2001
-	NetworkLSAtype         = 0x2002
-	InterAreaPrefixLSAtype = 0x2003
-	InterAreaRouterLSAtype = 0x2004
-	ASExternalLSAtype      = 0x4005
-	NSSALSAtype            = 0x2007
-	LinkLSAtype            = 0x0008
-	IntraAreaPrefixLSAtype = 0x2009
+	RouterLSAtypeV2          = 0x1
+	RouterLSAtypeV3          = 0x2001
+	NetworkLSAtypeV2         = 0x2
+	NetworkLSAtypeV3         = 0x2002
+	SummaryLSANetworktypeV2  = 0x3
+	InterAreaPrefixLSAtypeV3 = 0x2003
+	SummaryLSAASBRtypeV2     = 0x4
+	InterAreaRouterLSAtypeV3 = 0x2004
+	ASExternalLSAtypeV2      = 0x5
+	ASExternalLSAtypeV3      = 0x4005
+	NSSALSAtypeV3            = 0x2007
+	LinkLSAtype              = 0x0008
+	IntraAreaPrefixLSAtypeV3 = 0x2009
 )
 
 // String conversions for OSPFType
@@ -81,8 +86,17 @@ type LinkLSA struct {
 	Prefixes         []Prefix
 }
 
-// ASExternalLSA is the struct from RFC 5340  A.4.7.
-type ASExternalLSA struct {
+// ASExternalLSAV2 is the struct from RFC 2328  A.4.5.
+type ASExternalLSAV2 struct {
+	NetworkMask       uint32
+	ExternalBit       uint8
+	Metric            uint32
+	ForwardingAddress uint32
+	ExternalRouteTag  uint32
+}
+
+// ASExternalLSAV3 is the struct from RFC 5340  A.4.7.
+type ASExternalLSAV3 struct {
 	Flags             uint8
 	Metric            uint32
 	PrefixLength      uint8
@@ -115,8 +129,23 @@ type NetworkLSA struct {
 	AttachedRouter []uint32
 }
 
-// Router extends RouterLSA
-type Router struct {
+// RouterV2 extends RouterLSAV2
+type RouterV2 struct {
+	Type     uint8
+	LinkID   uint32
+	LinkData uint32
+	Metric   uint16
+}
+
+// RouterLSAV2 is the struct from RFC 2328  A.4.2.
+type RouterLSAV2 struct {
+	Flags   uint8
+	Links   uint16
+	Routers []RouterV2
+}
+
+// RouterV3 extends RouterLSAV3
+type RouterV3 struct {
 	Type                uint8
 	Metric              uint16
 	InterfaceID         uint32
@@ -124,14 +153,14 @@ type Router struct {
 	NeighborRouterID    uint32
 }
 
-// RouterLSA is the struct from RFC 5340  A.4.3.
-type RouterLSA struct {
+// RouterLSAV3 is the struct from RFC 5340  A.4.3.
+type RouterLSAV3 struct {
 	Flags   uint8
 	Options uint32
-	Routers []Router
+	Routers []RouterV3
 }
 
-// LSAheader is the struct from RFC 5340  A.4.2.
+// LSAheader is the struct from RFC 5340  A.4.2 and RFC 2328 A.4.1.
 type LSAheader struct {
 	LSAge       uint16
 	LSType      uint16
@@ -140,6 +169,7 @@ type LSAheader struct {
 	LSSeqNumber uint32
 	LSChecksum  uint16
 	Length      uint16
+	LSOptions   uint8
 }
 
 // LSA links LSAheader with the structs from RFC 5340  A.4.
@@ -176,7 +206,7 @@ type HelloPkg struct {
 	RtrPriority              uint8
 	Options                  uint32
 	HelloInterval            uint16
-	RouterDeadInterval       uint16
+	RouterDeadInterval       uint32
 	DesignatedRouterID       uint32
 	BackupDesignatedRouterID uint32
 	NeighborID               []uint32
@@ -215,7 +245,169 @@ type OSPFv3 struct {
 	Reserved uint8
 }
 
-// getLSAs parses the LSA information from the packet
+// getLSAsv2 parses the LSA information from the packet for OSPFv2
+func getLSAsv2(num uint32, data []byte) ([]LSA, error) {
+	var lsas []LSA
+	var i uint32 = 0
+	var offset uint32 = 0
+	for ; i < num; i++ {
+		lstype := uint16(data[offset+3])
+		lsalength := binary.BigEndian.Uint16(data[offset+18 : offset+20])
+		content, err := extractLSAInformation(lstype, lsalength, data[offset:])
+		if err != nil {
+			return nil, fmt.Errorf("Could not extract Link State type.")
+		}
+		lsa := LSA{
+			LSAheader: LSAheader{
+				LSAge:       binary.BigEndian.Uint16(data[offset : offset+2]),
+				LSOptions:   data[offset+2],
+				LSType:      lstype,
+				LinkStateID: binary.BigEndian.Uint32(data[offset+4 : offset+8]),
+				AdvRouter:   binary.BigEndian.Uint32(data[offset+8 : offset+12]),
+				LSSeqNumber: binary.BigEndian.Uint32(data[offset+12 : offset+16]),
+				LSChecksum:  binary.BigEndian.Uint16(data[offset+16 : offset+18]),
+				Length:      lsalength,
+			},
+			Content: content,
+		}
+		lsas = append(lsas, lsa)
+		offset += uint32(lsalength)
+	}
+	return lsas, nil
+}
+
+// extractLSAInformation extracts all the LSA information
+func extractLSAInformation(lstype, lsalength uint16, data []byte) (interface{}, error) {
+	var content interface{}
+	switch lstype {
+	case RouterLSAtypeV2:
+		var routers []RouterV2
+		links := binary.BigEndian.Uint16(data[22:24])
+		content = RouterLSAV2{
+			Flags:   data[20],
+			Links:   links,
+			Routers: routers,
+		}
+	case ASExternalLSAtypeV2:
+		content = ASExternalLSAV2{
+			NetworkMask:       binary.BigEndian.Uint32(data[20:24]),
+			ExternalBit:       data[24] & 0x80,
+			Metric:            binary.BigEndian.Uint32(data[24:28]) & 0x00FFFFFF,
+			ForwardingAddress: binary.BigEndian.Uint32(data[28:32]),
+			ExternalRouteTag:  binary.BigEndian.Uint32(data[32:36]),
+		}
+	case RouterLSAtypeV3:
+		var routers []RouterV3
+		var j uint32
+		for j = 24; j < uint32(lsalength); j += 16 {
+			router := RouterV3{
+				Type:                uint8(data[j]),
+				Metric:              binary.BigEndian.Uint16(data[j+2 : j+4]),
+				InterfaceID:         binary.BigEndian.Uint32(data[j+4 : j+8]),
+				NeighborInterfaceID: binary.BigEndian.Uint32(data[j+8 : j+12]),
+				NeighborRouterID:    binary.BigEndian.Uint32(data[j+12 : j+16]),
+			}
+			routers = append(routers, router)
+		}
+		content = RouterLSAV3{
+			Flags:   uint8(data[20]),
+			Options: binary.BigEndian.Uint32(data[20:24]) & 0x00FFFFFF,
+			Routers: routers,
+		}
+	case NetworkLSAtypeV3:
+		var routers []uint32
+		var j uint32
+		for j = 24; j < uint32(lsalength); j += 4 {
+			routers = append(routers, binary.BigEndian.Uint32(data[j:j+4]))
+		}
+		content = NetworkLSA{
+			Options:        binary.BigEndian.Uint32(data[20:24]) & 0x00FFFFFF,
+			AttachedRouter: routers,
+		}
+	case InterAreaPrefixLSAtypeV3:
+		content = InterAreaPrefixLSA{
+			Metric:        binary.BigEndian.Uint32(data[20:24]) & 0x00FFFFFF,
+			PrefixLength:  uint8(data[24]),
+			PrefixOptions: uint8(data[25]),
+			AddressPrefix: data[28:uint32(lsalength)],
+		}
+	case InterAreaRouterLSAtypeV3:
+		content = InterAreaRouterLSA{
+			Options:             binary.BigEndian.Uint32(data[20:24]) & 0x00FFFFFF,
+			Metric:              binary.BigEndian.Uint32(data[24:28]) & 0x00FFFFFF,
+			DestinationRouterID: binary.BigEndian.Uint32(data[28:32]),
+		}
+	case ASExternalLSAtypeV3:
+		fallthrough
+	case NSSALSAtypeV3:
+
+		flags := uint8(data[20])
+		prefixLen := uint8(data[24]) / 8
+		var forwardingAddress []byte
+		if (flags & 0x02) == 0x02 {
+			forwardingAddress = data[28+uint32(prefixLen) : 28+uint32(prefixLen)+16]
+		}
+		content = ASExternalLSAV3{
+			Flags:             flags,
+			Metric:            binary.BigEndian.Uint32(data[20:24]) & 0x00FFFFFF,
+			PrefixLength:      prefixLen,
+			PrefixOptions:     uint8(data[25]),
+			RefLSType:         binary.BigEndian.Uint16(data[26:28]),
+			AddressPrefix:     data[28 : 28+uint32(prefixLen)],
+			ForwardingAddress: forwardingAddress,
+		}
+	case LinkLSAtype:
+		var prefixes []Prefix
+		var prefixOffset uint32 = 44
+		var j uint32
+		numOfPrefixes := binary.BigEndian.Uint32(data[40:44])
+		for j = 0; j < numOfPrefixes; j++ {
+			prefixLen := uint8(data[prefixOffset])
+			prefix := Prefix{
+				PrefixLength:  prefixLen,
+				PrefixOptions: uint8(data[prefixOffset+1]),
+				AddressPrefix: data[prefixOffset+4 : prefixOffset+4+uint32(prefixLen)/8],
+			}
+			prefixes = append(prefixes, prefix)
+			prefixOffset = prefixOffset + 4 + uint32(prefixLen)/8
+		}
+		content = LinkLSA{
+			RtrPriority:      uint8(data[20]),
+			Options:          binary.BigEndian.Uint32(data[20:24]) & 0x00FFFFFF,
+			LinkLocalAddress: data[24:40],
+			NumOfPrefixes:    numOfPrefixes,
+			Prefixes:         prefixes,
+		}
+	case IntraAreaPrefixLSAtypeV3:
+		var prefixes []Prefix
+		var prefixOffset uint32 = 32
+		var j uint16
+		numOfPrefixes := binary.BigEndian.Uint16(data[20:22])
+		for j = 0; j < numOfPrefixes; j++ {
+			prefixLen := uint8(data[prefixOffset])
+			prefix := Prefix{
+				PrefixLength:  prefixLen,
+				PrefixOptions: uint8(data[prefixOffset+1]),
+				Metric:        binary.BigEndian.Uint16(data[prefixOffset+2 : prefixOffset+4]),
+				AddressPrefix: data[prefixOffset+4 : prefixOffset+4+uint32(prefixLen)/8],
+			}
+			prefixes = append(prefixes, prefix)
+			prefixOffset = prefixOffset + 4 + uint32(prefixLen)
+		}
+		content = IntraAreaPrefixLSA{
+			NumOfPrefixes:  numOfPrefixes,
+			RefLSType:      binary.BigEndian.Uint16(data[22:24]),
+			RefLinkStateID: binary.BigEndian.Uint32(data[24:28]),
+			RefAdvRouter:   binary.BigEndian.Uint32(data[28:32]),
+			Prefixes:       prefixes,
+		}
+	default:
+		return nil, fmt.Errorf("Unknown Link State type.")
+	}
+	return content, nil
+}
+
+// getLSAs parses the LSA information from the packet for OSPFv3
 func getLSAs(num uint32, data []byte) ([]LSA, error) {
 	var lsas []LSA
 	var i uint32 = 0
@@ -225,114 +417,9 @@ func getLSAs(num uint32, data []byte) ([]LSA, error) {
 		lstype := binary.BigEndian.Uint16(data[offset+2 : offset+4])
 		lsalength := binary.BigEndian.Uint16(data[offset+18 : offset+20])
 
-		switch lstype {
-		case RouterLSAtype:
-			var routers []Router
-			var j uint32
-			for j = 24; j < uint32(lsalength); j += 16 {
-				router := Router{
-					Type:                uint8(data[offset+j]),
-					Metric:              binary.BigEndian.Uint16(data[offset+j+2 : offset+j+4]),
-					InterfaceID:         binary.BigEndian.Uint32(data[offset+j+4 : offset+j+8]),
-					NeighborInterfaceID: binary.BigEndian.Uint32(data[offset+j+8 : offset+j+12]),
-					NeighborRouterID:    binary.BigEndian.Uint32(data[offset+j+12 : offset+j+16]),
-				}
-				routers = append(routers, router)
-			}
-			content = RouterLSA{
-				Flags:   uint8(data[offset+20]),
-				Options: binary.BigEndian.Uint32(data[offset+20:offset+24]) & 0x00FFFFFF,
-				Routers: routers,
-			}
-		case NetworkLSAtype:
-			var routers []uint32
-			var j uint32
-			for j = 24; j < uint32(lsalength); j += 4 {
-				routers = append(routers, binary.BigEndian.Uint32(data[offset+j:offset+j+4]))
-			}
-			content = NetworkLSA{
-				Options:        binary.BigEndian.Uint32(data[offset+20:offset+24]) & 0x00FFFFFF,
-				AttachedRouter: routers,
-			}
-		case InterAreaPrefixLSAtype:
-			content = InterAreaPrefixLSA{
-				Metric:        binary.BigEndian.Uint32(data[offset+20:offset+24]) & 0x00FFFFFF,
-				PrefixLength:  uint8(data[offset+24]),
-				PrefixOptions: uint8(data[offset+25]),
-				AddressPrefix: data[offset+28 : offset+uint32(lsalength)],
-			}
-		case InterAreaRouterLSAtype:
-			content = InterAreaRouterLSA{
-				Options:             binary.BigEndian.Uint32(data[offset+20:offset+24]) & 0x00FFFFFF,
-				Metric:              binary.BigEndian.Uint32(data[offset+24:offset+28]) & 0x00FFFFFF,
-				DestinationRouterID: binary.BigEndian.Uint32(data[offset+28 : offset+32]),
-			}
-		case ASExternalLSAtype:
-			fallthrough
-		case NSSALSAtype:
-
-			flags := uint8(data[offset+20])
-			prefixLen := uint8(data[offset+24]) / 8
-			var forwardingAddress []byte
-			if (flags & 0x02) == 0x02 {
-				forwardingAddress = data[offset+28+uint32(prefixLen) : offset+28+uint32(prefixLen)+16]
-			}
-			content = ASExternalLSA{
-				Flags:             flags,
-				Metric:            binary.BigEndian.Uint32(data[offset+20:offset+24]) & 0x00FFFFFF,
-				PrefixLength:      prefixLen,
-				PrefixOptions:     uint8(data[offset+25]),
-				RefLSType:         binary.BigEndian.Uint16(data[offset+26 : offset+28]),
-				AddressPrefix:     data[offset+28 : offset+28+uint32(prefixLen)],
-				ForwardingAddress: forwardingAddress,
-			}
-		case LinkLSAtype:
-			var prefixes []Prefix
-			var prefixOffset uint32 = offset + 44
-			var j uint32
-			numOfPrefixes := binary.BigEndian.Uint32(data[offset+40 : offset+44])
-			for j = 0; j < numOfPrefixes; j++ {
-				prefixLen := uint8(data[prefixOffset])
-				prefix := Prefix{
-					PrefixLength:  prefixLen,
-					PrefixOptions: uint8(data[prefixOffset+1]),
-					AddressPrefix: data[prefixOffset+4 : prefixOffset+4+uint32(prefixLen)/8],
-				}
-				prefixes = append(prefixes, prefix)
-				prefixOffset = prefixOffset + 4 + uint32(prefixLen)/8
-			}
-			content = LinkLSA{
-				RtrPriority:      uint8(data[offset+20]),
-				Options:          binary.BigEndian.Uint32(data[offset+20:offset+24]) & 0x00FFFFFF,
-				LinkLocalAddress: data[offset+24 : offset+40],
-				NumOfPrefixes:    numOfPrefixes,
-				Prefixes:         prefixes,
-			}
-		case IntraAreaPrefixLSAtype:
-			var prefixes []Prefix
-			var prefixOffset uint32 = offset + 32
-			var j uint16
-			numOfPrefixes := binary.BigEndian.Uint16(data[offset+20 : offset+22])
-			for j = 0; j < numOfPrefixes; j++ {
-				prefixLen := uint8(data[prefixOffset])
-				prefix := Prefix{
-					PrefixLength:  prefixLen,
-					PrefixOptions: uint8(data[prefixOffset+1]),
-					Metric:        binary.BigEndian.Uint16(data[prefixOffset+2 : prefixOffset+4]),
-					AddressPrefix: data[prefixOffset+4 : prefixOffset+4+uint32(prefixLen)/8],
-				}
-				prefixes = append(prefixes, prefix)
-				prefixOffset = prefixOffset + 4 + uint32(prefixLen)
-			}
-			content = IntraAreaPrefixLSA{
-				NumOfPrefixes:  numOfPrefixes,
-				RefLSType:      binary.BigEndian.Uint16(data[offset+22 : offset+24]),
-				RefLinkStateID: binary.BigEndian.Uint32(data[offset+24 : offset+28]),
-				RefAdvRouter:   binary.BigEndian.Uint32(data[offset+28 : offset+32]),
-				Prefixes:       prefixes,
-			}
-		default:
-			return nil, fmt.Errorf("Unknown Link State type.")
+		content, err := extractLSAInformation(lstype, lsalength, data[offset:])
+		if err != nil {
+			return nil, fmt.Errorf("Could not extract Link State type.")
 		}
 		lsa := LSA{
 			LSAheader: LSAheader{
@@ -367,6 +454,84 @@ func (ospf *OSPFv2) DecodeFromBytes(data []byte, df gopacket.DecodeFeedback) err
 	ospf.AuType = binary.BigEndian.Uint16(data[14:16])
 	ospf.Authentication = binary.BigEndian.Uint64(data[16:24])
 
+	switch ospf.Type {
+	case OSPFHello:
+		var neighbors []uint32
+		for i := 44; uint16(i+4) <= ospf.PacketLength; i += 4 {
+			neighbors = append(neighbors, binary.BigEndian.Uint32(data[i:i+4]))
+		}
+		ospf.Content = HelloPkgV2{
+			NetworkMask: binary.BigEndian.Uint32(data[24:28]),
+			HelloPkg: HelloPkg{
+				HelloInterval:            binary.BigEndian.Uint16(data[28:30]),
+				Options:                  uint32(data[30]),
+				RtrPriority:              uint8(data[31]),
+				RouterDeadInterval:       binary.BigEndian.Uint32(data[32:36]),
+				DesignatedRouterID:       binary.BigEndian.Uint32(data[36:40]),
+				BackupDesignatedRouterID: binary.BigEndian.Uint32(data[40:44]),
+				NeighborID:               neighbors,
+			},
+		}
+	case OSPFDatabaseDescription:
+		var lsas []LSAheader
+		for i := 32; uint16(i+20) <= ospf.PacketLength; i += 20 {
+			lsa := LSAheader{
+				LSAge:       binary.BigEndian.Uint16(data[i : i+2]),
+				LSType:      binary.BigEndian.Uint16(data[i+2 : i+4]),
+				LinkStateID: binary.BigEndian.Uint32(data[i+4 : i+8]),
+				AdvRouter:   binary.BigEndian.Uint32(data[i+8 : i+12]),
+				LSSeqNumber: binary.BigEndian.Uint32(data[i+12 : i+16]),
+				LSChecksum:  binary.BigEndian.Uint16(data[i+16 : i+18]),
+				Length:      binary.BigEndian.Uint16(data[i+18 : i+20]),
+			}
+			lsas = append(lsas, lsa)
+		}
+		ospf.Content = DbDescPkg{
+			InterfaceMTU: binary.BigEndian.Uint16(data[24:26]),
+			Options:      uint32(data[26]),
+			Flags:        uint16(data[27]),
+			DDSeqNumber:  binary.BigEndian.Uint32(data[28:32]),
+			LSAinfo:      lsas,
+		}
+	case OSPFLinkStateRequest:
+		var lsrs []LSReq
+		for i := 24; uint16(i+12) <= ospf.PacketLength; i += 12 {
+			lsr := LSReq{
+				LSType:    binary.BigEndian.Uint16(data[i+2 : i+4]),
+				LSID:      binary.BigEndian.Uint32(data[i+4 : i+8]),
+				AdvRouter: binary.BigEndian.Uint32(data[i+8 : i+12]),
+			}
+			lsrs = append(lsrs, lsr)
+		}
+		ospf.Content = lsrs
+	case OSPFLinkStateUpdate:
+		num := binary.BigEndian.Uint32(data[24:28])
+
+		lsas, err := getLSAsv2(num, data[28:])
+		if err != nil {
+			return fmt.Errorf("Cannot parse Link State Update packet: %v", err)
+		}
+		ospf.Content = LSUpdate{
+			NumOfLSAs: num,
+			LSAs:      lsas,
+		}
+	case OSPFLinkStateAcknowledgment:
+		var lsas []LSAheader
+		for i := 24; uint16(i+20) <= ospf.PacketLength; i += 20 {
+			lsa := LSAheader{
+				LSAge:       binary.BigEndian.Uint16(data[i : i+2]),
+				LSOptions:   data[i+2],
+				LSType:      uint16(data[i+3]),
+				LinkStateID: binary.BigEndian.Uint32(data[i+4 : i+8]),
+				AdvRouter:   binary.BigEndian.Uint32(data[i+8 : i+12]),
+				LSSeqNumber: binary.BigEndian.Uint32(data[i+12 : i+16]),
+				LSChecksum:  binary.BigEndian.Uint16(data[i+16 : i+18]),
+				Length:      binary.BigEndian.Uint16(data[i+18 : i+20]),
+			}
+			lsas = append(lsas, lsa)
+		}
+		ospf.Content = lsas
+	}
 	return nil
 }
 
@@ -397,7 +562,7 @@ func (ospf *OSPFv3) DecodeFromBytes(data []byte, df gopacket.DecodeFeedback) err
 			RtrPriority:              uint8(data[20]),
 			Options:                  binary.BigEndian.Uint32(data[21:25]) >> 8,
 			HelloInterval:            binary.BigEndian.Uint16(data[24:26]),
-			RouterDeadInterval:       binary.BigEndian.Uint16(data[26:28]),
+			RouterDeadInterval:       uint32(binary.BigEndian.Uint16(data[26:28])),
 			DesignatedRouterID:       binary.BigEndian.Uint32(data[28:32]),
 			BackupDesignatedRouterID: binary.BigEndian.Uint32(data[32:36]),
 			NeighborID:               neighbors,
