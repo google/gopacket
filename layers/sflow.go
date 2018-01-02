@@ -526,9 +526,11 @@ func decodeFlowSample(data *[]byte, expanded bool) (SFlowFlowSample, error) {
 				return s, err
 			}
 		case SFlowTypeEthernetFrameFlow:
-			// TODO
-			skipRecord(data)
-			return s, errors.New("skipping TypeEthernetFrameFlow")
+			if record, err := decodeSFlowEthernetFrameRecord(data); err == nil {
+				s.Records = append(s.Records, record)
+			} else {
+				return s, err
+			}
 		case SFlowTypeIpv4Flow:
 			if record, err := decodeSFlowIpv4Record(data); err == nil {
 				s.Records = append(s.Records, record)
@@ -1948,6 +1950,55 @@ func decodeExtendedVniIngress(data *[]byte) (SFlowExtendedVniIngressRecord, erro
 	*data, rec.VNI = (*data)[4:], binary.BigEndian.Uint32((*data)[:4])
 
 	return rec, nil
+}
+
+// **************************************************
+//  Packet Ethernet Data Record
+// **************************************************
+
+//  0                      15                      31
+//  +--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+
+//  |                    Length                     |
+//  +--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+
+//  |                                               |
+//  |                    Src Mac                    |
+//  +--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+
+//  |                                               |
+//  |                    Dst Mac                    |
+//  +--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+
+//  |                     Type                      |
+//  +--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+
+//  |  Src Mac  | Dst Mac   |
+//  +--+--+--+--+--+--+--+--+
+type SFlowEthernetFrameRecord struct {
+	SFlowBaseFlowRecord
+	//为2代表是Ethernet Frame Data字段
+	Length_mac uint32
+	//源mac地址8字节
+	SrcMac []byte
+	//目的mac地址8字节
+	DstMac []byte
+	Type   uint32
+}
+
+func decodeSFlowEthernetFrameRecord(data *[]byte) (SFlowEthernetFrameRecord, error) {
+	sef := SFlowEthernetFrameRecord{}
+	var efr SFlowFlowDataFormat
+
+	*data, efr = (*data)[4:], SFlowFlowDataFormat(binary.BigEndian.Uint32((*data)[:4]))
+	sef.EnterpriseID, sef.Format = efr.decode()
+	//fmt.Println("=============start================decodeSFlowEthernetFrameRecord")
+	*data, sef.FlowDataLength = (*data)[4:], binary.BigEndian.Uint32((*data)[:4])
+	*data, sef.Length_mac = (*data)[4:], binary.BigEndian.Uint32((*data)[:4])
+	//fmt.Println("decodeSFlowEthernetFrameRecord Format",sef.Format,*data)
+	*data, sef.SrcMac = (*data)[8:], (*data)[:8]
+	//fmt.Println("decodeSFlowEthernetFrameRecord SrcMac",string(sef.SrcMac),*data)
+	*data, sef.DstMac = (*data)[8:], (*data)[:8]
+	//fmt.Println("decodeSFlowEthernetFrameRecord DstMac",string(sef.DstMac),*data)
+	*data, sef.Type = (*data)[4:], binary.BigEndian.Uint32((*data)[:4])
+	//fmt.Println("decodeSFlowEthernetFrameRecord Format",sef.Type,*data)
+
+	return sef, nil
 }
 
 // **************************************************
