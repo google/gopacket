@@ -1613,6 +1613,7 @@ func decodeExtendedUserFlow(data *[]byte) (SFlowExtendedUserFlow, error) {
 //  |                      TOS                      |
 //  +--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+
 type SFlowIpv4Record struct {
+	SFlowBaseFlowRecord
 	// The length of the IP packet excluding ower layer encapsulations
 	Length uint32
 	// IP Protocol type (for example, TCP = 6, UDP = 17)
@@ -1633,6 +1634,11 @@ type SFlowIpv4Record struct {
 
 func decodeSFlowIpv4Record(data *[]byte) (SFlowIpv4Record, error) {
 	si := SFlowIpv4Record{}
+	var ir SFlowFlowDataFormat
+
+	*data, ir = (*data)[4:], SFlowFlowDataFormat(binary.BigEndian.Uint32((*data)[:4]))
+	si.EnterpriseID, si.Format = ir.decode()
+	*data, si.FlowDataLength = (*data)[4:], binary.BigEndian.Uint32((*data)[:4])
 
 	*data, si.Length = (*data)[4:], binary.BigEndian.Uint32((*data)[:4])
 	*data, si.Protocol = (*data)[4:], binary.BigEndian.Uint32((*data)[:4])
@@ -1669,6 +1675,7 @@ func decodeSFlowIpv4Record(data *[]byte) (SFlowIpv4Record, error) {
 //  |                    Priority                   |
 //  +--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+
 type SFlowIpv6Record struct {
+	SFlowBaseFlowRecord
 	// The length of the IP packet excluding ower layer encapsulations
 	Length uint32
 	// IP Protocol type (for example, TCP = 6, UDP = 17)
@@ -1689,6 +1696,11 @@ type SFlowIpv6Record struct {
 
 func decodeSFlowIpv6Record(data *[]byte) (SFlowIpv6Record, error) {
 	si := SFlowIpv6Record{}
+	var ir SFlowFlowDataFormat
+
+	*data, ir = (*data)[4:], SFlowFlowDataFormat(binary.BigEndian.Uint32((*data)[:4]))
+	si.EnterpriseID, si.Format = ir.decode()
+	*data, si.FlowDataLength = (*data)[4:], binary.BigEndian.Uint32((*data)[:4])
 
 	*data, si.Length = (*data)[4:], binary.BigEndian.Uint32((*data)[:4])
 	*data, si.Protocol = (*data)[4:], binary.BigEndian.Uint32((*data)[:4])
