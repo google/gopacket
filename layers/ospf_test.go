@@ -677,7 +677,7 @@ func TestPacketOSPF3LSUpdate(t *testing.T) {
 								LSChecksum:  0xd13a,
 								Length:      24,
 							},
-							Content: RouterLSAV3{
+							Content: RouterLSA{
 								Flags:   0x1,
 								Options: 0x33,
 							},
