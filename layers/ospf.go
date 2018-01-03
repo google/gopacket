@@ -27,19 +27,19 @@ const (
 
 // LSA Function Codes for LSAheader.LSType
 const (
-	RouterLSAtypeV2          = 0x1
-	RouterLSAtypeV3          = 0x2001
-	NetworkLSAtypeV2         = 0x2
-	NetworkLSAtypeV3         = 0x2002
-	SummaryLSANetworktypeV2  = 0x3
-	InterAreaPrefixLSAtypeV3 = 0x2003
-	SummaryLSAASBRtypeV2     = 0x4
-	InterAreaRouterLSAtypeV3 = 0x2004
-	ASExternalLSAtypeV2      = 0x5
-	ASExternalLSAtypeV3      = 0x4005
-	NSSALSAtypeV3            = 0x2007
-	LinkLSAtype              = 0x0008
-	IntraAreaPrefixLSAtypeV3 = 0x2009
+	RouterLSAtypeV2         = 0x1
+	RouterLSAtype           = 0x2001
+	NetworkLSAtypeV2        = 0x2
+	NetworkLSAtype          = 0x2002
+	SummaryLSANetworktypeV2 = 0x3
+	InterAreaPrefixLSAtype  = 0x2003
+	SummaryLSAASBRtypeV2    = 0x4
+	InterAreaRouterLSAtype  = 0x2004
+	ASExternalLSAtypeV2     = 0x5
+	ASExternalLSAtype       = 0x4005
+	NSSALSAtype             = 0x2007
+	LinkLSAtype             = 0x0008
+	IntraAreaPrefixLSAtype  = 0x2009
 )
 
 // String conversions for OSPFType
@@ -95,8 +95,8 @@ type ASExternalLSAV2 struct {
 	ExternalRouteTag  uint32
 }
 
-// ASExternalLSAV3 is the struct from RFC 5340  A.4.7.
-type ASExternalLSAV3 struct {
+// ASExternalLSA is the struct from RFC 5340  A.4.7.
+type ASExternalLSA struct {
 	Flags             uint8
 	Metric            uint32
 	PrefixLength      uint8
@@ -144,8 +144,8 @@ type RouterLSAV2 struct {
 	Routers []RouterV2
 }
 
-// RouterV3 extends RouterLSAV3
-type RouterV3 struct {
+// Router extends RouterLSA
+type Router struct {
 	Type                uint8
 	Metric              uint16
 	InterfaceID         uint32
@@ -153,11 +153,11 @@ type RouterV3 struct {
 	NeighborRouterID    uint32
 }
 
-// RouterLSAV3 is the struct from RFC 5340  A.4.3.
-type RouterLSAV3 struct {
+// RouterLSA is the struct from RFC 5340  A.4.3.
+type RouterLSA struct {
 	Flags   uint8
 	Options uint32
-	Routers []RouterV3
+	Routers []Router
 }
 
 // LSAheader is the struct from RFC 5340  A.4.2 and RFC 2328 A.4.1.
@@ -296,11 +296,11 @@ func extractLSAInformation(lstype, lsalength uint16, data []byte) (interface{}, 
 			ForwardingAddress: binary.BigEndian.Uint32(data[28:32]),
 			ExternalRouteTag:  binary.BigEndian.Uint32(data[32:36]),
 		}
-	case RouterLSAtypeV3:
-		var routers []RouterV3
+	case RouterLSAtype:
+		var routers []Router
 		var j uint32
 		for j = 24; j < uint32(lsalength); j += 16 {
-			router := RouterV3{
+			router := Router{
 				Type:                uint8(data[j]),
 				Metric:              binary.BigEndian.Uint16(data[j+2 : j+4]),
 				InterfaceID:         binary.BigEndian.Uint32(data[j+4 : j+8]),
@@ -309,12 +309,12 @@ func extractLSAInformation(lstype, lsalength uint16, data []byte) (interface{}, 
 			}
 			routers = append(routers, router)
 		}
-		content = RouterLSAV3{
+		content = RouterLSA{
 			Flags:   uint8(data[20]),
 			Options: binary.BigEndian.Uint32(data[20:24]) & 0x00FFFFFF,
 			Routers: routers,
 		}
-	case NetworkLSAtypeV3:
+	case NetworkLSAtype:
 		var routers []uint32
 		var j uint32
 		for j = 24; j < uint32(lsalength); j += 4 {
@@ -324,22 +324,22 @@ func extractLSAInformation(lstype, lsalength uint16, data []byte) (interface{}, 
 			Options:        binary.BigEndian.Uint32(data[20:24]) & 0x00FFFFFF,
 			AttachedRouter: routers,
 		}
-	case InterAreaPrefixLSAtypeV3:
+	case InterAreaPrefixLSAtype:
 		content = InterAreaPrefixLSA{
 			Metric:        binary.BigEndian.Uint32(data[20:24]) & 0x00FFFFFF,
 			PrefixLength:  uint8(data[24]),
 			PrefixOptions: uint8(data[25]),
 			AddressPrefix: data[28:uint32(lsalength)],
 		}
-	case InterAreaRouterLSAtypeV3:
+	case InterAreaRouterLSAtype:
 		content = InterAreaRouterLSA{
 			Options:             binary.BigEndian.Uint32(data[20:24]) & 0x00FFFFFF,
 			Metric:              binary.BigEndian.Uint32(data[24:28]) & 0x00FFFFFF,
 			DestinationRouterID: binary.BigEndian.Uint32(data[28:32]),
 		}
-	case ASExternalLSAtypeV3:
+	case ASExternalLSAtype:
 		fallthrough
-	case NSSALSAtypeV3:
+	case NSSALSAtype:
 
 		flags := uint8(data[20])
 		prefixLen := uint8(data[24]) / 8
@@ -347,7 +347,7 @@ func extractLSAInformation(lstype, lsalength uint16, data []byte) (interface{}, 
 		if (flags & 0x02) == 0x02 {
 			forwardingAddress = data[28+uint32(prefixLen) : 28+uint32(prefixLen)+16]
 		}
-		content = ASExternalLSAV3{
+		content = ASExternalLSA{
 			Flags:             flags,
 			Metric:            binary.BigEndian.Uint32(data[20:24]) & 0x00FFFFFF,
 			PrefixLength:      prefixLen,
@@ -378,7 +378,7 @@ func extractLSAInformation(lstype, lsalength uint16, data []byte) (interface{}, 
 			NumOfPrefixes:    numOfPrefixes,
 			Prefixes:         prefixes,
 		}
-	case IntraAreaPrefixLSAtypeV3:
+	case IntraAreaPrefixLSAtype:
 		var prefixes []Prefix
 		var prefixOffset uint32 = 32
 		var j uint16
