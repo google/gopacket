@@ -237,8 +237,8 @@ func (r *Ring) SetPriority(cpu uint16) {
 }
 
 // SetPollDuration sets the pfring's poll duration before it yields/returns
-func (r *Ring) SetPollDuration(duration uint) error {
-	if rv := C.pfring_set_poll_duration(r.cptr, C.u_int(duration)); rv != 0 {
+func (r *Ring) SetPollDuration(durationMillis time.Duration) error {
+	if rv := C.pfring_set_poll_duration(r.cptr, C.u_int(durationMillis)); rv != 0 {
 		return fmt.Errorf("Unable to set poll duration, got error code %d", rv)
 	}
 	return nil
