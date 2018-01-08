@@ -222,6 +222,7 @@ func (r *Ring) SetSamplingRate(rate int) error {
 	}
 	return nil
 }
+
 // SetPollWatermark sets the pfring's poll watermark packet count
 func (r *Ring) SetPollWatermark(count uint16) error {
 	if rv := C.pfring_set_poll_watermark(r.cptr, C.u_int16_t(count)); rv != 0 {
