@@ -14,22 +14,22 @@ import (
 )
 
 const (
-	cipBasePacketLen           int = 2
+	cipBasePacketLen int = 2
 )
 
 var (
-	ErrCIPDataTooSmall   = errors.New("CIP packet data truncated")
+	ErrCIPDataTooSmall = errors.New("CIP packet data truncated")
 )
 
 type CIP struct {
 	BaseLayer
-	Response	bool	// false if request, true if response
-	ServiceID	byte	// The service specified for the request
-	ClassID		uint16	// request only
-	InstanceID	uint16	// request only
-	Status	byte	// Response only
-	AdditionalStatus	[]uint16	// Response only
-	Data	[]byte	// Command data for request, reply data for response
+	Response         bool     // false if request, true if response
+	ServiceID        byte     // The service specified for the request
+	ClassID          uint16   // request only
+	InstanceID       uint16   // request only
+	Status           byte     // Response only
+	AdditionalStatus []uint16 // Response only
+	Data             []byte   // Command data for request, reply data for response
 }
 
 func (cip *CIP) DecodeFromBytes(data []byte, df gopacket.DecodeFeedback) error {
@@ -49,7 +49,7 @@ func (cip *CIP) DecodeFromBytes(data []byte, df gopacket.DecodeFeedback) error {
 		pathsize := data[offset]
 		offset++
 
-		if len(data) < cipBasePacketLen + int(2*pathsize) {
+		if len(data) < cipBasePacketLen+int(2*pathsize) {
 			df.SetTruncated()
 			return ErrCIPDataTooSmall
 		}
@@ -65,7 +65,7 @@ func (cip *CIP) DecodeFromBytes(data []byte, df gopacket.DecodeFeedback) error {
 			offset++
 		case 0x21:
 			// 16-bite ID
-			cip.ClassID = binary.LittleEndian.Uint16(data[offset:offset+2])
+			cip.ClassID = binary.LittleEndian.Uint16(data[offset : offset+2])
 			offset += 2
 		}
 
@@ -80,20 +80,20 @@ func (cip *CIP) DecodeFromBytes(data []byte, df gopacket.DecodeFeedback) error {
 			offset++
 		case 0x25:
 			// 16-bite ID
-			cip.InstanceID = binary.LittleEndian.Uint16(data[offset:offset+2])
+			cip.InstanceID = binary.LittleEndian.Uint16(data[offset : offset+2])
 			offset += 2
 		}
 
 		if offset < len(data) {
 			cip.Data = data[offset:]
 		}
-	} else {	// response
-		if len(data) < cipBasePacketLen + 2 {
+	} else { // response
+		if len(data) < cipBasePacketLen+2 {
 			df.SetTruncated()
 			return ErrCIPDataTooSmall
 		}
 
-		offset++	// skip the 00 padding byte
+		offset++ // skip the 00 padding byte
 
 		cip.Status = data[offset]
 		offset++
@@ -101,7 +101,7 @@ func (cip *CIP) DecodeFromBytes(data []byte, df gopacket.DecodeFeedback) error {
 		additionalStatusSize := uint(data[offset])
 		offset++
 
-		if len(data) < cipBasePacketLen + 2 + 2*int(additionalStatusSize) {
+		if len(data) < cipBasePacketLen+2+2*int(additionalStatusSize) {
 			df.SetTruncated()
 			return ErrCIPDataTooSmall
 		}
