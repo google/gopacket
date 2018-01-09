@@ -97,7 +97,7 @@ func TestENIPSendRRData(t *testing.T) {
 	if p.ErrorLayer() != nil {
 		t.Error("Failed to decode ENIP packet:", p.ErrorLayer().Error())
 	}
-	checkLayers(p, []gopacket.LayerType{LayerTypeEthernet, LayerTypeIPv4, LayerTypeTCP, LayerTypeENIP}, t)
+	checkLayers(p, []gopacket.LayerType{LayerTypeEthernet, LayerTypeIPv4, LayerTypeTCP, LayerTypeENIP, LayerTypeCIP}, t)
 	if got, ok := p.Layer(LayerTypeENIP).(*ENIP); ok {
 		want := &ENIP{
 			BaseLayer: BaseLayer{
@@ -167,7 +167,7 @@ func TestENIPSendUnitData(t *testing.T) {
 	if p.ErrorLayer() != nil {
 		t.Error("Failed to decode ENIP packet:", p.ErrorLayer().Error())
 	}
-	checkLayers(p, []gopacket.LayerType{LayerTypeEthernet, LayerTypeIPv4, LayerTypeTCP, LayerTypeENIP}, t)
+	checkLayers(p, []gopacket.LayerType{LayerTypeEthernet, LayerTypeIPv4, LayerTypeTCP, LayerTypeENIP, LayerTypeCIP}, t)
 	if got, ok := p.Layer(LayerTypeENIP).(*ENIP); ok {
 		want := &ENIP{
 			BaseLayer: BaseLayer{
