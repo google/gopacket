@@ -35,7 +35,8 @@ type MBAP struct {
 type Modbus struct {
 	BaseLayer
 	MBAP
-	FunctionCode FC
+	FunctionCode uint8
+	Exception    bool
 	ReqResp      []byte
 }
 
@@ -52,7 +53,8 @@ func (m *Modbus) DecodeFromBytes(data []byte, df gopacket.DecodeFeedback) error 
 	m.ProtocolID = binary.BigEndian.Uint16(data[2:4])
 	m.Length = binary.BigEndian.Uint16(data[4:6])
 	m.UnitID = data[6]
-	m.FunctionCode = FC(data[7])
+	m.Exception = FC(data[7]).exception()
+	m.FunctionCode = data[7] & 0x7f
 	end := int(m.Length) + 6
 	if len(data) < end || end < 8 {
 		df.SetTruncated()
