@@ -223,6 +223,27 @@ func (r *Ring) SetSamplingRate(rate int) error {
 	return nil
 }
 
+// SetPollWatermark sets the pfring's poll watermark packet count
+func (r *Ring) SetPollWatermark(count uint16) error {
+	if rv := C.pfring_set_poll_watermark(r.cptr, C.u_int16_t(count)); rv != 0 {
+		return fmt.Errorf("Unable to set poll watermark, got error code %d", rv)
+	}
+	return nil
+}
+
+// SetPriority sets the pfring poll threads CPU usage limit
+func (r *Ring) SetPriority(cpu uint16) {
+	C.pfring_config(C.u_short(cpu))
+}
+
+// SetPollDuration sets the pfring's poll duration before it yields/returns
+func (r *Ring) SetPollDuration(durationMillis uint) error {
+	if rv := C.pfring_set_poll_duration(r.cptr, C.u_int(durationMillis)); rv != 0 {
+		return fmt.Errorf("Unable to set poll duration, got error code %d", rv)
+	}
+	return nil
+}
+
 // SetBPFFilter sets the BPF filter for the ring.
 func (r *Ring) SetBPFFilter(bpfFilter string) error {
 	filter := C.CString(bpfFilter)
