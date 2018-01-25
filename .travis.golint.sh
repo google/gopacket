@@ -17,8 +17,11 @@ for subdir in $DIRS; do
 done
 
 pushd layers
-for file in $(cat .linted); do
-  if golint $file | grep .; then
+for file in *.go; do
+  if cat .lint_blacklist | grep -q $file; then
+    echo "Skipping lint of $file due to .lint_blacklist"
+  elif golint $file | grep .; then
+    echo "Lint error in file $file"
     exit 1
   fi
 done
