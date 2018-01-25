@@ -7,6 +7,7 @@
 package layers
 
 import (
+	"fmt"
 	"github.com/google/gopacket"
 	"reflect"
 	"testing"
@@ -92,10 +93,13 @@ func TestModbusExceptionResponse(t *testing.T) {
 				Length:        3,
 				UnitID:        10,
 			},
-			FunctionCode: 0x88,
+			FunctionCode: 0x8,
+			Exception:    true,
 			ReqResp:      []uint8{0x0b},
 		}
 		if !reflect.DeepEqual(got, want) {
+			fmt.Println(got)
+			fmt.Println(want)
 			t.Fatal("Modbus Exception packet does not match")
 		}
 	} else {
