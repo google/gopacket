@@ -150,6 +150,7 @@ func (d *DHCPv4) DecodeFromBytes(data []byte, df gopacket.DecodeFeedback) error 
 	}
 
 	options := data[240:]
+	d.Options = d.Options[:0]
 
 	stop := len(options)
 	start := 0
