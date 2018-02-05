@@ -61,8 +61,10 @@ func (gtp *GTPv1U) DecodeFromBytes(data []byte, df gopacket.DecodeFeedback) erro
 	}
 	//  Field used to multiplex different connections in the same GTP tunnel.
 	gtp.TEID = binary.BigEndian.Uint32(data[4:8])
+	cIndex := uint16(hLen)
 	if gtp.SequenceNumberFlag || gtp.NPDUFlag || gtp.ExtensionHeaderFlag {
 		hLen += 4
+		cIndex += 4
 		if dLen < hLen {
 			return fmt.Errorf("GTP packet too small: %d bytes", dLen)
 		}
@@ -72,7 +74,6 @@ func (gtp *GTPv1U) DecodeFromBytes(data []byte, df gopacket.DecodeFeedback) erro
 		if gtp.NPDUFlag {
 			gtp.NPDU = data[10]
 		}
-		cIndex := uint16(hLen)
 		if gtp.ExtensionHeaderFlag {
 			extensionFlag := true
 			for extensionFlag {
@@ -96,8 +97,8 @@ func (gtp *GTPv1U) DecodeFromBytes(data []byte, df gopacket.DecodeFeedback) erro
 
 			}
 		}
-		gtp.BaseLayer = BaseLayer{Contents: data[:cIndex], Payload: data[cIndex:]}
 	}
+	gtp.BaseLayer = BaseLayer{Contents: data[:cIndex], Payload: data[cIndex:]}
 	return nil
 
 }
@@ -152,7 +153,14 @@ func (g *GTPv1U) CanDecode() gopacket.LayerClass {
 }
 
 func (g *GTPv1U) NextLayerType() gopacket.LayerType {
-	return LayerTypeIPv4
+	version := uint8(g.LayerPayload()[0]) >> 4
+	if version == 4 {
+		return LayerTypeIPv4
+	} else if version == 6 {
+		return LayerTypeIPv6
+	} else {
+		return LayerTypePPP
+	}
 }
 
 func decodeGTPv1u(data []byte, p gopacket.PacketBuilder) error {
