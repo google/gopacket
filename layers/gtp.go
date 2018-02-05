@@ -8,7 +8,7 @@ import (
 
 const gtpMinimumSizeInBytes int = 8
 
-type GTPExtenstionHeader struct {
+type GTPExtensionHeader struct {
 	Type    uint8
 	Content []byte
 }
@@ -28,7 +28,7 @@ type GTPv1U struct {
 	TEID                uint32
 	SequenceNumber      uint16
 	NPDU                uint8
-	GTPExtensionHeaders []GTPExtenstionHeader
+	GTPExtensionHeaders []GTPExtensionHeader
 }
 
 // LayerType returns LayerTypeGTPV1U
@@ -69,20 +69,23 @@ func (gtp *GTPv1U) DecodeFromBytes(data []byte, df gopacket.DecodeFeedback) erro
 		if gtp.ExtensionHeaderFlag {
 			extensionFlag := true
 			for extensionFlag {
-				extensionLength := uint(data[cIndex-1])
+				extensionType := uint8(data[cIndex-1])
+				extensionLength := uint(data[cIndex])
 				if extensionLength == 0 {
 					return fmt.Errorf("GTP packet with invalid extension header")
 				}
-				lIndex := cIndex + uint16(extensionLength)/4
+				// extensionLength is in 4-octet units
+				lIndex := cIndex + (uint16(extensionLength) * 4)
 				if uint16(dLen) < lIndex {
 					fmt.Println(dLen, lIndex)
 					return fmt.Errorf("GTP packet with small extension header: %d bytes", dLen)
 				}
-				content := data[cIndex : lIndex-1]
-				eh := GTPExtenstionHeader{Type: data[lIndex], Content: content}
+				content := data[cIndex+1 : lIndex-1]
+				eh := GTPExtensionHeader{Type: extensionType, Content: content}
 				gtp.GTPExtensionHeaders = append(gtp.GTPExtensionHeaders, eh)
-				extensionFlag = eh.Type != 0
-				cIndex = lIndex + 1
+				cIndex = lIndex
+				// Check if coming bytes are from an extension header
+				extensionFlag = data[cIndex-1] != 0
 
 			}
 		}
@@ -120,16 +123,17 @@ func (g *GTPv1U) SerializeTo(b gopacket.SerializeBuffer, opts gopacket.Serialize
 		binary.BigEndian.PutUint16(data[:2], g.SequenceNumber)
 		data[2] = g.NPDU
 		for _, eh := range g.GTPExtensionHeaders {
-			data[len(data)-1] = 0x01
+			data[len(data)-1] = eh.Type
 			lContent := len(eh.Content)
-			extensionLength := lContent / 4
-			// Get an extra byte for the extension header type
-			data, err = b.AppendBytes(lContent + 1)
+			// extensionLength is in 4-octet units
+			extensionLength := (lContent + 2) / 4
+			// Get two extra byte for the next extension header type and length
+			data, err = b.AppendBytes(lContent + 2)
 			if err != nil {
 				return err
 			}
 			data[0] = byte(extensionLength)
-			copy(data[1:lContent], eh.Content)
+			copy(data[1:lContent+1], eh.Content)
 		}
 	}
 	return nil
