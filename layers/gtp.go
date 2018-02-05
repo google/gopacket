@@ -153,7 +153,14 @@ func (g *GTPv1U) CanDecode() gopacket.LayerClass {
 }
 
 func (g *GTPv1U) NextLayerType() gopacket.LayerType {
-	return LayerTypeIPv4
+	version := uint8(g.LayerPayload()[0]) >> 4
+	if version == 4 {
+		return LayerTypeIPv4
+	} else if version == 6 {
+		return LayerTypeIPv6
+	} else {
+		return LayerTypePPP
+	}
 }
 
 func decodeGTPv1u(data []byte, p gopacket.PacketBuilder) error {
