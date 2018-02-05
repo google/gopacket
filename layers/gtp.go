@@ -15,12 +15,13 @@ import (
 
 const gtpMinimumSizeInBytes int = 8
 
+// GTPExtensionHeader is used to carry extra data and enable future extensions of the GTP  without the need to use another version number.
 type GTPExtensionHeader struct {
 	Type    uint8
 	Content []byte
 }
 
-// GTPV1U protocol is used to exchange user data over GTP tunnels across the Sx interfaces.
+// GTPv1U protocol is used to exchange user data over GTP tunnels across the Sx interfaces.
 // Defined in https://portal.3gpp.org/desktopmodules/Specifications/SpecificationDetails.aspx?specificationId=1595
 type GTPv1U struct {
 	BaseLayer
@@ -41,40 +42,41 @@ type GTPv1U struct {
 // LayerType returns LayerTypeGTPV1U
 func (g *GTPv1U) LayerType() gopacket.LayerType { return LayerTypeGTPv1U }
 
-func (gtp *GTPv1U) DecodeFromBytes(data []byte, df gopacket.DecodeFeedback) error {
+// DecodeFromBytes analyses a byte slice and attempts to decode it as a GTPv1U packet
+func (g *GTPv1U) DecodeFromBytes(data []byte, df gopacket.DecodeFeedback) error {
 	hLen := gtpMinimumSizeInBytes
 	dLen := len(data)
 	if dLen < hLen {
 		return fmt.Errorf("GTP packet too small: %d bytes", dLen)
 	}
-	gtp.Version = (data[0] >> 5) & 0x07
-	gtp.ProtocolType = (data[0] >> 4) & 0x01
-	gtp.Reserved = (data[0] >> 3) & 0x01
-	gtp.SequenceNumberFlag = ((data[0] >> 1) & 0x01) == 1
-	gtp.NPDUFlag = (data[0] & 0x01) == 1
-	gtp.ExtensionHeaderFlag = ((data[0] >> 2) & 0x01) == 1
-	gtp.MessageType = data[1]
-	gtp.MessageLength = binary.BigEndian.Uint16(data[2:4])
-	pLen := 8 + gtp.MessageLength
+	g.Version = (data[0] >> 5) & 0x07
+	g.ProtocolType = (data[0] >> 4) & 0x01
+	g.Reserved = (data[0] >> 3) & 0x01
+	g.SequenceNumberFlag = ((data[0] >> 1) & 0x01) == 1
+	g.NPDUFlag = (data[0] & 0x01) == 1
+	g.ExtensionHeaderFlag = ((data[0] >> 2) & 0x01) == 1
+	g.MessageType = data[1]
+	g.MessageLength = binary.BigEndian.Uint16(data[2:4])
+	pLen := 8 + g.MessageLength
 	if uint16(dLen) < pLen {
 		return fmt.Errorf("GTP packet too small: %d bytes", dLen)
 	}
 	//  Field used to multiplex different connections in the same GTP tunnel.
-	gtp.TEID = binary.BigEndian.Uint32(data[4:8])
+	g.TEID = binary.BigEndian.Uint32(data[4:8])
 	cIndex := uint16(hLen)
-	if gtp.SequenceNumberFlag || gtp.NPDUFlag || gtp.ExtensionHeaderFlag {
+	if g.SequenceNumberFlag || g.NPDUFlag || g.ExtensionHeaderFlag {
 		hLen += 4
 		cIndex += 4
 		if dLen < hLen {
 			return fmt.Errorf("GTP packet too small: %d bytes", dLen)
 		}
-		if gtp.SequenceNumberFlag {
-			gtp.SequenceNumber = binary.BigEndian.Uint16(data[8:10])
+		if g.SequenceNumberFlag {
+			g.SequenceNumber = binary.BigEndian.Uint16(data[8:10])
 		}
-		if gtp.NPDUFlag {
-			gtp.NPDU = data[10]
+		if g.NPDUFlag {
+			g.NPDU = data[10]
 		}
-		if gtp.ExtensionHeaderFlag {
+		if g.ExtensionHeaderFlag {
 			extensionFlag := true
 			for extensionFlag {
 				extensionType := uint8(data[cIndex-1])
@@ -90,7 +92,7 @@ func (gtp *GTPv1U) DecodeFromBytes(data []byte, df gopacket.DecodeFeedback) erro
 				}
 				content := data[cIndex+1 : lIndex-1]
 				eh := GTPExtensionHeader{Type: extensionType, Content: content}
-				gtp.GTPExtensionHeaders = append(gtp.GTPExtensionHeaders, eh)
+				g.GTPExtensionHeaders = append(g.GTPExtensionHeaders, eh)
 				cIndex = lIndex
 				// Check if coming bytes are from an extension header
 				extensionFlag = data[cIndex-1] != 0
@@ -98,11 +100,14 @@ func (gtp *GTPv1U) DecodeFromBytes(data []byte, df gopacket.DecodeFeedback) erro
 			}
 		}
 	}
-	gtp.BaseLayer = BaseLayer{Contents: data[:cIndex], Payload: data[cIndex:]}
+	g.BaseLayer = BaseLayer{Contents: data[:cIndex], Payload: data[cIndex:]}
 	return nil
 
 }
 
+// SerializeTo writes the serialized form of this layer into the
+// SerializationBuffer, implementing gopacket.SerializableLayer.
+// See the docs for gopacket.SerializableLayer for more info.
 func (g *GTPv1U) SerializeTo(b gopacket.SerializeBuffer, opts gopacket.SerializeOptions) error {
 	data, err := b.PrependBytes(gtpMinimumSizeInBytes)
 	if err != nil {
@@ -148,10 +153,12 @@ func (g *GTPv1U) SerializeTo(b gopacket.SerializeBuffer, opts gopacket.Serialize
 
 }
 
+// CanDecode returns a set of layers that GTP objects can decode.
 func (g *GTPv1U) CanDecode() gopacket.LayerClass {
 	return LayerTypeGTPv1U
 }
 
+// NextLayerType specifies the next layer that GoPacket should attempt to
 func (g *GTPv1U) NextLayerType() gopacket.LayerType {
 	version := uint8(g.LayerPayload()[0]) >> 4
 	if version == 4 {
