@@ -49,6 +49,9 @@ var ErrPoll = errors.New("packet poll failed")
 // ErrTimeout returned on poll timeout
 var ErrTimeout = errors.New("packet poll timeout expired")
 
+// ErrEmptyBlock returned on empty block
+var ErrEmptyBlock = errors.New("packet poll return empty block")
+
 func tpacketAlign(v int) int {
 	return int((uint(v) + tpacketAlignment - 1) & ((^tpacketAlignment) - 1))
 }
@@ -267,7 +270,6 @@ func (h *TPacket) releaseCurrentPacket() error {
 //  data2, _, _ := tp.ZeroCopyReadPacketData()  // invalidates bytes in data1
 func (h *TPacket) ZeroCopyReadPacketData() (data []byte, ci gopacket.CaptureInfo, err error) {
 	h.mu.Lock()
-retry:
 	if h.current == nil || !h.headerNextNeeded || !h.current.next() {
 		if h.shouldReleasePacket {
 			h.releaseCurrentPacket()
@@ -280,7 +282,9 @@ retry:
 		}
 		// We received an empty block
 		if h.current.getLength() == 0 {
-			goto retry
+			err = ErrEmptyBlock
+			h.mu.Unlock()
+			return
 		}
 	}
 	data = h.current.getData()
