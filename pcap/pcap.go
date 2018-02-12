@@ -110,6 +110,7 @@ import (
 	"fmt"
 	"io"
 	"net"
+	"os"
 	"reflect"
 	"runtime"
 	"strconv"
@@ -283,6 +284,11 @@ func OpenOffline(file string) (handle *Handle, err error) {
 	}
 	h := &Handle{cptr: cptr}
 	return h, nil
+}
+
+// OpenOfflineFile returns contents of input file as a *Handle.
+func OpenOfflineFile(file *os.File) (handle *Handle, err error) {
+	return openOfflineFile(file)
 }
 
 // NextError is the return code from a call to Next.
