@@ -165,9 +165,8 @@ func CreateICMPv6TypeCode(typ uint8, code uint8) ICMPv6TypeCode {
 // ICMPv6 is the layer for IPv6 ICMP packet data
 type ICMPv6 struct {
 	BaseLayer
-	TypeCode  ICMPv6TypeCode
-	Checksum  uint16
-	TypeBytes []byte
+	TypeCode ICMPv6TypeCode
+	Checksum uint16
 	tcpipchecksum
 }
 
@@ -182,8 +181,7 @@ func (i *ICMPv6) DecodeFromBytes(data []byte, df gopacket.DecodeFeedback) error 
 	}
 	i.TypeCode = CreateICMPv6TypeCode(data[0], data[1])
 	i.Checksum = binary.BigEndian.Uint16(data[2:4])
-	i.TypeBytes = data[4:8]
-	i.BaseLayer = BaseLayer{data[:8], data[8:]}
+	i.BaseLayer = BaseLayer{data[:4], data[4:]}
 	return nil
 }
 
@@ -191,17 +189,12 @@ func (i *ICMPv6) DecodeFromBytes(data []byte, df gopacket.DecodeFeedback) error 
 // SerializationBuffer, implementing gopacket.SerializableLayer.
 // See the docs for gopacket.SerializableLayer for more info.
 func (i *ICMPv6) SerializeTo(b gopacket.SerializeBuffer, opts gopacket.SerializeOptions) error {
-	if i.TypeBytes == nil {
-		i.TypeBytes = lotsOfZeros[:4]
-	} else if len(i.TypeBytes) != 4 {
-		return fmt.Errorf("invalid type bytes for ICMPv6 packet: %v", i.TypeBytes)
-	}
 	bytes, err := b.PrependBytes(8)
 	if err != nil {
 		return err
 	}
 	i.TypeCode.SerializeTo(bytes)
-	copy(bytes[4:8], i.TypeBytes)
+
 	if opts.ComputeChecksums {
 		bytes[2] = 0
 		bytes[3] = 0
@@ -222,6 +215,19 @@ func (i *ICMPv6) CanDecode() gopacket.LayerClass {
 
 // NextLayerType returns the layer type contained by this DecodingLayer.
 func (i *ICMPv6) NextLayerType() gopacket.LayerType {
+	switch i.TypeCode.Type() {
+	case ICMPv6TypeRouterSolicitation:
+		return LayerTypeICMPv6RouterSolicitation
+	case ICMPv6TypeRouterAdvertisement:
+		return LayerTypeICMPv6RouterAdvertisement
+	case ICMPv6TypeNeighborSolicitation:
+		return LayerTypeICMPv6NeighborSolicitation
+	case ICMPv6TypeNeighborAdvertisement:
+		return LayerTypeICMPv6NeighborAdvertisement
+	case ICMPv6TypeRedirect:
+		return LayerTypeICMPv6Redirect
+	}
+
 	return gopacket.LayerTypePayload
 }
 
