@@ -129,11 +129,11 @@ func (i *ICMPv6RouterAdvertisement) SerializeTo(bytes []byte) {
 }
 
 func (i *ICMPv6RouterAdvertisement) ManagedAddressConfig() bool {
-	return i.Flags&0xa0 == 1
+	return i.Flags&0x80 != 1
 }
 
 func (i *ICMPv6RouterAdvertisement) OtherConfig() bool {
-	return i.Flags&0x70 == 1
+	return i.Flags&0x40 != 1
 }
 
 func (i *ICMPv6NeighborSolicitation) LayerType() gopacket.LayerType {
@@ -187,6 +187,18 @@ func (i *ICMPv6NeighborAdvertisement) DecodeFromBytes(data []byte, df gopacket.D
 
 func (i *ICMPv6NeighborAdvertisement) SerializeTo(bytes []byte) {
 	// TODO
+}
+
+func (i *ICMPv6NeighborAdvertisement) Router() bool {
+	return i.Flags&0x80 != 0
+}
+
+func (i *ICMPv6NeighborAdvertisement) Solicited() bool {
+	return i.Flags&0x40 != 0
+}
+
+func (i *ICMPv6NeighborAdvertisement) Override() bool {
+	return i.Flags&0x20 != 0
 }
 
 func (i *ICMPv6Redirect) LayerType() gopacket.LayerType {
