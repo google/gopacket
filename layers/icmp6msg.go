@@ -65,9 +65,8 @@ type ICMPv6Redirect struct {
 }
 
 type ICMPv6Option struct {
-	Type   ICMPv6Opt
-	Length int // Length of option, in bytes
-	Data   []byte
+	Type ICMPv6Opt
+	Data []byte
 }
 
 type ICMPv6Options []ICMPv6Option
@@ -93,8 +92,18 @@ func (i *ICMPv6RouterSolicitation) DecodeFromBytes(data []byte, df gopacket.Deco
 	return i.Options.DecodeFromBytes(data[4:], df)
 }
 
-func (i *ICMPv6RouterSolicitation) SerializeTo(bytes []byte) {
-	// TODO
+func (i *ICMPv6RouterSolicitation) SerializeTo(b gopacket.SerializeBuffer, opts gopacket.SerializeOptions) error {
+	if err := i.Options.SerializeTo(b, opts); err != nil {
+		return err
+	}
+
+	buf, err := b.PrependBytes(4)
+	if err != nil {
+		return err
+	}
+
+	copy(buf, lotsOfZeros[:4])
+	return nil
 }
 
 func (i *ICMPv6RouterAdvertisement) LayerType() gopacket.LayerType {
@@ -117,6 +126,7 @@ func (i *ICMPv6RouterAdvertisement) DecodeFromBytes(data []byte, df gopacket.Dec
 	i.RouterLifetime = binary.BigEndian.Uint16(data[2:4])
 	i.ReachableTime = binary.BigEndian.Uint32(data[4:8])
 	i.RetransTimer = binary.BigEndian.Uint32(data[8:12])
+	i.BaseLayer = BaseLayer{data, nil} // assume no payload
 
 	// truncate old options
 	i.Options = i.Options[:0]
@@ -124,8 +134,22 @@ func (i *ICMPv6RouterAdvertisement) DecodeFromBytes(data []byte, df gopacket.Dec
 	return i.Options.DecodeFromBytes(data[12:], df)
 }
 
-func (i *ICMPv6RouterAdvertisement) SerializeTo(bytes []byte) {
-	// TODO
+func (i *ICMPv6RouterAdvertisement) SerializeTo(b gopacket.SerializeBuffer, opts gopacket.SerializeOptions) error {
+	if err := i.Options.SerializeTo(b, opts); err != nil {
+		return err
+	}
+
+	buf, err := b.PrependBytes(12)
+	if err != nil {
+		return err
+	}
+
+	buf[0] = byte(i.HopLimit)
+	buf[1] = byte(i.Flags)
+	binary.BigEndian.PutUint16(buf[2:], i.RouterLifetime)
+	binary.BigEndian.PutUint32(buf[4:], i.ReachableTime)
+	binary.BigEndian.PutUint32(buf[8:], i.RetransTimer)
+	return nil
 }
 
 func (i *ICMPv6RouterAdvertisement) ManagedAddressConfig() bool {
@@ -151,6 +175,7 @@ func (i *ICMPv6NeighborSolicitation) DecodeFromBytes(data []byte, df gopacket.De
 	}
 
 	i.TargetAddress = net.IP(data[4:20])
+	i.BaseLayer = BaseLayer{data, nil} // assume no payload
 
 	// truncate old options
 	i.Options = i.Options[:0]
@@ -158,8 +183,19 @@ func (i *ICMPv6NeighborSolicitation) DecodeFromBytes(data []byte, df gopacket.De
 	return i.Options.DecodeFromBytes(data[20:], df)
 }
 
-func (i *ICMPv6NeighborSolicitation) SerializeTo(bytes []byte) {
-	// TODO
+func (i *ICMPv6NeighborSolicitation) SerializeTo(b gopacket.SerializeBuffer, opts gopacket.SerializeOptions) error {
+	if err := i.Options.SerializeTo(b, opts); err != nil {
+		return err
+	}
+
+	buf, err := b.PrependBytes(20)
+	if err != nil {
+		return err
+	}
+
+	copy(buf, lotsOfZeros[:4])
+	copy(buf[4:], i.TargetAddress)
+	return nil
 }
 
 func (i *ICMPv6NeighborAdvertisement) LayerType() gopacket.LayerType {
@@ -178,6 +214,7 @@ func (i *ICMPv6NeighborAdvertisement) DecodeFromBytes(data []byte, df gopacket.D
 
 	i.Flags = uint8(data[0])
 	i.TargetAddress = net.IP(data[4:20])
+	i.BaseLayer = BaseLayer{data, nil} // assume no payload
 
 	// truncate old options
 	i.Options = i.Options[:0]
@@ -185,8 +222,20 @@ func (i *ICMPv6NeighborAdvertisement) DecodeFromBytes(data []byte, df gopacket.D
 	return i.Options.DecodeFromBytes(data[20:], df)
 }
 
-func (i *ICMPv6NeighborAdvertisement) SerializeTo(bytes []byte) {
-	// TODO
+func (i *ICMPv6NeighborAdvertisement) SerializeTo(b gopacket.SerializeBuffer, opts gopacket.SerializeOptions) error {
+	if err := i.Options.SerializeTo(b, opts); err != nil {
+		return err
+	}
+
+	buf, err := b.PrependBytes(20)
+	if err != nil {
+		return err
+	}
+
+	buf[0] = byte(i.Flags)
+	copy(buf[1:], lotsOfZeros[:3])
+	copy(buf[4:], i.TargetAddress)
+	return nil
 }
 
 func (i *ICMPv6NeighborAdvertisement) Router() bool {
@@ -217,6 +266,7 @@ func (i *ICMPv6Redirect) DecodeFromBytes(data []byte, df gopacket.DecodeFeedback
 
 	i.TargetAddress = net.IP(data[4:20])
 	i.DestinationAddress = net.IP(data[20:36])
+	i.BaseLayer = BaseLayer{data, nil} // assume no payload
 
 	// truncate old options
 	i.Options = i.Options[:0]
@@ -224,8 +274,20 @@ func (i *ICMPv6Redirect) DecodeFromBytes(data []byte, df gopacket.DecodeFeedback
 	return i.Options.DecodeFromBytes(data[36:], df)
 }
 
-func (i *ICMPv6Redirect) SerializeTo(bytes []byte) {
-	// TODO
+func (i *ICMPv6Redirect) SerializeTo(b gopacket.SerializeBuffer, opts gopacket.SerializeOptions) error {
+	if err := i.Options.SerializeTo(b, opts); err != nil {
+		return err
+	}
+
+	buf, err := b.PrependBytes(36)
+	if err != nil {
+		return err
+	}
+
+	copy(buf, lotsOfZeros[:4])
+	copy(buf[4:], i.TargetAddress)
+	copy(buf[20:], i.DestinationAddress)
+	return nil
 }
 
 func (i *ICMPv6Options) DecodeFromBytes(data []byte, df gopacket.DecodeFeedback) error {
@@ -235,20 +297,21 @@ func (i *ICMPv6Options) DecodeFromBytes(data []byte, df gopacket.DecodeFeedback)
 			return errors.New("ICMP layer less then 2 bytes for ICMPv6 message option")
 		}
 
+		// unit is 8 octets, convert to bytes
+		length := int(data[1]) * 8
+
+		if len(data) < length {
+			df.SetTruncated()
+			return fmt.Errorf("ICMP layer only %v bytes for ICMPv6 message option with length %v", len(data), length)
+		}
+
 		o := ICMPv6Option{
 			Type: ICMPv6Opt(data[0]),
-			// unit of Length is 8 octets, convert to bytes
-			Length: int(data[1]) * 8,
+			Data: data[2:length],
 		}
 
-		if len(data) < int(o.Length) {
-			df.SetTruncated()
-			return fmt.Errorf("ICMP layer only %v bytes for ICMPv6 message option with length %v", len(data), o.Length)
-		}
-
-		o.Data = data[2:o.Length]
 		// chop off option we just consumed
-		data = data[o.Length:]
+		data = data[length:]
 
 		*i = append(*i, o)
 	}
@@ -256,8 +319,20 @@ func (i *ICMPv6Options) DecodeFromBytes(data []byte, df gopacket.DecodeFeedback)
 	return nil
 }
 
-func (i *ICMPv6Options) SerializeTo(bytes []byte) {
-	// TODO
+func (i *ICMPv6Options) SerializeTo(b gopacket.SerializeBuffer, opts gopacket.SerializeOptions) error {
+	for _, opt := range []ICMPv6Option(*i) {
+		length := len(opt.Data) + 2
+		buf, err := b.PrependBytes(length)
+		if err != nil {
+			return err
+		}
+
+		buf[0] = byte(opt.Type)
+		buf[1] = byte(length / 8)
+		copy(buf[2:], opt.Data)
+	}
+
+	return nil
 }
 
 func decodeICMPv6RouterSolicitation(data []byte, p gopacket.PacketBuilder) error {
