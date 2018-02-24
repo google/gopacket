@@ -167,6 +167,9 @@ type ICMPv6 struct {
 	BaseLayer
 	TypeCode ICMPv6TypeCode
 	Checksum uint16
+	// TypeBytes is deprecated and always nil. See the different ICMPv6 message types
+	// instead (e.g. ICMPv6TypeRouterSolicitation).
+	TypeBytes []byte
 	tcpipchecksum
 }
 
@@ -175,9 +178,9 @@ func (i *ICMPv6) LayerType() gopacket.LayerType { return LayerTypeICMPv6 }
 
 // DecodeFromBytes decodes the given bytes into this layer.
 func (i *ICMPv6) DecodeFromBytes(data []byte, df gopacket.DecodeFeedback) error {
-	if len(data) < 8 {
+	if len(data) < 4 {
 		df.SetTruncated()
-		return errors.New("ICMP layer less then 8 bytes for ICMPv6 packet")
+		return errors.New("ICMP layer less then 4 bytes for ICMPv6 packet")
 	}
 	i.TypeCode = CreateICMPv6TypeCode(data[0], data[1])
 	i.Checksum = binary.BigEndian.Uint16(data[2:4])
@@ -189,7 +192,7 @@ func (i *ICMPv6) DecodeFromBytes(data []byte, df gopacket.DecodeFeedback) error 
 // SerializationBuffer, implementing gopacket.SerializableLayer.
 // See the docs for gopacket.SerializableLayer for more info.
 func (i *ICMPv6) SerializeTo(b gopacket.SerializeBuffer, opts gopacket.SerializeOptions) error {
-	bytes, err := b.PrependBytes(8)
+	bytes, err := b.PrependBytes(4)
 	if err != nil {
 		return err
 	}
@@ -205,6 +208,7 @@ func (i *ICMPv6) SerializeTo(b gopacket.SerializeBuffer, opts gopacket.Serialize
 		i.Checksum = csum
 	}
 	binary.BigEndian.PutUint16(bytes[2:], i.Checksum)
+
 	return nil
 }
 
