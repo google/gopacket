@@ -9,9 +9,11 @@ package layers
 
 import (
 	"encoding/binary"
+	"encoding/hex"
 	"errors"
 	"fmt"
 	"net"
+	"time"
 
 	"github.com/google/gopacket"
 )
@@ -102,6 +104,23 @@ type ICMPv6Option struct {
 
 // ICMPv6Options is a slice of ICMPv6Option.
 type ICMPv6Options []ICMPv6Option
+
+func (i ICMPv6Opt) String() string {
+	switch i {
+	case ICMPv6OptSourceAddress:
+		return "SourceAddress"
+	case ICMPv6OptTargetAddress:
+		return "TargetAddress"
+	case ICMPv6OptPrefixInfo:
+		return "PrefixInfo"
+	case ICMPv6OptRedirectedHeader:
+		return "RedirectedHeader"
+	case ICMPv6OptMTU:
+		return "MTU"
+	default:
+		return fmt.Sprintf("Unknown(%d)", i)
+	}
+}
 
 // LayerType returns LayerTypeICMPv6.
 func (i *ICMPv6RouterSolicitation) LayerType() gopacket.LayerType {
@@ -358,6 +377,47 @@ func (i *ICMPv6Redirect) SerializeTo(b gopacket.SerializeBuffer, opts gopacket.S
 	copy(buf[4:], i.TargetAddress)
 	copy(buf[20:], i.DestinationAddress)
 	return nil
+}
+
+func (i ICMPv6Option) String() string {
+	hd := hex.EncodeToString(i.Data)
+	if len(hd) > 0 {
+		hd = " 0x" + hd
+	}
+
+	switch i.Type {
+	case ICMPv6OptSourceAddress, ICMPv6OptTargetAddress:
+		return fmt.Sprintf("ICMPv6Option(%s:%v)",
+			i.Type,
+			net.HardwareAddr(i.Data))
+	case ICMPv6OptPrefixInfo:
+		if len(i.Data) == 30 {
+			prefixLen := uint8(i.Data[0])
+			onLink := (i.Data[1]&0x80 != 0)
+			autonomous := (i.Data[1]&0x40 != 0)
+			validLifetime := time.Duration(binary.BigEndian.Uint32(i.Data[2:6])) * time.Second
+			preferredLifetime := time.Duration(binary.BigEndian.Uint32(i.Data[6:10])) * time.Second
+
+			prefix := net.IP(i.Data[14:])
+
+			return fmt.Sprintf("ICMPv6Option(%s:%v/%v:%t:%t:%v:%v)",
+				i.Type,
+				prefix, prefixLen,
+				onLink, autonomous,
+				validLifetime, preferredLifetime)
+		}
+	case ICMPv6OptRedirectedHeader:
+		// could invoke IP decoder on data... probably best not to
+		break
+	case ICMPv6OptMTU:
+		if len(i.Data) == 6 {
+			return fmt.Sprintf("ICMPv6Option(%s:%v)",
+				i.Type,
+				binary.BigEndian.Uint32(i.Data[2:]))
+		}
+
+	}
+	return fmt.Sprintf("ICMPv6Option(%s:%s)", i.Type, hd)
 }
 
 // DecodeFromBytes decodes the given bytes into this layer.
