@@ -18,22 +18,47 @@ import (
 
 // Based on RFC 4861
 
+// ICMPv6Opt indicate how to decode the data associated with each ICMPv6Option.
 type ICMPv6Opt uint8
 
 const (
 	_ ICMPv6Opt = iota
+
+	// ICMPv6OptSourceAddress contains the link-layer address of the sender of
+	// the packet. It is used in the Neighbor Solicitation, Router
+	// Solicitation, and Router Advertisement packets. Must be ignored for other
+	// Neighbor discovery messages.
 	ICMPv6OptSourceAddress
+
+	// ICMPv6OptTargetAddress contains the link-layer address of the target. It
+	// is used in Neighbor Advertisement and Redirect packets. Must be ignored
+	// for other Neighbor discovery messages.
 	ICMPv6OptTargetAddress
+
+	// ICMPv6OptPrefixInfo provides hosts with on-link prefixes and prefixes
+	// for Address Autoconfiguration. The Prefix Information option appears in
+	// Router Advertisement packets and MUST be silently ignored for other
+	// messages.
 	ICMPv6OptPrefixInfo
+
+	// ICMPv6OptRedirectedHeader is used in Redirect messages and contains all
+	// or part of the packet that is being redirected.
 	ICMPv6OptRedirectedHeader
+
+	// ICMPv6OptMTU is used in Router Advertisement messages to ensure that all
+	// nodes on a link use the same MTU value in those cases where the link MTU
+	// is not well known. This option MUST be silently ignored for other
+	// Neighbor Discovery messages.
 	ICMPv6OptMTU
 )
 
+// ICMPv6RouterSolicitation is sent by hosts to find routers.
 type ICMPv6RouterSolicitation struct {
 	BaseLayer
 	Options ICMPv6Options
 }
 
+// ICMPv6RouterAdvertisement is sent by routers in response to Solicitation.
 type ICMPv6RouterAdvertisement struct {
 	BaseLayer
 	HopLimit       uint8
@@ -44,12 +69,15 @@ type ICMPv6RouterAdvertisement struct {
 	Options        ICMPv6Options
 }
 
+// ICMPv6NeighborSolicitation is sent to request the link-layer address of a
+// target node.
 type ICMPv6NeighborSolicitation struct {
 	BaseLayer
 	TargetAddress net.IP
 	Options       ICMPv6Options
 }
 
+// ICMPv6NeighborAdvertisement is sent by nodes in response to Solicitation.
 type ICMPv6NeighborAdvertisement struct {
 	BaseLayer
 	Flags         uint8
@@ -57,6 +85,8 @@ type ICMPv6NeighborAdvertisement struct {
 	Options       ICMPv6Options
 }
 
+// ICMPv6Redirect is sent by routers to inform hosts of a better first-hop node
+// on the path to a destination.
 type ICMPv6Redirect struct {
 	BaseLayer
 	TargetAddress      net.IP
@@ -64,21 +94,26 @@ type ICMPv6Redirect struct {
 	Options            ICMPv6Options
 }
 
+// ICMPv6Option contains the type and data for a single option.
 type ICMPv6Option struct {
 	Type ICMPv6Opt
 	Data []byte
 }
 
+// ICMPv6Options is a slice of ICMPv6Option.
 type ICMPv6Options []ICMPv6Option
 
+// LayerType returns LayerTypeICMPv6.
 func (i *ICMPv6RouterSolicitation) LayerType() gopacket.LayerType {
 	return LayerTypeICMPv6RouterSolicitation
 }
 
+// NextLayerType returns the layer type contained by this DecodingLayer.
 func (i *ICMPv6RouterSolicitation) NextLayerType() gopacket.LayerType {
 	return gopacket.LayerTypePayload
 }
 
+// DecodeFromBytes decodes the given bytes into this layer.
 func (i *ICMPv6RouterSolicitation) DecodeFromBytes(data []byte, df gopacket.DecodeFeedback) error {
 	// first 4 bytes are reserved followed by options
 	if len(data) < 4 {
@@ -92,6 +127,9 @@ func (i *ICMPv6RouterSolicitation) DecodeFromBytes(data []byte, df gopacket.Deco
 	return i.Options.DecodeFromBytes(data[4:], df)
 }
 
+// SerializeTo writes the serialized form of this layer into the
+// SerializationBuffer, implementing gopacket.SerializableLayer.
+// See the docs for gopacket.SerializableLayer for more info.
 func (i *ICMPv6RouterSolicitation) SerializeTo(b gopacket.SerializeBuffer, opts gopacket.SerializeOptions) error {
 	if err := i.Options.SerializeTo(b, opts); err != nil {
 		return err
@@ -106,14 +144,17 @@ func (i *ICMPv6RouterSolicitation) SerializeTo(b gopacket.SerializeBuffer, opts 
 	return nil
 }
 
+// LayerType returns LayerTypeICMPv6RouterAdvertisement.
 func (i *ICMPv6RouterAdvertisement) LayerType() gopacket.LayerType {
 	return LayerTypeICMPv6RouterAdvertisement
 }
 
+// NextLayerType returns the layer type contained by this DecodingLayer.
 func (i *ICMPv6RouterAdvertisement) NextLayerType() gopacket.LayerType {
 	return gopacket.LayerTypePayload
 }
 
+// DecodeFromBytes decodes the given bytes into this layer.
 func (i *ICMPv6RouterAdvertisement) DecodeFromBytes(data []byte, df gopacket.DecodeFeedback) error {
 	if len(data) < 12 {
 		df.SetTruncated()
@@ -134,6 +175,9 @@ func (i *ICMPv6RouterAdvertisement) DecodeFromBytes(data []byte, df gopacket.Dec
 	return i.Options.DecodeFromBytes(data[12:], df)
 }
 
+// SerializeTo writes the serialized form of this layer into the
+// SerializationBuffer, implementing gopacket.SerializableLayer.
+// See the docs for gopacket.SerializableLayer for more info.
 func (i *ICMPv6RouterAdvertisement) SerializeTo(b gopacket.SerializeBuffer, opts gopacket.SerializeOptions) error {
 	if err := i.Options.SerializeTo(b, opts); err != nil {
 		return err
@@ -152,22 +196,29 @@ func (i *ICMPv6RouterAdvertisement) SerializeTo(b gopacket.SerializeBuffer, opts
 	return nil
 }
 
+// ManagedAddressConfig is true when addresses are available via DHCPv6. If
+// set, the OtherConfig flag is redundant.
 func (i *ICMPv6RouterAdvertisement) ManagedAddressConfig() bool {
 	return i.Flags&0x80 != 1
 }
 
+// OtherConfig is true when there is other configuration information available
+// via DHCPv6. For example, DNS-related information.
 func (i *ICMPv6RouterAdvertisement) OtherConfig() bool {
 	return i.Flags&0x40 != 1
 }
 
+// LayerType returns LayerTypeICMPv6NeighborSolicitation.
 func (i *ICMPv6NeighborSolicitation) LayerType() gopacket.LayerType {
 	return LayerTypeICMPv6NeighborSolicitation
 }
 
+// NextLayerType returns the layer type contained by this DecodingLayer.
 func (i *ICMPv6NeighborSolicitation) NextLayerType() gopacket.LayerType {
 	return gopacket.LayerTypePayload
 }
 
+// DecodeFromBytes decodes the given bytes into this layer.
 func (i *ICMPv6NeighborSolicitation) DecodeFromBytes(data []byte, df gopacket.DecodeFeedback) error {
 	if len(data) < 20 {
 		df.SetTruncated()
@@ -183,6 +234,9 @@ func (i *ICMPv6NeighborSolicitation) DecodeFromBytes(data []byte, df gopacket.De
 	return i.Options.DecodeFromBytes(data[20:], df)
 }
 
+// SerializeTo writes the serialized form of this layer into the
+// SerializationBuffer, implementing gopacket.SerializableLayer.
+// See the docs for gopacket.SerializableLayer for more info.
 func (i *ICMPv6NeighborSolicitation) SerializeTo(b gopacket.SerializeBuffer, opts gopacket.SerializeOptions) error {
 	if err := i.Options.SerializeTo(b, opts); err != nil {
 		return err
@@ -198,14 +252,17 @@ func (i *ICMPv6NeighborSolicitation) SerializeTo(b gopacket.SerializeBuffer, opt
 	return nil
 }
 
+// LayerType returns LayerTypeICMPv6NeighborAdvertisement.
 func (i *ICMPv6NeighborAdvertisement) LayerType() gopacket.LayerType {
 	return LayerTypeICMPv6NeighborAdvertisement
 }
 
+// NextLayerType returns the layer type contained by this DecodingLayer.
 func (i *ICMPv6NeighborAdvertisement) NextLayerType() gopacket.LayerType {
 	return gopacket.LayerTypePayload
 }
 
+// DecodeFromBytes decodes the given bytes into this layer.
 func (i *ICMPv6NeighborAdvertisement) DecodeFromBytes(data []byte, df gopacket.DecodeFeedback) error {
 	if len(data) < 20 {
 		df.SetTruncated()
@@ -222,6 +279,9 @@ func (i *ICMPv6NeighborAdvertisement) DecodeFromBytes(data []byte, df gopacket.D
 	return i.Options.DecodeFromBytes(data[20:], df)
 }
 
+// SerializeTo writes the serialized form of this layer into the
+// SerializationBuffer, implementing gopacket.SerializableLayer.
+// See the docs for gopacket.SerializableLayer for more info.
 func (i *ICMPv6NeighborAdvertisement) SerializeTo(b gopacket.SerializeBuffer, opts gopacket.SerializeOptions) error {
 	if err := i.Options.SerializeTo(b, opts); err != nil {
 		return err
@@ -238,26 +298,33 @@ func (i *ICMPv6NeighborAdvertisement) SerializeTo(b gopacket.SerializeBuffer, op
 	return nil
 }
 
+// Router indicates whether the sender is a router or not.
 func (i *ICMPv6NeighborAdvertisement) Router() bool {
 	return i.Flags&0x80 != 0
 }
 
+// Solicited indicates whether the advertisement was solicited or not.
 func (i *ICMPv6NeighborAdvertisement) Solicited() bool {
 	return i.Flags&0x40 != 0
 }
 
+// Override indicates whether the advertisement should Override an existing
+// cache entry.
 func (i *ICMPv6NeighborAdvertisement) Override() bool {
 	return i.Flags&0x20 != 0
 }
 
+// LayerType returns LayerTypeICMPv6Redirect.
 func (i *ICMPv6Redirect) LayerType() gopacket.LayerType {
 	return LayerTypeICMPv6Redirect
 }
 
+// NextLayerType returns the layer type contained by this DecodingLayer.
 func (i *ICMPv6Redirect) NextLayerType() gopacket.LayerType {
 	return gopacket.LayerTypePayload
 }
 
+// DecodeFromBytes decodes the given bytes into this layer.
 func (i *ICMPv6Redirect) DecodeFromBytes(data []byte, df gopacket.DecodeFeedback) error {
 	if len(data) < 36 {
 		df.SetTruncated()
@@ -274,6 +341,9 @@ func (i *ICMPv6Redirect) DecodeFromBytes(data []byte, df gopacket.DecodeFeedback
 	return i.Options.DecodeFromBytes(data[36:], df)
 }
 
+// SerializeTo writes the serialized form of this layer into the
+// SerializationBuffer, implementing gopacket.SerializableLayer.
+// See the docs for gopacket.SerializableLayer for more info.
 func (i *ICMPv6Redirect) SerializeTo(b gopacket.SerializeBuffer, opts gopacket.SerializeOptions) error {
 	if err := i.Options.SerializeTo(b, opts); err != nil {
 		return err
@@ -290,6 +360,7 @@ func (i *ICMPv6Redirect) SerializeTo(b gopacket.SerializeBuffer, opts gopacket.S
 	return nil
 }
 
+// DecodeFromBytes decodes the given bytes into this layer.
 func (i *ICMPv6Options) DecodeFromBytes(data []byte, df gopacket.DecodeFeedback) error {
 	for len(data) > 0 {
 		if len(data) < 2 {
@@ -319,6 +390,9 @@ func (i *ICMPv6Options) DecodeFromBytes(data []byte, df gopacket.DecodeFeedback)
 	return nil
 }
 
+// SerializeTo writes the serialized form of this layer into the
+// SerializationBuffer, implementing gopacket.SerializableLayer.
+// See the docs for gopacket.SerializableLayer for more info.
 func (i *ICMPv6Options) SerializeTo(b gopacket.SerializeBuffer, opts gopacket.SerializeOptions) error {
 	for _, opt := range []ICMPv6Option(*i) {
 		length := len(opt.Data) + 2
