@@ -180,4 +180,13 @@ var (
 		LayerTypeIPSecAH,
 		LayerTypeIPSecESP,
 	})
+	// LayerClassICMPv6NDP contains ICMPv6 neighbor discovery protocol
+	// messages.
+	LayerClassICMPv6NDP = gopacket.NewLayerClass([]gopacket.LayerType{
+		LayerTypeICMPv6RouterSolicitation,
+		LayerTypeICMPv6RouterAdvertisement,
+		LayerTypeICMPv6NeighborSolicitation,
+		LayerTypeICMPv6NeighborAdvertisement,
+		LayerTypeICMPv6Redirect,
+	})
 )
