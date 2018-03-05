@@ -98,6 +98,7 @@ var udpPortLayerType = [65536]gopacket.LayerType{
 	4789: LayerTypeVXLAN,
 	67:   LayerTypeDHCPv4,
 	68:   LayerTypeDHCPv4,
+	5060: LayerTypeSIP,
 	6343: LayerTypeSFlow,
 	6081: LayerTypeGeneve,
 	3784: LayerTypeBFD,
