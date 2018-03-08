@@ -15,6 +15,8 @@ import (
 )
 
 // #include <linux/if_packet.h>
+// #include <linux/if_ether.h>
+// #define VLAN_HLEN	4
 import "C"
 
 // Our model of handling all TPacket versions is a little hacky, to say the
@@ -63,6 +65,13 @@ func makeSlice(start uintptr, length int) (data []byte) {
 	return
 }
 
+func insertVlanHeader(data []byte, vlanTCI int) []byte {
+	eth := make([]byte, 0, len(data)+C.VLAN_HLEN)
+	eth = append(eth, data[0:C.ETH_ALEN*2]...)
+	eth = append(eth, []byte{0x81, 0, byte((vlanTCI >> 8) & 0xff), byte(vlanTCI & 0xff)}...)
+	return append(eth, data[C.ETH_ALEN*2:]...)
+}
+
 func (h *v1header) getStatus() int {
 	return int(h.tp_status)
 }
@@ -96,7 +105,13 @@ func (h *v2header) getTime() time.Time {
 	return time.Unix(int64(h.tp_sec), int64(h.tp_nsec))
 }
 func (h *v2header) getData() []byte {
-	return makeSlice(uintptr(unsafe.Pointer(h))+uintptr(h.tp_mac), int(h.tp_snaplen))
+	data := makeSlice(uintptr(unsafe.Pointer(h))+uintptr(h.tp_mac), int(h.tp_snaplen))
+
+	tci := int(h.tp_vlan_tci)
+	if tci == 0 {
+		return data
+	}
+	return insertVlanHeader(data, tci)
 }
 func (h *v2header) getLength() int {
 	return int(h.tp_len)
@@ -132,7 +147,14 @@ func (w *v3wrapper) getTime() time.Time {
 	return time.Unix(int64(w.packet.tp_sec), int64(w.packet.tp_nsec))
 }
 func (w *v3wrapper) getData() []byte {
-	return makeSlice(uintptr(unsafe.Pointer(w.packet))+uintptr(w.packet.tp_mac), int(w.packet.tp_snaplen))
+	data := makeSlice(uintptr(unsafe.Pointer(w.packet))+uintptr(w.packet.tp_mac), int(w.packet.tp_snaplen))
+
+	hv1 := (*C.struct_tpacket_hdr_variant1)(unsafe.Pointer(&w.packet.anon0[0]))
+	tci := int(hv1.tp_vlan_tci)
+	if tci == 0 {
+		return data
+	}
+	return insertVlanHeader(data, tci)
 }
 func (w *v3wrapper) getLength() int {
 	return int(w.packet.tp_len)
