@@ -84,6 +84,9 @@ int pcap_set_rfmon(pcap_t *p, int rfmon) {
 #elif __APPLE__
 #define gopacket_time_secs_t __darwin_time_t
 #define gopacket_time_usecs_t __darwin_suseconds_t
+#elif __ANDROID__
+#define gopacket_time_secs_t __kernel_time_t
+#define gopacket_time_usecs_t __kernel_suseconds_t
 #elif __GLIBC__
 #define gopacket_time_secs_t __time_t
 #define gopacket_time_usecs_t __suseconds_t

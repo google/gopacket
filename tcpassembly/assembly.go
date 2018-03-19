@@ -32,7 +32,7 @@ var memLog = flag.Bool("assembly_memuse_log", false, "If true, the github.com/go
 var debugLog = flag.Bool("assembly_debug_log", false, "If true, the github.com/google/gopacket/tcpassembly library will log verbose debugging information (at least one line per packet)")
 
 const invalidSequence = -1
-const uint32Max = 0xFFFFFFFF
+const uint32Size = 1 << 32
 
 // Sequence is a TCP sequence number.  It provides a few convenience functions
 // for handling TCP wrap-around.  The sequence should always be in the range
@@ -52,17 +52,17 @@ type Sequence int64
 // uint32 space to be after any sequence in the last quarter of that space, thus
 // wrapping the uint32 space.
 func (s Sequence) Difference(t Sequence) int {
-	if s > uint32Max-uint32Max/4 && t < uint32Max/4 {
-		t += uint32Max
-	} else if t > uint32Max-uint32Max/4 && s < uint32Max/4 {
-		s += uint32Max
+	if s > uint32Size-uint32Size/4 && t < uint32Size/4 {
+		t += uint32Size
+	} else if t > uint32Size-uint32Size/4 && s < uint32Size/4 {
+		s += uint32Size
 	}
 	return int(t - s)
 }
 
 // Add adds an integer to a sequence and returns the resulting sequence.
 func (s Sequence) Add(t int) Sequence {
-	return (s + Sequence(t)) & uint32Max
+	return (s + Sequence(t)) & (uint32Size - 1)
 }
 
 // Reassembly objects are passed by an Assembler into Streams using the

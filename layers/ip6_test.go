@@ -99,7 +99,7 @@ var testPacketIPv6HopByHop0 = []byte{
 }
 
 func TestPacketIPv6HopByHop0Serialize(t *testing.T) {
-	var serialize []gopacket.SerializableLayer = make([]gopacket.SerializableLayer, 0, 2)
+	var serialize = make([]gopacket.SerializableLayer, 0, 2)
 	var err error
 
 	ip6 := &IPv6{}
@@ -208,7 +208,7 @@ var testPacketIPv6Destination0 = []byte{
 }
 
 func TestPacketIPv6Destination0Serialize(t *testing.T) {
-	var serialize []gopacket.SerializableLayer = make([]gopacket.SerializableLayer, 0, 2)
+	var serialize = make([]gopacket.SerializableLayer, 0, 2)
 	var err error
 
 	ip6 := &IPv6{}
@@ -308,7 +308,7 @@ var testPacketIPv6JumbogramHeader = []byte{
 }
 
 func TestIPv6JumbogramSerialize(t *testing.T) {
-	var serialize []gopacket.SerializableLayer = make([]gopacket.SerializableLayer, 0, 2)
+	var serialize = make([]gopacket.SerializableLayer, 0, 2)
 	var err error
 
 	ip6 := &IPv6{}
