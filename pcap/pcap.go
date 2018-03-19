@@ -285,6 +285,14 @@ func OpenOffline(file string) (handle *Handle, err error) {
 	return h, nil
 }
 
+func OpenDead(linktype layers.LinkType, snaplen int32) (handle *Handle, _ error) {
+	cptr := C.pcap_open_dead(C.int(linktype), C.int(snaplen))
+	if cptr == nil {
+		return nil, errors.New("pcap_open_dead failed")
+	}
+	return &Handle{cptr: cptr}, nil
+}
+
 // NextError is the return code from a call to Next.
 type NextError int32
 
@@ -711,6 +719,10 @@ func destroyBPF(bpf *BPF) {
 // String returns the original string this BPF filter was compiled from.
 func (b *BPF) String() string {
 	return b.orig
+}
+
+func (b *BPF) BPF() _Ctype_struct_bpf_program {
+	return b.bpf
 }
 
 // Matches returns true if the given packet data matches this filter.

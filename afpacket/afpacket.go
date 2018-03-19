@@ -27,6 +27,8 @@ import (
 	"golang.org/x/sys/unix"
 
 	"github.com/google/gopacket"
+	"github.com/google/gopacket/layers"
+	"github.com/google/gopacket/pcap"
 )
 
 /*
@@ -61,6 +63,8 @@ type Stats struct {
 	// This should always be <= Packets, since with TPacket one syscall
 	// can (and often does) return many results.
 	Polls int64
+
+	PollRetries int64
 }
 
 // SocketStats is a struct where socket stats are stored
@@ -280,6 +284,7 @@ retry:
 		}
 		// We received an empty block
 		if h.current.getLength() == 0 {
+			atomic.AddInt64(&h.stats.PollRetries, 1)
 			goto retry
 		}
 	}
@@ -298,8 +303,9 @@ retry:
 // Stats returns statistics on the packets the TPacket has seen so far.
 func (h *TPacket) Stats() (Stats, error) {
 	return Stats{
-		Polls:   atomic.LoadInt64(&h.stats.Polls),
-		Packets: atomic.LoadInt64(&h.stats.Packets),
+		Polls:       atomic.LoadInt64(&h.stats.Polls),
+		Packets:     atomic.LoadInt64(&h.stats.Packets),
+		PollRetries: atomic.LoadInt64(&h.stats.PollRetries),
 	}, nil
 }
 
@@ -473,4 +479,25 @@ func (h *TPacket) SetFanout(t FanoutType, id uint16) error {
 func (h *TPacket) WritePacketData(pkt []byte) error {
 	_, err := unix.Write(h.fd, pkt)
 	return err
+}
+
+func (h *TPacket) SetBPFFilter(expr string) (err error) {
+	// Open a dummy pcap handle
+	p, err := pcap.OpenDead(layers.LinkTypeEthernet, 65536)
+	if err != nil {
+		return fmt.Errorf("OpenDead: %s", err)
+	}
+	bpf, err := p.NewBPF(expr)
+	if err != nil {
+		return fmt.Errorf("NewBPF: %s", err)
+	}
+
+	program := bpf.BPF()
+
+	_, err = C.setsockopt(C.int(h.fd), C.SOL_SOCKET, C.SO_ATTACH_FILTER,
+		unsafe.Pointer(&program), C.socklen_t(unsafe.Sizeof(program)))
+	if err != nil {
+		return fmt.Errorf("setsockopt: %s", err)
+	}
+	return nil
 }
