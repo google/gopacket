@@ -319,6 +319,7 @@ type Dot11 struct {
 	Checksum       uint32
 	QOS            *Dot11QOS
 	HTControl      *Dot11HTControl
+	DataLayer      gopacket.Layer
 }
 
 type Dot11QOS struct {
@@ -403,21 +404,49 @@ func (m *Dot11HTControlMFB) NoFeedBackPresent() bool {
 
 func decodeDot11(data []byte, p gopacket.PacketBuilder) error {
 	d := &Dot11{}
-	return decodingLayerDecoder(d, data, p)
+	err := d.DecodeFromBytes(data, p)
+	if err != nil {
+		return err
+	}
+	p.AddLayer(d)
+	if d.DataLayer != nil {
+		p.AddLayer(d.DataLayer)
+	}
+	return p.NextDecoder(d.NextLayerType())
 }
 
 func (m *Dot11) LayerType() gopacket.LayerType  { return LayerTypeDot11 }
 func (m *Dot11) CanDecode() gopacket.LayerClass { return LayerTypeDot11 }
 func (m *Dot11) NextLayerType() gopacket.LayerType {
-	// if m.Flags.WEP() {
-	// 	return (LayerTypeDot11WEP)
-	// }
-
+	if m.DataLayer != nil {
+		if m.Flags.WEP() {
+			return LayerTypeDot11WEP
+		}
+		return m.DataLayer.(gopacket.DecodingLayer).NextLayerType()
+	}
 	return m.Type.LayerType()
 }
 
 func createU8(x uint8) *uint8 {
 	return &x
+}
+
+var dataDecodeMap = map[Dot11Type]func() gopacket.DecodingLayer{
+	Dot11TypeData:                   func() gopacket.DecodingLayer { return &Dot11Data{} },
+	Dot11TypeDataCFAck:              func() gopacket.DecodingLayer { return &Dot11DataCFAck{} },
+	Dot11TypeDataCFPoll:             func() gopacket.DecodingLayer { return &Dot11DataCFPoll{} },
+	Dot11TypeDataCFAckPoll:          func() gopacket.DecodingLayer { return &Dot11DataCFAckPoll{} },
+	Dot11TypeDataNull:               func() gopacket.DecodingLayer { return &Dot11DataNull{} },
+	Dot11TypeDataCFAckNoData:        func() gopacket.DecodingLayer { return &Dot11DataCFAckNoData{} },
+	Dot11TypeDataCFPollNoData:       func() gopacket.DecodingLayer { return &Dot11DataCFPollNoData{} },
+	Dot11TypeDataCFAckPollNoData:    func() gopacket.DecodingLayer { return &Dot11DataCFAckPollNoData{} },
+	Dot11TypeDataQOSData:            func() gopacket.DecodingLayer { return &Dot11DataQOSData{} },
+	Dot11TypeDataQOSDataCFAck:       func() gopacket.DecodingLayer { return &Dot11DataQOSDataCFAck{} },
+	Dot11TypeDataQOSDataCFPoll:      func() gopacket.DecodingLayer { return &Dot11DataQOSDataCFPoll{} },
+	Dot11TypeDataQOSDataCFAckPoll:   func() gopacket.DecodingLayer { return &Dot11DataQOSDataCFAckPoll{} },
+	Dot11TypeDataQOSNull:            func() gopacket.DecodingLayer { return &Dot11DataQOSNull{} },
+	Dot11TypeDataQOSCFPollNoData:    func() gopacket.DecodingLayer { return &Dot11DataQOSCFPollNoData{} },
+	Dot11TypeDataQOSCFAckPollNoData: func() gopacket.DecodingLayer { return &Dot11DataQOSCFAckPollNoData{} },
 }
 
 func (m *Dot11) DecodeFromBytes(data []byte, df gopacket.DecodeFeedback) error {
@@ -567,6 +596,16 @@ func (m *Dot11) DecodeFromBytes(data []byte, df gopacket.DecodeFeedback) error {
 		Contents: data[0:offset],
 		Payload:  data[offset : len(data)-4],
 	}
+
+	if mainType == Dot11TypeData {
+		l := dataDecodeMap[m.Type]()
+		err := l.DecodeFromBytes(m.BaseLayer.Payload, df)
+		if err != nil {
+			return err
+		}
+		m.DataLayer = l.(gopacket.Layer)
+	}
+
 	m.Checksum = binary.LittleEndian.Uint32(data[len(data)-4 : len(data)])
 	return nil
 }
@@ -655,7 +694,7 @@ type Dot11WEP struct {
 	BaseLayer
 }
 
-func (m *Dot11WEP) NextLayerType() gopacket.LayerType { return LayerTypeLLC }
+func (m *Dot11WEP) NextLayerType() gopacket.LayerType { return gopacket.LayerTypePayload }
 
 func (m *Dot11WEP) LayerType() gopacket.LayerType  { return LayerTypeDot11WEP }
 func (m *Dot11WEP) CanDecode() gopacket.LayerClass { return LayerTypeDot11WEP }
@@ -674,7 +713,9 @@ type Dot11Data struct {
 	BaseLayer
 }
 
-func (m *Dot11Data) NextLayerType() gopacket.LayerType { return LayerTypeLLC }
+func (m *Dot11Data) NextLayerType() gopacket.LayerType {
+	return LayerTypeLLC
+}
 
 func (m *Dot11Data) LayerType() gopacket.LayerType  { return LayerTypeDot11Data }
 func (m *Dot11Data) CanDecode() gopacket.LayerClass { return LayerTypeDot11Data }
@@ -802,7 +843,8 @@ type Dot11DataQOS struct {
 }
 
 func (m *Dot11DataQOS) DecodeFromBytes(data []byte, df gopacket.DecodeFeedback) error {
-	return m.Dot11Ctrl.DecodeFromBytes(data, df)
+	m.BaseLayer = BaseLayer{Payload: data}
+	return nil
 }
 
 type Dot11DataQOSData struct {

@@ -464,7 +464,7 @@ func TestPacketP6196(t *testing.T) {
 		t.Error("Failed to decode packet:", p.ErrorLayer().Error())
 	}
 
-	checkLayers(p, []gopacket.LayerType{LayerTypeRadioTap, LayerTypeDot11, LayerTypeDot11WEP}, t)
+	checkLayers(p, []gopacket.LayerType{LayerTypeRadioTap, LayerTypeDot11, LayerTypeDot11DataQOSData, LayerTypeDot11WEP}, t)
 }
 
 func BenchmarkDecodePacketP6196(b *testing.B) {
