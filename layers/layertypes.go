@@ -69,7 +69,6 @@ var (
 	LayerTypeDot11                       = gopacket.RegisterLayerType(65, gopacket.LayerTypeMetadata{Name: "Dot11", Decoder: gopacket.DecodeFunc(decodeDot11)})
 	LayerTypeDot11Ctrl                   = gopacket.RegisterLayerType(66, gopacket.LayerTypeMetadata{Name: "Dot11Ctrl", Decoder: gopacket.DecodeFunc(decodeDot11Ctrl)})
 	LayerTypeDot11Data                   = gopacket.RegisterLayerType(67, gopacket.LayerTypeMetadata{Name: "Dot11Data", Decoder: gopacket.DecodeFunc(decodeDot11Data)})
-	LayerTypeDot11DataData				 = gopacket.RegisterLayerType(129, gopacket.LayerTypeMetadata{Name: "Dot11DataData", Decoder: gopacket.DecodeFunc(decodeDot11DataData)})
 	LayerTypeDot11DataCFAck              = gopacket.RegisterLayerType(68, gopacket.LayerTypeMetadata{Name: "Dot11DataCFAck", Decoder: gopacket.DecodeFunc(decodeDot11DataCFAck)})
 	LayerTypeDot11DataCFPoll             = gopacket.RegisterLayerType(69, gopacket.LayerTypeMetadata{Name: "Dot11DataCFPoll", Decoder: gopacket.DecodeFunc(decodeDot11DataCFPoll)})
 	LayerTypeDot11DataCFAckPoll          = gopacket.RegisterLayerType(70, gopacket.LayerTypeMetadata{Name: "Dot11DataCFAckPoll", Decoder: gopacket.DecodeFunc(decodeDot11DataCFAckPoll)})

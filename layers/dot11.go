@@ -507,21 +507,6 @@ func decodeDot11Data(data []byte, p gopacket.PacketBuilder) error {
 	return decodingLayerDecoder(d, data, p)
 }
 
-type Dot11DataData struct {
-	Dot11Data
-}
-
-func decodeDot11DataData(data []byte, p gopacket.PacketBuilder) error {
-	d := &Dot11DataData{}
-	return decodingLayerDecoder(d, data, p)
-}
-
-func (m *Dot11DataData) LayerType() gopacket.LayerType {return LayerTypeDot11DataData}
-func (m *Dot11DataData) CanDecode() gopacket.LayerClass {return LayerTypeDot11DataData}
-func (m *Dot11DataData) DecodeFromBytes(data []byte, df gopacket.DecodeFeedback) error {
-	return m.Dot11Data.DecodeFromBytes(data, df)
-}
-
 
 
 type Dot11DataCFAck struct {
