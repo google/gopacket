@@ -507,6 +507,8 @@ func decodeDot11Data(data []byte, p gopacket.PacketBuilder) error {
 	return decodingLayerDecoder(d, data, p)
 }
 
+
+
 type Dot11DataCFAck struct {
 	Dot11Data
 }
