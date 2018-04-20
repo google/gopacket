@@ -219,12 +219,17 @@ func (d Dot11Type) MainType() Dot11Type {
 	return d & dot11TypeMask
 }
 
+func (d Dot11Type) QOS() bool {
+	return d&dot11QOSMask == Dot11TypeDataQOSData
+}
+
 const (
 	Dot11TypeMgmt     Dot11Type = 0x00
 	Dot11TypeCtrl     Dot11Type = 0x01
 	Dot11TypeData     Dot11Type = 0x02
 	Dot11TypeReserved Dot11Type = 0x03
 	dot11TypeMask               = 0x03
+	dot11QOSMask                = 0x23
 
 	// The following are type/subtype conglomerations.
 
