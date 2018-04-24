@@ -317,21 +317,136 @@ type Dot11 struct {
 	SequenceNumber uint16
 	FragmentNumber uint16
 	Checksum       uint32
+	QOS            *Dot11QOS
+	HTControl      *Dot11HTControl
+	DataLayer      gopacket.Layer
+}
+
+type Dot11QOS struct {
+	TID       uint8 /* Traffic IDentifier */
+	EOSP      bool  /* End of service period */
+	AckPolicy Dot11AckPolicy
+	TXOP      uint8
+}
+
+type Dot11HTControl struct {
+	ACConstraint bool
+	RDGMorePPDU  bool
+
+	VHT *Dot11HTControlVHT
+	HT  *Dot11HTControlHT
+}
+
+type Dot11HTControlHT struct {
+	LinkAdapationControl *Dot11LinkAdapationControl
+	CalibrationPosition  uint8
+	CalibrationSequence  uint8
+	CSISteering          uint8
+	NDPAnnouncement      bool
+	DEI                  bool
+}
+
+type Dot11HTControlVHT struct {
+	MRQ            bool
+	UnsolicitedMFB bool
+	MSI            *uint8
+	MFB            Dot11HTControlMFB
+	CompressedMSI  *uint8
+	STBCIndication bool
+	MFSI           *uint8
+	GID            *uint8
+	CodingType     *Dot11CodingType
+	FbTXBeamformed bool
+}
+
+type Dot11HTControlMFB struct {
+	NumSTS uint8
+	VHTMCS uint8
+	BW     uint8
+	SNR    int8
+}
+
+type Dot11LinkAdapationControl struct {
+	TRQ  bool
+	MRQ  bool
+	MSI  uint8
+	MFSI uint8
+	ASEL *Dot11ASEL
+	MFB  *uint8
+}
+
+type Dot11ASEL struct {
+	Command uint8
+	Data    uint8
+}
+
+type Dot11CodingType uint8
+
+const (
+	Dot11CodingTypeBCC  = 0
+	Dot11CodingTypeLDPC = 1
+)
+
+func (a Dot11CodingType) String() string {
+	switch a {
+	case Dot11CodingTypeBCC:
+		return "BCC"
+	case Dot11CodingTypeLDPC:
+		return "LDPC"
+	default:
+		return "Unknown coding type"
+	}
+}
+
+func (m *Dot11HTControlMFB) NoFeedBackPresent() bool {
+	return m.VHTMCS == 15 && m.NumSTS == 7
 }
 
 func decodeDot11(data []byte, p gopacket.PacketBuilder) error {
 	d := &Dot11{}
-	return decodingLayerDecoder(d, data, p)
+	err := d.DecodeFromBytes(data, p)
+	if err != nil {
+		return err
+	}
+	p.AddLayer(d)
+	if d.DataLayer != nil {
+		p.AddLayer(d.DataLayer)
+	}
+	return p.NextDecoder(d.NextLayerType())
 }
 
 func (m *Dot11) LayerType() gopacket.LayerType  { return LayerTypeDot11 }
 func (m *Dot11) CanDecode() gopacket.LayerClass { return LayerTypeDot11 }
 func (m *Dot11) NextLayerType() gopacket.LayerType {
-	if m.Flags.WEP() {
-		return (LayerTypeDot11WEP)
+	if m.DataLayer != nil {
+		if m.Flags.WEP() {
+			return LayerTypeDot11WEP
+		}
+		return m.DataLayer.(gopacket.DecodingLayer).NextLayerType()
 	}
-
 	return m.Type.LayerType()
+}
+
+func createU8(x uint8) *uint8 {
+	return &x
+}
+
+var dataDecodeMap = map[Dot11Type]func() gopacket.DecodingLayer{
+	Dot11TypeData:                   func() gopacket.DecodingLayer { return &Dot11Data{} },
+	Dot11TypeDataCFAck:              func() gopacket.DecodingLayer { return &Dot11DataCFAck{} },
+	Dot11TypeDataCFPoll:             func() gopacket.DecodingLayer { return &Dot11DataCFPoll{} },
+	Dot11TypeDataCFAckPoll:          func() gopacket.DecodingLayer { return &Dot11DataCFAckPoll{} },
+	Dot11TypeDataNull:               func() gopacket.DecodingLayer { return &Dot11DataNull{} },
+	Dot11TypeDataCFAckNoData:        func() gopacket.DecodingLayer { return &Dot11DataCFAckNoData{} },
+	Dot11TypeDataCFPollNoData:       func() gopacket.DecodingLayer { return &Dot11DataCFPollNoData{} },
+	Dot11TypeDataCFAckPollNoData:    func() gopacket.DecodingLayer { return &Dot11DataCFAckPollNoData{} },
+	Dot11TypeDataQOSData:            func() gopacket.DecodingLayer { return &Dot11DataQOSData{} },
+	Dot11TypeDataQOSDataCFAck:       func() gopacket.DecodingLayer { return &Dot11DataQOSDataCFAck{} },
+	Dot11TypeDataQOSDataCFPoll:      func() gopacket.DecodingLayer { return &Dot11DataQOSDataCFPoll{} },
+	Dot11TypeDataQOSDataCFAckPoll:   func() gopacket.DecodingLayer { return &Dot11DataQOSDataCFAckPoll{} },
+	Dot11TypeDataQOSNull:            func() gopacket.DecodingLayer { return &Dot11DataQOSNull{} },
+	Dot11TypeDataQOSCFPollNoData:    func() gopacket.DecodingLayer { return &Dot11DataQOSCFPollNoData{} },
+	Dot11TypeDataQOSCFAckPollNoData: func() gopacket.DecodingLayer { return &Dot11DataQOSCFAckPollNoData{} },
 }
 
 func (m *Dot11) DecodeFromBytes(data []byte, df gopacket.DecodeFeedback) error {
@@ -385,7 +500,112 @@ func (m *Dot11) DecodeFromBytes(data []byte, df gopacket.DecodeFeedback) error {
 		offset += 6
 	}
 
-	m.BaseLayer = BaseLayer{Contents: data[0:offset], Payload: data[offset : len(data)-4]}
+	if m.Type.QOS() {
+		if len(data) < offset+2 {
+			df.SetTruncated()
+			return fmt.Errorf("Dot11 length %v too short, %v required", len(data), offset+6)
+		}
+		m.QOS = &Dot11QOS{
+			TID:       (uint8(data[offset]) & 0x0F),
+			EOSP:      (uint8(data[offset]) & 0x10) == 0x10,
+			AckPolicy: Dot11AckPolicy((uint8(data[offset]) & 0x60) >> 5),
+			TXOP:      uint8(data[offset+1]),
+		}
+		offset += 2
+	}
+	if m.Flags.Order() && (m.Type.QOS() || mainType == Dot11TypeMgmt) {
+		if len(data) < offset+4 {
+			df.SetTruncated()
+			return fmt.Errorf("Dot11 length %v too short, %v required", len(data), offset+6)
+		}
+
+		htc := &Dot11HTControl{
+			ACConstraint: data[offset+3]&0x40 != 0,
+			RDGMorePPDU:  data[offset+3]&0x80 != 0,
+		}
+		m.HTControl = htc
+
+		if data[offset]&0x1 != 0 { // VHT Variant
+			vht := &Dot11HTControlVHT{}
+			htc.VHT = vht
+			vht.MRQ = data[offset]&0x4 != 0
+			vht.UnsolicitedMFB = data[offset+3]&0x20 != 0
+			vht.MFB = Dot11HTControlMFB{
+				NumSTS: uint8(data[offset+1] >> 1 & 0x7),
+				VHTMCS: uint8(data[offset+1] >> 4 & 0xF),
+				BW:     uint8(data[offset+2] & 0x3),
+				SNR:    int8((-(data[offset+2] >> 2 & 0x20))+data[offset+2]>>2&0x1F) + 22,
+			}
+
+			if vht.UnsolicitedMFB {
+				if !vht.MFB.NoFeedBackPresent() {
+					vht.CompressedMSI = createU8(data[offset] >> 3 & 0x3)
+					vht.STBCIndication = data[offset]&0x20 != 0
+					vht.CodingType = (*Dot11CodingType)(createU8(data[offset+3] >> 3 & 0x1))
+					vht.FbTXBeamformed = data[offset+3]&0x10 != 0
+					vht.GID = createU8(
+						data[offset]>>6 +
+							(data[offset+1] & 0x1 << 2) +
+							data[offset+3]&0x7<<3)
+				}
+			} else {
+				if vht.MRQ {
+					vht.MSI = createU8((data[offset] >> 3) & 0x07)
+				}
+				vht.MFSI = createU8(data[offset]>>6 + (data[offset+1] & 0x1 << 2))
+			}
+
+		} else { // HT Variant
+			ht := &Dot11HTControlHT{}
+			htc.HT = ht
+
+			lac := &Dot11LinkAdapationControl{}
+			ht.LinkAdapationControl = lac
+			lac.TRQ = data[offset]&0x2 != 0
+			lac.MFSI = data[offset]>>6&0x3 + data[offset+1]&0x1<<3
+			if data[offset]&0x3C == 0x38 { // ASEL
+				lac.ASEL = &Dot11ASEL{
+					Command: data[offset+1] >> 1 & 0x7,
+					Data:    data[offset+1] >> 4 & 0xF,
+				}
+			} else {
+				lac.MRQ = data[offset]&0x4 != 0
+				if lac.MRQ {
+					lac.MSI = data[offset] >> 3 & 0x7
+				}
+				lac.MFB = createU8(data[offset+1] >> 1)
+			}
+			ht.CalibrationPosition = data[offset+2] & 0x3
+			ht.CalibrationSequence = data[offset+2] >> 2 & 0x3
+			ht.CSISteering = data[offset+2] >> 6 & 0x3
+			ht.NDPAnnouncement = data[offset+3]&0x1 != 0
+			if mainType != Dot11TypeMgmt {
+				ht.DEI = data[offset+3]&0x20 != 0
+			}
+		}
+
+		offset += 4
+	}
+
+	if len(data) < offset+4 {
+		df.SetTruncated()
+		return fmt.Errorf("Dot11 length %v too short, %v required", len(data), offset+4)
+	}
+
+	m.BaseLayer = BaseLayer{
+		Contents: data[0:offset],
+		Payload:  data[offset : len(data)-4],
+	}
+
+	if mainType == Dot11TypeData {
+		l := dataDecodeMap[m.Type]()
+		err := l.DecodeFromBytes(m.BaseLayer.Payload, df)
+		if err != nil {
+			return err
+		}
+		m.DataLayer = l.(gopacket.Layer)
+	}
+
 	m.Checksum = binary.LittleEndian.Uint32(data[len(data)-4 : len(data)])
 	return nil
 }
@@ -474,7 +694,7 @@ type Dot11WEP struct {
 	BaseLayer
 }
 
-func (m *Dot11WEP) NextLayerType() gopacket.LayerType { return LayerTypeLLC }
+func (m *Dot11WEP) NextLayerType() gopacket.LayerType { return gopacket.LayerTypePayload }
 
 func (m *Dot11WEP) LayerType() gopacket.LayerType  { return LayerTypeDot11WEP }
 func (m *Dot11WEP) CanDecode() gopacket.LayerClass { return LayerTypeDot11WEP }
@@ -493,7 +713,9 @@ type Dot11Data struct {
 	BaseLayer
 }
 
-func (m *Dot11Data) NextLayerType() gopacket.LayerType { return LayerTypeLLC }
+func (m *Dot11Data) NextLayerType() gopacket.LayerType {
+	return LayerTypeLLC
+}
 
 func (m *Dot11Data) LayerType() gopacket.LayerType  { return LayerTypeDot11Data }
 func (m *Dot11Data) CanDecode() gopacket.LayerClass { return LayerTypeDot11Data }
@@ -618,23 +840,10 @@ func (m *Dot11DataCFAckPollNoData) DecodeFromBytes(data []byte, df gopacket.Deco
 
 type Dot11DataQOS struct {
 	Dot11Ctrl
-	TID       uint8 /* Traffic IDentifier */
-	EOSP      bool  /* End of service period */
-	AckPolicy Dot11AckPolicy
-	TXOP      uint8
 }
 
 func (m *Dot11DataQOS) DecodeFromBytes(data []byte, df gopacket.DecodeFeedback) error {
-	if len(data) < 4 {
-		df.SetTruncated()
-		return fmt.Errorf("Dot11DataQOS length %v too short, %v required", len(data), 4)
-	}
-	m.TID = (uint8(data[0]) & 0x0F)
-	m.EOSP = (uint8(data[0]) & 0x10) == 0x10
-	m.AckPolicy = Dot11AckPolicy((uint8(data[0]) & 0x60) >> 5)
-	m.TXOP = uint8(data[1])
-	// TODO: Mesh Control bytes 2:4
-	m.BaseLayer = BaseLayer{Contents: data[0:4], Payload: data[4:]}
+	m.BaseLayer = BaseLayer{Payload: data}
 	return nil
 }
 
