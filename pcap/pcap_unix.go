@@ -32,21 +32,22 @@ int pcap_wait(pcap_t *p, int usec) {
 	tv.tv_usec = usec;
 
 	if(usec != 0) {
-		return select(1, &fds, NULL, NULL, &tv);
+		return select(fd+1, &fds, NULL, NULL, &tv);
 	}
 
 	// block indefinitely if no timeout provided
-	return select(1, &fds, NULL, NULL, NULL);
+	return select(fd+1, &fds, NULL, NULL, NULL);
 }
 */
 import "C"
 
 import (
 	"errors"
+	"os"
 	"unsafe"
 )
 
-func (p *Handle) openLive() error {
+func (p *Handle) setNonBlocking() error {
 	buf := (*C.char)(C.calloc(errorBufferSize, 1))
 	defer C.free(unsafe.Pointer(buf))
 
@@ -68,4 +69,19 @@ func (p *Handle) waitForPacket() {
 	usec -= 100
 
 	C.pcap_wait(p.cptr, usec)
+}
+
+// openOfflineFile returns contents of input file as a *Handle.
+func openOfflineFile(file *os.File) (handle *Handle, err error) {
+	buf := (*C.char)(C.calloc(errorBufferSize, 1))
+	defer C.free(unsafe.Pointer(buf))
+	cmode := C.CString("rb")
+	defer C.free(unsafe.Pointer(cmode))
+	cf := C.fdopen(C.int(file.Fd()), cmode)
+
+	cptr := C.pcap_fopen_offline(cf, buf)
+	if cptr == nil {
+		return nil, errors.New(C.GoString(buf))
+	}
+	return &Handle{cptr: cptr}, nil
 }

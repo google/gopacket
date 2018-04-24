@@ -92,15 +92,14 @@ func (r *router) Route(dst net.IP) (iface *net.Interface, gateway, preferredSrc 
 }
 
 func (r *router) RouteWithSrc(input net.HardwareAddr, src, dst net.IP) (iface *net.Interface, gateway, preferredSrc net.IP, err error) {
-	length := len(dst)
 	var ifaceIndex int
-	switch length {
-	case 4:
+	switch {
+	case dst.To4() != nil:
 		ifaceIndex, gateway, preferredSrc, err = r.route(r.v4, input, src, dst)
-	case 16:
+	case dst.To16() != nil:
 		ifaceIndex, gateway, preferredSrc, err = r.route(r.v6, input, src, dst)
 	default:
-		err = errors.New("IP length is not 4 or 16")
+		err = errors.New("IP is not valid as IPv4 or IPv6")
 		return
 	}
 
@@ -109,10 +108,10 @@ func (r *router) RouteWithSrc(input net.HardwareAddr, src, dst net.IP) (iface *n
 
 	iface = &r.ifaces[ifaceIndex]
 	if preferredSrc == nil {
-		switch length {
-		case 4:
+		switch {
+		case dst.To4() != nil:
 			preferredSrc = r.addrs[ifaceIndex].v4
-		case 16:
+		case dst.To16() != nil:
 			preferredSrc = r.addrs[ifaceIndex].v6
 		}
 	}
