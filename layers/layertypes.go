@@ -131,6 +131,7 @@ var (
 	LayerTypeICMPv6NeighborAdvertisement = gopacket.RegisterLayerType(127, gopacket.LayerTypeMetadata{Name: "ICMPv6NeighborAdvertisement", Decoder: gopacket.DecodeFunc(decodeICMPv6NeighborAdvertisement)})
 	LayerTypeICMPv6Redirect              = gopacket.RegisterLayerType(128, gopacket.LayerTypeMetadata{Name: "ICMPv6Redirect", Decoder: gopacket.DecodeFunc(decodeICMPv6Redirect)})
 	LayerTypeGTPv1U                      = gopacket.RegisterLayerType(129, gopacket.LayerTypeMetadata{Name: "GTPv1U", Decoder: gopacket.DecodeFunc(decodeGTPv1u)})
+	LayerTypeEAPOLKey                    = gopacket.RegisterLayerType(130, gopacket.LayerTypeMetadata{Name: "EAPOLKey", Decoder: gopacket.DecodeFunc(decodeEAPOLKey)})
 )
 
 var (
