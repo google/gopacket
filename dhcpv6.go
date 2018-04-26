@@ -16,64 +16,58 @@ import (
 	"github.com/google/gopacket"
 )
 
-// DHCPOp rerprents a bootp operation
-type DHCPOp byte
-
-// bootp operations
-const (
-	DHCPOpRequest DHCPOp = 1
-	DHCPOpReply   DHCPOp = 2
-)
-
-// String returns a string version of a DHCPOp.
-func (o DHCPOp) String() string {
-	switch o {
-	case DHCPOpRequest:
-		return "Request"
-	case DHCPOpReply:
-		return "Reply"
-	default:
-		return "Unknown"
-	}
-}
-
-// DHCPMsgType represents a DHCP operation
-type DHCPMsgType byte
+// DHCPv6MsgType represents a DHCPv6 operation
+type DHCPv6MsgType byte
 
 // Constants that represent DHCP operations
 const (
-	DHCPMsgTypeUnspecified DHCPMsgType = iota
-	DHCPMsgTypeDiscover
-	DHCPMsgTypeOffer
-	DHCPMsgTypeRequest
-	DHCPMsgTypeDecline
-	DHCPMsgTypeAck
-	DHCPMsgTypeNak
-	DHCPMsgTypeRelease
-	DHCPMsgTypeInform
+	DHCPv6MsgTypeUnspecified DHCPv6MsgType = iota
+	DHCPv6MsgTypeSolicit
+	DHCPv6MsgTypeAdverstise
+	DHCPv6MsgTypeRequest
+	DHCPv6MsgTypeConfirm
+	DHCPv6MsgTypeRenew
+	DHCPv6MsgTypeRebind
+	DHCPv6MsgTypeReply
+	DHCPv6MsgTypeRelease
+	DHCPv6MsgTypeDecline
+	DHCPv6MsgTypeReconfigure
+	DHCPv6MsgTypeInformationRequest
+	DHCPv6MsgTypeRelayForward
+	DHCPv6MsgTypeRelayReply
 )
 
-// String returns a string version of a DHCPMsgType.
-func (o DHCPMsgType) String() string {
+// String returns a string version of a DHCPv6MsgType.
+func (o DHCPv6MsgType) String() string {
 	switch o {
-	case DHCPMsgTypeUnspecified:
+	case DHCPv6MsgTypeUnspecified:
 		return "Unspecified"
-	case DHCPMsgTypeDiscover:
-		return "Discover"
-	case DHCPMsgTypeOffer:
-		return "Offer"
-	case DHCPMsgTypeRequest:
+	case DHCPv6MsgTypeSolicit:
+		return "Solicit"
+	case DHCPv6MsgTypeAdverstise:
+		return "Adverstise"
+	case DHCPv6MsgTypeRequest:
 		return "Request"
-	case DHCPMsgTypeDecline:
-		return "Decline"
-	case DHCPMsgTypeAck:
-		return "Ack"
-	case DHCPMsgTypeNak:
-		return "Nak"
-	case DHCPMsgTypeRelease:
+	case DHCPv6MsgTypeConfirm:
+		return "Confirm"
+	case DHCPv6MsgTypeRenew:
+		return "Renew"
+	case DHCPv6MsgTypeRebind:
+		return "Rebind"
+	case DHCPv6MsgTypeReply:
+		return "Reply"
+	case DHCPv6MsgTypeRelease:
 		return "Release"
-	case DHCPMsgTypeInform:
-		return "Inform"
+	case DHCPv6MsgTypeDecline:
+		return "Decline"
+	case DHCPv6MsgTypeReconfigure:
+		return "Reconfigure"
+	case DHCPv6MsgTypeInformationRequest:
+		return "InformationRequest"
+	case DHCPv6MsgTypeRelayForward:
+		return "RelayForward"
+	case DHCPv6MsgTypeRelayReply:
+		return "RelayReply"
 	default:
 		return "Unknown"
 	}
