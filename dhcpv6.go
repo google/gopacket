@@ -93,15 +93,15 @@ type DHCPv4 struct {
 	ClientHWAddr net.HardwareAddr
 	ServerName   []byte
 	File         []byte
-	Options      DHCPOptions
+	Options      DHCPv6Options
 }
 
-// DHCPOptions is used to get nicely printed option lists which would normally
+// DHCPv6Options is used to get nicely printed option lists which would normally
 // be cut off after 5 options.
-type DHCPOptions []DHCPOption
+type DHCPv6Options []DHCPv6Option
 
 // String returns a string version of the options list.
-func (o DHCPOptions) String() string {
+func (o DHCPv6Options) String() string {
 	buf := &bytes.Buffer{}
 	buf.WriteByte('[')
 	for i, opt := range o {
@@ -148,16 +148,16 @@ func (d *DHCPv4) DecodeFromBytes(data []byte, df gopacket.DecodeFeedback) error 
 	stop := len(options)
 	start := 0
 	for start < stop {
-		o := DHCPOption{}
+		o := DHCPv6Option{}
 		if err := o.decode(options[start:]); err != nil {
 			return err
 		}
-		if o.Type == DHCPOptEnd {
+		if o.Type == DHCPv6OptEnd {
 			break
 		}
 		d.Options = append(d.Options, o)
 		// Check if the option is a single byte pad
-		if o.Type == DHCPOptPad {
+		if o.Type == DHCPv6OptPad {
 			start++
 		} else {
 			start += int(o.Length) + 2
@@ -170,7 +170,7 @@ func (d *DHCPv4) DecodeFromBytes(data []byte, df gopacket.DecodeFeedback) error 
 func (d *DHCPv4) Len() uint16 {
 	n := uint16(240)
 	for _, o := range d.Options {
-		if o.Type == DHCPOptPad {
+		if o.Type == DHCPv6OptPad {
 			n++
 		} else {
 			n += uint16(o.Length) + 2
@@ -217,13 +217,13 @@ func (d *DHCPv4) SerializeTo(b gopacket.SerializeBuffer, opts gopacket.Serialize
 				return err
 			}
 			// A pad option is only a single byte
-			if o.Type == DHCPOptPad {
+			if o.Type == DHCPv6OptPad {
 				offset++
 			} else {
 				offset += 2 + len(o.Data)
 			}
 		}
-		optend := NewDHCPOption(DHCPOptEnd, nil)
+		optend := NewDHCPv6Option(DHCPv6OptEnd, nil)
 		if err := optend.encode(data[offset:]); err != nil {
 			return err
 		}
@@ -251,261 +251,122 @@ func decodeDHCPv4(data []byte, p gopacket.PacketBuilder) error {
 	return p.NextDecoder(gopacket.LayerTypePayload)
 }
 
-// DHCPOpt represents a DHCP option or parameter from RFC-2132
-type DHCPOpt byte
+// DHCPv6Opt represents a DHCP option or parameter from RFC-3315
+type DHCPv6Opt byte
 
-// Constants for the DHCPOpt options.
+// Constants for the DHCPv6Opt options.
 const (
-	DHCPOptPad                   DHCPOpt = 0
-	DHCPOptSubnetMask            DHCPOpt = 1   // 4, net.IP
-	DHCPOptTimeOffset            DHCPOpt = 2   // 4, int32 (signed seconds from UTC)
-	DHCPOptRouter                DHCPOpt = 3   // n*4, [n]net.IP
-	DHCPOptTimeServer            DHCPOpt = 4   // n*4, [n]net.IP
-	DHCPOptNameServer            DHCPOpt = 5   // n*4, [n]net.IP
-	DHCPOptDNS                   DHCPOpt = 6   // n*4, [n]net.IP
-	DHCPOptLogServer             DHCPOpt = 7   // n*4, [n]net.IP
-	DHCPOptCookieServer          DHCPOpt = 8   // n*4, [n]net.IP
-	DHCPOptLPRServer             DHCPOpt = 9   // n*4, [n]net.IP
-	DHCPOptImpressServer         DHCPOpt = 10  // n*4, [n]net.IP
-	DHCPOptResLocServer          DHCPOpt = 11  // n*4, [n]net.IP
-	DHCPOptHostname              DHCPOpt = 12  // n, string
-	DHCPOptBootfileSize          DHCPOpt = 13  // 2, uint16
-	DHCPOptMeritDumpFile         DHCPOpt = 14  // >1, string
-	DHCPOptDomainName            DHCPOpt = 15  // n, string
-	DHCPOptSwapServer            DHCPOpt = 16  // n*4, [n]net.IP
-	DHCPOptRootPath              DHCPOpt = 17  // n, string
-	DHCPOptExtensionsPath        DHCPOpt = 18  // n, string
-	DHCPOptIPForwarding          DHCPOpt = 19  // 1, bool
-	DHCPOptSourceRouting         DHCPOpt = 20  // 1, bool
-	DHCPOptPolicyFilter          DHCPOpt = 21  // 8*n, [n]{net.IP/net.IP}
-	DHCPOptDatagramMTU           DHCPOpt = 22  // 2, uint16
-	DHCPOptDefaultTTL            DHCPOpt = 23  // 1, byte
-	DHCPOptPathMTUAgingTimeout   DHCPOpt = 24  // 4, uint32
-	DHCPOptPathPlateuTableOption DHCPOpt = 25  // 2*n, []uint16
-	DHCPOptInterfaceMTU          DHCPOpt = 26  // 2, uint16
-	DHCPOptAllSubsLocal          DHCPOpt = 27  // 1, bool
-	DHCPOptBroadcastAddr         DHCPOpt = 28  // 4, net.IP
-	DHCPOptMaskDiscovery         DHCPOpt = 29  // 1, bool
-	DHCPOptMaskSupplier          DHCPOpt = 30  // 1, bool
-	DHCPOptRouterDiscovery       DHCPOpt = 31  // 1, bool
-	DHCPOptSolicitAddr           DHCPOpt = 32  // 4, net.IP
-	DHCPOptStaticRoute           DHCPOpt = 33  // n*8, [n]{net.IP/net.IP} -- note the 2nd is router not mask
-	DHCPOptARPTrailers           DHCPOpt = 34  // 1, bool
-	DHCPOptARPTimeout            DHCPOpt = 35  // 4, uint32
-	DHCPOptEthernetEncap         DHCPOpt = 36  // 1, bool
-	DHCPOptTCPTTL                DHCPOpt = 37  // 1, byte
-	DHCPOptTCPKeepAliveInt       DHCPOpt = 38  // 4, uint32
-	DHCPOptTCPKeepAliveGarbage   DHCPOpt = 39  // 1, bool
-	DHCPOptNISDomain             DHCPOpt = 40  // n, string
-	DHCPOptNISServers            DHCPOpt = 41  // 4*n,  [n]net.IP
-	DHCPOptNTPServers            DHCPOpt = 42  // 4*n, [n]net.IP
-	DHCPOptVendorOption          DHCPOpt = 43  // n, [n]byte // may be encapsulated.
-	DHCPOptNetBIOSTCPNS          DHCPOpt = 44  // 4*n, [n]net.IP
-	DHCPOptNetBIOSTCPDDS         DHCPOpt = 45  // 4*n, [n]net.IP
-	DHCPOptNETBIOSTCPNodeType    DHCPOpt = 46  // 1, magic byte
-	DHCPOptNetBIOSTCPScope       DHCPOpt = 47  // n, string
-	DHCPOptXFontServer           DHCPOpt = 48  // n, string
-	DHCPOptXDisplayManager       DHCPOpt = 49  // n, string
-	DHCPOptRequestIP             DHCPOpt = 50  // 4, net.IP
-	DHCPOptLeaseTime             DHCPOpt = 51  // 4, uint32
-	DHCPOptExtOptions            DHCPOpt = 52  // 1, 1/2/3
-	DHCPOptMessageType           DHCPOpt = 53  // 1, 1-7
-	DHCPOptServerID              DHCPOpt = 54  // 4, net.IP
-	DHCPOptParamsRequest         DHCPOpt = 55  // n, []byte
-	DHCPOptMessage               DHCPOpt = 56  // n, 3
-	DHCPOptMaxMessageSize        DHCPOpt = 57  // 2, uint16
-	DHCPOptT1                    DHCPOpt = 58  // 4, uint32
-	DHCPOptT2                    DHCPOpt = 59  // 4, uint32
-	DHCPOptClassID               DHCPOpt = 60  // n, []byte
-	DHCPOptClientID              DHCPOpt = 61  // n >=  2, []byte
-	DHCPOptDomainSearch          DHCPOpt = 119 // n, string
-	DHCPOptSIPServers            DHCPOpt = 120 // n, url
-	DHCPOptClasslessStaticRoute  DHCPOpt = 121 //
-	DHCPOptEnd                   DHCPOpt = 255
+	DHCPv6OptClientID           DHCPv6Opt = 1
+	DHCPv6OptServerID           DHCPv6Opt = 2
+	DHCPv6OptIANA               DHCPv6Opt = 3
+	DHCPv6OptIATA               DHCPv6Opt = 4
+	DHCPv6OptIAAddr             DHCPv6Opt = 5
+	DHCPv6OptOro                DHCPv6Opt = 6
+	DHCPv6OptPreference         DHCPv6Opt = 7
+	DHCPv6OptElapsedTime        DHCPv6Opt = 8
+	DHCPv6OptRelayMessage       DHCPv6Opt = 9
+	DHCPv6OptAuth               DHCPv6Opt = 11
+	DHCPv6OptUnicast            DHCPv6Opt = 12
+	DHCPv6OptStatusCode         DHCPv6Opt = 13
+	DHCPv6OptRapidCommit        DHCPv6Opt = 14
+	DHCPv6OptUserClass          DHCPv6Opt = 15
+	DHCPv6OptVendorClass        DHCPv6Opt = 16
+	DHCPv6OptVendorOpts         DHCPv6Opt = 17
+	DHCPv6OptInterfaceID        DHCPv6Opt = 18
+	DHCPv6OptReconfigureMessage DHCPv6Opt = 19
+	DHCPv6OptReconfigureAccept  DHCPv6Opt = 20
 )
 
-// String returns a string version of a DHCPOpt.
-func (o DHCPOpt) String() string {
+// String returns a string version of a DHCPv6Opt.
+func (o DHCPv6Opt) String() string {
 	switch o {
-	case DHCPOptPad:
+	case DHCPv6OptPad:
 		return "(padding)"
-	case DHCPOptSubnetMask:
-		return "SubnetMask"
-	case DHCPOptTimeOffset:
-		return "TimeOffset"
-	case DHCPOptRouter:
-		return "Router"
-	case DHCPOptTimeServer:
-		return "rfc868" // old time server protocol stringified to dissuade confusion w. NTP
-	case DHCPOptNameServer:
-		return "ien116" // obscure nameserver protocol stringified to dissuade confusion w. DNS
-	case DHCPOptDNS:
-		return "DNS"
-	case DHCPOptLogServer:
-		return "mitLCS" // MIT LCS server protocol yada yada w. Syslog
-	case DHCPOptCookieServer:
-		return "CookieServer"
-	case DHCPOptLPRServer:
-		return "LPRServer"
-	case DHCPOptImpressServer:
-		return "ImpressServer"
-	case DHCPOptResLocServer:
-		return "ResourceLocationServer"
-	case DHCPOptHostname:
-		return "Hostname"
-	case DHCPOptBootfileSize:
-		return "BootfileSize"
-	case DHCPOptMeritDumpFile:
-		return "MeritDumpFile"
-	case DHCPOptDomainName:
-		return "DomainName"
-	case DHCPOptSwapServer:
-		return "SwapServer"
-	case DHCPOptRootPath:
-		return "RootPath"
-	case DHCPOptExtensionsPath:
-		return "ExtensionsPath"
-	case DHCPOptIPForwarding:
-		return "IPForwarding"
-	case DHCPOptSourceRouting:
-		return "SourceRouting"
-	case DHCPOptPolicyFilter:
-		return "PolicyFilter"
-	case DHCPOptDatagramMTU:
-		return "DatagramMTU"
-	case DHCPOptDefaultTTL:
-		return "DefaultTTL"
-	case DHCPOptPathMTUAgingTimeout:
-		return "PathMTUAgingTimeout"
-	case DHCPOptPathPlateuTableOption:
-		return "PathPlateuTableOption"
-	case DHCPOptInterfaceMTU:
-		return "InterfaceMTU"
-	case DHCPOptAllSubsLocal:
-		return "AllSubsLocal"
-	case DHCPOptBroadcastAddr:
-		return "BroadcastAddress"
-	case DHCPOptMaskDiscovery:
-		return "MaskDiscovery"
-	case DHCPOptMaskSupplier:
-		return "MaskSupplier"
-	case DHCPOptRouterDiscovery:
-		return "RouterDiscovery"
-	case DHCPOptSolicitAddr:
-		return "SolicitAddr"
-	case DHCPOptStaticRoute:
-		return "StaticRoute"
-	case DHCPOptARPTrailers:
-		return "ARPTrailers"
-	case DHCPOptARPTimeout:
-		return "ARPTimeout"
-	case DHCPOptEthernetEncap:
-		return "EthernetEncap"
-	case DHCPOptTCPTTL:
-		return "TCPTTL"
-	case DHCPOptTCPKeepAliveInt:
-		return "TCPKeepAliveInt"
-	case DHCPOptTCPKeepAliveGarbage:
-		return "TCPKeepAliveGarbage"
-	case DHCPOptNISDomain:
-		return "NISDomain"
-	case DHCPOptNISServers:
-		return "NISServers"
-	case DHCPOptNTPServers:
-		return "NTPServers"
-	case DHCPOptVendorOption:
-		return "VendorOption"
-	case DHCPOptNetBIOSTCPNS:
-		return "NetBIOSOverTCPNS"
-	case DHCPOptNetBIOSTCPDDS:
-		return "NetBiosOverTCPDDS"
-	case DHCPOptNETBIOSTCPNodeType:
-		return "NetBIOSOverTCPNodeType"
-	case DHCPOptNetBIOSTCPScope:
-		return "NetBIOSOverTCPScope"
-	case DHCPOptXFontServer:
-		return "XFontServer"
-	case DHCPOptXDisplayManager:
-		return "XDisplayManager"
-	case DHCPOptEnd:
-		return "(end)"
-	case DHCPOptSIPServers:
-		return "SipServers"
-	case DHCPOptRequestIP:
-		return "RequestIP"
-	case DHCPOptLeaseTime:
-		return "LeaseTime"
-	case DHCPOptExtOptions:
-		return "ExtOpts"
-	case DHCPOptMessageType:
-		return "MessageType"
-	case DHCPOptServerID:
-		return "ServerID"
-	case DHCPOptParamsRequest:
-		return "ParamsRequest"
-	case DHCPOptMessage:
-		return "Message"
-	case DHCPOptMaxMessageSize:
-		return "MaxDHCPSize"
-	case DHCPOptT1:
-		return "Timer1"
-	case DHCPOptT2:
-		return "Timer2"
-	case DHCPOptClassID:
-		return "ClassID"
-	case DHCPOptClientID:
+	case DHCPv6OptClientID:
 		return "ClientID"
-	case DHCPOptDomainSearch:
-		return "DomainSearch"
-	case DHCPOptClasslessStaticRoute:
-		return "ClasslessStaticRoute"
+	case DHCPv6OptServerID:
+		return "ServerID"
+	case DHCPv6OptIANA:
+		return "IA_NA"
+	case DHCPv6OptIATA:
+		return "IA_TA"
+	case DHCPv6OptIAAddr:
+		return "IAAddr"
+	case DHCPv6OptOro:
+		return "Oro"
+	case DHCPv6OptPreference:
+		return "Preference"
+	case DHCPv6OptElapsedTime:
+		return "ElapsedTime"
+	case DHCPv6OptRelayMessage:
+		return "RelayMessage"
+	case DHCPv6OptAuth:
+		return "Auth"
+	case DHCPv6OptUnicast:
+		return "Unicast"
+	case DHCPv6OptStatusCode:
+		return "StatusCode"
+	case DHCPv6OptRapidCommit:
+		return "RapidCommit"
+	case DHCPv6OptUserClass:
+		return "UserClass"
+	case DHCPv6OptVendorClass:
+		return "VendorClass"
+	case DHCPv6OptVendorOpts:
+		return "VendorOpts"
+	case DHCPv6OptInterfaceID:
+		return "InterfaceID"
+	case DHCPv6OptReconfigureMessage:
+		return "ReconfigureMessage"
+	case DHCPv6OptReconfigureAccept:
+		return "ReconfigureAccept"
 	default:
 		return "Unknown"
 	}
 }
 
-// DHCPOption rerpresents a DHCP option.
-type DHCPOption struct {
-	Type   DHCPOpt
+// DHCPv6Option rerpresents a DHCP option.
+type DHCPv6Option struct {
+	Type   DHCPv6Opt
 	Length uint8
 	Data   []byte
 }
 
 // String returns a string version of a DHCP Option.
-func (o DHCPOption) String() string {
+func (o DHCPv6Option) String() string {
 	switch o.Type {
 
-	case DHCPOptHostname, DHCPOptMeritDumpFile, DHCPOptDomainName, DHCPOptRootPath,
-		DHCPOptExtensionsPath, DHCPOptNISDomain, DHCPOptNetBIOSTCPScope, DHCPOptXFontServer,
-		DHCPOptXDisplayManager, DHCPOptMessage, DHCPOptDomainSearch: // string
+	case DHCPv6OptHostname, DHCPv6OptMeritDumpFile, DHCPv6OptDomainName, DHCPv6OptRootPath,
+		DHCPv6OptExtensionsPath, DHCPv6OptNISDomain, DHCPv6OptNetBIOSTCPScope, DHCPv6OptXFontServer,
+		DHCPv6OptXDisplayManager, DHCPv6OptMessage, DHCPv6OptDomainSearch: // string
 		return fmt.Sprintf("Option(%s:%s)", o.Type, string(o.Data))
 
-	case DHCPOptMessageType:
+	case DHCPv6OptMessageType:
 		if len(o.Data) != 1 {
 			return fmt.Sprintf("Option(%s:INVALID)", o.Type)
 		}
 		return fmt.Sprintf("Option(%s:%s)", o.Type, DHCPMsgType(o.Data[0]))
 
-	case DHCPOptSubnetMask, DHCPOptServerID, DHCPOptBroadcastAddr,
-		DHCPOptSolicitAddr, DHCPOptRequestIP: // net.IP
+	case DHCPv6OptSubnetMask, DHCPv6OptServerID, DHCPv6OptBroadcastAddr,
+		DHCPv6OptSolicitAddr, DHCPv6OptRequestIP: // net.IP
 		if len(o.Data) < 4 {
 			return fmt.Sprintf("Option(%s:INVALID)", o.Type)
 		}
 		return fmt.Sprintf("Option(%s:%s)", o.Type, net.IP(o.Data))
 
-	case DHCPOptT1, DHCPOptT2, DHCPOptLeaseTime, DHCPOptPathMTUAgingTimeout,
-		DHCPOptARPTimeout, DHCPOptTCPKeepAliveInt: // uint32
+	case DHCPv6OptT1, DHCPv6OptT2, DHCPv6OptLeaseTime, DHCPv6OptPathMTUAgingTimeout,
+		DHCPv6OptARPTimeout, DHCPv6OptTCPKeepAliveInt: // uint32
 		if len(o.Data) != 4 {
 			return fmt.Sprintf("Option(%s:INVALID)", o.Type)
 		}
 		return fmt.Sprintf("Option(%s:%d)", o.Type,
 			uint32(o.Data[0])<<24|uint32(o.Data[1])<<16|uint32(o.Data[2])<<8|uint32(o.Data[3]))
 
-	case DHCPOptParamsRequest:
+	case DHCPv6OptParamsRequest:
 		buf := &bytes.Buffer{}
 		buf.WriteString(fmt.Sprintf("Option(%s:", o.Type))
 		for i, v := range o.Data {
-			buf.WriteString(DHCPOpt(v).String())
+			buf.WriteString(DHCPv6Opt(v).String())
 			if i+1 != len(o.Data) {
 				buf.WriteByte(',')
 			}
@@ -518,9 +379,9 @@ func (o DHCPOption) String() string {
 	}
 }
 
-// NewDHCPOption constructs a new DHCPOption with a given type and data.
-func NewDHCPOption(t DHCPOpt, data []byte) DHCPOption {
-	o := DHCPOption{Type: t}
+// NewDHCPv6Option constructs a new DHCPv6Option with a given type and data.
+func NewDHCPv6Option(t DHCPv6Opt, data []byte) DHCPv6Option {
+	o := DHCPv6Option{Type: t}
 	if data != nil {
 		o.Data = data
 		o.Length = uint8(len(data))
@@ -528,9 +389,9 @@ func NewDHCPOption(t DHCPOpt, data []byte) DHCPOption {
 	return o
 }
 
-func (o *DHCPOption) encode(b []byte) error {
+func (o *DHCPv6Option) encode(b []byte) error {
 	switch o.Type {
-	case DHCPOptPad, DHCPOptEnd:
+	case DHCPv6OptPad, DHCPv6OptEnd:
 		b[0] = byte(o.Type)
 	default:
 		if o.Length > 253 {
@@ -543,14 +404,14 @@ func (o *DHCPOption) encode(b []byte) error {
 	return nil
 }
 
-func (o *DHCPOption) decode(data []byte) error {
+func (o *DHCPv6Option) decode(data []byte) error {
 	if len(data) < 1 {
 		// Pad/End have a length of 1
 		return errors.New("Not enough data to decode")
 	}
-	o.Type = DHCPOpt(data[0])
+	o.Type = DHCPv6Opt(data[0])
 	switch o.Type {
-	case DHCPOptPad, DHCPOptEnd:
+	case DHCPv6OptPad, DHCPv6OptEnd:
 		o.Data = nil
 	default:
 		if len(data) < 3 {
