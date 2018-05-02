@@ -218,13 +218,13 @@ func (i *ICMPv6RouterAdvertisement) SerializeTo(b gopacket.SerializeBuffer, opts
 // ManagedAddressConfig is true when addresses are available via DHCPv6. If
 // set, the OtherConfig flag is redundant.
 func (i *ICMPv6RouterAdvertisement) ManagedAddressConfig() bool {
-	return i.Flags&0x80 != 1
+	return i.Flags&0x80 != 0
 }
 
 // OtherConfig is true when there is other configuration information available
 // via DHCPv6. For example, DNS-related information.
 func (i *ICMPv6RouterAdvertisement) OtherConfig() bool {
-	return i.Flags&0x40 != 1
+	return i.Flags&0x40 != 0
 }
 
 // LayerType returns LayerTypeICMPv6NeighborSolicitation.
