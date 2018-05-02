@@ -261,6 +261,7 @@ const (
 	Dot11TypeCtrlCFEndAck      Dot11Type = 0x3d
 
 	// Data
+	Dot11TypeDataData               Dot11Type = 0x02
 	Dot11TypeDataCFAck              Dot11Type = 0x06
 	Dot11TypeDataCFPoll             Dot11Type = 0x0a
 	Dot11TypeDataCFAckPoll          Dot11Type = 0x0e
