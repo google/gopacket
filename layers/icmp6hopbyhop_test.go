@@ -12,7 +12,7 @@ import (
 	"testing"
 )
 
-var data = []byte{
+var icmp6HopByHopData = []byte{
 	// Ethernet layer
 	0x33, 0x33, 0x00, 0x00, 0x00, 0x16, // destination
 	0x1e, 0xc3, 0xe3, 0xb7, 0xc4, 0xd5, //  source
@@ -62,14 +62,14 @@ func TestPacketICMPv6WithHopByHop(t *testing.T) {
 	parser.IgnoreUnsupported = true // avoid `No decoder for layer type ICMPv6RouterAdvertisement` error
 
 	respLayers := make([]gopacket.LayerType, 0)
-	err := parser.DecodeLayers(data, &respLayers)
+	err := parser.DecodeLayers(icmp6HopByHopData, &respLayers)
 
 	if err != nil {
 		t.Errorf("error decoding layers %s", err)
 		return
 	}
 
-	expectedType := uint8(data[62])
+	expectedType := uint8(icmp6HopByHopData[62])
 	actualType := uint8(icmpLayerResp.TypeCode.Type())
 	if expectedType != actualType {
 		t.Errorf("expected ICMP layer's TypeCode to be %d but was %d", expectedType, actualType)
