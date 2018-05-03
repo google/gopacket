@@ -31,11 +31,12 @@ func (d debugging) Printf(format string, args ...interface{}) {
 }
 
 // Constants determining how to handle fragments.
+// Reference RFC 791, page 25
 const (
-	IPv4MinimumFragmentSize    = 576   // Minimum size of a single fragment
+	IPv4MinimumFragmentSize    = 8     // Minimum size of a single fragment
 	IPv4MaximumSize            = 65535 // Maximum size of a fragment (2^16)
-	IPv4MaximumFragmentOffset  = 8189  // Maximum offset of a fragment
-	IPv4MaximumFragmentListLen = 8     // Back out if we get more than this many fragments
+	IPv4MaximumFragmentOffset  = 8183  // Maximum offset of a fragment
+	IPv4MaximumFragmentListLen = 8192  // Back out if we get more than this many fragments
 )
 
 // DefragIPv4 takes in an IPv4 packet with a fragment payload.
@@ -89,8 +90,7 @@ func (d *IPv4Defragmenter) DefragIPv4WithTimestamp(in *layers.IPv4, t time.Time)
 		return in, nil
 	}
 	// perfom security checks
-	st, err := d.securityChecks(in)
-	if err != nil || st == false {
+	if err := d.securityChecks(in); err != nil {
 		debug.Printf("defrag: alert security check")
 		return nil, err
 	}
@@ -173,21 +173,27 @@ func (d *IPv4Defragmenter) dontDefrag(ip *layers.IPv4) bool {
 }
 
 // securityChecks performs the needed security checks
-func (d *IPv4Defragmenter) securityChecks(ip *layers.IPv4) (bool, error) {
+func (d *IPv4Defragmenter) securityChecks(ip *layers.IPv4) error {
+	// don't allow small fragments outside of specification
+	if (ip.Length - uint16(ip.IHL)*4) < IPv4MinimumFragmentSize {
+		return fmt.Errorf("defrag: fragment too small "+
+			"(handcrafted? %d < %d)", ip.Length, IPv4MinimumFragmentSize)
+	}
+
 	// don't allow too big fragment offset
 	if ip.FragOffset > IPv4MaximumFragmentOffset {
-		return false, fmt.Errorf("defrag: fragment offset too big "+
+		return fmt.Errorf("defrag: fragment offset too big "+
 			"(handcrafted? %d > %d)", ip.FragOffset, IPv4MaximumFragmentOffset)
 	}
 	fragOffset := ip.FragOffset * 8
 
 	// don't allow fragment that would oversize an IP packet
 	if fragOffset+ip.Length > IPv4MaximumSize {
-		return false, fmt.Errorf("defrag: fragment will overrun "+
-			"(handcrafted? %d > %d)", ip.FragOffset*8+ip.Length, IPv4MaximumSize)
+		return fmt.Errorf("defrag: fragment will overrun "+
+			"(handcrafted? %d > %d)", fragOffset+ip.Length, IPv4MaximumSize)
 	}
 
-	return true, nil
+	return nil
 }
 
 // fragmentList holds a container/list used to contains IP
