@@ -143,35 +143,83 @@ func TestDefragPing1and2(t *testing.T) {
 	debug = false
 }
 
-func TestDefragPingTooMuch(t *testing.T) {
+func TestDefragTooSmall(t *testing.T) {
 	defrag := NewIPv4Defragmenter()
 
 	ip1 := layers.IPv4{
 		Version:    4,
+		IHL:        5,
 		TTL:        15,
 		SrcIP:      net.IPv4(1, 1, 1, 1),
 		DstIP:      net.IPv4(2, 2, 2, 2),
 		Id:         0xcc,
 		FragOffset: 0,
-		Length:     500,
+		Length:     27, // Minimum fragment size -1 + header (20)
 		Flags:      layers.IPv4MoreFragments,
 	}
-	defrag.DefragIPv4(&ip1)
-	for i := 2; i < 8; i = i + 1 {
-		nip := ip1
-		nip.FragOffset = ip1.Length * uint16(i)
-		out, err := defrag.DefragIPv4(&nip)
-		if err != nil || out != nil {
-			t.Fatalf("defrag: %s", err)
-		}
-
+	if _, err := defrag.DefragIPv4(&ip1); err == nil {
+		t.Fatal("defrag: Minimum fragment size is supposed to be 8")
 	}
-	ip8 := ip1
-	ip8.FragOffset = 666
 
-	_, err := defrag.DefragIPv4(&ip8)
+	ip1.Length++
+	if _, err := defrag.DefragIPv4(&ip1); err != nil {
+		t.Fatalf("defrag: Minimum fragment size is supposed to be 8, %s", err)
+	}
+}
+
+func TestDefragFragmentOffset(t *testing.T) {
+	defrag := NewIPv4Defragmenter()
+
+	ip1 := layers.IPv4{
+		Version:    4,
+		IHL:        5,
+		TTL:        15,
+		SrcIP:      net.IPv4(1, 1, 1, 1),
+		DstIP:      net.IPv4(2, 2, 2, 2),
+		Id:         0xcc,
+		FragOffset: 0,
+		Length:     512,
+		Flags:      layers.IPv4MoreFragments,
+	}
+	if _, err := defrag.DefragIPv4(&ip1); err != nil {
+		t.Fatal(err)
+	}
+
+	ip2 := ip1
+	ip2.FragOffset = 8184
+
+	_, err := defrag.DefragIPv4(&ip2)
 	if err == nil {
-		t.Fatalf("defrag: Maximum number of fragments are supposed to be 8")
+		t.Fatalf("defrag: Maximum fragment offset is supposed to be 8183")
+	}
+}
+
+func TestDefragMaxSize(t *testing.T) {
+	defrag := NewIPv4Defragmenter()
+
+	ip1 := layers.IPv4{
+		Version:    4,
+		IHL:        5,
+		TTL:        15,
+		SrcIP:      net.IPv4(1, 1, 1, 1),
+		DstIP:      net.IPv4(2, 2, 2, 2),
+		Id:         0xcc,
+		FragOffset: 0,
+		Length:     65535,
+		Flags:      layers.IPv4MoreFragments,
+	}
+	if _, err := defrag.DefragIPv4(&ip1); err != nil {
+		t.Fatal(err)
+	}
+
+	ip2 := ip1
+	ip2.Length = 28
+	ip2.FragOffset = 1
+
+	_, err := defrag.DefragIPv4(&ip2)
+	if err != nil {
+		t.Fatal(err)
+		t.Fatalf("defrag: Maximum length is supposed to be 65535")
 	}
 }
 
