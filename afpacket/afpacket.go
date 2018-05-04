@@ -283,7 +283,7 @@ retry:
 			goto retry
 		}
 	}
-	data = h.current.getData()
+	data = h.current.getData(&h.opts)
 	ci.Timestamp = h.current.getTime()
 	ci.CaptureLength = len(data)
 	ci.Length = h.current.getLength()
