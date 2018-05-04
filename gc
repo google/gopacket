@@ -186,6 +186,12 @@ if [ -f /usr/include/pfring.h ]; then
   go build
   popd
 fi
+pushd ip4defrag
+go test ./...
+popd
+pushd defrag
+go test ./...
+popd
 
 for travis_script in `ls .travis.*.sh`; do
   ./$travis_script
