@@ -8,3 +8,5 @@ See [godoc](https://godoc.org/github.com/google/gopacket) for more details.
 
 Originally forked from the gopcap project written by Andreas
 Krennmair <ak@synflood.at> (http://github.com/akrennmair/gopcap).
+
+#My own fork added as remote, so all changes will be pushed to my #fork while making changes in original local repo
