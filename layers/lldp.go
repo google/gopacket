@@ -48,7 +48,7 @@ const (
 	LLDPChassisIDSubTypePortComp    LLDPChassisIDSubType = 3
 	LLDPChassisIDSubTypeMACAddr     LLDPChassisIDSubType = 4
 	LLDPChassisIDSubTypeNetworkAddr LLDPChassisIDSubType = 5
-	LLDPChassisIDSubtypeIfaceName   LLDPChassisIDSubType = 6
+	LLDPChassisIDSubTypeIfaceName   LLDPChassisIDSubType = 6
 	LLDPChassisIDSubTypeLocal       LLDPChassisIDSubType = 7
 )
 
@@ -1209,7 +1209,7 @@ func (t LLDPChassisIDSubType) String() (s string) {
 		s = "MAC Address"
 	case LLDPChassisIDSubTypeNetworkAddr:
 		s = "Network Address"
-	case LLDPChassisIDSubtypeIfaceName:
+	case LLDPChassisIDSubTypeIfaceName:
 		s = "Interface Name"
 	case LLDPChassisIDSubTypeLocal:
 		s = "Local"
