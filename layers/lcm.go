@@ -165,11 +165,11 @@ func (lcm LCM) CanDecode() gopacket.LayerClass {
 // combination of data types, lookup of correct layer type is based on that
 // fingerprint.
 func (lcm LCM) NextLayerType() gopacket.LayerType {
-	if lcm.Fragmented {
-		return gopacket.LayerTypeFragment
+	if !lcm.Fragmented || (lcm.Fragmented && lcm.FragmentNumber == 0) {
+		return GetLCMLayerType(lcm.fingerprint)
 	}
 
-	return GetLCMLayerType(lcm.fingerprint)
+	return gopacket.LayerTypeFragment
 }
 
 // LayerType returns LayerTypeLCM
