@@ -761,15 +761,6 @@ func (c *LinkLayerDiscovery) SerializeTo(b gopacket.SerializeBuffer, opts gopack
 	}
 	cBytes := c.ChassisID.Serialize()
 	copy(vb[:], cBytes)
-	/*
-		var chassIdLength uint16 = uint16(LLDPTLVChassisID) << 9
-		var length uint16 = 7
-		chassIdLength = chassIdLength | length
-		binary.BigEndian.PutUint16(vb[0:2], chassIdLength)
-		var sbb byte = 4
-		copy(vb[2:3], []byte{sbb})
-
-		copy(vb[3:9], net.HardwareAddr{0x50, 0x3E, 0xAA, 0x41, 0xFB, 0x46})*/
 
 	return nil
 }
