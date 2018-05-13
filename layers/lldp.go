@@ -41,13 +41,6 @@ func (c *LinkLayerDiscoveryValue) len() int {
 	return 0
 }
 
-/*
-type LLDPSerializableTLV interface {
-	TLVID() byte
-	Serialize() []byte
-	Len() int
-}
-*/
 // LLDPChassisIDSubType specifies the value type for a single LLDPChassisID.ID
 type LLDPChassisIDSubType byte
 
@@ -795,31 +788,6 @@ func (c *LinkLayerDiscovery) SerializeTo(b gopacket.SerializeBuffer, opts gopack
 
 }
 
-/*
-func (c *LLDPChassisID) TLVID() byte {
-	return byte(LLDPTLVChassisID)
-}
-func (c *LLDPChassisID) Serialize() []byte {
-	var buf = make([]byte, c.Len())
-	idLen := uint16(c.TLVID())<<9 | uint16(len(c.ID)+1) //id should take 7 bits, length should take 9 bits, +1 for subtype
-	binary.BigEndian.PutUint16(buf[0:2], idLen)
-	buf[2] = byte(c.Subtype)
-	copy(buf[3:], c.ID)
-	return buf
-}
-func (c *LLDPChassisID) Len() int {
-	return len(c.ID) + 3 // +2 for id and length, +1 for subtype
-}
-*/
-
-func serializeTLV(tlv LinkLayerDiscoveryValue) []byte {
-	valueLen := uint16(len(tlv.Value))
-	var buf = make([]byte, valueLen+2) // 2 bytes for tlv type and length, (1 byte for subtype is covered in value)
-	idLen := ((uint16(tlv.Type) << 9) | tlv.Length)
-	binary.BigEndian.PutUint16(buf[0:2], idLen)
-	copy(buf[2:], tlv.Value)
-	return nil
-}
 func decodeLinkLayerDiscovery(data []byte, p gopacket.PacketBuilder) error {
 	var vals []LinkLayerDiscoveryValue
 	vData := data[0:]
