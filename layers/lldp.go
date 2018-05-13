@@ -36,12 +36,18 @@ type LinkLayerDiscoveryValue struct {
 	Length uint16
 	Value  []byte
 }
+
+func (c *LinkLayerDiscoveryValue) len() int {
+	return 0
+}
+
+/*
 type LLDPSerializableTLV interface {
 	TLVID() byte
 	Serialize() []byte
 	Len() int
 }
-
+*/
 // LLDPChassisIDSubType specifies the value type for a single LLDPChassisID.ID
 type LLDPChassisIDSubType byte
 
@@ -62,18 +68,17 @@ type LLDPChassisID struct {
 	ID      []byte
 }
 
-func (c *LLDPChassisID) TLVID() byte {
-	return byte(LLDPTLVChassisID)
-}
-func (c *LLDPChassisID) Serialize() []byte {
-	var buf = make([]byte, c.Len())
-	idLen := uint16(c.TLVID())<<9 | uint16(len(c.ID)+1) //id should take 7 bits, length should take 9 bits, +1 for subtype
+func (c *LLDPChassisID) serialize() []byte {
+
+	var buf = make([]byte, c.serializedLen())
+	idLen := uint16(LLDPTLVChassisID)<<9 | uint16(len(c.ID)+1) //id should take 7 bits, length should take 9 bits, +1 for subtype
 	binary.BigEndian.PutUint16(buf[0:2], idLen)
 	buf[2] = byte(c.Subtype)
 	copy(buf[3:], c.ID)
 	return buf
 }
-func (c *LLDPChassisID) Len() int {
+
+func (c *LLDPChassisID) serializedLen() int {
 	return len(c.ID) + 3 // +2 for id and length, +1 for subtype
 }
 
@@ -95,6 +100,20 @@ const (
 type LLDPPortID struct {
 	Subtype LLDPPortIDSubType
 	ID      []byte
+}
+
+func (c *LLDPPortID) serialize() []byte {
+
+	var buf = make([]byte, c.serializedLen())
+	idLen := uint16(LLDPTLVPortID)<<9 | uint16(len(c.ID)+1) //id should take 7 bits, length should take 9 bits, +1 for subtype
+	binary.BigEndian.PutUint16(buf[0:2], idLen)
+	buf[2] = byte(c.Subtype)
+	copy(buf[3:], c.ID)
+	return buf
+}
+
+func (c *LLDPPortID) serializedLen() int {
+	return len(c.ID) + 3 // +2 for id and length, +1 for subtype
 }
 
 // LinkLayerDiscovery is a packet layer containing the LinkLayer Discovery Protocol.
@@ -753,17 +772,46 @@ func (c *LinkLayerDiscovery) LayerType() gopacket.LayerType {
 	return LayerTypeLinkLayerDiscovery
 }
 
-// Satisfy SerializableLayer interface
+// SerializeTo serializes LLDP packet to bytes and writes on SerializeBuffer.
 func (c *LinkLayerDiscovery) SerializeTo(b gopacket.SerializeBuffer, opts gopacket.SerializeOptions) error {
-	vb, err := b.AppendBytes(c.ChassisID.Len())
+	chassIDLen := c.ChassisID.serializedLen()
+	portIDLen := c.PortID.serializedLen()
+	vb, err := b.AppendBytes(chassIDLen + portIDLen + 4) // +4 for TTL
 	if err != nil {
 		return err
 	}
-	cBytes := c.ChassisID.Serialize()
-	copy(vb[:], cBytes)
+	copy(vb[:chassIDLen], c.ChassisID.serialize())
+	copy(vb[chassIDLen:], c.PortID.serialize())
+	ttlIDLen := uint16(LLDPTLVTTL)<<9 | uint16(2)
+	binary.BigEndian.PutUint16(vb[chassIDLen+portIDLen:], ttlIDLen)
+	binary.BigEndian.PutUint16(vb[chassIDLen+portIDLen+2:], c.TTL)
 
+	vb, err = b.AppendBytes(2) // End Tlv, 2 bytes
+	if err != nil {
+		return err
+	}
+	binary.BigEndian.PutUint16(vb[len(vb)-2:], uint16(0)) //End tlv, 2 bytes, all zero
 	return nil
+
 }
+
+/*
+func (c *LLDPChassisID) TLVID() byte {
+	return byte(LLDPTLVChassisID)
+}
+func (c *LLDPChassisID) Serialize() []byte {
+	var buf = make([]byte, c.Len())
+	idLen := uint16(c.TLVID())<<9 | uint16(len(c.ID)+1) //id should take 7 bits, length should take 9 bits, +1 for subtype
+	binary.BigEndian.PutUint16(buf[0:2], idLen)
+	buf[2] = byte(c.Subtype)
+	copy(buf[3:], c.ID)
+	return buf
+}
+func (c *LLDPChassisID) Len() int {
+	return len(c.ID) + 3 // +2 for id and length, +1 for subtype
+}
+*/
+
 func serializeTLV(tlv LinkLayerDiscoveryValue) []byte {
 	valueLen := uint16(len(tlv.Value))
 	var buf = make([]byte, valueLen+2) // 2 bytes for tlv type and length, (1 byte for subtype is covered in value)
