@@ -133,6 +133,7 @@ var (
 	LayerTypeGTPv1U                      = gopacket.RegisterLayerType(129, gopacket.LayerTypeMetadata{Name: "GTPv1U", Decoder: gopacket.DecodeFunc(decodeGTPv1u)})
 	LayerTypeEAPOLKey                    = gopacket.RegisterLayerType(130, gopacket.LayerTypeMetadata{Name: "EAPOLKey", Decoder: gopacket.DecodeFunc(decodeEAPOLKey)})
 	LayerTypeLCM                         = gopacket.RegisterLayerType(131, gopacket.LayerTypeMetadata{Name: "LCM", Decoder: gopacket.DecodeFunc(decodeLCM)})
+	LayerTypeICMPv6Echo                  = gopacket.RegisterLayerType(132, gopacket.LayerTypeMetadata{Name: "ICMPv6Echo", Decoder: gopacket.DecodeFunc(decodeICMPv6Echo)})
 )
 
 var (
