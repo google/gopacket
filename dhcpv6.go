@@ -73,9 +73,6 @@ func (o DHCPv6MsgType) String() string {
 	}
 }
 
-//DHCPMagic is the RFC 2131 "magic cooke" for DHCP.
-var DHCPMagic uint32 = 0x63825363
-
 // DHCPv4 contains data for a single DHCP packet.
 type DHCPv4 struct {
 	BaseLayer
@@ -94,24 +91,6 @@ type DHCPv4 struct {
 	ServerName   []byte
 	File         []byte
 	Options      DHCPv6Options
-}
-
-// DHCPv6Options is used to get nicely printed option lists which would normally
-// be cut off after 5 options.
-type DHCPv6Options []DHCPv6Option
-
-// String returns a string version of the options list.
-func (o DHCPv6Options) String() string {
-	buf := &bytes.Buffer{}
-	buf.WriteByte('[')
-	for i, opt := range o {
-		buf.WriteString(opt.String())
-		if i+1 != len(o) {
-			buf.WriteString(", ")
-		}
-	}
-	buf.WriteByte(']')
-	return buf.String()
 }
 
 // LayerType returns gopacket.LayerTypeDHCPv4
@@ -251,6 +230,63 @@ func decodeDHCPv4(data []byte, p gopacket.PacketBuilder) error {
 	return p.NextDecoder(gopacket.LayerTypePayload)
 }
 
+// DHCPv6StatusCode represents a DHCP status code - RFC-3315
+type DHCPv6StatusCode byte
+
+// Constants for the DHCPv6StatusCode.
+const (
+	DHCPv6StatusCodeSuccess           DHCPv6StatusCode = iota
+	DHCPv6StatusCodeUnspecFail
+	DHCPv6StatusCodeNoAddrsAvail
+	DHCPv6StatusCodeNoBinding
+	DHCPv6StatusCodeNotOnLink
+	DHCPv6StatusCodeUseMulticast
+)
+
+// String returns a string version of a DHCPv6StatusCode.
+func (o DHCPv6StatusCode) String() string {
+	switch o {
+	case DHCPv6StatusCodeSuccess:
+		return "Success"
+	case DHCPv6StatusCodeUnspecFail:
+		return "UnspecifiedFailure"
+	case DHCPv6StatusCodeNoAddrsAvail:
+		return "NoAddressAvailable"
+	case DHCPv6StatusCodeNoBinding:
+		return "NoBinding"
+	case DHCPv6StatusCodeNotOnLink:
+		return "NotOnLink"
+	case DHCPv6StatusCodeUseMulticast:
+		return "UseMulticast"
+	default:
+		return "Unknown"
+	}
+}
+
+// DHCPv6Duid represents a DHCP DUID - RFC-3315
+type DHCPv6Duid byte
+
+// Constants for the DHCPv6Duid.
+const (
+	DHCPv6DuidLLT           DHCPv6Duid = iota + 1
+	DHCPv6DuidEN
+	DHCPv6DuidLL
+)
+
+// String returns a string version of a DHCPv6Duid.
+func (o DHCPv6Duid) String() string {
+	switch o {
+	case DHCPv6DuidLLT:
+		return "LLT"
+	case DHCPv6DuidEN:
+		return "EN"
+	case DHCPv6DuidLL:
+		return "LL"
+	default:
+		return "Unknown"
+	}
+}
+
 // DHCPv6Opt represents a DHCP option or parameter from RFC-3315
 type DHCPv6Opt byte
 
@@ -280,8 +316,6 @@ const (
 // String returns a string version of a DHCPv6Opt.
 func (o DHCPv6Opt) String() string {
 	switch o {
-	case DHCPv6OptPad:
-		return "(padding)"
 	case DHCPv6OptClientID:
 		return "ClientID"
 	case DHCPv6OptServerID:
@@ -323,6 +357,24 @@ func (o DHCPv6Opt) String() string {
 	default:
 		return "Unknown"
 	}
+}
+
+// DHCPv6Options is used to get nicely printed option lists which would normally
+// be cut off after 5 options.
+type DHCPv6Options []DHCPv6Option
+
+// String returns a string version of the options list.
+func (o DHCPv6Options) String() string {
+	buf := &bytes.Buffer{}
+	buf.WriteByte('[')
+	for i, opt := range o {
+		buf.WriteString(opt.String())
+		if i+1 != len(o) {
+			buf.WriteString(", ")
+		}
+	}
+	buf.WriteByte(']')
+	return buf.String()
 }
 
 // DHCPv6Option rerpresents a DHCP option.
