@@ -54,6 +54,13 @@ const (
 	ICMPv6OptMTU
 )
 
+// ICMPv6Echo represents the structure of a ping.
+type ICMPv6Echo struct {
+	BaseLayer
+	Identifier uint16
+	SeqNumber  uint16
+}
+
 // ICMPv6RouterSolicitation is sent by hosts to find routers.
 type ICMPv6RouterSolicitation struct {
 	BaseLayer
@@ -120,6 +127,28 @@ func (i ICMPv6Opt) String() string {
 	default:
 		return fmt.Sprintf("Unknown(%d)", i)
 	}
+}
+
+// LayerType returns LayerTypeICMPv6Echo.
+func (i *ICMPv6Echo) LayerType() gopacket.LayerType {
+	return LayerTypeICMPv6Echo
+}
+
+// NextLayerType returns the layer type contained by this DecodingLayer.
+func (i *ICMPv6Echo) NextLayerType() gopacket.LayerType {
+	return gopacket.LayerTypePayload
+}
+
+// DecodeFromBytes decodes the given bytes into this layer.
+func (i *ICMPv6Echo) DecodeFromBytes(data []byte, df gopacket.DecodeFeedback) error {
+	if len(data) < 4 {
+		df.SetTruncated()
+		return errors.New("ICMP layer less then 4 bytes for ICMPv6 Echo")
+	}
+	i.Identifier = binary.BigEndian.Uint16(data[0:2])
+	i.SeqNumber = binary.BigEndian.Uint16(data[2:4])
+
+	return nil
 }
 
 // LayerType returns LayerTypeICMPv6.
@@ -467,6 +496,11 @@ func (i *ICMPv6Options) SerializeTo(b gopacket.SerializeBuffer, opts gopacket.Se
 	}
 
 	return nil
+}
+
+func decodeICMPv6Echo(data []byte, p gopacket.PacketBuilder) error {
+	i := &ICMPv6Echo{}
+	return decodingLayerDecoder(i, data, p)
 }
 
 func decodeICMPv6RouterSolicitation(data []byte, p gopacket.PacketBuilder) error {
