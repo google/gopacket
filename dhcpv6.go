@@ -73,96 +73,69 @@ func (o DHCPv6MsgType) String() string {
 	}
 }
 
-// DHCPv4 contains data for a single DHCP packet.
-type DHCPv4 struct {
+// DHCPv6 contains data for a single DHCP packet.
+type DHCPv6 struct {
 	BaseLayer
-	Operation    DHCPOp
-	HardwareType LinkType
-	HardwareLen  uint8
-	HardwareOpts uint8
-	Xid          uint32
-	Secs         uint16
-	Flags        uint16
-	ClientIP     net.IP
-	YourClientIP net.IP
-	NextServerIP net.IP
-	RelayAgentIP net.IP
-	ClientHWAddr net.HardwareAddr
-	ServerName   []byte
-	File         []byte
-	Options      DHCPv6Options
+	MsgType       uint8
+	TransactionId []byte
+	HopCount      uint8
+	LinkAddr      net.IP
+	PeerAddr      net.IP
+	Options       DHCPv6Options
 }
 
-// LayerType returns gopacket.LayerTypeDHCPv4
-func (d *DHCPv4) LayerType() gopacket.LayerType { return LayerTypeDHCPv4 }
+// LayerType returns gopacket.LayerTypeDHCPv6
+func (d *DHCPv6) LayerType() gopacket.LayerType { return LayerTypeDHCPv6 }
 
 // DecodeFromBytes decodes the given bytes into this layer.
-func (d *DHCPv4) DecodeFromBytes(data []byte, df gopacket.DecodeFeedback) error {
+func (d *DHCPv6) DecodeFromBytes(data []byte, df gopacket.DecodeFeedback) error {
 	d.Options = d.Options[:0]
-	d.Operation = DHCPOp(data[0])
-	d.HardwareType = LinkType(data[1])
-	d.HardwareLen = data[2]
-	d.HardwareOpts = data[3]
-	d.Xid = binary.BigEndian.Uint32(data[4:8])
-	d.Secs = binary.BigEndian.Uint16(data[8:10])
-	d.Flags = binary.BigEndian.Uint16(data[10:12])
-	d.ClientIP = net.IP(data[12:16])
-	d.YourClientIP = net.IP(data[16:20])
-	d.NextServerIP = net.IP(data[20:24])
-	d.RelayAgentIP = net.IP(data[24:28])
-	d.ClientHWAddr = net.HardwareAddr(data[28 : 28+d.HardwareLen])
-	d.ServerName = data[44:108]
-	d.File = data[108:236]
-	if binary.BigEndian.Uint32(data[236:240]) != DHCPMagic {
-		return errors.New("Bad DHCP header")
+	d.MsgType = DHCPv6MsgType(data[0])
+
+	offset := 0
+	if d.MsgType == DHCPv6MsgTypeRelayForward || d.MsgType == DHCPv6MsgTypeRelayForward {
+		d.HopCount = data[1]
+		d.LinkAddr = net.IP(data[2:18])
+		d.PeerAddr = net.IP(data[18:34])
+		offset = 34
+	} else {
+		d.TransactionId = data[1:4]
+		offset = 4
 	}
 
-	if len(data) <= 240 {
-		// DHCP Packet could have no option (??)
-		return nil
-	}
-
-	options := data[240:]
-
-	stop := len(options)
-	start := 0
-	for start < stop {
+	stop := len(data)
+	for offset < stop {
 		o := DHCPv6Option{}
-		if err := o.decode(options[start:]); err != nil {
+		if err := o.decode(data[offset:]); err != nil {
 			return err
 		}
-		if o.Type == DHCPv6OptEnd {
-			break
-		}
 		d.Options = append(d.Options, o)
-		// Check if the option is a single byte pad
-		if o.Type == DHCPv6OptPad {
-			start++
-		} else {
-			start += int(o.Length) + 2
-		}
+		offset += int(o.Length) + 4 // 2 from option code, 2 from option length
 	}
+
 	return nil
 }
 
-// Len returns the length of a DHCPv4 packet.
-func (d *DHCPv4) Len() uint16 {
-	n := uint16(240)
-	for _, o := range d.Options {
-		if o.Type == DHCPv6OptPad {
-			n++
-		} else {
-			n += uint16(o.Length) + 2
-		}
+// Len returns the length of a DHCPv6 packet.
+func (d *DHCPv6) Len() int {
+	n := 1
+	if d.MsgType == DHCPv6MsgTypeRelayForward || d.MsgType == DHCPv6MsgTypeRelayReply {
+		n += 33
+	} else {
+		n += 3
 	}
-	n++ // for opt end
+
+	for _, o := range d.Options {
+		n += int(o.Length) + 4 // 2 from option code, 2 from option length
+	}
+
 	return n
 }
 
 // SerializeTo writes the serialized form of this layer into the
 // SerializationBuffer, implementing gopacket.SerializableLayer.
 // See the docs for gopacket.SerializableLayer for more info.
-func (d *DHCPv4) SerializeTo(b gopacket.SerializeBuffer, opts gopacket.SerializeOptions) error {
+func (d *DHCPv6) SerializeTo(b gopacket.SerializeBuffer, opts gopacket.SerializeOptions) error {
 	plen := int(d.Len())
 
 	data, err := b.PrependBytes(plen)
@@ -170,58 +143,41 @@ func (d *DHCPv4) SerializeTo(b gopacket.SerializeBuffer, opts gopacket.Serialize
 		return err
 	}
 
-	data[0] = byte(d.Operation)
-	data[1] = byte(d.HardwareType)
-	if opts.FixLengths {
-		d.HardwareLen = uint8(len(d.ClientHWAddr))
+	offset := 0
+	data[0] = byte(d.MsgType)
+	if d.MsgType == DHCPv6MsgTypeRelayForward || d.MsgType == DHCPv6MsgTypeRelayReply {
+		data[1] = byte(d.HopCount)
+		copy(data[2:18], d.LinkAddr.To6())
+		copy(data[18:34], d.PeerAddr.To6())
+		offset = 34
+	} else {
+		copy(data[1:4], d.TransactionId)
+		offset = 4
 	}
-	data[2] = d.HardwareLen
-	data[3] = d.HardwareOpts
-	binary.BigEndian.PutUint32(data[4:8], d.Xid)
-	binary.BigEndian.PutUint16(data[8:10], d.Secs)
-	binary.BigEndian.PutUint16(data[10:12], d.Flags)
-	copy(data[12:16], d.ClientIP.To4())
-	copy(data[16:20], d.YourClientIP.To4())
-	copy(data[20:24], d.NextServerIP.To4())
-	copy(data[24:28], d.RelayAgentIP.To4())
-	copy(data[28:44], d.ClientHWAddr)
-	copy(data[44:108], d.ServerName)
-	copy(data[108:236], d.File)
-	binary.BigEndian.PutUint32(data[236:240], DHCPMagic)
 
 	if len(d.Options) > 0 {
-		offset := 240
 		for _, o := range d.Options {
 			if err := o.encode(data[offset:]); err != nil {
 				return err
 			}
-			// A pad option is only a single byte
-			if o.Type == DHCPv6OptPad {
-				offset++
-			} else {
-				offset += 2 + len(o.Data)
-			}
-		}
-		optend := NewDHCPv6Option(DHCPv6OptEnd, nil)
-		if err := optend.encode(data[offset:]); err != nil {
-			return err
+			offset += int(o.Length) + 4 // 2 from option code, 2 from option length
 		}
 	}
 	return nil
 }
 
 // CanDecode returns the set of layer types that this DecodingLayer can decode.
-func (d *DHCPv4) CanDecode() gopacket.LayerClass {
-	return LayerTypeDHCPv4
+func (d *DHCPv6) CanDecode() gopacket.LayerClass {
+	return LayerTypeDHCPv6
 }
 
 // NextLayerType returns the layer type contained by this DecodingLayer.
-func (d *DHCPv4) NextLayerType() gopacket.LayerType {
+func (d *DHCPv6) NextLayerType() gopacket.LayerType {
 	return gopacket.LayerTypePayload
 }
 
-func decodeDHCPv4(data []byte, p gopacket.PacketBuilder) error {
-	dhcp := &DHCPv4{}
+func decodeDHCPv6(data []byte, p gopacket.PacketBuilder) error {
+	dhcp := &DHCPv6{}
 	err := dhcp.DecodeFromBytes(data, p)
 	if err != nil {
 		return err
@@ -235,7 +191,7 @@ type DHCPv6StatusCode byte
 
 // Constants for the DHCPv6StatusCode.
 const (
-	DHCPv6StatusCodeSuccess           DHCPv6StatusCode = iota
+	DHCPv6StatusCodeSuccess DHCPv6StatusCode = iota
 	DHCPv6StatusCodeUnspecFail
 	DHCPv6StatusCodeNoAddrsAvail
 	DHCPv6StatusCodeNoBinding
@@ -268,7 +224,7 @@ type DHCPv6Duid byte
 
 // Constants for the DHCPv6Duid.
 const (
-	DHCPv6DuidLLT           DHCPv6Duid = iota + 1
+	DHCPv6DuidLLT DHCPv6Duid = iota + 1
 	DHCPv6DuidEN
 	DHCPv6DuidLL
 )
@@ -288,7 +244,7 @@ func (o DHCPv6Duid) String() string {
 }
 
 // DHCPv6Opt represents a DHCP option or parameter from RFC-3315
-type DHCPv6Opt byte
+type DHCPv6Opt uint16
 
 // Constants for the DHCPv6Opt options.
 const (
@@ -379,8 +335,8 @@ func (o DHCPv6Options) String() string {
 
 // DHCPv6Option rerpresents a DHCP option.
 type DHCPv6Option struct {
-	Type   DHCPv6Opt
-	Length uint8
+	Code   DHCPv6Opt
+	Length uint16
 	Data   []byte
 }
 
@@ -432,48 +388,33 @@ func (o DHCPv6Option) String() string {
 }
 
 // NewDHCPv6Option constructs a new DHCPv6Option with a given type and data.
-func NewDHCPv6Option(t DHCPv6Opt, data []byte) DHCPv6Option {
-	o := DHCPv6Option{Type: t}
+func NewDHCPv6Option(code DHCPv6Opt, data []byte) DHCPv6Option {
+	o := DHCPv6Option{Code: code}
 	if data != nil {
 		o.Data = data
-		o.Length = uint8(len(data))
+		o.Length = uint16(len(data))
 	}
+
 	return o
 }
 
 func (o *DHCPv6Option) encode(b []byte) error {
-	switch o.Type {
-	case DHCPv6OptPad, DHCPv6OptEnd:
-		b[0] = byte(o.Type)
-	default:
-		if o.Length > 253 {
-			return errors.New("data too long to encode")
-		}
-		b[0] = byte(o.Type)
-		b[1] = o.Length
-		copy(b[2:], o.Data)
-	}
+	copy(b[0:2], binary.BigEndian.Uint16(o.Code))
+	copy(b[2:4], binary.BigEndian.Uint16(o.Length))
+	copy(b[4:], o.Data)
+
 	return nil
 }
 
 func (o *DHCPv6Option) decode(data []byte) error {
-	if len(data) < 1 {
-		// Pad/End have a length of 1
+	if len(data) < 2 {
 		return errors.New("Not enough data to decode")
 	}
-	o.Type = DHCPv6Opt(data[0])
-	switch o.Type {
-	case DHCPv6OptPad, DHCPv6OptEnd:
-		o.Data = nil
-	default:
-		if len(data) < 3 {
-			return errors.New("Not enough data to decode")
-		}
-		o.Length = data[1]
-		if o.Length > 253 {
-			return errors.New("data too long to decode")
-		}
-		o.Data = data[2 : 2+o.Length]
+	o.Code = DHCPv6Opt(binary.BigEndian.Uint16(data[0:2]))
+	if len(data) < 3 {
+		return errors.New("Not enough data to decode")
 	}
+	o.Length = binary.BigEndian.Uint16(data[2:4])
+	o.Data = data[4 : 4+o.Length]
 	return nil
 }
