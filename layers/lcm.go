@@ -43,13 +43,18 @@ type LCM struct {
 	ChannelName string
 	// Gopacket helper fields
 	Fragmented  bool
-	fingerprint uint64
+	fingerprint LCMFingerprint
 	contents    []byte
 	payload     []byte
 }
 
+// LCMFingerprint is the type of a LCM fingerprint.
+type LCMFingerprint uint64
+
 var (
-	lcmLayerTypes  = map[uint64]gopacket.LayerType{}
+	// lcmLayerTypes contains a map of all LCM fingerprints that we support and
+	// their LayerType
+	lcmLayerTypes  = map[LCMFingerprint]gopacket.LayerType{}
 	layerTypeIndex = 1001
 )
 
@@ -58,9 +63,8 @@ var (
 // contains and which identifies it uniquely. If num is not the zero value it
 // will be used when registering with RegisterLayerType towards gopacket,
 // otherwise an incremental value starting from 1001 will be used.
-func RegisterLCMLayerType(num int, fingerprint uint64,
+func RegisterLCMLayerType(num int, name string, fingerprint LCMFingerprint,
 	decoder gopacket.Decoder) gopacket.LayerType {
-	name := fmt.Sprintf("%v", fingerprint)
 	metadata := gopacket.LayerTypeMetadata{Name: name, Decoder: decoder}
 
 	if num == 0 {
@@ -73,9 +77,19 @@ func RegisterLCMLayerType(num int, fingerprint uint64,
 	return lcmLayerTypes[fingerprint]
 }
 
+// SupportedLCMFingerprints returns a slice of all LCM fingerprints that has
+// been registered so far.
+func SupportedLCMFingerprints() []LCMFingerprint {
+	fingerprints := make([]LCMFingerprint, 0, len(lcmLayerTypes))
+	for fp := range lcmLayerTypes {
+		fingerprints = append(fingerprints, fp)
+	}
+	return fingerprints
+}
+
 // GetLCMLayerType returns the underlying LCM message's LayerType.
 // This LayerType has to be registered by using RegisterLCMLayerType.
-func GetLCMLayerType(fingerprint uint64) gopacket.LayerType {
+func GetLCMLayerType(fingerprint LCMFingerprint) gopacket.LayerType {
 	layerType, ok := lcmLayerTypes[fingerprint]
 	if !ok {
 		return gopacket.LayerTypePayload
@@ -146,7 +160,8 @@ func (lcm *LCM) DecodeFromBytes(data []byte, df gopacket.DecodeFeedback) error {
 		lcm.ChannelName = string(buffer)
 	}
 
-	lcm.fingerprint = binary.BigEndian.Uint64(data[offset : offset+8])
+	lcm.fingerprint = LCMFingerprint(
+		binary.BigEndian.Uint64(data[offset : offset+8]))
 
 	lcm.contents = data[:offset]
 	lcm.payload = data[offset:]
@@ -190,4 +205,9 @@ func (lcm LCM) LayerPayload() []byte {
 // Payload returns the payload following this LCM header.
 func (lcm LCM) Payload() []byte {
 	return lcm.LayerPayload()
+}
+
+// Fingerprint returns the LCM fingerprint of the underlying message.
+func (lcm LCM) Fingerprint() LCMFingerprint {
+	return lcm.fingerprint
 }
