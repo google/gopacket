@@ -76,11 +76,11 @@ func (o DHCPv6MsgType) String() string {
 // DHCPv6 contains data for a single DHCP packet.
 type DHCPv6 struct {
 	BaseLayer
-	MsgType       uint8
-	TransactionId []byte
+	MsgType       DHCPv6MsgType
 	HopCount      uint8
 	LinkAddr      net.IP
 	PeerAddr      net.IP
+	TransactionId []byte
 	Options       DHCPv6Options
 }
 
@@ -147,8 +147,8 @@ func (d *DHCPv6) SerializeTo(b gopacket.SerializeBuffer, opts gopacket.Serialize
 	data[0] = byte(d.MsgType)
 	if d.MsgType == DHCPv6MsgTypeRelayForward || d.MsgType == DHCPv6MsgTypeRelayReply {
 		data[1] = byte(d.HopCount)
-		copy(data[2:18], d.LinkAddr.To6())
-		copy(data[18:34], d.PeerAddr.To6())
+		copy(data[2:18], d.LinkAddr.To16())
+		copy(data[18:34], d.PeerAddr.To16())
 		offset = 34
 	} else {
 		copy(data[1:4], d.TransactionId)
@@ -342,8 +342,8 @@ type DHCPv6Option struct {
 
 // String returns a string version of a DHCP Option.
 func (o DHCPv6Option) String() string {
-	switch o.Type {
-
+	switch o.Code {
+	/*
 	case DHCPv6OptHostname, DHCPv6OptMeritDumpFile, DHCPv6OptDomainName, DHCPv6OptRootPath,
 		DHCPv6OptExtensionsPath, DHCPv6OptNISDomain, DHCPv6OptNetBIOSTCPScope, DHCPv6OptXFontServer,
 		DHCPv6OptXDisplayManager, DHCPv6OptMessage, DHCPv6OptDomainSearch: // string
@@ -381,9 +381,9 @@ func (o DHCPv6Option) String() string {
 		}
 		buf.WriteString(")")
 		return buf.String()
-
+	*/
 	default:
-		return fmt.Sprintf("Option(%s:%v)", o.Type, o.Data)
+		return fmt.Sprintf("Option(%s:%v)", o.Code, o.Data)
 	}
 }
 
@@ -399,8 +399,8 @@ func NewDHCPv6Option(code DHCPv6Opt, data []byte) DHCPv6Option {
 }
 
 func (o *DHCPv6Option) encode(b []byte) error {
-	copy(b[0:2], binary.BigEndian.Uint16(o.Code))
-	copy(b[2:4], binary.BigEndian.Uint16(o.Length))
+	binary.BigEndian.PutUint16(b[0:2], uint16(o.Code))
+	binary.BigEndian.PutUint16(b[2:4], o.Length)
 	copy(b[4:], o.Data)
 
 	return nil
