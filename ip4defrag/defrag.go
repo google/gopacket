@@ -174,10 +174,12 @@ func (d *IPv4Defragmenter) dontDefrag(ip *layers.IPv4) bool {
 
 // securityChecks performs the needed security checks
 func (d *IPv4Defragmenter) securityChecks(ip *layers.IPv4) error {
+	fragSize := ip.Length - uint16(ip.IHL)*4
+
 	// don't allow small fragments outside of specification
-	if (ip.Length - uint16(ip.IHL)*4) < IPv4MinimumFragmentSize {
+	if fragSize < IPv4MinimumFragmentSize {
 		return fmt.Errorf("defrag: fragment too small "+
-			"(handcrafted? %d < %d)", ip.Length, IPv4MinimumFragmentSize)
+			"(handcrafted? %d < %d)", fragSize, IPv4MinimumFragmentSize)
 	}
 
 	// don't allow too big fragment offset
