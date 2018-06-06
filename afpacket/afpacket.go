@@ -66,8 +66,28 @@ type Stats struct {
 // SocketStats is a struct where socket stats are stored
 type SocketStats C.struct_tpacket_stats
 
+// Packets returns the number of packets seen by this socket.
+func (s *SocketStats) Packets() uint {
+	return uint(s.tp_packets)
+}
+
+// Drops returns the number of packets dropped on this socket.
+func (s *SocketStats) Drops() uint {
+	return uint(s.tp_drops)
+}
+
 // SocketStatsV3 is a struct where socket stats for TPacketV3 are stored
 type SocketStatsV3 C.struct_tpacket_stats_v3
+
+// Packets returns the number of packets seen by this socket.
+func (s *SocketStatsV3) Packets() uint {
+	return uint(s.tp_packets)
+}
+
+// Drops returns the number of packets dropped on this socket.
+func (s *SocketStatsV3) Drops() uint {
+	return uint(s.tp_drops)
+}
 
 // TPacket implements packet receiving for Linux AF_PACKET versions 1, 2, and 3.
 type TPacket struct {
