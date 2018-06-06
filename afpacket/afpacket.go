@@ -288,6 +288,7 @@ retry:
 	ci.CaptureLength = len(data)
 	ci.Length = h.current.getLength()
 	ci.InterfaceIndex = h.current.getIfaceIndex()
+	ci.VLAN = h.current.getVLAN()
 	atomic.AddInt64(&h.stats.Packets, 1)
 	h.headerNextNeeded = true
 	h.mu.Unlock()

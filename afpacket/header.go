@@ -43,6 +43,8 @@ type header interface {
 	// getIfaceIndex returns the index of the network interface
 	// where the packet was seen. The index can later be translated to a name.
 	getIfaceIndex() int
+	// getVLAN returns the VLAN of a packet if it was provided out-of-band
+	getVLAN() int
 	// next moves this header to point to the next packet it contains,
 	// returning true on success (in which case getTime and getData will
 	// return values for the new packet) or false if there are no more
@@ -75,6 +77,9 @@ func insertVlanHeader(data []byte, vlanTCI int, opts *options) []byte {
 	return append(eth, data[C.ETH_ALEN*2:]...)
 }
 
+func (h *v1header) getVLAN() int {
+	return -1
+}
 func (h *v1header) getStatus() int {
 	return int(h.tp_status)
 }
@@ -98,6 +103,9 @@ func (h *v1header) next() bool {
 	return false
 }
 
+func (h *v2header) getVLAN() int {
+	return -1
+}
 func (h *v2header) getStatus() int {
 	return int(h.tp_status)
 }
@@ -135,6 +143,15 @@ func initV3Wrapper(block unsafe.Pointer) (w v3wrapper) {
 	w.packet = (*C.struct_tpacket3_hdr)(unsafe.Pointer(uintptr(block) + uintptr(w.blockhdr.offset_to_first_pkt)))
 	return
 }
+
+func (w *v3wrapper) getVLAN() int {
+	if w.packet.tp_status&C.TP_STATUS_VLAN_VALID != 0 {
+		hv1 := (*_Ctype_struct_tpacket_hdr_variant1)(unsafe.Pointer(&w.packet.anon0[0]))
+		return int(hv1.tp_vlan_tci & 0xfff)
+	}
+	return -1
+}
+
 func (w *v3wrapper) getStatus() int {
 	return int(w.blockhdr.block_status)
 }
