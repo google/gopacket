@@ -139,6 +139,35 @@ func (r *Reader) readPacketHeader() (ci gopacket.CaptureInfo, err error) {
 	return
 }
 
+// ReadPacketDataNoCopy reads next packet from file, returns reference to the data.
+func (r *Reader) ReadPacketDataNoCopy() (*[]byte, *gopacket.CaptureInfo, error) {
+	var err error
+	var data []byte
+	var ci *gopacket.CaptureInfo
+	if ci, err = r.readPacketHeaderNoCopy(); err != nil {
+		return &data, ci, err
+	}
+	if ci.CaptureLength > int(r.snaplen) {
+		err := fmt.Errorf("capture length exceeds snap length: %d > %d", 16+ci.CaptureLength, r.snaplen)
+		return &data, ci, err
+	}
+	data = make([]byte, ci.CaptureLength)
+	_, err = io.ReadFull(r.r, data)
+	return &data, ci, err
+}
+
+func (r *Reader) readPacketHeaderNoCopy() (*gopacket.CaptureInfo, error) {
+	var ci gopacket.CaptureInfo
+	var err error
+	if _, err = io.ReadFull(r.r, r.buf[:]); err != nil {
+		return &ci, err
+	}
+	ci.Timestamp = time.Unix(int64(r.byteOrder.Uint32(r.buf[0:4])), int64(r.byteOrder.Uint32(r.buf[4:8])*r.nanoSecsFactor)).UTC()
+	ci.CaptureLength = int(r.byteOrder.Uint32(r.buf[8:12]))
+	ci.Length = int(r.byteOrder.Uint32(r.buf[12:16]))
+	return &ci, err
+}
+
 // LinkType returns network, as a layers.LinkType.
 func (r *Reader) LinkType() layers.LinkType {
 	return r.linkType
