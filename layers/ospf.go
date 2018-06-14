@@ -278,6 +278,12 @@ func getLSAsv2(num uint32, data []byte) ([]LSA, error) {
 
 // extractLSAInformation extracts all the LSA information
 func extractLSAInformation(lstype, lsalength uint16, data []byte) (interface{}, error) {
+	if lsalength < 20 {
+		return nil, fmt.Errorf("Link State header length %v too short, %v required", lsalength, 20)
+	}
+	if len(data) < int(lsalength) {
+		return nil, fmt.Errorf("Link State header length %v too short, %v required", len(data), lsalength)
+	}
 	var content interface{}
 	switch lstype {
 	case RouterLSAtypeV2:
