@@ -897,11 +897,11 @@ func (a *Assembler) dump(text string, half *halfconnection) {
 	}
 	log.Printf(" * a.ret\n")
 	for i, r := range a.ret {
-		log.Printf("\t%d: %s b:%s\n", i, r.captureInfo(), hex.EncodeToString(r.getBytes()))
+		log.Printf("\t%d: %v b:%s\n", i, r.captureInfo(), hex.EncodeToString(r.getBytes()))
 	}
 	log.Printf(" * a.cacheSG.all\n")
 	for i, r := range a.cacheSG.all {
-		log.Printf("\t%d: %s b:%s\n", i, r.captureInfo(), hex.EncodeToString(r.getBytes()))
+		log.Printf("\t%d: %v b:%s\n", i, r.captureInfo(), hex.EncodeToString(r.getBytes()))
 	}
 }
 
