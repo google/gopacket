@@ -89,6 +89,11 @@ func (s *SocketStatsV3) Drops() uint {
 	return uint(s.tp_drops)
 }
 
+// QueueFreezes returns the number of queue freezes on this socket.
+func (s *SocketStatsV3) QueueFreezes() uint {
+	return uint(s.tp_freeze_q_cnt)
+}
+
 // TPacket implements packet receiving for Linux AF_PACKET versions 1, 2, and 3.
 type TPacket struct {
 	// fd is the C file descriptor.
