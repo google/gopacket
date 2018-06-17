@@ -60,7 +60,8 @@ func (a TCPPort) LayerType() gopacket.LayerType {
 }
 
 var tcpPortLayerType = [65536]gopacket.LayerType{
-	53: LayerTypeDNS,
+	53:   LayerTypeDNS,
+	443:  LayerTypeTLS, // Add other TLS services
 }
 
 // RegisterTCPPortLayerType creates a new mapping between a TCPPort
