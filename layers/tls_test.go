@@ -39,6 +39,12 @@ var testDoubleAppData = []byte{
 	0x61, 0x9f, 0x51, 0x93, 0x1b, 0xbf, 0x53, 0x3b, 0xf8, 0x26,
 }
 
+var testAlertEncrypted = []byte{
+	0x15, 0x03, 0x03, 0x00, 0x20, 0x44, 0xb9, 0x9c, 0x2c, 0x6e, 0xab, 0xa3, 0xdf, 0xb1, 0x77, 0x04,
+	0xa2, 0xa4, 0x3a, 0x9a, 0x08, 0x1d, 0xe6, 0x51, 0xac, 0xa0, 0x5f, 0xab, 0x74, 0xa7, 0x96, 0x24,
+	0xfe, 0x62, 0xfe, 0xe8, 0x5e,
+}
+
 // Malformed TLS records
 var testMalformed = []byte{
 	0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08, 0x09, 0x0a, 0x0b, 0x0c, 0x0d, 0x0e, 0x0f,
@@ -126,5 +132,28 @@ func TestParseTLSLengthMismatch(t *testing.T) {
 	p := gopacket.NewPacket(testLengthMismatch, LayerTypeTLS, testDecodeOptions)
 	if p.ErrorLayer() == nil {
 		t.Error("No Decoding Error when parsing a malformed data")
+	}
+}
+
+func TestParseTLSAlertEncrypted(t *testing.T) {
+	p := gopacket.NewPacket(testAlertEncrypted, LayerTypeTLS, testDecodeOptions)
+	if p.ErrorLayer() != nil {
+		t.Error("Failed to decode packet:", p.ErrorLayer().Error())
+	}
+	checkLayers(p, []gopacket.LayerType{LayerTypeTLS}, t)
+
+	r := p.Layer(LayerTypeTLS).(*TLS).Alert
+	if len(r) != 1 {
+		t.Errorf("Wrong number of alert records, expected 1, got %d", len(r))
+	}
+
+	l := r[0].Level
+	d := r[0].Description
+	if l.String() != "Unknown" || d.String() != "Unknown" {
+		t.Error("Alert packet should be Encrypted")
+	}
+	msg := r[0].EncryptedMsg
+	if len(msg) == 0 {
+		t.Errorf("Wrong Encrypted Message length on alert record, expected 0, got %d", len(msg))
 	}
 }

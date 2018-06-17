@@ -100,23 +100,6 @@ type TLSrecordHeader struct {
 	Length      uint16
 }
 
-type TLSchangeCipherSpecRecord struct {
-	TLSrecordHeader
-}
-
-type TLSalertRecord struct {
-	TLSrecordHeader
-}
-
-type TLShandshakeRecord struct {
-	TLSrecordHeader
-}
-
-type TLSappdataRecord struct {
-	TLSrecordHeader
-	Payload []byte
-}
-
 // LayerType returns gopacket.LayerTypeTLS.
 func (t *TLS) LayerType() gopacket.LayerType { return LayerTypeTLS }
 
@@ -198,57 +181,6 @@ func (t *TLS) DecodeFromBytes(data []byte, df gopacket.DecodeFeedback) error {
 		return nil
 	}
 	return t.DecodeFromBytes(data[tl:len(data)], df)
-}
-
-// DecodeFromBytes decodes the slice into the TLS struct.
-func (t *TLSchangeCipherSpecRecord) DecodeFromBytes(h TLSrecordHeader, data []byte, df gopacket.DecodeFeedback) error {
-	// TLS Record Header
-	t.ContentType = h.ContentType
-	t.Version = h.Version
-	t.Length = h.Length
-
-	// TODO
-
-	return nil
-}
-
-// DecodeFromBytes decodes the slice into the TLS struct.
-func (t *TLShandshakeRecord) DecodeFromBytes(h TLSrecordHeader, data []byte, df gopacket.DecodeFeedback) error {
-	// TLS Record Header
-	t.ContentType = h.ContentType
-	t.Version = h.Version
-	t.Length = h.Length
-
-	// TODO
-
-	return nil
-}
-
-// DecodeFromBytes decodes the slice into the TLS struct.
-func (t *TLSappdataRecord) DecodeFromBytes(h TLSrecordHeader, data []byte, df gopacket.DecodeFeedback) error {
-	// TLS Record Header
-	t.ContentType = h.ContentType
-	t.Version = h.Version
-	t.Length = h.Length
-
-	if len(data) != int(t.Length) {
-		return errors.New("TLS Application Data length mismatch")
-	}
-
-	t.Payload = data
-	return nil
-}
-
-// DecodeFromBytes decodes the slice into the TLS struct.
-func (t *TLSalertRecord) DecodeFromBytes(h TLSrecordHeader, data []byte, df gopacket.DecodeFeedback) error {
-	// TLS Record Header
-	t.ContentType = h.ContentType
-	t.Version = h.Version
-	t.Length = h.Length
-
-	// TODO
-
-	return nil
 }
 
 // CanDecode implements gopacket.DecodingLayer.
