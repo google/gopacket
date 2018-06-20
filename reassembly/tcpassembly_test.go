@@ -144,7 +144,7 @@ func test(t *testing.T, s []testSequence) {
 			t.Fatalf("test %v:\nwant: %v\n got: %v\n", i, final, fact.reassembly)
 		}
 		if testDebug {
-			fmt.Printf("test %v passing...(%s)\n", i, final)
+			fmt.Printf("test %v passing...(%v)\n", i, final)
 		}
 	}
 }
