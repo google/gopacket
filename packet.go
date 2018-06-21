@@ -31,12 +31,10 @@ type CaptureInfo struct {
 	Length int
 	// InterfaceIndex
 	InterfaceIndex int
-	// VLAN is the VLAN ID if one was provided out-of-band by the
-	// capture mechanism. If no ID was provided, this will be -1.
-	// Note that this can be -1 and a VLAN header still present
-	// if the capture mechanism does not support out-of-band reporting
-	// of VLAN IDs.
-	VLAN int
+	// The packet source can place ancillary data of various types here.
+	// For example, the afpacket source can report the VLAN of captured
+	// packets this way.
+	AncillaryData []interface{}
 }
 
 // PacketMetadata contains metadata for a packet.
