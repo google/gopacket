@@ -102,8 +102,10 @@ type OptPollTimeout time.Duration
 // a large performance hit, especially in otherwise zero-copy operation.
 //
 // Note that if you do not need to have a "real" VLAN layer, it may be
-// preferable to use the VLAN ID provided in gopacket.CaptureInfo.VLAN,
-// which is populated out-of-band and has negligible performance impact.
+// preferable to use the VLAN ID provided by the AncillaryVLAN struct
+// in CaptureInfo.AncillaryData, which is populated out-of-band and has
+// negligible performance impact. Such ancillary data will automatically
+// be provided if available.
 type OptAddVLANHeader bool
 
 // Default constants used by options.
