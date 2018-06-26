@@ -153,8 +153,7 @@ func (d *IPv4Defragmenter) DiscardOlderThan(t time.Time) int {
 // flush the fragment list for a particular flow
 func (d *IPv4Defragmenter) flush(ipf ipv4) {
 	d.Lock()
-	fl := new(fragmentList)
-	d.ipFlows[ipf] = fl
+	delete(d.ipFlows, ipf)
 	d.Unlock()
 }
 

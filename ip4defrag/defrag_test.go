@@ -11,6 +11,7 @@ import (
 	"fmt"
 	"net"
 	"testing"
+	"time"
 
 	"github.com/google/gopacket"
 	"github.com/google/gopacket/bytediff"
@@ -56,6 +57,11 @@ func TestDefragPingMultipleFrags(t *testing.T) {
 		fmt.Println(bytediff.BashOutput.String(
 			bytediff.Diff(validPayload, ip.Payload)))
 		t.Errorf("defrag: payload is not correctly defragmented")
+	}
+
+	discarded := defrag.DiscardOlderThan(time.Now())
+	if 0 != discarded {
+		t.Errorf("defrag: discarded more fragments then expected: %d", discarded)
 	}
 }
 
@@ -191,6 +197,18 @@ func TestDefragFragmentOffset(t *testing.T) {
 	_, err := defrag.DefragIPv4(&ip2)
 	if err == nil {
 		t.Fatalf("defrag: Maximum fragment offset is supposed to be 8183")
+	}
+}
+
+func TestDefragDiscard(t *testing.T) {
+	defrag := NewIPv4Defragmenter()
+
+	gentestDefrag(t, defrag, testPing1Frag1, false, "Ping1Frag1")
+	gentestDefrag(t, defrag, testPing2Frag1, false, "Ping2Frag1")
+
+	discarded := defrag.DiscardOlderThan(time.Now())
+	if 2 != discarded {
+		t.Errorf("defrag: discarded more fragments then expected: %d", discarded)
 	}
 }
 
