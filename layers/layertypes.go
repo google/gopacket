@@ -125,6 +125,7 @@ var (
 	LayerTypeSTP                         = gopacket.RegisterLayerType(121, gopacket.LayerTypeMetadata{Name: "STP", Decoder: gopacket.DecodeFunc(decodeSTP)})
 	LayerTypeBFD                         = gopacket.RegisterLayerType(122, gopacket.LayerTypeMetadata{Name: "BFD", Decoder: gopacket.DecodeFunc(decodeBFD)})
 	LayerTypeOSPF                        = gopacket.RegisterLayerType(123, gopacket.LayerTypeMetadata{Name: "OSPF", Decoder: gopacket.DecodeFunc(decodeOSPF)})
+
 	LayerTypeICMPv6RouterSolicitation    = gopacket.RegisterLayerType(124, gopacket.LayerTypeMetadata{Name: "ICMPv6RouterSolicitation", Decoder: gopacket.DecodeFunc(decodeICMPv6RouterSolicitation)})
 	LayerTypeICMPv6RouterAdvertisement   = gopacket.RegisterLayerType(125, gopacket.LayerTypeMetadata{Name: "ICMPv6RouterAdvertisement", Decoder: gopacket.DecodeFunc(decodeICMPv6RouterAdvertisement)})
 	LayerTypeICMPv6NeighborSolicitation  = gopacket.RegisterLayerType(126, gopacket.LayerTypeMetadata{Name: "ICMPv6NeighborSolicitation", Decoder: gopacket.DecodeFunc(decodeICMPv6NeighborSolicitation)})
@@ -132,6 +133,9 @@ var (
 	LayerTypeICMPv6Redirect              = gopacket.RegisterLayerType(128, gopacket.LayerTypeMetadata{Name: "ICMPv6Redirect", Decoder: gopacket.DecodeFunc(decodeICMPv6Redirect)})
 	LayerTypeGTPv1U                      = gopacket.RegisterLayerType(129, gopacket.LayerTypeMetadata{Name: "GTPv1U", Decoder: gopacket.DecodeFunc(decodeGTPv1u)})
 	LayerTypeEAPOLKey                    = gopacket.RegisterLayerType(130, gopacket.LayerTypeMetadata{Name: "EAPOLKey", Decoder: gopacket.DecodeFunc(decodeEAPOLKey)})
+	LayerTypeLCM                         = gopacket.RegisterLayerType(131, gopacket.LayerTypeMetadata{Name: "LCM", Decoder: gopacket.DecodeFunc(decodeLCM)})
+	LayerTypeICMPv6Echo                  = gopacket.RegisterLayerType(132, gopacket.LayerTypeMetadata{Name: "ICMPv6Echo", Decoder: gopacket.DecodeFunc(decodeICMPv6Echo)})
+	LayerTypeDHCPv6                      = gopacket.RegisterLayerType(133, gopacket.LayerTypeMetadata{Name: "DHCPv6", Decoder: gopacket.DecodeFunc(decodeDHCPv6)})
 )
 
 var (
