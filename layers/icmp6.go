@@ -220,6 +220,10 @@ func (i *ICMPv6) CanDecode() gopacket.LayerClass {
 // NextLayerType returns the layer type contained by this DecodingLayer.
 func (i *ICMPv6) NextLayerType() gopacket.LayerType {
 	switch i.TypeCode.Type() {
+	case ICMPv6TypeEchoRequest:
+		return LayerTypeICMPv6Echo
+	case ICMPv6TypeEchoReply:
+		return LayerTypeICMPv6Echo
 	case ICMPv6TypeRouterSolicitation:
 		return LayerTypeICMPv6RouterSolicitation
 	case ICMPv6TypeRouterAdvertisement:
