@@ -103,7 +103,7 @@ func TestDefragPing1(t *testing.T) {
 }
 
 func TestDefragPing1and2(t *testing.T) {
-	debug = false
+	SetDebug(false)
 	defrag := NewIPv4Defragmenter()
 
 	// We inject the 8 mixed fragments from two "flows"
@@ -146,7 +146,7 @@ func TestDefragPing1and2(t *testing.T) {
 			bytediff.Diff(validPayload2, ip.Payload)))
 		t.Errorf("defrag: payload Ping2 is not correctly defragmented")
 	}
-	debug = false
+	SetDebug(false)
 }
 
 func TestDefragTooSmall(t *testing.T) {
