@@ -9,7 +9,9 @@ package ip4defrag
 import (
 	"bytes"
 	"fmt"
+	"log"
 	"net"
+	"strings"
 	"testing"
 	"time"
 
@@ -239,6 +241,36 @@ func TestDefragMaxSize(t *testing.T) {
 		t.Fatal(err)
 		t.Fatalf("defrag: Maximum length is supposed to be 65535")
 	}
+}
+
+func TestSetDebug(t *testing.T) {
+	mockWriter := &mockWriter{}
+	log.SetOutput(mockWriter)
+
+	SetDebug(false)
+	message := "test 1"
+	debug.Printf(message)
+	if len(mockWriter.got) != 0 {
+		t.Fatalf("defrag: debug set to false, but log was written")
+	}
+
+	SetDebug(true)
+	message = "test 2"
+	debug.Printf(message)
+	if !strings.Contains(string(mockWriter.got), message) {
+		t.Fatalf("defrag: debug expected to contain %v, got %v", message, string(mockWriter.got))
+	}
+}
+
+// mockWriter is in use to test the debug logs.
+// It saves the given bytes in the last Write() call.
+type mockWriter struct {
+	got []byte
+}
+
+func (m *mockWriter) Write(p []byte) (int, error) {
+	m.got = make([]byte, len(p))
+	return copy(m.got, p), nil
 }
 
 func gentestDefrag(t *testing.T, defrag *IPv4Defragmenter, buf []byte, expect bool, label string) *layers.IPv4 {
