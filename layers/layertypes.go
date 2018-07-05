@@ -125,9 +125,18 @@ var (
 	LayerTypeSTP                         = gopacket.RegisterLayerType(121, gopacket.LayerTypeMetadata{Name: "STP", Decoder: gopacket.DecodeFunc(decodeSTP)})
 	LayerTypeBFD                         = gopacket.RegisterLayerType(122, gopacket.LayerTypeMetadata{Name: "BFD", Decoder: gopacket.DecodeFunc(decodeBFD)})
 	LayerTypeOSPF                        = gopacket.RegisterLayerType(123, gopacket.LayerTypeMetadata{Name: "OSPF", Decoder: gopacket.DecodeFunc(decodeOSPF)})
-	LayerTypeModbus                      = gopacket.RegisterLayerType(124, gopacket.LayerTypeMetadata{Name: "Modbus", Decoder: gopacket.DecodeFunc(decodeModbus)})
-	LayerTypeENIP                        = gopacket.RegisterLayerType(125, gopacket.LayerTypeMetadata{Name: "Ethernet/IP", Decoder: gopacket.DecodeFunc(decodeENIP)})
-	LayerTypeCIP                         = gopacket.RegisterLayerType(126, gopacket.LayerTypeMetadata{Name: "CIP", Decoder: gopacket.DecodeFunc(decodeCIP)})
+	LayerTypeICMPv6RouterSolicitation    = gopacket.RegisterLayerType(124, gopacket.LayerTypeMetadata{Name: "ICMPv6RouterSolicitation", Decoder: gopacket.DecodeFunc(decodeICMPv6RouterSolicitation)})
+	LayerTypeICMPv6RouterAdvertisement   = gopacket.RegisterLayerType(125, gopacket.LayerTypeMetadata{Name: "ICMPv6RouterAdvertisement", Decoder: gopacket.DecodeFunc(decodeICMPv6RouterAdvertisement)})
+	LayerTypeICMPv6NeighborSolicitation  = gopacket.RegisterLayerType(126, gopacket.LayerTypeMetadata{Name: "ICMPv6NeighborSolicitation", Decoder: gopacket.DecodeFunc(decodeICMPv6NeighborSolicitation)})
+	LayerTypeICMPv6NeighborAdvertisement = gopacket.RegisterLayerType(127, gopacket.LayerTypeMetadata{Name: "ICMPv6NeighborAdvertisement", Decoder: gopacket.DecodeFunc(decodeICMPv6NeighborAdvertisement)})
+	LayerTypeICMPv6Redirect              = gopacket.RegisterLayerType(128, gopacket.LayerTypeMetadata{Name: "ICMPv6Redirect", Decoder: gopacket.DecodeFunc(decodeICMPv6Redirect)})
+	LayerTypeGTPv1U                      = gopacket.RegisterLayerType(129, gopacket.LayerTypeMetadata{Name: "GTPv1U", Decoder: gopacket.DecodeFunc(decodeGTPv1u)})
+	LayerTypeEAPOLKey                    = gopacket.RegisterLayerType(130, gopacket.LayerTypeMetadata{Name: "EAPOLKey", Decoder: gopacket.DecodeFunc(decodeEAPOLKey)})
+	LayerTypeLCM                         = gopacket.RegisterLayerType(131, gopacket.LayerTypeMetadata{Name: "LCM", Decoder: gopacket.DecodeFunc(decodeLCM)})
+	LayerTypeICMPv6Echo                  = gopacket.RegisterLayerType(132, gopacket.LayerTypeMetadata{Name: "ICMPv6Echo", Decoder: gopacket.DecodeFunc(decodeICMPv6Echo)})
+	LayerTypeModbus                      = gopacket.RegisterLayerType(133, gopacket.LayerTypeMetadata{Name: "Modbus", Decoder: gopacket.DecodeFunc(decodeModbus)})
+	LayerTypeENIP                        = gopacket.RegisterLayerType(134, gopacket.LayerTypeMetadata{Name: "Ethernet/IP", Decoder: gopacket.DecodeFunc(decodeENIP)})
+	LayerTypeCIP                         = gopacket.RegisterLayerType(135, gopacket.LayerTypeMetadata{Name: "CIP", Decoder: gopacket.DecodeFunc(decodeCIP)})
 )
 
 var (
@@ -176,5 +185,14 @@ var (
 	LayerClassIPSec = gopacket.NewLayerClass([]gopacket.LayerType{
 		LayerTypeIPSecAH,
 		LayerTypeIPSecESP,
+	})
+	// LayerClassICMPv6NDP contains ICMPv6 neighbor discovery protocol
+	// messages.
+	LayerClassICMPv6NDP = gopacket.NewLayerClass([]gopacket.LayerType{
+		LayerTypeICMPv6RouterSolicitation,
+		LayerTypeICMPv6RouterAdvertisement,
+		LayerTypeICMPv6NeighborSolicitation,
+		LayerTypeICMPv6NeighborAdvertisement,
+		LayerTypeICMPv6Redirect,
 	})
 )

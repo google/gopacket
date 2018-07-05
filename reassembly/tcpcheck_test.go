@@ -42,7 +42,7 @@ func testCheckFSM(t *testing.T, options TCPSimpleFSMOptions, s []testCheckFSMSeq
 		}
 		res := fsm.CheckState(&test.tcp, dir)
 		if res != test.expected {
-			t.Fatalf("#%d: packet rejected (%s): got %s, expected %s. State:%s", i, gopacket.LayerDump(&test.tcp), res, test.expected, fsm.String())
+			t.Fatalf("#%d: packet rejected (%v): got %v, expected %v. State:%s", i, gopacket.LayerDump(&test.tcp), res, test.expected, fsm.String())
 		}
 	}
 }

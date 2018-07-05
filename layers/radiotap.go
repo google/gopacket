@@ -859,6 +859,22 @@ func (m *RadioTap) DecodeFromBytes(data []byte, df gopacket.DecodeFeedback) erro
 	}
 
 	payload := data[m.Length:]
+
+	// Remove non standard padding used by some Wi-Fi drivers
+	if m.Flags.Datapad() &&
+		payload[0]&0xC == 0x8 { //&& // Data frame
+		headlen := 24
+		if payload[0]&0x8C == 0x88 { // QoS
+			headlen += 2
+		}
+		if payload[1]&0x3 == 0x3 { // 4 addresses
+			headlen += 2
+		}
+		if headlen%4 == 2 {
+			payload = append(payload[:headlen], payload[headlen+2:len(payload)]...)
+		}
+	}
+
 	if !m.Flags.FCS() {
 		// Dot11.DecodeFromBytes() expects FCS present and performs a hard chop on the checksum
 		// If a user is handing in subslices or packets from a buffered stream, the capacity of the slice
