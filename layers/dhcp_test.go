@@ -67,6 +67,58 @@ func TestDHCPv4EncodeResponse(t *testing.T) {
 	testDHCPEqual(t, dhcp, dhcp2)
 }
 
+func TestDHCPv4DecodeOption(t *testing.T) {
+	var tests = []struct {
+		msg string
+		buf []byte
+		err error
+	}{
+		{
+			msg: "DHCPOptPad",
+			buf: []byte{0},
+			err: nil,
+		},
+		{
+			msg: "Option with zero length",
+			buf: []byte{119, 0},
+			err: nil,
+		},
+		{
+			msg: "Option with maximum length",
+			buf: bytes.Join([][]byte{
+				{119, 255},
+				bytes.Repeat([]byte{0}, 255),
+			}, nil),
+			err: nil,
+		},
+		{
+			msg: "Too short option",
+			buf: []byte{},
+			err: DecOptionNotEnoughData,
+		},
+		{
+			msg: "Too short option when option is not 0 or 255",
+			buf: []byte{119},
+			err: DecOptionNotEnoughData,
+		},
+		{
+			msg: "Malformed option",
+			buf: []byte{119, 1},
+			err: DecOptionMalformed,
+		},
+	}
+
+	for i := range tests {
+		var (
+			opt = new(DHCPOption)
+			err = opt.decode(tests[i].buf)
+		)
+		if want, got := tests[i].err, err; want != got {
+			t.Errorf("[#%v %v] Unexpected error want: %v, got: %v\n", i, tests[i].msg, want, err)
+		}
+	}
+}
+
 func testDHCPEqual(t *testing.T, d1, d2 *DHCPv4) {
 	if d1.Operation != d2.Operation {
 		t.Errorf("expected Operation=%s, got %s", d1.Operation, d2.Operation)

@@ -1,4 +1,6 @@
 language: go
+before_install:
+ - sudo apt-get install libpcap-dev
 install:
  - go get github.com/google/gopacket
  - go get github.com/google/gopacket/layers

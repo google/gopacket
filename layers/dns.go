@@ -254,7 +254,7 @@ type DNS struct {
 	TC bool  // Truncated
 	RD bool  // Recursion desired
 	RA bool  // Recursion available
-	Z  uint8 // Resrved for future use
+	Z  uint8 // Reserved for future use
 
 	ResponseCode DNSResponseCode
 	QDCount      uint16 // Number of questions to expect
