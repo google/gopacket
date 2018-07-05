@@ -14,12 +14,8 @@ import (
 )
 
 var (
-	opts = gopacket.Default
+	opts = gopacket.DecodeOptions{DecodeStreamsAsDatagrams: true}
 )
-
-func init() {
-	opts.DecodeStreamsAsDatagrams = true
-}
 
 // Pulled from a modbus test data dump at https://github.com/automayt/ICS-pcap
 // 10.0.0.9	10.0.0.3	Modbus/TCP	66	   Query: Trans:     1; Unit:  10, Func:   1: Read Coils
