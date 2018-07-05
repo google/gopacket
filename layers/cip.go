@@ -18,9 +18,14 @@ const (
 )
 
 var (
+	// ErrCIPDataTooSmall indicates that a CIP packet has been truncated
 	ErrCIPDataTooSmall = errors.New("CIP packet data truncated")
 )
 
+// CIP implements encoding/decoding for the Common Industrial Protocol, as
+// defined by ODVA (odva.org).
+// Refer to https://www.rockwellautomation.com/resources/downloads/rockwellautomation/pdf/sales-partners/technology-licensing/eipexp1_2.pdf
+// for more information about the protocol.
 type CIP struct {
 	BaseLayer
 	Response         bool     // false if request, true if response
@@ -32,6 +37,7 @@ type CIP struct {
 	Data             []byte   // Command data for request, reply data for response
 }
 
+// DecodeFromBytes unpacks a CIP packet in the `data` argument into the receiver.
 func (cip *CIP) DecodeFromBytes(data []byte, df gopacket.DecodeFeedback) error {
 	offset := 0
 	tmp := data[offset]
@@ -118,8 +124,14 @@ func (cip *CIP) DecodeFromBytes(data []byte, df gopacket.DecodeFeedback) error {
 	return nil
 }
 
-func (cip *CIP) LayerType() gopacket.LayerType  { return LayerTypeCIP }
+// LayerType returns gopacket.LayerTypeCIP
+func (cip *CIP) LayerType() gopacket.LayerType { return LayerTypeCIP }
+
+// CanDecode returns gopacket.LayerTypeCIP
 func (cip *CIP) CanDecode() gopacket.LayerClass { return LayerTypeCIP }
+
+// NextLayerType returns LayerTypePayload, the only possible next
+// layer type for a CIP packet.
 func (cip *CIP) NextLayerType() (nl gopacket.LayerType) {
 	switch {
 	default:

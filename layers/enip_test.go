@@ -56,8 +56,8 @@ func TestENIPRegisterSession(t *testing.T) {
 			SenderContext: []byte{0, 0, 0, 0, 0, 0, 0, 0},
 			Options:       0,
 			CommandSpecific: ENIPCommandSpecificData{
-				cmd:  0x0065,
-				data: []byte{0x01, 0x00, 0x00, 0x00},
+				Cmd:  0x0065,
+				Data: []byte{0x01, 0x00, 0x00, 0x00},
 			},
 		}
 		if !reflect.DeepEqual(got, want) {
@@ -122,8 +122,8 @@ func TestENIPSendRRData(t *testing.T) {
 			SenderContext: []byte{0, 0, 0, 0, 0, 0, 0, 0},
 			Options:       0,
 			CommandSpecific: ENIPCommandSpecificData{
-				cmd: 0x6f,
-				data: []byte{
+				Cmd: 0x6f,
+				Data: []byte{
 					0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02, 0x00, 0x00, 0x00,
 					0x00, 0x00, 0xb2, 0x00, 0x32, 0x00,
 				},
@@ -193,8 +193,8 @@ func TestENIPSendUnitData(t *testing.T) {
 			SenderContext: []byte{0, 0, 0, 0, 0, 0, 0, 0},
 			Options:       0,
 			CommandSpecific: ENIPCommandSpecificData{
-				cmd: 0x70,
-				data: []byte{
+				Cmd: 0x70,
+				Data: []byte{
 					0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02, 0x00, 0xa1, 0x00,
 					0x04, 0x00, 0xc1, 0x11, 0x94, 0x00, 0xb1, 0x00, 0x32, 0x00,
 					0x1d, 0x00,

@@ -14,17 +14,22 @@ import (
 )
 
 const (
-	MBAPHeaderLen      int    = 7
+	// MBAPHeaderLen is the length of a Modbus Application Header
+	MBAPHeaderLen int = 7
+	// MinModbusPacketLen is the minimum length of a Modbus packet
 	MinModbusPacketLen int    = MBAPHeaderLen + 1
 	modbusPort         uint16 = 502
 )
 
 var (
+	// ErrModbusDataTooSmall is returned when a Modbus packet is truncated.
 	ErrModbusDataTooSmall = errors.New("Data too small for Modbus")
 )
 
+// FC is a modbus function code
 type FC byte
 
+// MBAP is a ModBus Application Packet header
 type MBAP struct {
 	TransactionID uint16
 	ProtocolID    uint16
@@ -32,6 +37,7 @@ type MBAP struct {
 	UnitID        uint8
 }
 
+// Modbus is a full Modbus message, including header (MBAP)
 type Modbus struct {
 	BaseLayer
 	MBAP
@@ -44,6 +50,8 @@ func init() {
 	RegisterTCPPortLayerType(TCPPort(modbusPort), LayerTypeModbus)
 }
 
+// DecodeFromBytes parses the contents of `data` as a Modbus packet, populating
+// the receiver.
 func (m *Modbus) DecodeFromBytes(data []byte, df gopacket.DecodeFeedback) error {
 	if len(data) < MinModbusPacketLen {
 		df.SetTruncated()
@@ -66,14 +74,18 @@ func (m *Modbus) DecodeFromBytes(data []byte, df gopacket.DecodeFeedback) error 
 	return nil
 }
 
+// LayerType returns LayerTypeModbus
 func (m *Modbus) LayerType() gopacket.LayerType {
 	return LayerTypeModbus
 }
 
+// NextLayerType returns LayerTypeZero
+// Modbus packets do not contain other protocols or any unstructured payload.
 func (m *Modbus) NextLayerType() gopacket.LayerType {
 	return gopacket.LayerTypeZero
 }
 
+// CanDecode returns LayerTypeModbus
 func (m *Modbus) CanDecode() gopacket.LayerClass {
 	return LayerTypeModbus
 }
@@ -95,6 +107,7 @@ func (fc FC) masked() FC {
 	return fc & 0x7F
 }
 
+// String returns the name of the given function code.
 func (fc FC) String() (s string) {
 	if fc.exception() {
 		s = `Exception: `
