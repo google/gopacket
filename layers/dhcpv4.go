@@ -576,7 +576,7 @@ func (d DHCPv4Error) Error() string {
 }
 
 const (
-	// DecOptionNotEnoughData is returned when there is not enough data during option's decode process	
+	// DecOptionNotEnoughData is returned when there is not enough data during option's decode process
 	DecOptionNotEnoughData = DHCPv4Error("Not enough data to decode")
 	// DecOptionMalformed is returned when the option is malformed
 	DecOptionMalformed = DHCPv4Error("Option is malformed")
