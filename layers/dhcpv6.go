@@ -332,7 +332,7 @@ func (o DHCPv6Option) String() string {
 			if options != "" {
 				options += ","
 			}
-			option := DHCPv6Opt(binary.BigEndian.Uint16(o.Data[i : i + 2]))
+			option := DHCPv6Opt(binary.BigEndian.Uint16(o.Data[i : i+2]))
 			options += option.String()
 		}
 		return fmt.Sprintf("Option(%s:[%s])", o.Code, options)
@@ -432,6 +432,41 @@ func (d *Duid) DecodeFromBytes(data []byte) error {
 	}
 
 	return nil
+}
+
+func (d *Duid) Encode() []byte {
+	length := d.Len()
+	data := make([]byte, length)
+	binary.BigEndian.PutUint16(data[0:2], uint16(d.Type))
+
+	if d.Type == DHCPv6DuidTypeLLT || d.Type == DHCPv6DuidTypeLL {
+		copy(data[2:4], d.HardwareType)
+	}
+
+	if d.Type == DHCPv6DuidTypeLLT {
+		copy(data[4:8], d.Time)
+		copy(data[8:], d.LinkLayerAddress)
+	} else if d.Type == DHCPv6DuidTypeEN {
+		copy(data[2:6], d.EnterpriseNumber)
+		copy(data[6:], d.Identifier)
+	} else {
+		copy(data[4:], d.LinkLayerAddress)
+	}
+
+	return data
+}
+
+func (d *Duid) Len() int {
+	length := 2 // d.Type
+	if d.Type == DHCPv6DuidTypeLLT {
+		length += 2 /*HardwareType*/ + 4 /*d.Time*/ + len(d.LinkLayerAddress)
+	} else if d.Type == DHCPv6DuidTypeEN {
+		length += 4 /*d.EnterpriseNumber*/ + len(d.Identifier)
+	} else { // LL
+		length += 2 /*d.HardwareType*/ + len(d.LinkLayerAddress)
+	}
+
+	return length
 }
 
 func (d *Duid) String() string {
