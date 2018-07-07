@@ -15,6 +15,8 @@ import (
 )
 
 // #include <linux/if_packet.h>
+// #include <linux/if_ether.h>
+// #define VLAN_HLEN	4
 import "C"
 
 // Our model of handling all TPacket versions is a little hacky, to say the

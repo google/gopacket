@@ -7,8 +7,16 @@
 
 package pcap
 
+/*
+#include <pcap.h>
+*/
+import "C"
+
 import (
+	"errors"
+	"os"
 	"runtime"
+	"unsafe"
 )
 
 func (p *Handle) setNonBlocking() error {
@@ -20,4 +28,17 @@ func (p *Handle) setNonBlocking() error {
 func (p *Handle) waitForPacket() {
 	// can't use select() so instead just switch goroutines
 	runtime.Gosched()
+}
+
+// openOfflineFile returns contents of input file as a *Handle.
+func openOfflineFile(file *os.File) (handle *Handle, err error) {
+	buf := (*C.char)(C.calloc(errorBufferSize, 1))
+	defer C.free(unsafe.Pointer(buf))
+	cf := C.intptr_t(file.Fd())
+
+	cptr := C.pcap_hopen_offline(cf, buf)
+	if cptr == nil {
+		return nil, errors.New(C.GoString(buf))
+	}
+	return &Handle{cptr: cptr}, nil
 }
