@@ -80,7 +80,7 @@ type DHCPv6 struct {
 	HopCount      uint8
 	LinkAddr      net.IP
 	PeerAddr      net.IP
-	TransactionId []byte
+	TransactionID []byte
 	Options       DHCPv6Options
 }
 
@@ -94,13 +94,13 @@ func (d *DHCPv6) DecodeFromBytes(data []byte, df gopacket.DecodeFeedback) error 
 	d.MsgType = DHCPv6MsgType(data[0])
 
 	offset := 0
-	if d.MsgType == DHCPv6MsgTypeRelayForward || d.MsgType == DHCPv6MsgTypeRelayForward {
+	if d.MsgType == DHCPv6MsgTypeRelayForward || d.MsgType == DHCPv6MsgTypeRelayReply {
 		d.HopCount = data[1]
 		d.LinkAddr = net.IP(data[2:18])
 		d.PeerAddr = net.IP(data[18:34])
 		offset = 34
 	} else {
-		d.TransactionId = data[1:4]
+		d.TransactionID = data[1:4]
 		offset = 4
 	}
 
@@ -152,7 +152,7 @@ func (d *DHCPv6) SerializeTo(b gopacket.SerializeBuffer, opts gopacket.Serialize
 		copy(data[18:34], d.PeerAddr.To16())
 		offset = 34
 	} else {
-		copy(data[1:4], d.TransactionId)
+		copy(data[1:4], d.TransactionID)
 		offset = 4
 	}
 
@@ -397,6 +397,7 @@ func (o DHCPv6DuidType) String() string {
 	}
 }
 
+// Duid means DHCP Unique Identifier as stated in RFC 3315, section 9 (https://tools.ietf.org/html/rfc3315#page-19)
 type Duid struct {
 	Type DHCPv6DuidType
 	// LLT, LL
@@ -411,6 +412,7 @@ type Duid struct {
 	Identifier []byte
 }
 
+// DecodeFromBytes decodes the given bytes into a Duid
 func (d *Duid) DecodeFromBytes(data []byte) error {
 	if len(data) < 2 {
 		return errors.New("Not enough bytes to decode: " + string(len(data)))
@@ -434,6 +436,7 @@ func (d *Duid) DecodeFromBytes(data []byte) error {
 	return nil
 }
 
+// Encode encodes the Duid in a slice of bytes
 func (d *Duid) Encode() []byte {
 	length := d.Len()
 	data := make([]byte, length)
@@ -456,6 +459,7 @@ func (d *Duid) Encode() []byte {
 	return data
 }
 
+// Len returns the length of the Duid, respecting the type
 func (d *Duid) Len() int {
 	length := 2 // d.Type
 	if d.Type == DHCPv6DuidTypeLLT {

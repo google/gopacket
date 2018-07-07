@@ -14,7 +14,7 @@ import (
 )
 
 func TestDHCPv6EncodeRequest(t *testing.T) {
-	dhcpv6 := &DHCPv6{MsgType: DHCPv6MsgTypeRequest, HopCount: 0, TransactionId: []byte{87, 25, 88}}
+	dhcpv6 := &DHCPv6{MsgType: DHCPv6MsgTypeRequest, HopCount: 0, TransactionID: []byte{87, 25, 88}}
 
 	client := &Duid{Type: DHCPv6DuidTypeLLT, HardwareType: []byte{0, 1}, Time: []byte{28, 56, 38, 45}, LinkLayerAddress: []byte{8, 0, 39, 254, 143, 149}}
 	dhcpv6.Options = append(dhcpv6.Options, NewDHCPv6Option(DHCPv6OptClientID, client.Encode()))
@@ -29,13 +29,13 @@ func TestDHCPv6EncodeRequest(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	p_ := gopacket.NewPacket(buf.Bytes(), LayerTypeDHCPv6, testDecodeOptions)
-	dhcpv6_ := p_.Layer(LayerTypeDHCPv6).(*DHCPv6)
-	testDHCPv6Equal(t, dhcpv6, dhcpv6_)
+	p2 := gopacket.NewPacket(buf.Bytes(), LayerTypeDHCPv6, testDecodeOptions)
+	dhcpv62 := p2.Layer(LayerTypeDHCPv6).(*DHCPv6)
+	testDHCPv6Equal(t, dhcpv6, dhcpv62)
 }
 
 func TestDHCPv6EncodeReply(t *testing.T) {
-	dhcpv6 := &DHCPv6{MsgType: DHCPv6MsgTypeReply, HopCount: 0, TransactionId: []byte{87, 25, 88}}
+	dhcpv6 := &DHCPv6{MsgType: DHCPv6MsgTypeReply, HopCount: 0, TransactionID: []byte{87, 25, 88}}
 
 	client := &Duid{Type: DHCPv6DuidTypeLLT, HardwareType: []byte{0, 1}, Time: []byte{28, 56, 38, 45}, LinkLayerAddress: []byte{8, 0, 39, 254, 143, 149}}
 	dhcpv6.Options = append(dhcpv6.Options, NewDHCPv6Option(DHCPv6OptClientID, client.Encode()))
@@ -50,9 +50,9 @@ func TestDHCPv6EncodeReply(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	p_ := gopacket.NewPacket(buf.Bytes(), LayerTypeDHCPv6, testDecodeOptions)
-	dhcpv6_ := p_.Layer(LayerTypeDHCPv6).(*DHCPv6)
-	testDHCPv6Equal(t, dhcpv6, dhcpv6_)
+	p2 := gopacket.NewPacket(buf.Bytes(), LayerTypeDHCPv6, testDecodeOptions)
+	dhcpv62 := p2.Layer(LayerTypeDHCPv6).(*DHCPv6)
+	testDHCPv6Equal(t, dhcpv6, dhcpv62)
 }
 
 func testDHCPv6Equal(t *testing.T, d1, d2 *DHCPv6) {
@@ -68,8 +68,8 @@ func testDHCPv6Equal(t *testing.T, d1, d2 *DHCPv6) {
 	if !d1.PeerAddr.Equal(d2.PeerAddr) {
 		t.Errorf("expected PeerAddr=%v, got %v", d1.PeerAddr, d2.PeerAddr)
 	}
-	if !bytes.Equal(d1.TransactionId, d2.TransactionId) {
-		t.Errorf("expected TransactionId=%v, got %v", d1.TransactionId, d2.TransactionId)
+	if !bytes.Equal(d1.TransactionID, d2.TransactionID) {
+		t.Errorf("expected TransactionID=%v, got %v", d1.TransactionID, d2.TransactionID)
 	}
 	if len(d1.Options) != len(d2.Options) {
 		t.Errorf("expected %d options, got %d", len(d1.Options), len(d2.Options))
