@@ -60,7 +60,7 @@ func testDHCPv6Equal(t *testing.T, d1, d2 *DHCPv6) {
 		t.Errorf("expected MsgType=%s, got %s", d1.MsgType, d2.MsgType)
 	}
 	if d1.HopCount != d2.HopCount {
-		t.Errorf("expected HopCount=%s, got %s", d1.HopCount, d2.HopCount)
+		t.Errorf("expected HopCount=%d, got %d", d1.HopCount, d2.HopCount)
 	}
 	if !d1.LinkAddr.Equal(d2.LinkAddr) {
 		t.Errorf("expected LinkAddr=%v, got %v", d1.LinkAddr, d2.LinkAddr)
@@ -85,7 +85,7 @@ func testDHCPv6OptionEqual(t *testing.T, idx int, d1, d2 DHCPv6Option) {
 		t.Errorf("expection Options[%d].Code = %s, got %s", idx, d1.Code, d2.Code)
 	}
 	if d1.Length != d2.Length {
-		t.Errorf("expection Options[%d].Length = %s, got %s", idx, d1.Length, d2.Length)
+		t.Errorf("expection Options[%d].Length = %d, got %d", idx, d1.Length, d2.Length)
 	}
 	if !bytes.Equal(d1.Data, d2.Data) {
 		t.Errorf("expection Options[%d].Data to be = %v, got %v", idx, d1.Data, d2.Data)
