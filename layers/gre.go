@@ -13,6 +13,7 @@ import (
 )
 
 // GRE is a Generic Routing Encapsulation header.
+// https://tools.ietf.org/html/rfc2784
 type GRE struct {
 	BaseLayer
 	ChecksumPresent, RoutingPresent, KeyPresent, SeqPresent, StrictSourceRoute bool
