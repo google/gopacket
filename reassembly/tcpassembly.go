@@ -460,6 +460,14 @@ func (c *connection) reset(k key, s Stream, ts time.Time) {
 	c.c2s.dir, c.s2c.dir = TCPDirClientToServer, TCPDirServerToClient
 }
 
+func (c *connection) lastSeen() time.Time {
+	if c.c2s.lastSeen.Before(c.s2c.lastSeen) {
+		return c.s2c.lastSeen
+	}
+
+	return c.c2s.lastSeen
+}
+
 func (c *connection) String() string {
 	return fmt.Sprintf("c2s: %s, s2c: %s", &c.c2s, &c.s2c)
 }
@@ -655,6 +663,9 @@ func (a *Assembler) AssembleWithContext(netFlow gopacket.Flow, t *layers.TCP, ac
 	}
 	if half.closed {
 		// this way is closed
+		if *debugLog {
+			log.Printf("%v got packet on closed half", key)
+		}
 		return
 	}
 
@@ -1275,7 +1286,8 @@ func (a *Assembler) flushClose(conn *connection, half *halfconnection, t time.Ti
 			closed = true
 		}
 	}
-	if !half.closed && half.first == nil && half.lastSeen.Before(tc) {
+	// Close the connection only if both halfs of the connection last seen before tc.
+	if !half.closed && half.first == nil && conn.lastSeen().Before(tc) {
 		a.closeHalfConnection(conn, half)
 		closed = true
 	}
