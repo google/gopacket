@@ -717,6 +717,163 @@ func TestCacheLargePacket(t *testing.T) {
 	})
 }
 
+func testFlush(t *testing.T, s []testSequence, delay time.Duration, flushInterval time.Duration) {
+	fact := &testFactory{}
+	p := NewStreamPool(fact)
+	a := NewAssembler(p)
+	a.MaxBufferedPagesPerConnection = 10
+	port := layers.TCPPort(0)
+
+	for i, test := range s {
+		fact.reassembly = []Reassembly{}
+		if testDebug {
+			fmt.Printf("#### test: #%d: sending:%s\n", i, hex.EncodeToString(test.in.BaseLayer.Payload))
+		}
+
+		flow := netFlow
+		if port == 0 {
+			port = test.in.SrcPort
+		}
+		if port != test.in.SrcPort {
+			flow = flow.Reverse()
+		}
+		a.Assemble(flow, &test.in)
+		time.Sleep(delay)
+		a.FlushCloseOlderThan(time.Now().Add(-1 * flushInterval))
+
+		final := []Reassembly{}
+		if len(test.want) > 0 {
+			final = append(final, Reassembly{})
+			for _, w := range test.want {
+				final[0].Bytes = append(final[0].Bytes, w.Bytes...)
+				if w.End {
+					final[0].End = true
+				}
+				if w.Start {
+					final[0].Start = true
+				}
+				if w.Skip != 0 {
+					final[0].Skip = w.Skip
+				}
+			}
+		}
+
+		if !reflect.DeepEqual(fact.reassembly, final) {
+			t.Errorf("test %v:\nwant: %v\n got: %v\n", i, final, fact.reassembly)
+		}
+
+		if testDebug {
+			fmt.Printf("test %v passing...(%v)\n", i, final)
+		}
+	}
+}
+
+func TestFlush(t *testing.T) {
+	for _, test := range []struct {
+		seq                   []testSequence
+		delay, flushOlderThan time.Duration
+	}{
+		{
+			seq: []testSequence{
+				{
+					in: layers.TCP{
+						SrcPort:   1,
+						DstPort:   2,
+						Seq:       1001,
+						BaseLayer: layers.BaseLayer{Payload: []byte{1, 2, 3}},
+					},
+					want: []Reassembly{
+						// flushed after flush interval.
+						Reassembly{
+							Skip:  -1,
+							Bytes: []byte{1, 2, 3},
+						},
+					},
+				},
+				{
+					in: layers.TCP{
+						SrcPort:   1,
+						DstPort:   2,
+						Seq:       1010,
+						BaseLayer: layers.BaseLayer{Payload: []byte{4, 5, 6, 7}},
+					},
+					want: []Reassembly{
+						// flushed after flush interval.
+						Reassembly{
+							Skip:  -1,
+							Bytes: []byte{4, 5, 6, 7},
+						},
+					},
+				},
+			},
+			delay:          time.Millisecond * 50,
+			flushOlderThan: time.Millisecond * 40,
+		},
+		{
+			// two way stream.
+			seq: []testSequence{
+				{
+					in: layers.TCP{
+						SrcPort:   1,
+						DstPort:   2,
+						Seq:       1001,
+						BaseLayer: layers.BaseLayer{Payload: []byte{1, 2, 3}},
+					},
+					want: []Reassembly{},
+				},
+				{
+					in: layers.TCP{
+						SrcPort:   2,
+						DstPort:   1,
+						Seq:       890,
+						BaseLayer: layers.BaseLayer{Payload: []byte{11, 22, 33}},
+					},
+					want: []Reassembly{
+						// First half is flushed after flush interval.
+						Reassembly{
+							Skip:  -1,
+							Bytes: []byte{1, 2, 3},
+						},
+					},
+				},
+				{
+					in: layers.TCP{
+						SrcPort:   2,
+						DstPort:   1,
+						Seq:       893,
+						BaseLayer: layers.BaseLayer{Payload: []byte{44, 55, 66, 77}},
+					},
+					want: []Reassembly{
+						// continues data is flushed.
+						Reassembly{
+							Skip:  -1,
+							Bytes: []byte{11, 22, 33, 44, 55, 66, 77},
+						},
+					},
+				},
+				{
+					in: layers.TCP{
+						SrcPort:   1,
+						DstPort:   2,
+						Seq:       1004,
+						BaseLayer: layers.BaseLayer{Payload: []byte{8, 9}},
+					},
+					want: []Reassembly{
+						Reassembly{
+							// Should be flushed because is continues.
+							Bytes: []byte{8, 9},
+						},
+					},
+				},
+			},
+			delay:          time.Millisecond * 50,
+			flushOlderThan: time.Millisecond * 99,
+		},
+	} {
+		testFlush(t, test.seq, test.delay, test.flushOlderThan)
+	}
+}
+
 /*
  * Keep
  */
