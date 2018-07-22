@@ -69,6 +69,14 @@ func TestPcapFileRead(t *testing.T) {
 				layers.LayerTypeTCP,
 			},
 		},
+		{filename: "test_vlan.pcap",
+			num: 14,
+			expectedLayers: []gopacket.LayerType{
+				layers.LayerTypeEthernet,
+				layers.LayerTypeIPv4,
+				layers.LayerTypeTCP,
+			},
+		},
 		{filename: "test_dns.pcap",
 			num: 10,
 			expectedLayers: []gopacket.LayerType{
@@ -131,6 +139,39 @@ func TestBPF(t *testing.T) {
 		{"foobar", true, false},
 		{"tcp[tcpflags] & (tcp-syn|tcp-ack) == (tcp-syn|tcp-ack)", false, true},
 		{"tcp[tcpflags] & (tcp-syn|tcp-ack) == tcp-ack", false, true},
+		{"udp", false, false},
+	} {
+		data, ci, err := handle.ReadPacketData()
+		if err != nil {
+			t.Fatal(err)
+		}
+		t.Log("Testing filter", expected.expr)
+		if bpf, err := handle.NewBPF(expected.expr); err != nil {
+			if !expected.Error {
+				t.Error(err, "while compiling filter was unexpected")
+			}
+		} else if expected.Error {
+			t.Error("expected error but didn't see one")
+		} else if matches := bpf.Matches(ci, data); matches != expected.Result {
+			t.Error("Filter result was", matches, "but should be", expected.Result)
+		}
+	}
+}
+
+func TestBPFVlan(t *testing.T) {
+	handle, err := OpenOffline("test_vlan.pcap")
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	for _, expected := range []struct {
+		expr   string
+		Error  bool
+		Result bool
+	}{
+		{"foobar", true, false},
+		{"tcp", false, true},
+		{"tcp and port 1162", false, true},
 		{"udp", false, false},
 	} {
 		data, ci, err := handle.ReadPacketData()
