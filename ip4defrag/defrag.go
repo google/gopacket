@@ -30,6 +30,12 @@ func (d debugging) Printf(format string, args ...interface{}) {
 	}
 }
 
+// SetDebug sets the debug flag to the given value.
+// This function is not thread safe: shouldn't use while defragmenting.
+func SetDebug(shouldDebug bool) {
+	debug = debugging(shouldDebug)
+}
+
 // Constants determining how to handle fragments.
 // Reference RFC 791, page 25
 const (
