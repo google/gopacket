@@ -247,3 +247,139 @@ func TestCheckFSMmissingSYN(t *testing.T) {
 		})
 	}
 }
+
+/*
+ * Option tests
+ */
+
+type testCheckOptionsSequence struct {
+	tcp      layers.TCP
+	ci       gopacket.CaptureInfo
+	dir      TCPFlowDirection
+	nextSeq  Sequence
+	expected bool
+	start    bool
+}
+
+func testCheckOptions(t *testing.T, title string, s []testCheckOptionsSequence) {
+	opt := NewTCPOptionCheck()
+	for i, test := range s {
+		err := opt.Accept(&test.tcp, test.ci, test.dir, test.nextSeq, &test.start)
+		res := err == nil
+		if res != test.expected {
+			t.Fatalf("'%v' #%d: packet rejected (%v): got %v, expected %v.", title, i, gopacket.LayerDump(&test.tcp), res, test.expected)
+		}
+	}
+}
+
+func TestCheckOptions(t *testing.T) {
+	for _, test := range []struct {
+		title    string
+		sequence []testCheckOptionsSequence
+	}{
+		{
+			title: "simle valid flow",
+			sequence: []testCheckOptionsSequence{
+				{
+					dir:     TCPDirClientToServer,
+					nextSeq: -1, // no packets received yet.
+					tcp: layers.TCP{
+						SrcPort:   35721,
+						DstPort:   80,
+						Seq:       374511116,
+						Ack:       0,
+						BaseLayer: layers.BaseLayer{Payload: []byte{1, 2, 3}},
+					},
+					ci: gopacket.CaptureInfo{
+						Timestamp: time.Unix(1432538521, 566690000),
+					},
+					expected: true,
+				},
+				{
+					dir:     TCPDirServerToClient,
+					nextSeq: -1,
+					tcp: layers.TCP{
+						SrcPort:   53,
+						DstPort:   54842,
+						Seq:       3465787765,
+						Ack:       374511119,
+						BaseLayer: layers.BaseLayer{Payload: []byte{}},
+					},
+					ci: gopacket.CaptureInfo{
+						Timestamp: time.Unix(1432538521, 590332000),
+					},
+					expected: true,
+				},
+				{
+					dir:     TCPDirClientToServer,
+					nextSeq: 374511119,
+					tcp: layers.TCP{
+						ACK:       true,
+						SrcPort:   54842,
+						DstPort:   53,
+						Seq:       374511119,
+						Ack:       3465787766,
+						BaseLayer: layers.BaseLayer{Payload: []byte{2, 3, 4}},
+					},
+					ci: gopacket.CaptureInfo{
+						Timestamp: time.Unix(1432538521, 590346000),
+					},
+					expected: true,
+				},
+			},
+		},
+		{
+			title: "ack received before data",
+			sequence: []testCheckOptionsSequence{
+				{
+					dir:     TCPDirServerToClient,
+					nextSeq: -1,
+					tcp: layers.TCP{
+						SrcPort:   53,
+						DstPort:   54842,
+						Seq:       3465787765,
+						Ack:       374511119,
+						BaseLayer: layers.BaseLayer{Payload: []byte{}},
+					},
+					ci: gopacket.CaptureInfo{
+						Timestamp: time.Unix(1432538521, 590332000),
+					},
+					expected: true,
+				},
+				{
+					dir:     TCPDirClientToServer,
+					nextSeq: 374511119, // ack already received.
+					tcp: layers.TCP{
+						SrcPort:   35721,
+						DstPort:   80,
+						Seq:       374511116,
+						Ack:       0,
+						BaseLayer: layers.BaseLayer{Payload: []byte{1, 2, 3}},
+					},
+					ci: gopacket.CaptureInfo{
+						Timestamp: time.Unix(1432538521, 566690000),
+					},
+					expected: true, // should be true, but with current implementation is false...
+				},
+				{
+					dir:     TCPDirClientToServer,
+					nextSeq: 374511119,
+					tcp: layers.TCP{
+						ACK:       true,
+						SrcPort:   54842,
+						DstPort:   53,
+						Seq:       374511119,
+						Ack:       3465787766,
+						BaseLayer: layers.BaseLayer{Payload: []byte{2, 3, 4}},
+					},
+					ci: gopacket.CaptureInfo{
+						Timestamp: time.Unix(1432538521, 590346000),
+					},
+					expected: true,
+				},
+			},
+		},
+	} {
+		testCheckOptions(t, test.title, test.sequence)
+	}
+}
