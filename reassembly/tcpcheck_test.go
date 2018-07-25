@@ -348,7 +348,7 @@ func TestCheckOptions(t *testing.T) {
 				},
 				{
 					dir:     TCPDirClientToServer,
-					nextSeq: 374511119, // ack already received.
+					nextSeq: 37451116, // this is the next expected sequence.
 					tcp: layers.TCP{
 						SrcPort:   35721,
 						DstPort:   80,
@@ -359,7 +359,7 @@ func TestCheckOptions(t *testing.T) {
 					ci: gopacket.CaptureInfo{
 						Timestamp: time.Unix(1432538521, 566690000),
 					},
-					expected: true, // should be true, but with current implementation is false...
+					expected: true,
 				},
 				{
 					dir:     TCPDirClientToServer,
@@ -376,6 +376,38 @@ func TestCheckOptions(t *testing.T) {
 						Timestamp: time.Unix(1432538521, 590346000),
 					},
 					expected: true,
+				},
+				{
+					dir:     TCPDirClientToServer,
+					nextSeq: 374511122, // 10 bytes skipped
+					tcp: layers.TCP{
+						ACK:       true,
+						SrcPort:   54842,
+						DstPort:   53,
+						Seq:       374511132,
+						Ack:       3465787766,
+						BaseLayer: layers.BaseLayer{Payload: []byte{22, 33, 44}},
+					},
+					ci: gopacket.CaptureInfo{
+						Timestamp: time.Unix(1432538521, 590346000),
+					},
+					expected: true,
+				},
+				{
+					dir:     TCPDirClientToServer,
+					nextSeq: 374511132,
+					tcp: layers.TCP{
+						ACK:       true,
+						SrcPort:   54842,
+						DstPort:   53,
+						Seq:       374511119, // retransmission of reassembled data.
+						Ack:       3465787766,
+						BaseLayer: layers.BaseLayer{Payload: []byte{2, 3, 4}},
+					},
+					ci: gopacket.CaptureInfo{
+						Timestamp: time.Unix(1432538521, 590346000),
+					},
+					expected: false,
 				},
 			},
 		},
