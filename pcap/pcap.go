@@ -695,6 +695,28 @@ func (p *Handle) NewBPF(expr string) (*BPF, error) {
 	return bpf, nil
 }
 
+// NewBPF allows to create a BPF without requiring an existing handle.
+// This allows to match packets obtained from a-non GoPacket capture source
+// to be matched.
+//
+// buf := make([]byte, MaxFrameSize)
+// bpfi, _ := pcap.NewBPF(layers.LinkTypeEthernet, MaxFrameSize, "icmp")
+// n, _ := someIO.Read(buf)
+// ci := gopacket.CaptureInfo{CaptureLength: n, Length: n}
+// if bpfi.Matches(ci, buf) {
+//     doSomething()
+// }
+func NewBPF(linkType layers.LinkType, captureLength int, expr string) (*BPF, error) {
+	cptr := C.pcap_open_dead(C.int(linkType), C.int(captureLength))
+	if cptr == nil {
+		return nil, errors.New("error opening dead capture")
+	}
+
+	h := Handle{cptr: cptr}
+	defer h.Close()
+	return h.NewBPF(expr)
+}
+
 // NewBPFInstructionFilter sets the given BPFInstructions as new filter program.
 //
 // More details see func SetBPFInstructionFilter
