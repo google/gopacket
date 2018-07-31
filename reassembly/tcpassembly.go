@@ -358,7 +358,7 @@ func (lp *livePacket) release(*pageCache) int {
 //    3) Call ReassemblyComplete one time, after which the stream is dereferenced by assembly.
 type Stream interface {
 	// Tell whether the TCP packet should be accepted, start could be modified to force a start even if no SYN have been seen
-	Accept(tcp *layers.TCP, ci gopacket.CaptureInfo, dir TCPFlowDirection, ackSeq Sequence, start *bool, ac AssemblerContext) bool
+	Accept(tcp *layers.TCP, ci gopacket.CaptureInfo, dir TCPFlowDirection, nextSeq Sequence, start *bool, ac AssemblerContext) bool
 
 	// ReassembledSG is called zero or more times.
 	// ScatterGather is reused after each Reassembled call,
@@ -458,6 +458,14 @@ func (c *connection) reset(k key, s Stream, ts time.Time) {
 	}
 	c.c2s, c.s2c = base, base
 	c.c2s.dir, c.s2c.dir = TCPDirClientToServer, TCPDirServerToClient
+}
+
+func (c *connection) lastSeen() time.Time {
+	if c.c2s.lastSeen.Before(c.s2c.lastSeen) {
+		return c.s2c.lastSeen
+	}
+
+	return c.c2s.lastSeen
 }
 
 func (c *connection) String() string {
@@ -573,7 +581,7 @@ func NewAssembler(pool *StreamPool) *Assembler {
 	pool.users++
 	pool.mu.Unlock()
 	return &Assembler{
-		ret:              make([]byteContainer, assemblerReturnValueInitialSize),
+		ret:              make([]byteContainer, 0, assemblerReturnValueInitialSize),
 		pc:               newPageCache(),
 		connPool:         pool,
 		AssemblerOptions: DefaultAssemblerOptions,
@@ -647,7 +655,13 @@ func (a *Assembler) AssembleWithContext(netFlow gopacket.Flow, t *layers.TCP, ac
 		half.lastSeen = timestamp
 	}
 	a.start = half.nextSeq == invalidSequence && t.SYN
-	if !half.stream.Accept(t, ci, half.dir, rev.ackSeq, &a.start, ac) {
+	if *debugLog {
+		if half.nextSeq < rev.ackSeq {
+			log.Printf("Delay detected on %v, data is acked but not assembled yet (acked %v, nextSeq %v)", key, rev.ackSeq, half.nextSeq)
+		}
+	}
+
+	if !half.stream.Accept(t, ci, half.dir, half.nextSeq, &a.start, ac) {
 		if *debugLog {
 			log.Printf("Ignoring packet")
 		}
@@ -655,6 +669,9 @@ func (a *Assembler) AssembleWithContext(netFlow gopacket.Flow, t *layers.TCP, ac
 	}
 	if half.closed {
 		// this way is closed
+		if *debugLog {
+			log.Printf("%v got packet on closed half", key)
+		}
 		return
 	}
 
@@ -1275,7 +1292,8 @@ func (a *Assembler) flushClose(conn *connection, half *halfconnection, t time.Ti
 			closed = true
 		}
 	}
-	if !half.closed && half.first == nil && half.lastSeen.Before(tc) {
+	// Close the connection only if both halfs of the connection last seen before tc.
+	if !half.closed && half.first == nil && conn.lastSeen().Before(tc) {
 		a.closeHalfConnection(conn, half)
 		closed = true
 	}
