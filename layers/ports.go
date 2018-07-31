@@ -107,9 +107,6 @@ var udpPortLayerType = [65536]gopacket.LayerType{
 	2152: LayerTypeGTPv1U,
 }
 
-
-
-
 // RegisterUDPPortLayerType creates a new mapping between a UDPPort
 // and an underlaying LayerType.
 func RegisterUDPPortLayerType(port UDPPort, layerType gopacket.LayerType) {
