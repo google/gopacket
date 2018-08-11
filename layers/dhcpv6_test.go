@@ -16,10 +16,10 @@ import (
 func TestDHCPv6EncodeRequest(t *testing.T) {
 	dhcpv6 := &DHCPv6{MsgType: DHCPv6MsgTypeRequest, HopCount: 0, TransactionID: []byte{87, 25, 88}}
 
-	client := &Duid{Type: DHCPv6DuidTypeLLT, HardwareType: []byte{0, 1}, Time: []byte{28, 56, 38, 45}, LinkLayerAddress: []byte{8, 0, 39, 254, 143, 149}}
+	client := &DHCPv6DUID{Type: DHCPv6DUIDTypeLLT, HardwareType: []byte{0, 1}, Time: []byte{28, 56, 38, 45}, LinkLayerAddress: []byte{8, 0, 39, 254, 143, 149}}
 	dhcpv6.Options = append(dhcpv6.Options, NewDHCPv6Option(DHCPv6OptClientID, client.Encode()))
 
-	server := &Duid{Type: DHCPv6DuidTypeLLT, HardwareType: []byte{0, 1}, Time: []byte{28, 56, 37, 232}, LinkLayerAddress: []byte{8, 0, 39, 212, 16, 187}}
+	server := &DHCPv6DUID{Type: DHCPv6DUIDTypeLLT, HardwareType: []byte{0, 1}, Time: []byte{28, 56, 37, 232}, LinkLayerAddress: []byte{8, 0, 39, 212, 16, 187}}
 	dhcpv6.Options = append(dhcpv6.Options, NewDHCPv6Option(DHCPv6OptServerID, server.Encode()))
 
 	buf := gopacket.NewSerializeBuffer()
@@ -37,10 +37,10 @@ func TestDHCPv6EncodeRequest(t *testing.T) {
 func TestDHCPv6EncodeReply(t *testing.T) {
 	dhcpv6 := &DHCPv6{MsgType: DHCPv6MsgTypeReply, HopCount: 0, TransactionID: []byte{87, 25, 88}}
 
-	client := &Duid{Type: DHCPv6DuidTypeLLT, HardwareType: []byte{0, 1}, Time: []byte{28, 56, 38, 45}, LinkLayerAddress: []byte{8, 0, 39, 254, 143, 149}}
+	client := &DHCPv6DUID{Type: DHCPv6DUIDTypeLLT, HardwareType: []byte{0, 1}, Time: []byte{28, 56, 38, 45}, LinkLayerAddress: []byte{8, 0, 39, 254, 143, 149}}
 	dhcpv6.Options = append(dhcpv6.Options, NewDHCPv6Option(DHCPv6OptClientID, client.Encode()))
 
-	server := &Duid{Type: DHCPv6DuidTypeLLT, HardwareType: []byte{0, 1}, Time: []byte{28, 56, 37, 232}, LinkLayerAddress: []byte{8, 0, 39, 212, 16, 187}}
+	server := &DHCPv6DUID{Type: DHCPv6DUIDTypeLLT, HardwareType: []byte{0, 1}, Time: []byte{28, 56, 37, 232}, LinkLayerAddress: []byte{8, 0, 39, 212, 16, 187}}
 	dhcpv6.Options = append(dhcpv6.Options, NewDHCPv6Option(DHCPv6OptServerID, server.Encode()))
 
 	buf := gopacket.NewSerializeBuffer()

@@ -321,7 +321,7 @@ type DHCPv6Option struct {
 func (o DHCPv6Option) String() string {
 	switch o.Code {
 	case DHCPv6OptClientID, DHCPv6OptServerID:
-		duid, err := decodeDuid(o.Data)
+		duid, err := decodeDHCPv6DUID(o.Data)
 		if err != nil {
 			return fmt.Sprintf("Option(%s:INVALID)", o.Code)
 		}
@@ -373,33 +373,33 @@ func (o *DHCPv6Option) decode(data []byte) error {
 	return nil
 }
 
-// DHCPv6DuidType represents a DHCP DUID - RFC-3315
-type DHCPv6DuidType uint16
+// DHCPv6DUIDType represents a DHCP DUID - RFC-3315
+type DHCPv6DUIDType uint16
 
-// Constants for the DHCPv6DuidType.
+// Constants for the DHCPv6DUIDType.
 const (
-	DHCPv6DuidTypeLLT DHCPv6DuidType = iota + 1
-	DHCPv6DuidTypeEN
-	DHCPv6DuidTypeLL
+	DHCPv6DUIDTypeLLT DHCPv6DUIDType = iota + 1
+	DHCPv6DUIDTypeEN
+	DHCPv6DUIDTypeLL
 )
 
-// String returns a string version of a DHCPv6DuidType.
-func (o DHCPv6DuidType) String() string {
+// String returns a string version of a DHCPv6DUIDType.
+func (o DHCPv6DUIDType) String() string {
 	switch o {
-	case DHCPv6DuidTypeLLT:
+	case DHCPv6DUIDTypeLLT:
 		return "LLT"
-	case DHCPv6DuidTypeEN:
+	case DHCPv6DUIDTypeEN:
 		return "EN"
-	case DHCPv6DuidTypeLL:
+	case DHCPv6DUIDTypeLL:
 		return "LL"
 	default:
 		return "Unknown"
 	}
 }
 
-// Duid means DHCP Unique Identifier as stated in RFC 3315, section 9 (https://tools.ietf.org/html/rfc3315#page-19)
-type Duid struct {
-	Type DHCPv6DuidType
+// DHCPv6DUID means DHCP Unique Identifier as stated in RFC 3315, section 9 (https://tools.ietf.org/html/rfc3315#page-19)
+type DHCPv6DUID struct {
+	Type DHCPv6DUIDType
 	// LLT, LL
 	HardwareType []byte
 	// EN
@@ -407,49 +407,49 @@ type Duid struct {
 	// LLT
 	Time []byte
 	// LLT, LL
-	LinkLayerAddress []byte
+	LinkLayerAddress net.HardwareAddr
 	// EN
 	Identifier []byte
 }
 
-// DecodeFromBytes decodes the given bytes into a Duid
-func (d *Duid) DecodeFromBytes(data []byte) error {
+// DecodeFromBytes decodes the given bytes into a DHCPv6DUID
+func (d *DHCPv6DUID) DecodeFromBytes(data []byte) error {
 	if len(data) < 2 {
 		return errors.New("Not enough bytes to decode: " + string(len(data)))
 	}
 
-	d.Type = DHCPv6DuidType(binary.BigEndian.Uint16(data[:2]))
-	if d.Type == DHCPv6DuidTypeLLT || d.Type == DHCPv6DuidTypeLL {
+	d.Type = DHCPv6DUIDType(binary.BigEndian.Uint16(data[:2]))
+	if d.Type == DHCPv6DUIDTypeLLT || d.Type == DHCPv6DUIDTypeLL {
 		d.HardwareType = data[2:4]
 	}
 
-	if d.Type == DHCPv6DuidTypeLLT {
+	if d.Type == DHCPv6DUIDTypeLLT {
 		d.Time = data[4:8]
-		d.LinkLayerAddress = data[8:]
-	} else if d.Type == DHCPv6DuidTypeEN {
+		d.LinkLayerAddress = net.HardwareAddr(data[8:])
+	} else if d.Type == DHCPv6DUIDTypeEN {
 		d.EnterpriseNumber = data[2:6]
 		d.Identifier = data[6:]
-	} else { // DHCPv6DuidTypeLL
-		d.LinkLayerAddress = data[4:]
+	} else { // DHCPv6DUIDTypeLL
+		d.LinkLayerAddress = net.HardwareAddr(data[4:])
 	}
 
 	return nil
 }
 
-// Encode encodes the Duid in a slice of bytes
-func (d *Duid) Encode() []byte {
+// Encode encodes the DHCPv6DUID in a slice of bytes
+func (d *DHCPv6DUID) Encode() []byte {
 	length := d.Len()
 	data := make([]byte, length)
 	binary.BigEndian.PutUint16(data[0:2], uint16(d.Type))
 
-	if d.Type == DHCPv6DuidTypeLLT || d.Type == DHCPv6DuidTypeLL {
+	if d.Type == DHCPv6DUIDTypeLLT || d.Type == DHCPv6DUIDTypeLL {
 		copy(data[2:4], d.HardwareType)
 	}
 
-	if d.Type == DHCPv6DuidTypeLLT {
+	if d.Type == DHCPv6DUIDTypeLLT {
 		copy(data[4:8], d.Time)
 		copy(data[8:], d.LinkLayerAddress)
-	} else if d.Type == DHCPv6DuidTypeEN {
+	} else if d.Type == DHCPv6DUIDTypeEN {
 		copy(data[2:6], d.EnterpriseNumber)
 		copy(data[6:], d.Identifier)
 	} else {
@@ -459,12 +459,12 @@ func (d *Duid) Encode() []byte {
 	return data
 }
 
-// Len returns the length of the Duid, respecting the type
-func (d *Duid) Len() int {
+// Len returns the length of the DHCPv6DUID, respecting the type
+func (d *DHCPv6DUID) Len() int {
 	length := 2 // d.Type
-	if d.Type == DHCPv6DuidTypeLLT {
+	if d.Type == DHCPv6DUIDTypeLLT {
 		length += 2 /*HardwareType*/ + 4 /*d.Time*/ + len(d.LinkLayerAddress)
-	} else if d.Type == DHCPv6DuidTypeEN {
+	} else if d.Type == DHCPv6DUIDTypeEN {
 		length += 4 /*d.EnterpriseNumber*/ + len(d.Identifier)
 	} else { // LL
 		length += 2 /*d.HardwareType*/ + len(d.LinkLayerAddress)
@@ -473,20 +473,20 @@ func (d *Duid) Len() int {
 	return length
 }
 
-func (d *Duid) String() string {
+func (d *DHCPv6DUID) String() string {
 	duid := "Type: " + d.Type.String() + ", "
-	if d.Type == DHCPv6DuidTypeLLT {
+	if d.Type == DHCPv6DUIDTypeLLT {
 		duid += fmt.Sprintf("HardwareType: %v, Time: %v, LinkLayerAddress: %v", d.HardwareType, d.Time, d.LinkLayerAddress)
-	} else if d.Type == DHCPv6DuidTypeEN {
+	} else if d.Type == DHCPv6DUIDTypeEN {
 		duid += fmt.Sprintf("EnterpriseNumber: %v, Identifier: %v", d.EnterpriseNumber, d.Identifier)
-	} else { // DHCPv6DuidTypeLL
+	} else { // DHCPv6DUIDTypeLL
 		duid += fmt.Sprintf("HardwareType: %v, LinkLayerAddress: %v", d.HardwareType, d.LinkLayerAddress)
 	}
 	return duid
 }
 
-func decodeDuid(data []byte) (*Duid, error) {
-	duid := &Duid{}
+func decodeDHCPv6DUID(data []byte) (*DHCPv6DUID, error) {
+	duid := &DHCPv6DUID{}
 	err := duid.DecodeFromBytes(data)
 	if err != nil {
 		return nil, err
