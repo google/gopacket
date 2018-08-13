@@ -135,6 +135,7 @@ var (
 	LayerTypeLCM                         = gopacket.RegisterLayerType(131, gopacket.LayerTypeMetadata{Name: "LCM", Decoder: gopacket.DecodeFunc(decodeLCM)})
 	LayerTypeICMPv6Echo                  = gopacket.RegisterLayerType(132, gopacket.LayerTypeMetadata{Name: "ICMPv6Echo", Decoder: gopacket.DecodeFunc(decodeICMPv6Echo)})
 	LayerTypeSIP                         = gopacket.RegisterLayerType(133, gopacket.LayerTypeMetadata{Name: "SIP", Decoder: gopacket.DecodeFunc(decodeSIP)})
+	LayerTypeDHCPv6                      = gopacket.RegisterLayerType(134, gopacket.LayerTypeMetadata{Name: "DHCPv6", Decoder: gopacket.DecodeFunc(decodeDHCPv6)})
 )
 
 var (
