@@ -46,8 +46,10 @@ package tcpreader
 
 import (
 	"errors"
-	"github.com/google/gopacket/tcpassembly"
 	"io"
+	"time"
+
+	"github.com/google/gopacket/tcpassembly"
 )
 
 var discardBuffer = make([]byte, 4096)
@@ -207,4 +209,15 @@ func (r *ReaderStream) Close() error {
 		}
 		r.done <- true
 	}
+}
+
+// Seen returns the timestamp when the last read byte was pulled off the wire.
+func (r *ReaderStream) Seen() time.Time {
+	if !r.initiated {
+		panic("ReaderStream not created via NewReaderStream")
+	}
+	if len(r.current) == 0 {
+		return time.Time{}
+	}
+	return r.current[0].Seen
 }
