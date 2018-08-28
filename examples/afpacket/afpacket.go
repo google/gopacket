@@ -41,27 +41,27 @@ type afpacketHandle struct {
 }
 
 func newAfpacketHandle(device string, snaplen int, block_size int, num_blocks int,
-	timeout time.Duration) (*afpacketHandle, error) {
+	useVLAN bool, timeout time.Duration) (*afpacketHandle, error) {
 
 	h := &afpacketHandle{}
 	var err error
 
-	if *iface == "any" {
+	if device == "any" {
 		h.TPacket, err = afpacket.NewTPacket(
 			afpacket.OptFrameSize(snaplen),
 			afpacket.OptBlockSize(block_size),
 			afpacket.OptNumBlocks(num_blocks),
-			afpacket.OptAddVLANHeader(*addVLAN),
+			afpacket.OptAddVLANHeader(useVLAN),
 			afpacket.OptPollTimeout(timeout),
 			afpacket.SocketRaw,
 			afpacket.TPacketVersion3)
 	} else {
 		h.TPacket, err = afpacket.NewTPacket(
-			afpacket.OptInterface(*iface),
+			afpacket.OptInterface(device),
 			afpacket.OptFrameSize(snaplen),
 			afpacket.OptBlockSize(block_size),
 			afpacket.OptNumBlocks(num_blocks),
-			afpacket.OptAddVLANHeader(*addVLAN),
+			afpacket.OptAddVLANHeader(useVLAN),
 			afpacket.OptPollTimeout(timeout),
 			afpacket.SocketRaw,
 			afpacket.TPacketVersion3)
@@ -157,7 +157,7 @@ func main() {
 	if err != nil {
 		log.Fatal(err)
 	}
-	afpacketHandle, err := newAfpacketHandle(*iface, szFrame, szBlock, numBlocks, pcap.BlockForever)
+	afpacketHandle, err := newAfpacketHandle(*iface, szFrame, szBlock, numBlocks, *addVLAN, pcap.BlockForever)
 	if err != nil {
 		log.Fatal(err)
 	}
