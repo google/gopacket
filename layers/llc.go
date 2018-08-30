@@ -132,7 +132,7 @@ func decodeSNAP(data []byte, p gopacket.PacketBuilder) error {
 // SerializationBuffer, implementing gopacket.SerializableLayer.
 // See the docs for gopacket.SerializableLayer for more info.
 func (l *LLC) SerializeTo(b gopacket.SerializeBuffer, opts gopacket.SerializeOptions) error {
-	var ig_flag, cr_flag byte
+	var igFlag, crFlag byte
 	var length int
 
 	if l.Control&0xFF00 != 0 {
@@ -152,18 +152,18 @@ func (l *LLC) SerializeTo(b gopacket.SerializeBuffer, opts gopacket.SerializeOpt
 	if buf, err := b.PrependBytes(length); err != nil {
 		return err
 	} else {
-		ig_flag = 0
+		igFlag = 0
 		if l.IG {
-			ig_flag = 0x1
+			igFlag = 0x1
 		}
 
-		cr_flag = 0
+		crFlag = 0
 		if l.CR {
-			cr_flag = 0x1
+			crFlag = 0x1
 		}
 
-		buf[0] = l.DSAP + ig_flag
-		buf[1] = l.SSAP + cr_flag
+		buf[0] = l.DSAP + igFlag
+		buf[1] = l.SSAP + crFlag
 
 		if length == 4 {
 			buf[2] = uint8(l.Control >> 8)
