@@ -523,11 +523,6 @@ func (i *ICMPv6Options) SerializeTo(b gopacket.SerializeBuffer, opts gopacket.Se
 	return nil
 }
 
-// CanDecode returns the set of layer types that this DecodingLayer can decode.
-func (i *ICMPv6Options) CanDecode() gopacket.LayerClass {
-	return LayerTypeICMPv6Options
-}
-
 func decodeICMPv6Echo(data []byte, p gopacket.PacketBuilder) error {
 	i := &ICMPv6Echo{}
 	return decodingLayerDecoder(i, data, p)
