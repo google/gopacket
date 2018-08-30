@@ -157,11 +157,15 @@ func (rl *reassemblyObject) KeepFrom(offset int) {
 
 func (rl *reassemblyObject) CaptureInfo(offset int) gopacket.CaptureInfo {
 	current := 0
-	for _, r := range rl.all {
+	var r byteContainer
+	for _, r = range rl.all {
 		if current >= offset {
 			return r.captureInfo()
 		}
 		current += r.length()
+	}
+	if r != nil && current >= offset {
+		return r.captureInfo()
 	}
 	// Invalid offset
 	return gopacket.CaptureInfo{}
