@@ -103,7 +103,11 @@ int pcap_set_rfmon(pcap_t *p, int rfmon) {
 
 // The things we do to avoid pointers escaping to the heap...
 int pcap_next_ex_escaping(pcap_t *p, uintptr_t pkt_hdr, uintptr_t pkt_data) {
-  return pcap_next_ex(p, (struct pcap_pkthdr**)(pkt_hdr), (const u_char**)(pkt_data));
+  int ex = pcap_next_ex(p, (struct pcap_pkthdr**)(pkt_hdr), (const u_char**)(pkt_data));
+  if (ex > 1) {
+	ex = 1;
+  }
+  return ex;
 }
 */
 import "C"
