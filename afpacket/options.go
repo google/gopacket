@@ -100,6 +100,12 @@ type OptPollTimeout time.Duration
 // time it goes through AF_PACKET.  If this option is true, the VLAN header is
 // added back in before the packet is returned.  Note that this potentially has
 // a large performance hit, especially in otherwise zero-copy operation.
+//
+// Note that if you do not need to have a "real" VLAN layer, it may be
+// preferable to use the VLAN ID provided by the AncillaryVLAN struct
+// in CaptureInfo.AncillaryData, which is populated out-of-band and has
+// negligible performance impact. Such ancillary data will automatically
+// be provided if available.
 type OptAddVLANHeader bool
 
 // Default constants used by options.
