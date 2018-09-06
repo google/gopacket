@@ -192,6 +192,11 @@ func (i *ICMPv6RouterSolicitation) SerializeTo(b gopacket.SerializeBuffer, opts 
 	return nil
 }
 
+// CanDecode returns the set of layer types that this DecodingLayer can decode.
+func (i *ICMPv6RouterSolicitation) CanDecode() gopacket.LayerClass {
+	return LayerTypeICMPv6RouterSolicitation
+}
+
 // LayerType returns LayerTypeICMPv6RouterAdvertisement.
 func (i *ICMPv6RouterAdvertisement) LayerType() gopacket.LayerType {
 	return LayerTypeICMPv6RouterAdvertisement
@@ -242,6 +247,11 @@ func (i *ICMPv6RouterAdvertisement) SerializeTo(b gopacket.SerializeBuffer, opts
 	binary.BigEndian.PutUint32(buf[4:], i.ReachableTime)
 	binary.BigEndian.PutUint32(buf[8:], i.RetransTimer)
 	return nil
+}
+
+// CanDecode returns the set of layer types that this DecodingLayer can decode.
+func (i *ICMPv6RouterAdvertisement) CanDecode() gopacket.LayerClass {
+	return LayerTypeICMPv6RouterAdvertisement
 }
 
 // ManagedAddressConfig is true when addresses are available via DHCPv6. If
@@ -300,6 +310,11 @@ func (i *ICMPv6NeighborSolicitation) SerializeTo(b gopacket.SerializeBuffer, opt
 	return nil
 }
 
+// CanDecode returns the set of layer types that this DecodingLayer can decode.
+func (i *ICMPv6NeighborSolicitation) CanDecode() gopacket.LayerClass {
+	return LayerTypeICMPv6NeighborSolicitation
+}
+
 // LayerType returns LayerTypeICMPv6NeighborAdvertisement.
 func (i *ICMPv6NeighborAdvertisement) LayerType() gopacket.LayerType {
 	return LayerTypeICMPv6NeighborAdvertisement
@@ -344,6 +359,11 @@ func (i *ICMPv6NeighborAdvertisement) SerializeTo(b gopacket.SerializeBuffer, op
 	copy(buf[1:], lotsOfZeros[:3])
 	copy(buf[4:], i.TargetAddress)
 	return nil
+}
+
+// CanDecode returns the set of layer types that this DecodingLayer can decode.
+func (i *ICMPv6NeighborAdvertisement) CanDecode() gopacket.LayerClass {
+	return LayerTypeICMPv6NeighborAdvertisement
 }
 
 // Router indicates whether the sender is a router or not.
@@ -406,6 +426,11 @@ func (i *ICMPv6Redirect) SerializeTo(b gopacket.SerializeBuffer, opts gopacket.S
 	copy(buf[4:], i.TargetAddress)
 	copy(buf[20:], i.DestinationAddress)
 	return nil
+}
+
+// CanDecode returns the set of layer types that this DecodingLayer can decode.
+func (i *ICMPv6Redirect) CanDecode() gopacket.LayerClass {
+	return LayerTypeICMPv6Redirect
 }
 
 func (i ICMPv6Option) String() string {
