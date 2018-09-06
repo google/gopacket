@@ -102,8 +102,15 @@ int pcap_set_rfmon(pcap_t *p, int rfmon) {
 #endif
 
 // The things we do to avoid pointers escaping to the heap...
+// According to https://github.com/the-tcpdump-group/libpcap/blob/1131a7c26c6f4d4772e4a2beeaf7212f4dea74ac/pcap.c#L398-L406 ,
+// the return value of pcap_next_ex could be greater than 1 for success.
+// Let's just make it 1 if it comes bigger than 1.
 int pcap_next_ex_escaping(pcap_t *p, uintptr_t pkt_hdr, uintptr_t pkt_data) {
-  return pcap_next_ex(p, (struct pcap_pkthdr**)(pkt_hdr), (const u_char**)(pkt_data));
+  int ex = pcap_next_ex(p, (struct pcap_pkthdr**)(pkt_hdr), (const u_char**)(pkt_data));
+  if (ex > 1) {
+    ex = 1;
+  }
+  return ex;
 }
 */
 import "C"
