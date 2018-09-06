@@ -53,6 +53,13 @@ func tpacketAlign(v int) int {
 	return int((uint(v) + tpacketAlignment - 1) & ((^tpacketAlignment) - 1))
 }
 
+// AncillaryVLAN structures are used to pass the captured VLAN
+// as ancillary data via CaptureInfo.
+type AncillaryVLAN struct {
+	// The VLAN VID provided by the kernel.
+	VLAN int
+}
+
 // Stats is a set of counters detailing the work TPacket has done so far.
 type Stats struct {
 	// Packets is the total number of packets returned to the caller.
@@ -313,6 +320,10 @@ retry:
 	ci.CaptureLength = len(data)
 	ci.Length = h.current.getLength()
 	ci.InterfaceIndex = h.current.getIfaceIndex()
+	vlan := h.current.getVLAN()
+	if vlan >= 0 {
+		ci.AncillaryData = append(ci.AncillaryData, AncillaryVLAN{vlan})
+	}
 	atomic.AddInt64(&h.stats.Packets, 1)
 	h.headerNextNeeded = true
 	h.mu.Unlock()
