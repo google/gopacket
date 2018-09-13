@@ -46,7 +46,7 @@ var ValidMACPrefixMap = validMACPrefixMap
 var validMACPrefixMap = map[[3]byte]string{
 `
 
-var url = flag.String("url", "http://standards.ieee.org/develop/regauth/oui/oui.txt", "URL to fetch MACs from")
+var url = flag.String("url", "http://standards-oui.ieee.org/oui/oui.txt", "URL to fetch MACs from")
 
 type mac struct {
 	prefix  [3]byte
