@@ -485,6 +485,11 @@ func (i *ICMPv6Options) DecodeFromBytes(data []byte, df gopacket.DecodeFeedback)
 		// unit is 8 octets, convert to bytes
 		length := int(data[1]) * 8
 
+		if length == 0 {
+			df.SetTruncated()
+			return errors.New("ICMPv6 message option with length 0")
+		}
+
 		if len(data) < length {
 			df.SetTruncated()
 			return fmt.Errorf("ICMP layer only %v bytes for ICMPv6 message option with length %v", len(data), length)
