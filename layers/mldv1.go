@@ -25,7 +25,7 @@ type MLDv1Message struct {
 	// 3.6. Multicast Address
 	// Zero in general query
 	// Specific IPv6 multicast address otherwise
-	MulticastAddress     net.IP
+	MulticastAddress net.IP
 }
 
 // DecodeFromBytes decodes the given bytes into this layer.
@@ -35,7 +35,7 @@ func (m *MLDv1Message) DecodeFromBytes(data []byte, df gopacket.DecodeFeedback) 
 		return errors.New("ICMP layer less than 20 bytes for Multicast Listener Query Message V1")
 	}
 
-	m.MaximumResponseDelay = time.Duration(binary.BigEndian.Uint16(data[0:2]))
+	m.MaximumResponseDelay = time.Duration(binary.BigEndian.Uint16(data[0:2])) * time.Millisecond
 	m.MulticastAddress = data[4:20]
 
 	return nil
@@ -68,10 +68,11 @@ func (m *MLDv1Message) SerializeTo(b gopacket.SerializeBuffer, opts gopacket.Ser
 	return nil
 }
 
+// Sums this layer up nicely formatted
 func (m *MLDv1Message) String() string {
 	return fmt.Sprintf(
 		"Maximum Response Delay: %dms, Multicast Address: %s",
-		m.MaximumResponseDelay,
+		m.MaximumResponseDelay/time.Millisecond,
 		m.MulticastAddress)
 }
 
@@ -82,6 +83,7 @@ type MLDv1MulticastListenerQueryMessage struct {
 	MLDv1Message
 }
 
+// DecodeFromBytes decodes the given bytes into this layer.
 func (m *MLDv1MulticastListenerQueryMessage) DecodeFromBytes(data []byte, df gopacket.DecodeFeedback) error {
 	err := m.MLDv1Message.DecodeFromBytes(data, df)
 	if err != nil {
@@ -105,6 +107,7 @@ func (*MLDv1MulticastListenerQueryMessage) CanDecode() gopacket.LayerClass {
 	return LayerTypeMLDv1MulticastListenerQuery
 }
 
+// IsGeneralQuery is true when this is a general query.
 // In a Query message, the Multicast Address field is set to zero when
 // sending a General Query.
 // https://tools.ietf.org/html/rfc2710#section-3.6
@@ -112,9 +115,9 @@ func (m *MLDv1MulticastListenerQueryMessage) IsGeneralQuery() bool {
 	return net.IPv6zero.Equal(m.MulticastAddress)
 }
 
+// IsSpecificQuery is true when this is not a general query.
 // In a Query message, the Multicast Address field is set to a specific
-// IPv6 multicast address when sending a Multicast-Address-Specific
-// Query.
+// IPv6 multicast address when sending a Multicast-Address-Specific Query.
 // https://tools.ietf.org/html/rfc2710#section-3.6
 func (m *MLDv1MulticastListenerQueryMessage) IsSpecificQuery() bool {
 	return !m.IsGeneralQuery()
