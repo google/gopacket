@@ -21,11 +21,7 @@ import (
 type MLDv1Message struct {
 	BaseLayer
 	// 3.4. Maximum Response Delay
-	// In milliseconds
-	// See also MLDv2MaximumResponseCode for Query Messages
 	MaximumResponseDelay time.Duration
-	// for MLDv2
-	maximumResponseDelayBytes uint16
 	// 3.6. Multicast Address
 	// Zero in general query
 	// Specific IPv6 multicast address otherwise
@@ -39,8 +35,7 @@ func (m *MLDv1Message) DecodeFromBytes(data []byte, df gopacket.DecodeFeedback) 
 		return errors.New("ICMP layer less than 20 bytes for Multicast Listener Query Message V1")
 	}
 
-	m.maximumResponseDelayBytes = binary.BigEndian.Uint16(data[0:2])
-	m.MaximumResponseDelay = time.Duration(m.maximumResponseDelayBytes)
+	m.MaximumResponseDelay = time.Duration(binary.BigEndian.Uint16(data[0:2]))
 	m.MulticastAddress = data[4:20]
 
 	return nil
@@ -48,7 +43,7 @@ func (m *MLDv1Message) DecodeFromBytes(data []byte, df gopacket.DecodeFeedback) 
 
 // NextLayerType returns the layer type contained by this DecodingLayer.
 func (*MLDv1Message) NextLayerType() gopacket.LayerType {
-	return gopacket.LayerTypePayload
+	return gopacket.LayerTypeZero
 }
 
 // SerializeTo writes the serialized form of this layer into the
@@ -60,18 +55,14 @@ func (m *MLDv1Message) SerializeTo(b gopacket.SerializeBuffer, opts gopacket.Ser
 		return err
 	}
 
-	if m.maximumResponseDelayBytes == 0 && m.MaximumResponseDelay > 0 {
-		maxRespDelay := m.MaximumResponseDelay / time.Millisecond
-
-		if maxRespDelay > math.MaxUint16 {
-			return fmt.Errorf(
-				"maximum response delay is 65535ms, but %dms given", maxRespDelay)
-		}
-
-		m.maximumResponseDelayBytes = uint16(maxRespDelay)
+	if m.MaximumResponseDelay < 0 {
+		return errors.New("maximum response delay must not be negative")
 	}
-
-	binary.BigEndian.PutUint16(buf[0:4], m.maximumResponseDelayBytes)
+	dms := m.MaximumResponseDelay / time.Millisecond
+	if dms > math.MaxUint16 {
+		return fmt.Errorf("maximum response delay %dms is more than the allowed 65535ms", dms)
+	}
+	binary.BigEndian.PutUint16(buf[0:4], uint16(dms))
 
 	copy(buf[4:], m.MulticastAddress)
 	return nil
@@ -89,7 +80,6 @@ func (m *MLDv1Message) String() string {
 // https://tools.ietf.org/html/rfc2710 Page 5
 type MLDv1MulticastListenerQueryMessage struct {
 	MLDv1Message
-	hasV2Content bool
 }
 
 func (m *MLDv1MulticastListenerQueryMessage) DecodeFromBytes(data []byte, df gopacket.DecodeFeedback) error {
@@ -99,40 +89,15 @@ func (m *MLDv1MulticastListenerQueryMessage) DecodeFromBytes(data []byte, df gop
 	}
 
 	if len(data) > 20 {
-		m.hasV2Content = true
 		m.Payload = data[20:]
 	}
 
 	return nil
 }
 
-func (m *MLDv1MulticastListenerQueryMessage) String() string {
-	var duration time.Duration
-
-	if !m.hasV2Content {
-		duration = m.MaximumResponseDelay
-	} else {
-		duration = m.MLDv2MaximumResponseDelay()
-	}
-
-	return fmt.Sprintf(
-		"Maximum Response Delay: %dms (Code: %#x), Multicast Address: %s",
-		duration,
-		m.maximumResponseDelayBytes,
-		m.MulticastAddress)
-}
-
 // LayerType returns LayerTypeMLDv1MulticastListenerQuery.
 func (*MLDv1MulticastListenerQueryMessage) LayerType() gopacket.LayerType {
 	return LayerTypeMLDv1MulticastListenerQuery
-}
-
-// LayerType returns LayerTypeMLDv1MulticastListenerQuery.
-func (m *MLDv1MulticastListenerQueryMessage) NextLayerType() gopacket.LayerType {
-	if m.hasV2Content {
-		return LayerTypeMLDv2MulticastListenerQuery
-	}
-	return gopacket.LayerTypePayload
 }
 
 // CanDecode returns the set of layer types that this DecodingLayer can decode.
@@ -153,61 +118,6 @@ func (m *MLDv1MulticastListenerQueryMessage) IsGeneralQuery() bool {
 // https://tools.ietf.org/html/rfc2710#section-3.6
 func (m *MLDv1MulticastListenerQueryMessage) IsSpecificQuery() bool {
 	return !m.IsGeneralQuery()
-}
-
-// Returns the Maximum Response Delay according to MLDv2
-// https://tools.ietf.org/html/rfc3810#section-5.1.3
-func (m *MLDv1MulticastListenerQueryMessage) MLDv2MaximumResponseDelay() time.Duration {
-	if m.maximumResponseDelayBytes < 0x8000 {
-		return time.Millisecond * m.MaximumResponseDelay
-	}
-
-	exp := m.maximumResponseDelayBytes & 0x7000 >> 12
-	mant := m.maximumResponseDelayBytes & 0x0FFF
-
-	return time.Millisecond * time.Duration(mant|0x1000<<(exp+3))
-}
-
-func maxRespDelayToMaxRespCode(d time.Duration) uint16 {
-	if d <= 0 {
-		return 0
-	}
-
-	dms := d / time.Millisecond
-
-	if dms < 32768 {
-		return uint16(dms)
-	}
-
-	if dms > 4193280 { // mant=0xFFF, exp=0x7
-		return 0xFFFF
-	}
-
-	value := uint32(dms) // ok, because 4193280 < math.MaxUint32
-	exp := uint8(7)
-	for mask := uint32(0x40000000); exp > 0; exp-- {
-		if mask&value != 0 {
-			break
-		}
-
-		mask >>= 1
-	}
-
-	mant := uint16(0x00000FFF & (value >> (exp + 3)))
-	sig := uint16(0x1000)
-	return sig | uint16(exp)<<12 | mant
-}
-
-// SerializeTo writes the serialized form of this layer into the
-// SerializationBuffer, implementing gopacket.SerializableLayer.
-// See the docs for gopacket.SerializableLayer for more info.
-func (m *MLDv1MulticastListenerQueryMessage) SerializeTo(b gopacket.SerializeBuffer, opts gopacket.SerializeOptions) error {
-	if len(b.Bytes()) > 0 {
-		// MLDv2 content already in the buffer
-		m.hasV2Content = true
-		m.maximumResponseDelayBytes = maxRespDelayToMaxRespCode(m.MaximumResponseDelay)
-	}
-  return m.MLDv1Message.SerializeTo(b, opts)
 }
 
 // MLDv1MulticastListenerReportMessage is sent by a client listening on

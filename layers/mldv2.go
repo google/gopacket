@@ -39,13 +39,18 @@ const (
 // previous layer LayerTypeMLDv1MulticastListenerQuery
 type MLDv2MulticastListenerQueryMessage struct {
   BaseLayer
+  // 5.1.3. Maximum Response Delay COde
+  MaximumResponseCode uint16
+  // 5.1.5. Multicast Address
+  // Zero in general query
+  // Specific IPv6 multicast address otherwise
+  MulticastAddress     net.IP
   // 5.1.7. S Flag (Suppress Router-Side Processing)
   S bool
   // 5.1.8. QRV (Querier's Robustness Variable)
   QRV uint8
   // 5.1.9. QQIC (Querier's Query Interval Code)
   QQIC uint8
-  QQI time.Duration
   // 5.1.10. Number of Sources (N)
   N uint16
   // 5.1.11 Source Address [i]
@@ -54,21 +59,23 @@ type MLDv2MulticastListenerQueryMessage struct {
 
 // DecodeFromBytes decodes the given bytes into this layer.
 func (m *MLDv2MulticastListenerQueryMessage) DecodeFromBytes(data []byte, df gopacket.DecodeFeedback) error {
-  if len(data) < 4 {
+  if len(data) < 24 {
     df.SetTruncated()
-    return errors.New("Multicast Listener Query Message V1 layer less than 4 bytes for Multicast Listener Query Message V2")
+    return errors.New("ICMP layer less than 24 bytes for Multicast Listener Query Message V2")
   }
 
-  m.S = (data[0] & sMask) == sTrue
-  m.QRV = data[0] & qrvMask
-  m.QQIC = data[1]
-  m.QQI = qqicToQQI(data[1])
+  m.MaximumResponseCode = binary.BigEndian.Uint16(data[0:2])
+  m.MulticastAddress = data[4:20]
+  m.S = (data[20] & sMask) == sTrue
+  m.QRV = data[20] & qrvMask
+  m.QQIC = data[21]
 
-  m.N = binary.BigEndian.Uint16(data[2:4])
+  m.N = binary.BigEndian.Uint16(data[22:24])
 
+  var end int
   for i := uint16(0); i < m.N; i++ {
-    begin := 4 + (int(i) * 16)
-    end := begin + 16
+    begin := 24 + (int(i) * 16)
+    end = begin + 16
 
     if end > len(data) {
       df.SetTruncated()
@@ -81,20 +88,9 @@ func (m *MLDv2MulticastListenerQueryMessage) DecodeFromBytes(data []byte, df gop
   return nil
 }
 
-// calculation according to https://tools.ietf.org/html/rfc3810#section-5.1.9
-func qqicToQQI(data byte) time.Duration {
-  if data < 128 {
-    return time.Second * time.Duration(data)
-  }
-
-  exp := uint16(data) & 0x70 >> 4
-  mant := uint16(data) & 0x0F
-  return time.Second * time.Duration(mant|0x1000<<(exp+3))
-}
-
 // NextLayerType returns the layer type contained by this DecodingLayer.
 func (*MLDv2MulticastListenerQueryMessage) NextLayerType() gopacket.LayerType {
-  return gopacket.LayerTypePayload
+  return gopacket.LayerTypeZero
 }
 
 // SerializeTo writes the serialized form of this layer into the
@@ -111,12 +107,7 @@ func (m *MLDv2MulticastListenerQueryMessage) SerializeTo(b gopacket.SerializeBuf
   }
 
   binary.BigEndian.PutUint16(buf[2:4], m.N)
-
-  if m.QQIC != 0 {
-    buf[1] = m.QQIC
-  } else {
-    buf[1] = qqiToQQIC(m.QQI)
-  }
+  buf[1] = m.QQIC
 
   byte0 := m.QRV & qrvMask
   if m.S {
@@ -128,36 +119,6 @@ func (m *MLDv2MulticastListenerQueryMessage) SerializeTo(b gopacket.SerializeBuf
   buf[0] = byte0
 
   return nil
-}
-
-// calculation according to https://tools.ietf.org/html/rfc3810#section-5.1.9
-func qqiToQQIC(d time.Duration) uint8 {
-  if d <= 0 {
-    return 0
-  }
-
-  dms := d / time.Second
-  if dms < 128 {
-    return uint8(dms)
-  }
-
-  if dms > 31744 { // mant=0xF, exp=0x7
-    return 0xFF
-  }
-
-  value := uint16(dms) // ok, because 31744 < math.MaxUint16
-  exp := uint8(7)
-  for mask := uint16(0x4000); exp > 0; exp-- {
-    if mask&value != 0 {
-      break
-    }
-
-    mask >>= 1
-  }
-
-  mant := uint8(0x000F & (value >> (exp + 3)))
-  sig := uint8(0x10)
-  return sig | exp<<4 | mant
 }
 
 // writes each source address to the buffer preserving the order
@@ -190,11 +151,14 @@ func (m *MLDv2MulticastListenerQueryMessage) serializeSourceAddressesTo(b gopack
 
 func (m *MLDv2MulticastListenerQueryMessage) String() string {
   return fmt.Sprintf(
-    "S Flag: %t, QRV: %#x, QQI: %ds (Code: %#x), Number of Source Address: %d (actual: %d), Source Addresses: %s",
+    "Maximum Response Code: %#x (%dms), Multicast Address: %s, S Flag: %t, QRV: %#x, QQIC: %#x (%ds), Number of Source Address: %d (actual: %d), Source Addresses: %s",
+    m.MaximumResponseCode,
+    m.MaximumResponseDelay(),
+    m.MulticastAddress,
     m.S,
     m.QRV,
-    m.QQI / time.Second,
     m.QQIC,
+    m.QQI()/time.Second,
     m.N,
     len(m.SourceAddresses),
     m.SourceAddresses)
@@ -208,6 +172,106 @@ func (*MLDv2MulticastListenerQueryMessage) LayerType() gopacket.LayerType {
 // CanDecode returns the set of layer types that this DecodingLayer can decode.
 func (*MLDv2MulticastListenerQueryMessage) CanDecode() gopacket.LayerClass {
   return LayerTypeMLDv2MulticastListenerQuery
+}
+
+// Calculates QQI according to https://tools.ietf.org/html/rfc3810#section-5.1.9
+func (m *MLDv2MulticastListenerQueryMessage) QQI() time.Duration {
+  data := m.QQIC
+  if data < 128 {
+    return time.Second * time.Duration(data)
+  }
+
+  exp := uint16(data) & 0x70 >> 4
+  mant := uint16(data) & 0x0F
+  return time.Second * time.Duration(mant|0x1000<<(exp+3))
+}
+
+// Calculates QQIC according to https://tools.ietf.org/html/rfc3810#section-5.1.9
+func (m *MLDv2MulticastListenerQueryMessage) SetQQI(d time.Duration) error {
+  if d < 0 {
+    m.QQIC = 0
+    return errors.New("QQI duration is negative")
+  }
+
+  if d == 0 {
+    m.QQIC = 0
+    return nil
+  }
+
+  dms := d / time.Second
+  if dms < 128 {
+    m.QQIC = uint8(dms)
+  }
+
+  if dms > 31744 { // mant=0xF, exp=0x7
+    m.QQIC = 0xFF
+    return fmt.Errorf("QQI duration %ds is, maximum allowed is 31744s", dms)
+  }
+
+  value := uint16(dms) // ok, because 31744 < math.MaxUint16
+  exp := uint8(7)
+  for mask := uint16(0x4000); exp > 0; exp-- {
+    if mask&value != 0 {
+      break
+    }
+
+    mask >>= 1
+  }
+
+  mant := uint8(0x000F & (value >> (exp + 3)))
+  sig := uint8(0x10)
+  m.QQIC = sig | exp<<4 | mant
+
+  return nil
+}
+
+// Returns the Maximum Response Delay according to MLDv2
+// https://tools.ietf.org/html/rfc3810#section-5.1.3
+func (m *MLDv2MulticastListenerQueryMessage) MaximumResponseDelay() time.Duration {
+  if m.MaximumResponseCode < 0x8000 {
+    return time.Duration(m.MaximumResponseCode)
+  }
+
+  exp := m.MaximumResponseCode & 0x7000 >> 12
+  mant := m.MaximumResponseCode & 0x0FFF
+
+  return time.Millisecond * time.Duration(mant|0x1000<<(exp+3))
+}
+
+func (m *MLDv2MulticastListenerQueryMessage) SetMLDv2MaximumResponseDelay(d time.Duration) error {
+  if d == 0 {
+    m.MaximumResponseCode = 0
+    return nil
+  }
+
+  if d < 0 {
+    return errors.New("maximum response delay must not be negative")
+  }
+
+  dms := d / time.Millisecond
+
+  if dms < 32768 {
+    m.MaximumResponseCode = uint16(dms)
+  }
+
+  if dms > 4193280 { // mant=0xFFF, exp=0x7
+    return fmt.Errorf("maximum response delay %dms is bigger the than maximum of 4193280ms", dms)
+  }
+
+  value := uint32(dms) // ok, because 4193280 < math.MaxUint32
+  exp := uint8(7)
+  for mask := uint32(0x40000000); exp > 0; exp-- {
+    if mask&value != 0 {
+      break
+    }
+
+    mask >>= 1
+  }
+
+  mant := uint16(0x00000FFF & (value >> (exp + 3)))
+  sig := uint16(0x1000)
+  m.MaximumResponseCode = sig | uint16(exp)<<12 | mant
+  return nil
 }
 
 // MLDv2MulticastListenerReportMessage is sent by an IP node to report the

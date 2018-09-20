@@ -59,7 +59,6 @@ func TestPacketMulticastListenerQueryMessageV2(t *testing.T) {
     LayerTypeIPv6,
     LayerTypeIPv6HopByHop,
     LayerTypeICMPv6,
-    LayerTypeMLDv1MulticastListenerQuery,
     LayerTypeMLDv2MulticastListenerQuery}, t)
   checkSerialization(p, t)
 }

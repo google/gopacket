@@ -243,8 +243,12 @@ func (i *ICMPv6) NextLayerType() gopacket.LayerType {
 		return LayerTypeICMPv6NeighborAdvertisement
 	case ICMPv6TypeRedirect:
 		return LayerTypeICMPv6Redirect
-	case ICMPv6TypeMLDv1MulticastListenerQueryMessage:
-		return LayerTypeMLDv1MulticastListenerQuery
+	case ICMPv6TypeMLDv1MulticastListenerQueryMessage: // Same Code for MLDv1 Query and MLDv2 Query
+		if len(i.Payload) > 20 { // Only payload size differs
+			return LayerTypeMLDv2MulticastListenerQuery
+		} else {
+			return LayerTypeMLDv1MulticastListenerQuery
+		}
 	case ICMPv6TypeMLDv1MulticastListenerDoneMessage:
 		return LayerTypeMLDv1MulticastListenerDone
 	case ICMPv6TypeMLDv1MulticastListenerReportMessage:
