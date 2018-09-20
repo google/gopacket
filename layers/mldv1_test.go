@@ -35,7 +35,7 @@ import (
 //  Maximum Response Code: 10000
 //  Reserved: 0000
 //  Multicast Address: ::
-var testPacketMulticastListenerQueryMessage = []byte{
+var testPacketMulticastListenerQueryMessageV1 = []byte{
 	0x33, 0x33, 0x00, 0x00, 0x00, 0x01, 0xb0, 0xa8, 0x6e, 0x0c, 0xd4, 0xe8, 0x86, 0xdd, 0x60, 0x00,
 	0x00, 0x00, 0x00, 0x24, 0x00, 0x01, 0xfe, 0x80, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xb2, 0xa8,
 	0x6e, 0xff, 0xfe, 0x0c, 0xd4, 0xe8, 0xff, 0x02, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
@@ -44,8 +44,8 @@ var testPacketMulticastListenerQueryMessage = []byte{
 	0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
 }
 
-func TestPacketMulticastListenerQueryMessage(t *testing.T) {
-	p := gopacket.NewPacket(testPacketMulticastListenerQueryMessage, LinkTypeEthernet, gopacket.Default)
+func TestPacketMulticastListenerQueryMessageV1(t *testing.T) {
+	p := gopacket.NewPacket(testPacketMulticastListenerQueryMessageV1, LinkTypeEthernet, gopacket.Default)
 	if p.ErrorLayer() != nil {
 		t.Error("Failed to decode packet:", p.ErrorLayer().Error())
 	}
@@ -56,7 +56,6 @@ func TestPacketMulticastListenerQueryMessage(t *testing.T) {
 // Adapted from https://github.com/the-tcpdump-group/tcpdump/blob/master/tests/icmpv6.pcap
 // BSD licensed content
 //
-// Frame 3: 90 bytes on wire (720 bits), 90 bytes captured (720 bits)
 // Ethernet II, Src: JuniperN_0c:d4:e8 (b0:a8:6e:0c:d4:e8), Dst: IPv6mcast_01 (33:33:00:00:00:01)
 // Internet Protocol Version 6, Src: fe80::b2a8:6eff:fe0c:d4e8, Dst: ff02::1
 //  0110 .... = Version: 6
@@ -77,7 +76,7 @@ func TestPacketMulticastListenerQueryMessage(t *testing.T) {
 //  Maximum Response Code: 10000
 //  Reserved: 0000
 //  Multicast Address: ff02::db8:1122:3344
-var testPacketMulticastListenerReportMessage = []byte{
+var testPacketMulticastListenerReportMessageV1 = []byte{
 	0x33, 0x33, 0x00, 0x00, 0x00, 0x01, 0xb0, 0xa8, 0x6e, 0x0c, 0xd4, 0xe8, 0x86, 0xdd, 0x60, 0x00,
 	0x00, 0x00, 0x00, 0x24, 0x00, 0x01, 0xfe, 0x80, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xb2, 0xa8,
 	0x6e, 0xff, 0xfe, 0x0c, 0xd4, 0xe8, 0xff, 0x02, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
@@ -86,8 +85,8 @@ var testPacketMulticastListenerReportMessage = []byte{
 	0x0d, 0xb8, 0x11, 0x22, 0x33, 0x44,
 }
 
-func TestPacketMulticastListenerReportMessage(t *testing.T) {
-	p := gopacket.NewPacket(testPacketMulticastListenerReportMessage, LinkTypeEthernet, gopacket.Default)
+func TestPacketMulticastListenerReportMessageV1(t *testing.T) {
+	p := gopacket.NewPacket(testPacketMulticastListenerReportMessageV1, LinkTypeEthernet, gopacket.Default)
 	if p.ErrorLayer() != nil {
 		t.Error("Failed to decode packet:", p.ErrorLayer().Error())
 	}
@@ -98,7 +97,6 @@ func TestPacketMulticastListenerReportMessage(t *testing.T) {
 // Adapted from https://github.com/the-tcpdump-group/tcpdump/blob/master/tests/icmpv6.pcap
 // BSD licensed content
 //
-// Frame 3: 90 bytes on wire (720 bits), 90 bytes captured (720 bits)
 // Ethernet II, Src: JuniperN_0c:d4:e8 (b0:a8:6e:0c:d4:e8), Dst: IPv6mcast_01 (33:33:00:00:00:01)
 // Internet Protocol Version 6, Src: fe80::b2a8:6eff:fe0c:d4e8, Dst: ff02::1
 //  0110 .... = Version: 6
@@ -119,7 +117,7 @@ func TestPacketMulticastListenerReportMessage(t *testing.T) {
 //  Maximum Response Code: 10000
 //  Reserved: 0000
 //  Multicast Address: ff02::db8:1122:3344
-var testPacketMulticastListenerDoneMessage = []byte{
+var testPacketMulticastListenerDoneMessageV1 = []byte{
 	0x33, 0x33, 0x00, 0x00, 0x00, 0x01, 0xb0, 0xa8, 0x6e, 0x0c, 0xd4, 0xe8, 0x86, 0xdd, 0x60, 0x00,
 	0x00, 0x00, 0x00, 0x24, 0x00, 0x01, 0xfe, 0x80, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xb2, 0xa8,
 	0x6e, 0xff, 0xfe, 0x0c, 0xd4, 0xe8, 0xff, 0x02, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
@@ -128,8 +126,8 @@ var testPacketMulticastListenerDoneMessage = []byte{
 	0x0d, 0xb8, 0x11, 0x22, 0x33, 0x44,
 }
 
-func TestPacketMulticastListenerDoneMessage(t *testing.T) {
-	p := gopacket.NewPacket(testPacketMulticastListenerDoneMessage, LinkTypeEthernet, gopacket.Default)
+func TestPacketMulticastListenerDoneMessageV1(t *testing.T) {
+	p := gopacket.NewPacket(testPacketMulticastListenerDoneMessageV1, LinkTypeEthernet, gopacket.Default)
 	if p.ErrorLayer() != nil {
 		t.Error("Failed to decode packet:", p.ErrorLayer().Error())
 	}

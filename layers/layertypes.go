@@ -139,6 +139,8 @@ var (
 	LayerTypeMLDv1MulticastListenerReport = gopacket.RegisterLayerType(135, gopacket.LayerTypeMetadata{Name: "MLDv1MulticastListenerReport", Decoder: gopacket.DecodeFunc(decodeMLDv1MulticastListenerReport)})
 	LayerTypeMLDv1MulticastListenerDone   = gopacket.RegisterLayerType(136, gopacket.LayerTypeMetadata{Name: "MLDv1MulticastListenerDone", Decoder: gopacket.DecodeFunc(decodeMLDv1MulticastListenerDone)})
 	LayerTypeMLDv1MulticastListenerQuery  = gopacket.RegisterLayerType(137, gopacket.LayerTypeMetadata{Name: "MLDv1MulticastListenerQuery", Decoder: gopacket.DecodeFunc(decodeMLDv1MulticastListenerQuery)})
+	LayerTypeMLDv2MulticastListenerReport = gopacket.RegisterLayerType(138, gopacket.LayerTypeMetadata{Name: "MLDv2MulticastListenerReport", Decoder: gopacket.DecodeFunc(decodeMLDv2MulticastListenerReport)})
+	LayerTypeMLDv2MulticastListenerQuery  = gopacket.RegisterLayerType(139, gopacket.LayerTypeMetadata{Name: "MLDv2MulticastListenerQuery", Decoder: gopacket.DecodeFunc(decodeMLDv2MulticastListenerQuery)})
 )
 
 var (
@@ -197,9 +199,18 @@ var (
 		LayerTypeICMPv6NeighborAdvertisement,
 		LayerTypeICMPv6Redirect,
 	})
+	// LayerClassMLDv1 contains multicast listener discovery protocol
 	LayerClassMLDv1 = gopacket.NewLayerClass([]gopacket.LayerType{
 		LayerTypeMLDv1MulticastListenerQuery,
 		LayerTypeMLDv1MulticastListenerReport,
 		LayerTypeMLDv1MulticastListenerDone,
+	})
+	// LayerClassMLDv2 contains multicast listener discovery protocol v2
+	LayerClassMLDv2 = gopacket.NewLayerClass([]gopacket.LayerType{
+		LayerTypeMLDv1MulticastListenerReport,
+		LayerTypeMLDv1MulticastListenerDone,
+		LayerTypeMLDv2MulticastListenerReport,
+		LayerTypeMLDv1MulticastListenerQuery,
+		LayerTypeMLDv2MulticastListenerQuery,
 	})
 )

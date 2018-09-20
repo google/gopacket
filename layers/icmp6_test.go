@@ -35,6 +35,8 @@ func TestPacketICMPv6(t *testing.T) {
 		t.Error("Failed to decode packet:", p.ErrorLayer().Error())
 	}
 	checkLayers(p, []gopacket.LayerType{LayerTypeEthernet, LayerTypeIPv6, LayerTypeICMPv6, gopacket.LayerTypePayload}, t)
+	checkSerialization(p, t)
+
 	if got, ok := p.Layer(LayerTypeIPv6).(*IPv6); ok {
 		want := &IPv6{
 			BaseLayer: BaseLayer{

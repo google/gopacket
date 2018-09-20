@@ -36,6 +36,9 @@ const (
 	ICMPv6TypeMLDv1MulticastListenerQueryMessage  = 130
 	ICMPv6TypeMLDv1MulticastListenerReportMessage = 131
 	ICMPv6TypeMLDv1MulticastListenerDoneMessage   = 132
+
+	// The following are from RFC 3810
+	ICMPv6TypeMLDv2MulticastListenerReportMessageV2 = 143
 )
 
 const (
@@ -246,6 +249,8 @@ func (i *ICMPv6) NextLayerType() gopacket.LayerType {
 		return LayerTypeMLDv1MulticastListenerDone
 	case ICMPv6TypeMLDv1MulticastListenerReportMessage:
 		return LayerTypeMLDv1MulticastListenerReport
+	case ICMPv6TypeMLDv2MulticastListenerReportMessageV2:
+		return LayerTypeMLDv2MulticastListenerReport
 	}
 
 	return gopacket.LayerTypePayload
