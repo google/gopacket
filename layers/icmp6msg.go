@@ -151,6 +151,20 @@ func (i *ICMPv6Echo) DecodeFromBytes(data []byte, df gopacket.DecodeFeedback) er
 	return nil
 }
 
+// SerializeTo writes the serialized form of this layer into the
+// SerializationBuffer, implementing gopacket.SerializableLayer.
+// See the docs for gopacket.SerializableLayer for more info.
+func (i *ICMPv6Echo) SerializeTo(b gopacket.SerializeBuffer, opts gopacket.SerializeOptions) error {
+	buf, err := b.PrependBytes(4)
+	if err != nil {
+		return err
+	}
+
+	binary.BigEndian.PutUint16(buf, i.Identifier)
+	binary.BigEndian.PutUint16(buf[2:], i.SeqNumber)
+	return nil
+}
+
 // LayerType returns LayerTypeICMPv6.
 func (i *ICMPv6RouterSolicitation) LayerType() gopacket.LayerType {
 	return LayerTypeICMPv6RouterSolicitation
