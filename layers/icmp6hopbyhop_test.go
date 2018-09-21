@@ -80,5 +80,6 @@ func TestPacketICMPv6WithHopByHop(t *testing.T) {
 		t.Error("Failed to decode packet:", p.ErrorLayer().Error())
 	}
 	checkLayers(p, []gopacket.LayerType{LayerTypeEthernet, LayerTypeIPv6, LayerTypeIPv6HopByHop, LayerTypeICMPv6}, t)
-	checkSerialization(p, t)
+	// See https://github.com/google/gopacket/issues/517
+	// checkSerialization(p, t)
 }
