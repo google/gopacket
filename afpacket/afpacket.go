@@ -118,6 +118,8 @@ type TPacket struct {
 	current header
 	// pollset is used by TPacket for its poll() call.
 	pollset unix.PollFd
+	// pollsets is used by Tpacket for its poll() call.
+	pollsets []unix.PollFd
 	// shouldReleasePacket is set to true whenever we return packet data, to make sure we remember to release that data back to the kernel.
 	shouldReleasePacket bool
 	// headerNextNeeded is set to true when header need to move to the next packet. No need to move it case of poll error.
@@ -260,6 +262,11 @@ func NewTPacket(opts ...interface{}) (h *TPacket, err error) {
 	if err = h.InitSocketStats(); err != nil {
 		goto errlbl
 	}
+
+	// Pre-alloc pollset array using fixed size
+	h.pollsets = make([]unix.PollFd, 1, 1)
+	h.pollsets[0] = h.pollset
+
 	runtime.SetFinalizer(h, (*TPacket).Close)
 	return h, nil
 errlbl:
@@ -299,6 +306,7 @@ func (h *TPacket) releaseCurrentPacket() error {
 //  data2, _, _ := tp.ZeroCopyReadPacketData()  // invalidates bytes in data1
 func (h *TPacket) ZeroCopyReadPacketData() (data []byte, ci gopacket.CaptureInfo, err error) {
 	h.mu.Lock()
+
 retry:
 	if h.current == nil || !h.headerNextNeeded || !h.current.next() {
 		if h.shouldReleasePacket {
@@ -459,11 +467,8 @@ func (h *TPacket) pollForFirstPacket(hdr header) error {
 	for hdr.getStatus()&C.TP_STATUS_USER == 0 {
 		h.pollset.Fd = int32(h.fd)
 		h.pollset.Events = unix.POLLIN
-		h.pollset.Revents = 0
-		n, err := unix.Poll([]unix.PollFd{h.pollset}, tm)
-		if n == 0 {
-			return ErrTimeout
-		}
+		h.pollset.Revents = unix.POLLERR
+		n, err := unix.Poll(h.pollsets, tm)
 
 		atomic.AddInt64(&h.stats.Polls, 1)
 		if h.pollset.Revents&unix.POLLERR > 0 {
@@ -471,6 +476,9 @@ func (h *TPacket) pollForFirstPacket(hdr header) error {
 		}
 		if err != nil {
 			return err
+		}
+		if n == 0 {
+			return ErrTimeout
 		}
 	}
 
