@@ -158,7 +158,17 @@ func (ip6 *IPv6) SerializeTo(b gopacket.SerializeBuffer, opts gopacket.Serialize
 			}
 		}
 	}
+
+	hbhAlreadySerialized := false
 	if ip6.HopByHop != nil {
+		for _, l := range b.Layers() {
+			if l == LayerTypeIPv6HopByHop {
+				hbhAlreadySerialized = true
+				break
+			}
+		}
+	}
+	if ip6.HopByHop != nil && !hbhAlreadySerialized {
 		if ip6.NextHeader != IPProtocolIPv6HopByHop {
 			// Just fix it instead of throwing an error
 			ip6.NextHeader = IPProtocolIPv6HopByHop
@@ -176,6 +186,7 @@ func (ip6 *IPv6) SerializeTo(b gopacket.SerializeBuffer, opts gopacket.Serialize
 			}
 		}
 	}
+
 	if !jumbo && pLen > ipv6MaxPayloadLength {
 		return errors.New("Cannot fit payload into IPv6 header")
 	}
