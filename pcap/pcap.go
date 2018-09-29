@@ -889,6 +889,9 @@ func sockaddrToIP(rsa *syscall.RawSockaddr) (IP []byte, err error) {
 
 // WritePacketData calls pcap_sendpacket, injecting the given data into the pcap handle.
 func (p *Handle) WritePacketData(data []byte) (err error) {
+	if p.cptr == nil {
+		return errors.New("Packet handle is invalid")
+	}
 	if -1 == C.pcap_sendpacket(p.cptr, (*C.u_char)(&data[0]), (C.int)(len(data))) {
 		err = p.Error()
 	}
