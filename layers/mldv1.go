@@ -36,6 +36,7 @@ func (m *MLDv1Message) DecodeFromBytes(data []byte, df gopacket.DecodeFeedback) 
 	}
 
 	m.MaximumResponseDelay = time.Duration(binary.BigEndian.Uint16(data[0:2])) * time.Millisecond
+	// data[2:4] is reserved and not used in mldv1
 	m.MulticastAddress = data[4:20]
 
 	return nil
@@ -62,8 +63,9 @@ func (m *MLDv1Message) SerializeTo(b gopacket.SerializeBuffer, opts gopacket.Ser
 	if dms > math.MaxUint16 {
 		return fmt.Errorf("maximum response delay %dms is more than the allowed 65535ms", dms)
 	}
-	binary.BigEndian.PutUint16(buf[0:4], uint16(dms))
+	binary.BigEndian.PutUint16(buf[0:2], uint16(dms))
 
+	copy(buf[2:4], []byte{0x0, 0x0})
 	copy(buf[4:], m.MulticastAddress)
 	return nil
 }
