@@ -19,16 +19,16 @@ import (
 
 const (
 	// S Flag bit is 1
-	sTrue uint8 = 0x8
+	mldv2STrue uint8 = 0x8
 
 	// S Flag value mask
-	//   sTrue & sMask == sTrue  // true
-	//   0x1   & sMask == sTrue  // true
-	//   0x0   & sMask == sTrue  // false
-	sMask uint8 = 0x8
+	//   mldv2STrue & mldv2SMask == mldv2STrue  // true
+	//          0x1 & mldv2SMask == mldv2STrue  // true
+	//          0x0 & mldv2SMask == mldv2STrue  // false
+	mldv2SMask uint8 = 0x8
 
 	// QRV value mask
-	qrvMask uint8 = 0x7
+	mldv2QRVMask uint8 = 0x7
 )
 
 // MLDv2MulticastListenerQueryMessage are sent by multicast routers to query the
@@ -67,8 +67,8 @@ func (m *MLDv2MulticastListenerQueryMessage) DecodeFromBytes(data []byte, df gop
 	m.MaximumResponseCode = binary.BigEndian.Uint16(data[0:2])
 	// ignore data[2:4] as per https://tools.ietf.org/html/rfc3810#section-5.1.4
 	m.MulticastAddress = data[4:20]
-	m.SuppressRoutersideProcessing = (data[20] & sMask) == sTrue
-	m.QueriersRobustnessVariable = data[20] & qrvMask
+	m.SuppressRoutersideProcessing = (data[20] & mldv2SMask) == mldv2STrue
+	m.QueriersRobustnessVariable = data[20] & mldv2QRVMask
 	m.QueriersQueryIntervalCode = data[21]
 
 	m.NumberOfSources = binary.BigEndian.Uint16(data[22:24])
@@ -111,11 +111,11 @@ func (m *MLDv2MulticastListenerQueryMessage) SerializeTo(b gopacket.SerializeBuf
 	copy(buf[2:4], []byte{0x00, 0x00}) // set reserved bytes to zero
 	copy(buf[4:20], m.MulticastAddress)
 
-	byte20 := m.QueriersRobustnessVariable & qrvMask
+	byte20 := m.QueriersRobustnessVariable & mldv2QRVMask
 	if m.SuppressRoutersideProcessing {
-		byte20 |= sTrue
+		byte20 |= mldv2STrue
 	} else {
-		byte20 &= ^sTrue // the complement of sTrue
+		byte20 &= ^mldv2STrue // the complement of mldv2STrue
 	}
 	byte20 &= 0x0F // set reserved bits to zero
 	buf[20] = byte20
