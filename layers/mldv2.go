@@ -154,7 +154,7 @@ func (m *MLDv2MulticastListenerQueryMessage) serializeSourceAddressesTo(b gopack
 	return nil
 }
 
-// Sums this layer up nicely formatted
+// String sums this layer up nicely formatted
 func (m *MLDv2MulticastListenerQueryMessage) String() string {
 	return fmt.Sprintf(
 		"Maximum Response Code: %#x (%dms), Multicast Address: %s, Suppress Routerside Processing: %t, QRV: %#x, QQIC: %#x (%ds), Number of Source Address: %d (actual: %d), Source Addresses: %s",
@@ -180,7 +180,7 @@ func (*MLDv2MulticastListenerQueryMessage) CanDecode() gopacket.LayerClass {
 	return LayerTypeMLDv2MulticastListenerQuery
 }
 
-// QQI calculates the QQI based on the QQIC
+// QQI calculates the Querier's Query Interval based on the QQIC
 // according to https://tools.ietf.org/html/rfc3810#section-5.1.9
 func (m *MLDv2MulticastListenerQueryMessage) QQI() time.Duration {
 	data := m.QueriersQueryIntervalCode
@@ -193,8 +193,8 @@ func (m *MLDv2MulticastListenerQueryMessage) QQI() time.Duration {
 	return time.Second * time.Duration(mant|0x1000<<(exp+3))
 }
 
-// SetQQI calculates the QQIC according to
-// https://tools.ietf.org/html/rfc3810#section-5.1.9
+// SetQQI calculates and updates the Querier's Query Interval Code (QQIC)
+// according to https://tools.ietf.org/html/rfc3810#section-5.1.9
 func (m *MLDv2MulticastListenerQueryMessage) SetQQI(d time.Duration) error {
 	if d < 0 {
 		m.QueriersQueryIntervalCode = 0
