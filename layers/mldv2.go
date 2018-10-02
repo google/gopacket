@@ -117,7 +117,7 @@ func (m *MLDv2MulticastListenerQueryMessage) SerializeTo(b gopacket.SerializeBuf
 	} else {
 		byte20 &= ^sTrue // the complement of sTrue
 	}
-	byte20 ^= 0x1F // set reserved bits to zero
+	byte20 &= 0x0F // set reserved bits to zero
 	buf[20] = byte20
 
 	binary.BigEndian.PutUint16(buf[22:24], m.NumberOfSources)
