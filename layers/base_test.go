@@ -45,3 +45,25 @@ func checkLayers(p gopacket.Packet, want []gopacket.LayerType, t *testing.T) {
 		}
 	}
 }
+
+// Checks that when a serialized version of p is decoded, p and the serialized version of p are the same.
+// Does not work for packets where the order of options can change, like icmpv6 router advertisements, dhcpv6, etc.
+func checkSerialization(p gopacket.Packet, t *testing.T) {
+	buf := gopacket.NewSerializeBuffer()
+	opts := gopacket.SerializeOptions{
+		ComputeChecksums: false,
+		FixLengths:       false,
+	}
+	if err := gopacket.SerializePacket(buf, opts, p); err != nil {
+		t.Error("Failed to encode packet:", err)
+	}
+
+	p2 := gopacket.NewPacket(buf.Bytes(), LinkTypeEthernet, gopacket.Default)
+	if p2.ErrorLayer() != nil {
+		t.Error("Failed to decode the re-encoded packet:", p2.ErrorLayer().Error())
+	}
+
+	if p2.Dump() != p.Dump() {
+		t.Errorf("The decoded and the re-encoded packet are different!\nDecoded:\n%s\n Re-Encoded:\n%s", p.Dump(), p2.Dump())
+	}
+}

@@ -74,4 +74,11 @@ func TestPacketICMPv6WithHopByHop(t *testing.T) {
 	if expectedType != actualType {
 		t.Errorf("expected ICMP layer's TypeCode to be %d but was %d", expectedType, actualType)
 	}
+
+	p := gopacket.NewPacket(icmp6HopByHopData, LinkTypeEthernet, gopacket.Default)
+	if p.ErrorLayer() != nil {
+		t.Error("Failed to decode packet:", p.ErrorLayer().Error())
+	}
+	checkLayers(p, []gopacket.LayerType{LayerTypeEthernet, LayerTypeIPv6, LayerTypeIPv6HopByHop, LayerTypeICMPv6}, t)
+	checkSerialization(p, t)
 }
