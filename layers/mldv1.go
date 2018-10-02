@@ -66,7 +66,13 @@ func (m *MLDv1Message) SerializeTo(b gopacket.SerializeBuffer, opts gopacket.Ser
 	binary.BigEndian.PutUint16(buf[0:2], uint16(dms))
 
 	copy(buf[2:4], []byte{0x0, 0x0})
-	copy(buf[4:], m.MulticastAddress)
+
+	ma16 := m.MulticastAddress.To16()
+	if ma16 == nil {
+		return fmt.Errorf("invalid multicast address '%s'", m.MulticastAddress)
+	}
+	copy(buf[4:20], ma16)
+
 	return nil
 }
 

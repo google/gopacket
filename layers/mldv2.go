@@ -109,7 +109,12 @@ func (m *MLDv2MulticastListenerQueryMessage) SerializeTo(b gopacket.SerializeBuf
 
 	binary.BigEndian.PutUint16(buf[0:2], m.MaximumResponseCode)
 	copy(buf[2:4], []byte{0x00, 0x00}) // set reserved bytes to zero
-	copy(buf[4:20], m.MulticastAddress)
+
+	ma16 := m.MulticastAddress.To16()
+	if ma16 == nil {
+		return fmt.Errorf("invalid MulticastAddress '%s'", m.MulticastAddress)
+	}
+	copy(buf[4:20], ma16)
 
 	byte20 := m.QueriersRobustnessVariable & mldv2QRVMask
 	if m.SuppressRoutersideProcessing {
@@ -148,7 +153,11 @@ func (m *MLDv2MulticastListenerQueryMessage) serializeSourceAddressesTo(b gopack
 			return err
 		}
 
-		copy(buf[0:], m.SourceAddresses[i].To16())
+		sa16 := m.SourceAddresses[i].To16()
+		if sa16 == nil {
+			return fmt.Errorf("invalid source address [%d] '%s'", i, m.SourceAddresses[i])
+		}
+		copy(buf[0:16], sa16)
 	}
 
 	return nil
@@ -530,7 +539,12 @@ func (m *MLDv2MulticastAddressRecord) serializeTo(b gopacket.SerializeBuffer, op
 	buf[0] = uint8(m.RecordType)
 	buf[1] = m.AuxDataLen
 	binary.BigEndian.PutUint16(buf[2:4], m.N)
-	copy(buf[4:], m.MulticastAddress)
+
+	ma16 := m.MulticastAddress.To16()
+	if ma16 == nil {
+		return fmt.Errorf("invalid multicast address '%s'", m.MulticastAddress)
+	}
+	copy(buf[4:20], ma16)
 
 	return nil
 }
@@ -583,7 +597,12 @@ func (m *MLDv2MulticastAddressRecord) serializeSourceAddressesTo(b gopacket.Seri
 		if err != nil {
 			return err
 		}
-		copy(buf, m.SourceAddresses[i])
+
+		sa16 := m.SourceAddresses[i].To16()
+		if sa16 == nil {
+			return fmt.Errorf("invalid source address [%d] '%s'", i, m.SourceAddresses[i])
+		}
+		copy(buf, sa16)
 	}
 
 	return nil
