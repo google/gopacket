@@ -180,7 +180,7 @@ func (w *serializeBuffer) AppendBytes(num int) ([]byte, error) {
 func (w *serializeBuffer) Clear() error {
 	w.start = w.prepended
 	w.data = w.data[:w.start]
-	w.layers = []LayerType{}
+	w.layers = w.layers[:0]
 	return nil
 }
 
