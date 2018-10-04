@@ -308,7 +308,11 @@ func decodeTCP(data []byte, p gopacket.PacketBuilder) error {
 	if err != nil {
 		return err
 	}
-	return p.NextDecoder(tcp.NextLayerType())
+	if p.DecodeOptions().DecodeStreamsAsDatagrams {
+		return p.NextDecoder(tcp.NextLayerType())
+	} else {
+		return p.NextDecoder(gopacket.LayerTypePayload)
+	}
 }
 
 func (t *TCP) TransportFlow() gopacket.Flow {
