@@ -20,6 +20,7 @@ import (
 	"runtime"
 	"sync"
 	"sync/atomic"
+	"syscall"
 	"time"
 	"unsafe"
 
@@ -469,6 +470,9 @@ func (h *TPacket) pollForFirstPacket(hdr header) error {
 		atomic.AddInt64(&h.stats.Polls, 1)
 		if pollset[0].Revents&unix.POLLERR > 0 {
 			return ErrPoll
+		}
+		if err == syscall.EINTR {
+			continue
 		}
 		if err != nil {
 			return err
