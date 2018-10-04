@@ -53,6 +53,13 @@ func tpacketAlign(v int) int {
 	return int((uint(v) + tpacketAlignment - 1) & ((^tpacketAlignment) - 1))
 }
 
+// AncillaryVLAN structures are used to pass the captured VLAN
+// as ancillary data via CaptureInfo.
+type AncillaryVLAN struct {
+	// The VLAN VID provided by the kernel.
+	VLAN int
+}
+
 // Stats is a set of counters detailing the work TPacket has done so far.
 type Stats struct {
 	// Packets is the total number of packets returned to the caller.
@@ -66,8 +73,33 @@ type Stats struct {
 // SocketStats is a struct where socket stats are stored
 type SocketStats C.struct_tpacket_stats
 
+// Packets returns the number of packets seen by this socket.
+func (s *SocketStats) Packets() uint {
+	return uint(s.tp_packets)
+}
+
+// Drops returns the number of packets dropped on this socket.
+func (s *SocketStats) Drops() uint {
+	return uint(s.tp_drops)
+}
+
 // SocketStatsV3 is a struct where socket stats for TPacketV3 are stored
 type SocketStatsV3 C.struct_tpacket_stats_v3
+
+// Packets returns the number of packets seen by this socket.
+func (s *SocketStatsV3) Packets() uint {
+	return uint(s.tp_packets)
+}
+
+// Drops returns the number of packets dropped on this socket.
+func (s *SocketStatsV3) Drops() uint {
+	return uint(s.tp_drops)
+}
+
+// QueueFreezes returns the number of queue freezes on this socket.
+func (s *SocketStatsV3) QueueFreezes() uint {
+	return uint(s.tp_freeze_q_cnt)
+}
 
 // TPacket implements packet receiving for Linux AF_PACKET versions 1, 2, and 3.
 type TPacket struct {
@@ -283,11 +315,15 @@ retry:
 			goto retry
 		}
 	}
-	data = h.current.getData()
+	data = h.current.getData(&h.opts)
 	ci.Timestamp = h.current.getTime()
 	ci.CaptureLength = len(data)
 	ci.Length = h.current.getLength()
 	ci.InterfaceIndex = h.current.getIfaceIndex()
+	vlan := h.current.getVLAN()
+	if vlan >= 0 {
+		ci.AncillaryData = append(ci.AncillaryData, AncillaryVLAN{vlan})
+	}
 	atomic.AddInt64(&h.stats.Packets, 1)
 	h.headerNextNeeded = true
 	h.mu.Unlock()

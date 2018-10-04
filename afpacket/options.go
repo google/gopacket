@@ -92,6 +92,22 @@ type OptBlockTimeout time.Duration
 // descriptor to become ready. Specifying a negative value in  time‐out means an infinite timeout.
 type OptPollTimeout time.Duration
 
+// OptAddVLANHeader modifies the packet data that comes back from the
+// kernel by adding in the VLAN header that the NIC stripped.  AF_PACKET by
+// default uses VLAN offloading, in which the NIC strips the VLAN header off of
+// the packet before handing it to the kernel.  This means that, even if a
+// packet has an 802.1q header on the wire, it'll show up without one by the
+// time it goes through AF_PACKET.  If this option is true, the VLAN header is
+// added back in before the packet is returned.  Note that this potentially has
+// a large performance hit, especially in otherwise zero-copy operation.
+//
+// Note that if you do not need to have a "real" VLAN layer, it may be
+// preferable to use the VLAN ID provided by the AncillaryVLAN struct
+// in CaptureInfo.AncillaryData, which is populated out-of-band and has
+// negligible performance impact. Such ancillary data will automatically
+// be provided if available.
+type OptAddVLANHeader bool
+
 // Default constants used by options.
 const (
 	DefaultFrameSize    = 4096                   // Default value for OptFrameSize.
@@ -106,6 +122,7 @@ type options struct {
 	framesPerBlock int
 	blockSize      int
 	numBlocks      int
+	addVLANHeader  bool
 	blockTimeout   time.Duration
 	pollTimeout    time.Duration
 	version        OptTPacketVersion
@@ -143,6 +160,8 @@ func parseOptions(opts ...interface{}) (ret options, err error) {
 			ret.iface = string(v)
 		case OptSocketType:
 			ret.socktype = v
+		case OptAddVLANHeader:
+			ret.addVLANHeader = bool(v)
 		default:
 			err = errors.New("unknown type in options")
 			return

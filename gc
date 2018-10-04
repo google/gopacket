@@ -127,6 +127,9 @@ if [ -f /usr/include/pcap.h ]; then
   Root pcap_tester --mode=filtered
   Root pcap_tester --mode=timestamp || echo "You might not support timestamp sources"
   popd
+  pushd examples/afpacket
+  go build
+  popd
   pushd examples/pcapdump
   go build
   popd
@@ -183,6 +186,12 @@ if [ -f /usr/include/pfring.h ]; then
   go build
   popd
 fi
+pushd ip4defrag
+go test ./...
+popd
+pushd defrag
+go test ./...
+popd
 
 for travis_script in `ls .travis.*.sh`; do
   ./$travis_script

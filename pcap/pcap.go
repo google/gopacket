@@ -102,8 +102,15 @@ int pcap_set_rfmon(pcap_t *p, int rfmon) {
 #endif
 
 // The things we do to avoid pointers escaping to the heap...
+// According to https://github.com/the-tcpdump-group/libpcap/blob/1131a7c26c6f4d4772e4a2beeaf7212f4dea74ac/pcap.c#L398-L406 ,
+// the return value of pcap_next_ex could be greater than 1 for success.
+// Let's just make it 1 if it comes bigger than 1.
 int pcap_next_ex_escaping(pcap_t *p, uintptr_t pkt_hdr, uintptr_t pkt_data) {
-  return pcap_next_ex(p, (struct pcap_pkthdr**)(pkt_hdr), (const u_char**)(pkt_data));
+  int ex = pcap_next_ex(p, (struct pcap_pkthdr**)(pkt_hdr), (const u_char**)(pkt_data));
+  if (ex > 1) {
+    ex = 1;
+  }
+  return ex;
 }
 */
 import "C"
@@ -693,6 +700,28 @@ func (p *Handle) NewBPF(expr string) (*BPF, error) {
 
 	runtime.SetFinalizer(bpf, destroyBPF)
 	return bpf, nil
+}
+
+// NewBPF allows to create a BPF without requiring an existing handle.
+// This allows to match packets obtained from a-non GoPacket capture source
+// to be matched.
+//
+// buf := make([]byte, MaxFrameSize)
+// bpfi, _ := pcap.NewBPF(layers.LinkTypeEthernet, MaxFrameSize, "icmp")
+// n, _ := someIO.Read(buf)
+// ci := gopacket.CaptureInfo{CaptureLength: n, Length: n}
+// if bpfi.Matches(ci, buf) {
+//     doSomething()
+// }
+func NewBPF(linkType layers.LinkType, captureLength int, expr string) (*BPF, error) {
+	cptr := C.pcap_open_dead(C.int(linkType), C.int(captureLength))
+	if cptr == nil {
+		return nil, errors.New("error opening dead capture")
+	}
+
+	h := Handle{cptr: cptr}
+	defer h.Close()
+	return h.NewBPF(expr)
 }
 
 // NewBPFInstructionFilter sets the given BPFInstructions as new filter program.
