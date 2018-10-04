@@ -455,13 +455,13 @@ func (h *TPacket) getTPacketHeader() header {
 func (h *TPacket) pollForFirstPacket(hdr header) error {
 	tm := int(h.opts.pollTimeout / time.Millisecond)
 	for hdr.getStatus()&C.TP_STATUS_USER == 0 {
-		pollset := []unix.PollFd{
-			unix.PollFd{
+		pollset := [1]unix.PollFd{
+			{
 				Fd:     int32(h.fd),
 				Events: unix.POLLIN,
 			},
 		}
-		n, err := unix.Poll(pollset, tm)
+		n, err := unix.Poll(pollset[:], tm)
 		if n == 0 {
 			return ErrTimeout
 		}
