@@ -103,6 +103,8 @@ func (s *SocketStatsV3) QueueFreezes() uint {
 
 // TPacket implements packet receiving for Linux AF_PACKET versions 1, 2, and 3.
 type TPacket struct {
+	// stats is simple statistics on TPacket's run. This MUST be the first entry to ensure alignment for sync.atomic
+	stats Stats
 	// fd is the C file descriptor.
 	fd int
 	// ring points to the memory space of the ring buffer shared by tpacket and the kernel.
@@ -130,8 +132,6 @@ type TPacket struct {
 	v3 v3wrapper
 
 	statsMu sync.Mutex // guards stats below
-	// stats is simple statistics on TPacket's run.
-	stats Stats
 	// socketStats contains stats from the socket
 	socketStats SocketStats
 	// same as socketStats, but with an extra field freeze_q_cnt
