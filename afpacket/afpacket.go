@@ -118,8 +118,6 @@ type TPacket struct {
 	offset int
 	// current is the current header.
 	current header
-	// pollset is used by TPacket for its poll() call.
-	pollset unix.PollFd
 	// shouldReleasePacket is set to true whenever we return packet data, to make sure we remember to release that data back to the kernel.
 	shouldReleasePacket bool
 	// headerNextNeeded is set to true when header need to move to the next packet. No need to move it case of poll error.
@@ -457,16 +455,19 @@ func (h *TPacket) getTPacketHeader() header {
 func (h *TPacket) pollForFirstPacket(hdr header) error {
 	tm := int(h.opts.pollTimeout / time.Millisecond)
 	for hdr.getStatus()&C.TP_STATUS_USER == 0 {
-		h.pollset.Fd = int32(h.fd)
-		h.pollset.Events = unix.POLLIN
-		h.pollset.Revents = 0
-		n, err := unix.Poll([]unix.PollFd{h.pollset}, tm)
+		pollset := []unix.PollFd{
+			unix.PollFd{
+				Fd:     int32(h.fd),
+				Events: unix.POLLIN,
+			},
+		}
+		n, err := unix.Poll(pollset, tm)
 		if n == 0 {
 			return ErrTimeout
 		}
 
 		atomic.AddInt64(&h.stats.Polls, 1)
-		if h.pollset.Revents&unix.POLLERR > 0 {
+		if pollset[0].Revents&unix.POLLERR > 0 {
 			return ErrPoll
 		}
 		if err != nil {
