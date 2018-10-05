@@ -8,6 +8,7 @@ package layers
 
 import (
 	"errors"
+	"fmt"
 
 	"github.com/google/gopacket"
 )
@@ -92,7 +93,7 @@ func (t *TLSAlertRecord) DecodeFromBytes(h TLSRecordHeader, data []byte, df gopa
 func (al TLSAlertLevel) String() string {
 	switch al {
 	default:
-		return "Unknown"
+		return fmt.Sprintf("Unknown(%d)", al)
 	case TLSAlertWarning:
 		return "Warning"
 	case TLSAlertFatal:

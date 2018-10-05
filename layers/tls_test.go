@@ -1,6 +1,7 @@
 package layers
 
 import (
+	"strings"
 	"testing"
 
 	"github.com/google/gopacket"
@@ -233,7 +234,7 @@ func TestParseTLSAlertEncrypted(t *testing.T) {
 
 	l := r[0].Level
 	d := r[0].Description
-	if l.String() != "Unknown" || d.String() != "Unknown" {
+	if !strings.HasPrefix(l.String(), "Unknown") || !strings.HasPrefix(d.String(), "Unknown") {
 		t.Error("Alert packet should be Encrypted")
 	}
 	msg := r[0].EncryptedMsg
