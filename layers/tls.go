@@ -183,7 +183,7 @@ func (t *TLS) CanDecode() gopacket.LayerClass {
 
 // NextLayerType implements gopacket.DecodingLayer.
 func (t *TLS) NextLayerType() gopacket.LayerType {
-	return gopacket.LayerTypePayload
+	return gopacket.LayerTypeZero
 }
 
 // Payload returns nil.
