@@ -12,40 +12,40 @@ import (
 	"github.com/google/gopacket"
 )
 
-type TLSalertLevel uint8
-type TLSalertDescr uint8
+type TLSAlertLevel uint8
+type TLSAlertDescr uint8
 
 const (
-	TLSalert_warning       TLSalertLevel = 1
-	TLSalert_fatal         TLSalertLevel = 2
-	TLSalert_unknown_level TLSalertLevel = 255
+	TLSAlertWarning      TLSAlertLevel = 1
+	TLSAlertFatal        TLSAlertLevel = 2
+	TLSAlertUnknownLevel TLSAlertLevel = 255
 
-	TLSalert_close_notify                TLSalertDescr = 0
-	TLSalert_unexpected_message          TLSalertDescr = 10
-	TLSalert_bad_record_mac              TLSalertDescr = 20
-	TLSalert_decryption_failed_RESERVED  TLSalertDescr = 21
-	TLSalert_record_overflow             TLSalertDescr = 22
-	TLSalert_decompression_failure       TLSalertDescr = 30
-	TLSalert_handshake_failure           TLSalertDescr = 40
-	TLSalert_no_certificate_RESERVED     TLSalertDescr = 41
-	TLSalert_bad_certificate             TLSalertDescr = 42
-	TLSalert_unsupported_certificate     TLSalertDescr = 43
-	TLSalert_certificate_revoked         TLSalertDescr = 44
-	TLSalert_certificate_expired         TLSalertDescr = 45
-	TLSalert_certificate_unknown         TLSalertDescr = 46
-	TLSalert_illegal_parameter           TLSalertDescr = 47
-	TLSalert_unknown_ca                  TLSalertDescr = 48
-	TLSalert_access_denied               TLSalertDescr = 49
-	TLSalert_decode_error                TLSalertDescr = 50
-	TLSalert_decrypt_error               TLSalertDescr = 51
-	TLSalert_export_restriction_RESERVED TLSalertDescr = 60
-	TLSalert_protocol_version            TLSalertDescr = 70
-	TLSalert_insufficient_security       TLSalertDescr = 71
-	TLSalert_internal_error              TLSalertDescr = 80
-	TLSalert_user_canceled               TLSalertDescr = 90
-	TLSalert_no_renegotiation            TLSalertDescr = 100
-	TLSalert_unsupported_extension       TLSalertDescr = 110
-	TLSalert_unknown_description         TLSalertDescr = 255
+	TLSAlertCloseNotify               TLSAlertDescr = 0
+	TLSAlertUnexpectedMessage         TLSAlertDescr = 10
+	TLSAlertBadRecordMac              TLSAlertDescr = 20
+	TLSAlertDecryptionFailedRESERVED  TLSAlertDescr = 21
+	TLSAlertRecordOverflow            TLSAlertDescr = 22
+	TLSAlertDecompressionFailure      TLSAlertDescr = 30
+	TLSAlertHandshakeFailure          TLSAlertDescr = 40
+	TLSAlertNoCertificateRESERVED     TLSAlertDescr = 41
+	TLSAlertBadCertificate            TLSAlertDescr = 42
+	TLSAlertUnsupportedCertificate    TLSAlertDescr = 43
+	TLSAlertCertificateRevoked        TLSAlertDescr = 44
+	TLSAlertCertificateExpired        TLSAlertDescr = 45
+	TLSAlertCertificateUnknown        TLSAlertDescr = 46
+	TLSAlertIllegalParameter          TLSAlertDescr = 47
+	TLSAlertUnknownCa                 TLSAlertDescr = 48
+	TLSAlertAccessDenied              TLSAlertDescr = 49
+	TLSAlertDecodeError               TLSAlertDescr = 50
+	TLSAlertDecryptError              TLSAlertDescr = 51
+	TLSAlertExportRestrictionRESERVED TLSAlertDescr = 60
+	TLSAlertProtocolVersion           TLSAlertDescr = 70
+	TLSAlertInsufficientSecurity      TLSAlertDescr = 71
+	TLSAlertInternalError             TLSAlertDescr = 80
+	TLSAlertUserCanceled              TLSAlertDescr = 90
+	TLSAlertNoRenegotiation           TLSAlertDescr = 100
+	TLSAlertUnsupportedExtension      TLSAlertDescr = 110
+	TLSAlertUnknownDescription        TLSAlertDescr = 255
 )
 
 //  TLS Alert
@@ -56,17 +56,17 @@ const (
 //  |      Description      |
 //  +--+--+--+--+--+--+--+--+
 
-type TLSalertRecord struct {
-	TLSrecordHeader
+type TLSAlertRecord struct {
+	TLSRecordHeader
 
-	Level       TLSalertLevel
-	Description TLSalertDescr
+	Level       TLSAlertLevel
+	Description TLSAlertDescr
 
 	EncryptedMsg []byte
 }
 
 // DecodeFromBytes decodes the slice into the TLS struct.
-func (t *TLSalertRecord) DecodeFromBytes(h TLSrecordHeader, data []byte, df gopacket.DecodeFeedback) error {
+func (t *TLSAlertRecord) DecodeFromBytes(h TLSRecordHeader, data []byte, df gopacket.DecodeFeedback) error {
 	// TLS Record Header
 	t.ContentType = h.ContentType
 	t.Version = h.Version
@@ -78,81 +78,81 @@ func (t *TLSalertRecord) DecodeFromBytes(h TLSrecordHeader, data []byte, df gopa
 	}
 
 	if t.Length == 2 {
-		t.Level = TLSalertLevel(data[0])
-		t.Description = TLSalertDescr(data[1])
+		t.Level = TLSAlertLevel(data[0])
+		t.Description = TLSAlertDescr(data[1])
 	} else {
-		t.Level = TLSalert_unknown_level
-		t.Description = TLSalert_unknown_description
+		t.Level = TLSAlertUnknownLevel
+		t.Description = TLSAlertUnknownDescription
 		t.EncryptedMsg = data
 	}
 
 	return nil
 }
 
-func (al TLSalertLevel) String() string {
+func (al TLSAlertLevel) String() string {
 	switch al {
 	default:
 		return "Unknown"
-	case TLSalert_warning:
+	case TLSAlertWarning:
 		return "Warning"
-	case TLSalert_fatal:
+	case TLSAlertFatal:
 		return "Fatal"
 	}
 }
 
-func (ad TLSalertDescr) String() string {
+func (ad TLSAlertDescr) String() string {
 	switch ad {
 	default:
 		return "Unknown"
-	case TLSalert_close_notify:
+	case TLSAlertCloseNotify:
 		return "close_notify"
-	case TLSalert_unexpected_message:
+	case TLSAlertUnexpectedMessage:
 		return "unexpected_message"
-	case TLSalert_bad_record_mac:
+	case TLSAlertBadRecordMac:
 		return "bad_record_mac"
-	case TLSalert_decryption_failed_RESERVED:
+	case TLSAlertDecryptionFailedRESERVED:
 		return "decryption_failed_RESERVED"
-	case TLSalert_record_overflow:
+	case TLSAlertRecordOverflow:
 		return "record_overflow"
-	case TLSalert_decompression_failure:
+	case TLSAlertDecompressionFailure:
 		return "decompression_failure"
-	case TLSalert_handshake_failure:
+	case TLSAlertHandshakeFailure:
 		return "handshake_failure"
-	case TLSalert_no_certificate_RESERVED:
+	case TLSAlertNoCertificateRESERVED:
 		return "no_certificate_RESERVED"
-	case TLSalert_bad_certificate:
+	case TLSAlertBadCertificate:
 		return "bad_certificate"
-	case TLSalert_unsupported_certificate:
+	case TLSAlertUnsupportedCertificate:
 		return "unsupported_certificate"
-	case TLSalert_certificate_revoked:
+	case TLSAlertCertificateRevoked:
 		return "certificate_revoked"
-	case TLSalert_certificate_expired:
+	case TLSAlertCertificateExpired:
 		return "certificate_expired"
-	case TLSalert_certificate_unknown:
+	case TLSAlertCertificateUnknown:
 		return "certificate_unknown"
-	case TLSalert_illegal_parameter:
+	case TLSAlertIllegalParameter:
 		return "illegal_parameter"
-	case TLSalert_unknown_ca:
+	case TLSAlertUnknownCa:
 		return "unknown_ca"
-	case TLSalert_access_denied:
+	case TLSAlertAccessDenied:
 		return "access_denied"
-	case TLSalert_decode_error:
+	case TLSAlertDecodeError:
 		return "decode_error"
-	case TLSalert_decrypt_error:
+	case TLSAlertDecryptError:
 		return "decrypt_error"
-	case TLSalert_export_restriction_RESERVED:
+	case TLSAlertExportRestrictionRESERVED:
 		return "export_restriction_RESERVED"
-	case TLSalert_protocol_version:
+	case TLSAlertProtocolVersion:
 		return "protocol_version"
-	case TLSalert_insufficient_security:
+	case TLSAlertInsufficientSecurity:
 		return "insufficient_security"
-	case TLSalert_internal_error:
+	case TLSAlertInternalError:
 		return "internal_error"
-	case TLSalert_user_canceled:
+	case TLSAlertUserCanceled:
 		return "user_canceled"
-	case TLSalert_no_renegotiation:
+	case TLSAlertNoRenegotiation:
 		return "no_renegotiation"
-	case TLSalert_unsupported_extension:
+	case TLSAlertUnsupportedExtension:
 		return "unsupported_extension"
 	}
 }

@@ -140,8 +140,8 @@ func TestParseTLSContentType(t *testing.T) {
 	}
 
 	ct := r[0].ContentType
-	if ct != TLShandshake {
-		t.Errorf("Failed to parse Content Type, expected %q, got %q", TLShandshake.String(), ct.String())
+	if ct != TLSHandshake {
+		t.Errorf("Failed to parse Content Type, expected %q, got %q", TLSHandshake.String(), ct.String())
 	}
 }
 
@@ -158,7 +158,7 @@ func TestParseTLSChangeCipherSpec(t *testing.T) {
 	}
 
 	m := r[0].Message
-	if m == TLSchangecipherspec_unknown {
+	if m == TLSChangecipherspecUnknown {
 		t.Error("Change Cipher Spec message unknown")
 	}
 }

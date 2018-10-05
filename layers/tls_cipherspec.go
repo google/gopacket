@@ -15,8 +15,8 @@ import (
 type TLSchangeCipherSpec uint8
 
 const (
-	TLSchangecipherspec_message TLSchangeCipherSpec = 1
-	TLSchangecipherspec_unknown TLSchangeCipherSpec = 255
+	TLSChangecipherspecMessage TLSchangeCipherSpec = 1
+	TLSChangecipherspecUnknown TLSchangeCipherSpec = 255
 )
 
 //  TLS Change Cipher Spec
@@ -25,14 +25,14 @@ const (
 //  |        Message        |
 //  +--+--+--+--+--+--+--+--+
 
-type TLSchangeCipherSpecRecord struct {
-	TLSrecordHeader
+type TLSChangeCipherSpecRecord struct {
+	TLSRecordHeader
 
 	Message TLSchangeCipherSpec
 }
 
 // DecodeFromBytes decodes the slice into the TLS struct.
-func (t *TLSchangeCipherSpecRecord) DecodeFromBytes(h TLSrecordHeader, data []byte, df gopacket.DecodeFeedback) error {
+func (t *TLSChangeCipherSpecRecord) DecodeFromBytes(h TLSRecordHeader, data []byte, df gopacket.DecodeFeedback) error {
 	// TLS Record Header
 	t.ContentType = h.ContentType
 	t.Version = h.Version
@@ -44,8 +44,8 @@ func (t *TLSchangeCipherSpecRecord) DecodeFromBytes(h TLSrecordHeader, data []by
 	}
 
 	t.Message = TLSchangeCipherSpec(data[0])
-	if t.Message != TLSchangecipherspec_message {
-		t.Message = TLSchangecipherspec_unknown
+	if t.Message != TLSChangecipherspecMessage {
+		t.Message = TLSChangecipherspecUnknown
 	}
 
 	return nil
@@ -55,7 +55,7 @@ func (ccs TLSchangeCipherSpec) String() string {
 	switch ccs {
 	default:
 		return "Unknown"
-	case TLSchangecipherspec_message:
+	case TLSChangecipherspecMessage:
 		return "Change Cipher Spec Message"
 	}
 }

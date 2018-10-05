@@ -12,13 +12,13 @@ import (
 	"github.com/google/gopacket"
 )
 
-type TLSappdataRecord struct {
-	TLSrecordHeader
+type TLSAppDataRecord struct {
+	TLSRecordHeader
 	Payload []byte
 }
 
 // DecodeFromBytes decodes the slice into the TLS struct.
-func (t *TLSappdataRecord) DecodeFromBytes(h TLSrecordHeader, data []byte, df gopacket.DecodeFeedback) error {
+func (t *TLSAppDataRecord) DecodeFromBytes(h TLSRecordHeader, data []byte, df gopacket.DecodeFeedback) error {
 	// TLS Record Header
 	t.ContentType = h.ContentType
 	t.Version = h.Version

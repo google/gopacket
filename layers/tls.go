@@ -18,24 +18,24 @@ type TLSType uint8
 
 // TLSType known values.
 const (
-	TLSchange_cipher_spec TLSType = 20
-	TLSalert              TLSType = 21
-	TLShandshake          TLSType = 22
-	TLSapplication_data   TLSType = 23
-	TLSunknown            TLSType = 255
+	TLSChangeCipherSpec TLSType = 20
+	TLSAlert            TLSType = 21
+	TLSHandshake        TLSType = 22
+	TLSApplicationData  TLSType = 23
+	TLSUnknown          TLSType = 255
 )
 
 func (tt TLSType) String() string {
 	switch tt {
 	default:
 		return "Unknown"
-	case TLSchange_cipher_spec:
+	case TLSChangeCipherSpec:
 		return "Change Cipher Spec"
-	case TLSalert:
+	case TLSAlert:
 		return "Alert"
-	case TLShandshake:
+	case TLSHandshake:
 		return "Handshake"
-	case TLSapplication_data:
+	case TLSApplicationData:
 		return "Application Data"
 	}
 }
@@ -86,13 +86,13 @@ type TLS struct {
 	BaseLayer
 
 	// TLS Records
-	ChangeCipherSpec []TLSchangeCipherSpecRecord
-	Handshake        []TLShandshakeRecord
-	Appdata          []TLSappdataRecord
-	Alert            []TLSalertRecord
+	ChangeCipherSpec []TLSChangeCipherSpecRecord
+	Handshake        []TLSHandshakeRecord
+	Appdata          []TLSAppDataRecord
+	Alert            []TLSAlertRecord
 }
 
-type TLSrecordHeader struct {
+type TLSRecordHeader struct {
 	ContentType TLSType
 	Version     TLSVersion
 	Length      uint16
@@ -125,7 +125,7 @@ func (t *TLS) DecodeFromBytes(data []byte, df gopacket.DecodeFeedback) error {
 	// pointing to this layer
 	t.BaseLayer = BaseLayer{Contents: data[:len(data)]}
 
-	var h TLSrecordHeader
+	var h TLSRecordHeader
 	h.ContentType = TLSType(data[0])
 	h.Version.major = data[1]
 	h.Version.minor = data[2]
@@ -145,29 +145,29 @@ func (t *TLS) DecodeFromBytes(data []byte, df gopacket.DecodeFeedback) error {
 	switch h.ContentType {
 	default:
 		return errors.New("Unknown TLS record type")
-	case TLSchange_cipher_spec:
-		var r TLSchangeCipherSpecRecord
+	case TLSChangeCipherSpec:
+		var r TLSChangeCipherSpecRecord
 		e := r.DecodeFromBytes(h, data[hl:tl], df)
 		if e != nil {
 			return e
 		}
 		t.ChangeCipherSpec = append(t.ChangeCipherSpec, r)
-	case TLSalert:
-		var r TLSalertRecord
+	case TLSAlert:
+		var r TLSAlertRecord
 		e := r.DecodeFromBytes(h, data[hl:tl], df)
 		if e != nil {
 			return e
 		}
 		t.Alert = append(t.Alert, r)
-	case TLShandshake:
-		var r TLShandshakeRecord
+	case TLSHandshake:
+		var r TLSHandshakeRecord
 		e := r.DecodeFromBytes(h, data[hl:tl], df)
 		if e != nil {
 			return e
 		}
 		t.Handshake = append(t.Handshake, r)
-	case TLSapplication_data:
-		var r TLSappdataRecord
+	case TLSApplicationData:
+		var r TLSAppDataRecord
 		e := r.DecodeFromBytes(h, data[hl:tl], df)
 		if e != nil {
 			return e
