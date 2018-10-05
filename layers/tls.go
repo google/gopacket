@@ -188,11 +188,5 @@ func (t *TLS) NextLayerType() gopacket.LayerType {
 
 // Payload returns nil.
 func (t *TLS) Payload() []byte {
-	return []byte{}
-}
-
-// SerializeTo writes the serialized form of this layer into the
-// SerializationBuffer, implementing gopacket.SerializableLayer.
-func (t *TLS) SerializeTo(b gopacket.SerializeBuffer, opts gopacket.SerializeOptions) error {
 	return nil
 }
