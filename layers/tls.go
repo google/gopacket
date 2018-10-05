@@ -40,27 +40,23 @@ func (tt TLSType) String() string {
 	}
 }
 
-type TLSVersion struct {
-	major uint8
-	minor uint8
-}
+type TLSVersion uint16
 
 func (tv TLSVersion) String() string {
-	s := tv.major*10 + tv.minor
-	switch s {
+	switch tv {
 	default:
 		return "Unknown"
-	case 20:
+	case 0x0200:
 		return "SSL 2.0"
-	case 30:
+	case 0x0300:
 		return "SSL 3.0"
-	case 31:
+	case 0x0301:
 		return "TLS 1.0"
-	case 32:
+	case 0x0302:
 		return "TLS 1.1"
-	case 33:
+	case 0x0303:
 		return "TLS 1.2"
-	case 34:
+	case 0x0304:
 		return "TLS 1.3"
 	}
 }
@@ -127,8 +123,7 @@ func (t *TLS) DecodeFromBytes(data []byte, df gopacket.DecodeFeedback) error {
 
 	var h TLSRecordHeader
 	h.ContentType = TLSType(data[0])
-	h.Version.major = data[1]
-	h.Version.minor = data[2]
+	h.Version = TLSVersion(binary.BigEndian.Uint16(data[1:3]))
 	h.Length = binary.BigEndian.Uint16(data[3:5])
 
 	if h.ContentType.String() == "Unknown" {
