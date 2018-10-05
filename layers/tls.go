@@ -142,28 +142,28 @@ func (t *TLS) DecodeFromBytes(data []byte, df gopacket.DecodeFeedback) error {
 		return errors.New("Unknown TLS record type")
 	case TLSChangeCipherSpec:
 		var r TLSChangeCipherSpecRecord
-		e := r.DecodeFromBytes(h, data[hl:tl], df)
+		e := r.decodeFromBytes(h, data[hl:tl], df)
 		if e != nil {
 			return e
 		}
 		t.ChangeCipherSpec = append(t.ChangeCipherSpec, r)
 	case TLSAlert:
 		var r TLSAlertRecord
-		e := r.DecodeFromBytes(h, data[hl:tl], df)
+		e := r.decodeFromBytes(h, data[hl:tl], df)
 		if e != nil {
 			return e
 		}
 		t.Alert = append(t.Alert, r)
 	case TLSHandshake:
 		var r TLSHandshakeRecord
-		e := r.DecodeFromBytes(h, data[hl:tl], df)
+		e := r.decodeFromBytes(h, data[hl:tl], df)
 		if e != nil {
 			return e
 		}
 		t.Handshake = append(t.Handshake, r)
 	case TLSApplicationData:
 		var r TLSAppDataRecord
-		e := r.DecodeFromBytes(h, data[hl:tl], df)
+		e := r.decodeFromBytes(h, data[hl:tl], df)
 		if e != nil {
 			return e
 		}

@@ -18,7 +18,7 @@ type TLSAppDataRecord struct {
 }
 
 // DecodeFromBytes decodes the slice into the TLS struct.
-func (t *TLSAppDataRecord) DecodeFromBytes(h TLSRecordHeader, data []byte, df gopacket.DecodeFeedback) error {
+func (t *TLSAppDataRecord) decodeFromBytes(h TLSRecordHeader, data []byte, df gopacket.DecodeFeedback) error {
 	// TLS Record Header
 	t.ContentType = h.ContentType
 	t.Version = h.Version

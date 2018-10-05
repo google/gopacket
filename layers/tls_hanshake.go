@@ -15,7 +15,7 @@ type TLSHandshakeRecord struct {
 }
 
 // DecodeFromBytes decodes the slice into the TLS struct.
-func (t *TLSHandshakeRecord) DecodeFromBytes(h TLSRecordHeader, data []byte, df gopacket.DecodeFeedback) error {
+func (t *TLSHandshakeRecord) decodeFromBytes(h TLSRecordHeader, data []byte, df gopacket.DecodeFeedback) error {
 	// TLS Record Header
 	t.ContentType = h.ContentType
 	t.Version = h.Version
