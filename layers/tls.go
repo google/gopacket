@@ -25,6 +25,7 @@ const (
 	TLSUnknown          TLSType = 255
 )
 
+// String shows the register type nicely formatted
 func (tt TLSType) String() string {
 	switch tt {
 	default:
@@ -40,8 +41,10 @@ func (tt TLSType) String() string {
 	}
 }
 
+// TLSVersion represents the TLS version in numeric format
 type TLSVersion uint16
 
+// Strings shows the TLS version nicely formatted
 func (tv TLSVersion) String() string {
 	switch tv {
 	default:
@@ -88,6 +91,7 @@ type TLS struct {
 	Alert            []TLSAlertRecord
 }
 
+// TLSRecordHeader contains all the information that each TLS Record types should have
 type TLSRecordHeader struct {
 	ContentType TLSType
 	Version     TLSVersion
@@ -186,7 +190,7 @@ func (t *TLS) NextLayerType() gopacket.LayerType {
 	return gopacket.LayerTypeZero
 }
 
-// Payload returns nil.
+// Payload returns nil, since TLS encrypted payload is inside TLSAppDataRecord
 func (t *TLS) Payload() []byte {
 	return nil
 }

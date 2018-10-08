@@ -12,6 +12,7 @@ import (
 	"github.com/google/gopacket"
 )
 
+// TLSAppDataRecord contains all the information that each AppData Record types should have
 type TLSAppDataRecord struct {
 	TLSRecordHeader
 	Payload []byte

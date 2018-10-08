@@ -13,7 +13,9 @@ import (
 	"github.com/google/gopacket"
 )
 
+// TLSAlertLevel defines the alert level data type
 type TLSAlertLevel uint8
+// TLSAlertDescr defines the alert descrption data type
 type TLSAlertDescr uint8
 
 const (
@@ -57,6 +59,7 @@ const (
 //  |      Description      |
 //  +--+--+--+--+--+--+--+--+
 
+// TLSAlertRecord contains all the information that each Alert Record type should have
 type TLSAlertRecord struct {
 	TLSRecordHeader
 
@@ -90,6 +93,7 @@ func (t *TLSAlertRecord) decodeFromBytes(h TLSRecordHeader, data []byte, df gopa
 	return nil
 }
 
+// Strings shows the TLS alert level nicely formatted
 func (al TLSAlertLevel) String() string {
 	switch al {
 	default:
@@ -101,6 +105,7 @@ func (al TLSAlertLevel) String() string {
 	}
 }
 
+// Strings shows the TLS alert description nicely formatted
 func (ad TLSAlertDescr) String() string {
 	switch ad {
 	default:

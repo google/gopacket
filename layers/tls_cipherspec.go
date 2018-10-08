@@ -12,6 +12,7 @@ import (
 	"github.com/google/gopacket"
 )
 
+// TLSchangeCipherSpec defines the message value inside ChangeCipherSpec Record
 type TLSchangeCipherSpec uint8
 
 const (
@@ -25,6 +26,7 @@ const (
 //  |        Message        |
 //  +--+--+--+--+--+--+--+--+
 
+// TLSChangeCipherSpecRecord defines the type of data inside ChangeCipherSpec Record
 type TLSChangeCipherSpecRecord struct {
 	TLSRecordHeader
 
@@ -51,6 +53,7 @@ func (t *TLSChangeCipherSpecRecord) decodeFromBytes(h TLSRecordHeader, data []by
 	return nil
 }
 
+// String shows the message value nicely formatted
 func (ccs TLSchangeCipherSpec) String() string {
 	switch ccs {
 	default:
