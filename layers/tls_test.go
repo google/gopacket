@@ -119,8 +119,13 @@ var testMalformed = []byte{
 	0xd1, 0xd2, 0xd3, 0xd4, 0xd5, 0xd6, 0xd7, 0xd8, 0xd9, 0xda, 0xdb, 0xdc, 0xdd, 0xde, 0xdf,
 }
 
+var testTLSDecodeOptions = gopacket.DecodeOptions{
+	SkipDecodeRecovery: true,
+	DecodeStreamsAsDatagrams: true,
+}
+
 func TestPacketTLS(t *testing.T) {
-	p := gopacket.NewPacket(testClientHello, LinkTypeEthernet, testDecodeOptions)
+	p := gopacket.NewPacket(testClientHello, LinkTypeEthernet, testTLSDecodeOptions)
 	if p.ErrorLayer() != nil {
 		t.Error("Failed to decode packet:", p.ErrorLayer().Error())
 	}
@@ -129,7 +134,7 @@ func TestPacketTLS(t *testing.T) {
 }
 
 func TestParseTLSContentType(t *testing.T) {
-	p := gopacket.NewPacket(testClientHello, LinkTypeEthernet, testDecodeOptions)
+	p := gopacket.NewPacket(testClientHello, LinkTypeEthernet, testTLSDecodeOptions)
 	if p.ErrorLayer() != nil {
 		t.Error("Failed to decode packet:", p.ErrorLayer().Error())
 	}
@@ -147,7 +152,7 @@ func TestParseTLSContentType(t *testing.T) {
 }
 
 func TestParseTLSChangeCipherSpec(t *testing.T) {
-	p := gopacket.NewPacket(testClientKeyExchange, LayerTypeTLS, testDecodeOptions)
+	p := gopacket.NewPacket(testClientKeyExchange, LayerTypeTLS, testTLSDecodeOptions)
 	if p.ErrorLayer() != nil {
 		t.Error("Failed to decode packet:", p.ErrorLayer().Error())
 	}
@@ -165,7 +170,7 @@ func TestParseTLSChangeCipherSpec(t *testing.T) {
 }
 
 func TestParseTLSAppData(t *testing.T) {
-	p := gopacket.NewPacket(testDoubleAppData, LayerTypeTLS, testDecodeOptions)
+	p := gopacket.NewPacket(testDoubleAppData, LayerTypeTLS, testTLSDecodeOptions)
 	if p.ErrorLayer() != nil {
 		t.Error("Failed to decode packet:", p.ErrorLayer().Error())
 	}
@@ -196,14 +201,14 @@ func TestParseTLSAppData(t *testing.T) {
 }
 
 func TestParseTLSMalformed(t *testing.T) {
-	p := gopacket.NewPacket(testMalformed, LayerTypeTLS, testDecodeOptions)
+	p := gopacket.NewPacket(testMalformed, LayerTypeTLS, testTLSDecodeOptions)
 	if p.ErrorLayer() == nil {
 		t.Error("No Decoding Error when parsing a malformed data")
 	}
 }
 
 func TestParseTLSTooShort(t *testing.T) {
-	p := gopacket.NewPacket(testMalformed[0:2], LayerTypeTLS, testDecodeOptions)
+	p := gopacket.NewPacket(testMalformed[0:2], LayerTypeTLS, testTLSDecodeOptions)
 	if p.ErrorLayer() == nil {
 		t.Error("No Decoding Error when parsing a malformed data")
 	}
@@ -214,14 +219,14 @@ func TestParseTLSLengthMismatch(t *testing.T) {
 	copy(testLengthMismatch, testDoubleAppData)
 	testLengthMismatch[3] = 0xFF
 	testLengthMismatch[4] = 0xFF
-	p := gopacket.NewPacket(testLengthMismatch, LayerTypeTLS, testDecodeOptions)
+	p := gopacket.NewPacket(testLengthMismatch, LayerTypeTLS, testTLSDecodeOptions)
 	if p.ErrorLayer() == nil {
 		t.Error("No Decoding Error when parsing a malformed data")
 	}
 }
 
 func TestParseTLSAlertEncrypted(t *testing.T) {
-	p := gopacket.NewPacket(testAlertEncrypted, LayerTypeTLS, testDecodeOptions)
+	p := gopacket.NewPacket(testAlertEncrypted, LayerTypeTLS, testTLSDecodeOptions)
 	if p.ErrorLayer() != nil {
 		t.Error("Failed to decode packet:", p.ErrorLayer().Error())
 	}
