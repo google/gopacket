@@ -120,7 +120,7 @@ var testMalformed = []byte{
 }
 
 var testTLSDecodeOptions = gopacket.DecodeOptions{
-	SkipDecodeRecovery: true,
+	SkipDecodeRecovery:       true,
 	DecodeStreamsAsDatagrams: true,
 }
 
