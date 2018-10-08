@@ -15,6 +15,7 @@ import (
 
 // TLSAlertLevel defines the alert level data type
 type TLSAlertLevel uint8
+
 // TLSAlertDescr defines the alert descrption data type
 type TLSAlertDescr uint8
 
