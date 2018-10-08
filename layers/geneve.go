@@ -81,7 +81,7 @@ func (gn *Geneve) DecodeFromBytes(data []byte, df gopacket.DecodeFeedback) error
 	copy(buf[1:], data[4:7])
 	gn.VNI = binary.BigEndian.Uint32(buf[:])
 
-	offset, length := uint8(8), gn.OptionsLength
+	offset, length := uint8(8), int32(gn.OptionsLength)
 	if len(data) < int(length+7) {
 		df.SetTruncated()
 		return errors.New("geneve packet too short")
@@ -91,7 +91,7 @@ func (gn *Geneve) DecodeFromBytes(data []byte, df gopacket.DecodeFeedback) error
 		opt, len := decodeGeneveOption(data[offset:], gn)
 		gn.Options = append(gn.Options, opt)
 
-		length -= len
+		length -= int32(len)
 		offset += len
 	}
 
