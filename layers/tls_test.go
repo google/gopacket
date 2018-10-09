@@ -1,7 +1,7 @@
 package layers
 
 import (
-	"strings"
+	"reflect"
 	"testing"
 
 	"github.com/google/gopacket"
@@ -29,6 +29,24 @@ var testClientHello = []byte{
 	0x0a, 0x00, 0x16, 0x00, 0x17, 0x00, 0x08, 0x00, 0x06, 0x00, 0x07, 0x00, 0x14, 0x00, 0x15, 0x00,
 	0x04, 0x00, 0x05, 0x00, 0x12, 0x00, 0x13, 0x00, 0x01, 0x00, 0x02, 0x00, 0x03, 0x00, 0x0f, 0x00,
 	0x10, 0x00, 0x11, 0x00, 0x23, 0x00, 0x00, 0x00, 0x0f, 0x00, 0x01, 0x01,
+}
+var testClientHelloDecoded = &TLS{
+	BaseLayer: BaseLayer{
+		Contents: testClientHello[54:],
+		Payload:  nil,
+	},
+	ChangeCipherSpec: nil,
+	Handshake: []TLSHandshakeRecord{
+		{
+			TLSRecordHeader{
+				ContentType: 22,
+				Version:     0x0301,
+				Length:      209,
+			},
+		},
+	},
+	Appdata: nil,
+	Alert:   nil,
 }
 
 // Packet 6 - Server Hello, Certificate, Server Hello Done
@@ -77,6 +95,40 @@ var testClientKeyExchange = []byte{
 	0xbc, 0xc1, 0x28, 0x8c, 0x27, 0xcc, 0xa2, 0xba, 0xec, 0x38, 0x63, 0x6e, 0x64, 0xd8, 0x52, 0x94,
 	0x17, 0x96, 0x61, 0xfd, 0x9c, 0x54,
 }
+var testClientKeyExchangeDecoded = &TLS{
+	BaseLayer: BaseLayer{
+		Contents: testClientKeyExchange[81:],
+		Payload:  nil,
+	},
+	ChangeCipherSpec: []TLSChangeCipherSpecRecord{
+		{
+			TLSRecordHeader{
+				ContentType: 20,
+				Version:     0x0301,
+				Length:      1,
+			},
+			1,
+		},
+	},
+	Handshake: []TLSHandshakeRecord{
+		{
+			TLSRecordHeader{
+				ContentType: 22,
+				Version:     0x0301,
+				Length:      70,
+			},
+		},
+		{
+			TLSRecordHeader{
+				ContentType: 22,
+				Version:     0x0301,
+				Length:      48,
+			},
+		},
+	},
+	Appdata: nil,
+	Alert:   nil,
+}
 
 // Packet 9 - New Session Ticket, Change Cipher Spec, Encryption Handshake Message
 var testNewSessionTicket = []byte{
@@ -105,11 +157,59 @@ var testDoubleAppData = []byte{
 	0x4a, 0x82, 0xdd, 0x53, 0x6d, 0x30, 0x82, 0x4d, 0x35, 0x22, 0xf1, 0x5f, 0x3b, 0x96, 0x66, 0x79,
 	0x61, 0x9f, 0x51, 0x93, 0x1b, 0xbf, 0x53, 0x3b, 0xf8, 0x26,
 }
+var testDoubleAppDataDecoded = &TLS{
+	BaseLayer: BaseLayer{
+		Contents: testDoubleAppData[37:],
+		Payload:  nil,
+	},
+	ChangeCipherSpec: nil,
+	Handshake:        nil,
+	Appdata: []TLSAppDataRecord{
+		{
+			TLSRecordHeader{
+				ContentType: 23,
+				Version:     0x0301,
+				Length:      32,
+			},
+			testDoubleAppData[5 : 5+32],
+		},
+		{
+			TLSRecordHeader{
+				ContentType: 23,
+				Version:     0x0301,
+				Length:      32,
+			},
+			testDoubleAppData[42 : 42+32],
+		},
+	},
+	Alert: nil,
+}
 
 var testAlertEncrypted = []byte{
 	0x15, 0x03, 0x03, 0x00, 0x20, 0x44, 0xb9, 0x9c, 0x2c, 0x6e, 0xab, 0xa3, 0xdf, 0xb1, 0x77, 0x04,
 	0xa2, 0xa4, 0x3a, 0x9a, 0x08, 0x1d, 0xe6, 0x51, 0xac, 0xa0, 0x5f, 0xab, 0x74, 0xa7, 0x96, 0x24,
 	0xfe, 0x62, 0xfe, 0xe8, 0x5e,
+}
+var testAlertEncryptedDecoded = &TLS{
+	BaseLayer: BaseLayer{
+		Contents: testAlertEncrypted,
+		Payload:  nil,
+	},
+	ChangeCipherSpec: nil,
+	Handshake:        nil,
+	Appdata:          nil,
+	Alert: []TLSAlertRecord{
+		{
+			TLSRecordHeader{
+				ContentType: 21,
+				Version:     0x0303,
+				Length:      32,
+			},
+			0xFF,
+			0xFF,
+			testAlertEncrypted[5:],
+		},
+	},
 }
 
 // Malformed TLS records
@@ -124,30 +224,20 @@ var testTLSDecodeOptions = gopacket.DecodeOptions{
 	DecodeStreamsAsDatagrams: true,
 }
 
-func TestPacketTLS(t *testing.T) {
-	p := gopacket.NewPacket(testClientHello, LinkTypeEthernet, testTLSDecodeOptions)
-	if p.ErrorLayer() != nil {
-		t.Error("Failed to decode packet:", p.ErrorLayer().Error())
-	}
-
-	checkLayers(p, []gopacket.LayerType{LayerTypeEthernet, LayerTypeIPv4, LayerTypeTCP, LayerTypeTLS}, t)
-}
-
-func TestParseTLSContentType(t *testing.T) {
+func TestParseTLSClientHello(t *testing.T) {
 	p := gopacket.NewPacket(testClientHello, LinkTypeEthernet, testTLSDecodeOptions)
 	if p.ErrorLayer() != nil {
 		t.Error("Failed to decode packet:", p.ErrorLayer().Error())
 	}
 	checkLayers(p, []gopacket.LayerType{LayerTypeEthernet, LayerTypeIPv4, LayerTypeTCP, LayerTypeTLS}, t)
 
-	r := p.Layer(LayerTypeTLS).(*TLS).Handshake
-	if len(r) != 1 {
-		t.Errorf("Wrong number of handshake records, expected 1, got %d", len(r))
-	}
-
-	ct := r[0].ContentType
-	if ct != TLSHandshake {
-		t.Errorf("Failed to parse Content Type, expected %q, got %q", TLSHandshake.String(), ct.String())
+	if got, ok := p.Layer(LayerTypeTLS).(*TLS); ok {
+		want := testClientHelloDecoded
+		if !reflect.DeepEqual(got, want) {
+			t.Errorf("TLS ClientHello packet processing failed:\ngot:\n%#v\n\nwant:\n%#v\n\n", got, want)
+		}
+	} else {
+		t.Error("No TLS layer type found in packet")
 	}
 }
 
@@ -158,14 +248,13 @@ func TestParseTLSChangeCipherSpec(t *testing.T) {
 	}
 	checkLayers(p, []gopacket.LayerType{LayerTypeTLS}, t)
 
-	r := p.Layer(LayerTypeTLS).(*TLS).ChangeCipherSpec
-	if len(r) != 1 {
-		t.Errorf("Wrong number of change cipher spec records, expected 1, got %d", len(r))
-	}
-
-	m := r[0].Message
-	if m == TLSChangecipherspecUnknown {
-		t.Error("Change Cipher Spec message unknown")
+	if got, ok := p.Layer(LayerTypeTLS).(*TLS); ok {
+		want := testClientKeyExchangeDecoded
+		if !reflect.DeepEqual(got, want) {
+			t.Errorf("TLS ChangeCipherSpec packet processing failed:\ngot:\n%#v\n\nwant:\n%#v\n\n", got, want)
+		}
+	} else {
+		t.Error("No TLS layer type found in packet")
 	}
 }
 
@@ -176,27 +265,13 @@ func TestParseTLSAppData(t *testing.T) {
 	}
 	checkLayers(p, []gopacket.LayerType{LayerTypeTLS}, t)
 
-	r := p.Layer(LayerTypeTLS).(*TLS).Appdata
-	if len(r) != 2 {
-		t.Errorf("Wrong number of application data records, expected 2, got %d", len(r))
-	}
-
-	d1 := r[0].Payload
-	l1 := len(d1)
-	if l1 != 32 {
-		t.Errorf("Wrong payoad length of application data record one, expected 32, got %d", l1)
-	}
-	if d1[0] != 0x77 || d1[l1-1] != 0xb1 {
-		t.Error("Wrong content on application data record one")
-	}
-
-	d2 := r[1].Payload
-	l2 := len(d2)
-	if l2 != 32 {
-		t.Errorf("Wrong payoad length of application data record two, expected 32, got %d", l1)
-	}
-	if d2[0] != 0x44 || d2[l2-1] != 0x26 {
-		t.Error("Wrong content on application data record two")
+	if got, ok := p.Layer(LayerTypeTLS).(*TLS); ok {
+		want := testDoubleAppDataDecoded
+		if !reflect.DeepEqual(got, want) {
+			t.Errorf("TLS TLSAppData packet processing failed:\ngot:\n%#v\n\nwant:\n%#v\n\n", got, want)
+		}
+	} else {
+		t.Error("No TLS layer type found in packet")
 	}
 }
 
@@ -232,18 +307,12 @@ func TestParseTLSAlertEncrypted(t *testing.T) {
 	}
 	checkLayers(p, []gopacket.LayerType{LayerTypeTLS}, t)
 
-	r := p.Layer(LayerTypeTLS).(*TLS).Alert
-	if len(r) != 1 {
-		t.Errorf("Wrong number of alert records, expected 1, got %d", len(r))
-	}
-
-	l := r[0].Level
-	d := r[0].Description
-	if !strings.HasPrefix(l.String(), "Unknown") || !strings.HasPrefix(d.String(), "Unknown") {
-		t.Error("Alert packet should be Encrypted")
-	}
-	msg := r[0].EncryptedMsg
-	if len(msg) == 0 {
-		t.Errorf("Wrong Encrypted Message length on alert record, expected 0, got %d", len(msg))
+	if got, ok := p.Layer(LayerTypeTLS).(*TLS); ok {
+		want := testAlertEncryptedDecoded
+		if !reflect.DeepEqual(got, want) {
+			t.Errorf("TLS TLSAlert packet processing failed:\ngot:\n%#v\n\nwant:\n%#v\n\n", got, want)
+		}
+	} else {
+		t.Error("No TLS layer type found in packet")
 	}
 }
