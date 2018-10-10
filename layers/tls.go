@@ -116,9 +116,21 @@ func decodeTLS(data []byte, p gopacket.PacketBuilder) error {
 
 // DecodeFromBytes decodes the slice into the TLS struct.
 func (t *TLS) DecodeFromBytes(data []byte, df gopacket.DecodeFeedback) error {
+	t.BaseLayer.Contents = data
+	t.BaseLayer.Payload = nil
+
+	t.ChangeCipherSpec = t.ChangeCipherSpec[:0]
+	t.Handshake = t.Handshake[:0]
+	t.Appdata = t.Appdata[:0]
+	t.Alert = t.Alert[:0]
+
+	return t.decodeTLSRecords(data, df)
+}
+
+func (t *TLS) decodeTLSRecords(data []byte, df gopacket.DecodeFeedback) error {
 	if len(data) < 5 {
 		df.SetTruncated()
-		return errors.New("TLS packet too short")
+		return errors.New("TLS record too short")
 	}
 
 	// since there are no further layers, the baselayer's content is
@@ -177,7 +189,7 @@ func (t *TLS) DecodeFromBytes(data []byte, df gopacket.DecodeFeedback) error {
 	if len(data) == tl {
 		return nil
 	}
-	return t.DecodeFromBytes(data[tl:len(data)], df)
+	return t.decodeTLSRecords(data[tl:len(data)], df)
 }
 
 // CanDecode implements gopacket.DecodingLayer.

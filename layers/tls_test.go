@@ -241,6 +241,27 @@ func TestParseTLSClientHello(t *testing.T) {
 	}
 }
 
+func testTLSClientHelloDecodeFromBytes(t *testing.T) {
+	var got TLS
+	want := testClientKeyExchangeDecoded
+
+	if err := got.DecodeFromBytes(testClientKeyExchange, gopacket.NilDecodeFeedback); err != nil {
+		t.Errorf("TLS DecodeFromBytes first decode failed:\ngot:\n%#v\n\nwant:\n%#v\n\n", got, want)
+	}
+
+	if !reflect.DeepEqual(got, want) {
+		t.Errorf("TLS DecodeFromBytes first decode doesn't match:\ngot:\n%#v\n\nwant:\n%#v\n\n", got, want)
+	}
+
+	if err := got.DecodeFromBytes(testClientKeyExchange, gopacket.NilDecodeFeedback); err != nil {
+		t.Errorf("TLS DecodeFromBytes second decode failed:\ngot:\n%#v\n\nwant:\n%#v\n\n", got, want)
+	}
+
+	if !reflect.DeepEqual(got, want) {
+		t.Errorf("TLS DecodeFromBytes second decode doesn't match:\ngot:\n%#v\n\nwant:\n%#v\n\n", got, want)
+	}
+}
+
 func TestParseTLSChangeCipherSpec(t *testing.T) {
 	p := gopacket.NewPacket(testClientKeyExchange, LayerTypeTLS, testTLSDecodeOptions)
 	if p.ErrorLayer() != nil {
