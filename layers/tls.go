@@ -87,7 +87,7 @@ type TLS struct {
 	// TLS Records
 	ChangeCipherSpec []TLSChangeCipherSpecRecord
 	Handshake        []TLSHandshakeRecord
-	Appdata          []TLSAppDataRecord
+	AppData          []TLSAppDataRecord
 	Alert            []TLSAlertRecord
 }
 
@@ -121,7 +121,7 @@ func (t *TLS) DecodeFromBytes(data []byte, df gopacket.DecodeFeedback) error {
 
 	t.ChangeCipherSpec = t.ChangeCipherSpec[:0]
 	t.Handshake = t.Handshake[:0]
-	t.Appdata = t.Appdata[:0]
+	t.AppData = t.AppData[:0]
 	t.Alert = t.Alert[:0]
 
 	return t.decodeTLSRecords(data, df)
@@ -183,7 +183,7 @@ func (t *TLS) decodeTLSRecords(data []byte, df gopacket.DecodeFeedback) error {
 		if e != nil {
 			return e
 		}
-		t.Appdata = append(t.Appdata, r)
+		t.AppData = append(t.AppData, r)
 	}
 
 	if len(data) == tl {

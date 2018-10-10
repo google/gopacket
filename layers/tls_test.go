@@ -45,7 +45,7 @@ var testClientHelloDecoded = &TLS{
 			},
 		},
 	},
-	Appdata: nil,
+	AppData: nil,
 	Alert:   nil,
 }
 
@@ -126,7 +126,7 @@ var testClientKeyExchangeDecoded = &TLS{
 			},
 		},
 	},
-	Appdata: nil,
+	AppData: nil,
 	Alert:   nil,
 }
 
@@ -164,7 +164,7 @@ var testDoubleAppDataDecoded = &TLS{
 	},
 	ChangeCipherSpec: nil,
 	Handshake:        nil,
-	Appdata: []TLSAppDataRecord{
+	AppData: []TLSAppDataRecord{
 		{
 			TLSRecordHeader{
 				ContentType: 23,
@@ -197,7 +197,7 @@ var testAlertEncryptedDecoded = &TLS{
 	},
 	ChangeCipherSpec: nil,
 	Handshake:        nil,
-	Appdata:          nil,
+	AppData:          nil,
 	Alert: []TLSAlertRecord{
 		{
 			TLSRecordHeader{
