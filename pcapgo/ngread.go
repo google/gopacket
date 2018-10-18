@@ -1,6 +1,6 @@
 // Copyright 2018 The GoPacket Authors. All rights reserved.
 
-package pcapnggo
+package pcapgo
 
 import (
 	"bufio"
@@ -14,8 +14,8 @@ import (
 	"github.com/google/gopacket/layers"
 )
 
-// ReaderOptions holds options for reading a pcapng file
-type ReaderOptions struct {
+// NgReaderOptions holds options for reading a pcapng file
+type NgReaderOptions struct {
 	// WantMixedLinkType enables reading a pcapng file containing multiple interfaces with varying link types. If false all link types must match, which is the libpcap behaviour and LinkType returns the link type of the first interface.
 	// If true the link type of the packet is also exposed via ci.AncillaryData[0].
 	WantMixedLinkType bool
@@ -26,23 +26,23 @@ type ReaderOptions struct {
 	SkipUnknownVersion bool
 	// SectionEndCallback gets called at the end of a section (execept for the last section, which is ends on EOF). The current list of interfaces and additional section information is provided.
 	// This is a good way to read interface statistics.
-	SectionEndCallback func([]Interface, SectionInfo)
+	SectionEndCallback func([]NgInterface, NgSectionInfo)
 	// StatisticsCallback is called when a interface statistics block is read. The interface id and the read statistics are provided.
-	StatisticsCallback func(int, InterfaceStatistics)
+	StatisticsCallback func(int, NgInterfaceStatistics)
 }
 
-// DefaultReaderOptions provides sane defaults for a pcapng reader.
-var DefaultReaderOptions = ReaderOptions{}
+// DefaultNgReaderOptions provides sane defaults for a pcapng reader.
+var DefaultNgReaderOptions = NgReaderOptions{}
 
-// Reader wraps an underlying bufio.Reader to read packet data in pcapng.
-type Reader struct {
+// NgReader wraps an underlying bufio.NgReader to read packet data in pcapng.
+type NgReader struct {
 	r                 *bufio.Reader
-	options           ReaderOptions
-	sectionInfo       SectionInfo
+	options           NgReaderOptions
+	sectionInfo       NgSectionInfo
 	linkType          layers.LinkType
-	ifaces            []Interface
-	currentBlock      block
-	currentOption     option
+	ifaces            []NgInterface
+	currentBlock      ngBlock
+	currentOption     ngOption
 	buf               [24]byte
 	packetBuf         []byte
 	ci                gopacket.CaptureInfo
@@ -53,11 +53,11 @@ type Reader struct {
 	bigEndian         bool
 }
 
-// NewReader initializes a new writer, reads the first section header, and if necessary according to the options the first interface.
-func NewReader(r io.Reader, options ReaderOptions) (*Reader, error) {
-	ret := &Reader{
+// NewNgReader initializes a new writer, reads the first section header, and if necessary according to the options the first interface.
+func NewNgReader(r io.Reader, options NgReaderOptions) (*NgReader, error) {
+	ret := &NgReader{
 		r: bufio.NewReader(r),
-		currentOption: option{
+		currentOption: ngOption{
 			value: make([]byte, 1024),
 		},
 		options: options,
@@ -67,7 +67,7 @@ func NewReader(r io.Reader, options ReaderOptions) (*Reader, error) {
 	if err := ret.readBlock(); err != nil {
 		return nil, err
 	}
-	if ret.currentBlock.typ != blockTypeSectionHeader {
+	if ret.currentBlock.typ != ngBlockTypeSectionHeader {
 		return nil, fmt.Errorf("Unknown magic %x", ret.currentBlock.typ)
 	}
 
@@ -82,7 +82,7 @@ func NewReader(r io.Reader, options ReaderOptions) (*Reader, error) {
 
 // This is way faster than calling io.ReadFull since io.ReadFull needs an itab lookup, does an additional function call into ReadAtLeast, and ReadAtLeast does additional stuff we don't need
 // Additionally this removes the bounds check compared to io.ReadFull due to the use of uint
-func (r *Reader) readBytes(buffer []byte) (err error) {
+func (r *NgReader) readBytes(buffer []byte) (err error) {
 	var nn int
 	n := uint(0)
 	for n < uint(len(buffer)) {
@@ -97,21 +97,21 @@ func (r *Reader) readBytes(buffer []byte) (err error) {
 
 // The following functions make the binary.* functions inlineable (except for getUint64, which is too big, but not in any hot path anyway)
 // Compared to storing binary.*Endian in a binary.ByteOrder this shaves off about 20% for (ZeroCopy)ReadPacketData, which is caused by the needed itab lookup + indirect go call
-func (r *Reader) getUint16(buffer []byte) uint16 {
+func (r *NgReader) getUint16(buffer []byte) uint16 {
 	if r.bigEndian {
 		return binary.BigEndian.Uint16(buffer)
 	}
 	return binary.LittleEndian.Uint16(buffer)
 }
 
-func (r *Reader) getUint32(buffer []byte) uint32 {
+func (r *NgReader) getUint32(buffer []byte) uint32 {
 	if r.bigEndian {
 		return binary.BigEndian.Uint32(buffer)
 	}
 	return binary.LittleEndian.Uint32(buffer)
 }
 
-func (r *Reader) getUint64(buffer []byte) uint64 {
+func (r *NgReader) getUint64(buffer []byte) uint64 {
 	if r.bigEndian {
 		return binary.BigEndian.Uint64(buffer)
 	}
@@ -121,20 +121,20 @@ func (r *Reader) getUint64(buffer []byte) uint64 {
 // Now the pcapng implementation
 
 // readBlock reads a the blocktype and length from the file. If the type is a section header, endianess is also read.
-func (r *Reader) readBlock() (err error) {
+func (r *NgReader) readBlock() (err error) {
 	if err = r.readBytes(r.buf[0:8]); err != nil {
 		return
 	}
-	r.currentBlock.typ = blockType(r.getUint32(r.buf[0:4]))
+	r.currentBlock.typ = ngBlockType(r.getUint32(r.buf[0:4]))
 	// The next part is a bit fucked up since a section header could change the endianess...
 	// So first read then length just into a buffer, check if its a section header and then do the endianess part...
-	if r.currentBlock.typ == blockTypeSectionHeader {
+	if r.currentBlock.typ == ngBlockTypeSectionHeader {
 		if err = r.readBytes(r.buf[8:12]); err != nil {
 			return
 		}
-		if binary.BigEndian.Uint32(r.buf[8:12]) == byteOrderMagic {
+		if binary.BigEndian.Uint32(r.buf[8:12]) == ngByteOrderMagic {
 			r.bigEndian = true
-		} else if binary.LittleEndian.Uint32(r.buf[8:12]) == byteOrderMagic {
+		} else if binary.LittleEndian.Uint32(r.buf[8:12]) == ngByteOrderMagic {
 			r.bigEndian = false
 		} else {
 			err = errors.New("Wrong byte order value in Section Header")
@@ -150,19 +150,19 @@ func (r *Reader) readBlock() (err error) {
 }
 
 // readOption reads a single arbitrary option (type and value). If there is no space left for options and end of options is missing, it is faked.
-func (r *Reader) readOption() (err error) {
+func (r *NgReader) readOption() (err error) {
 	if r.currentBlock.length == 4 {
 		// no more options
-		r.currentOption.code = optionEndOfOptions
+		r.currentOption.code = ngOptionCodeEndOfOptions
 		return
 	}
 	if err = r.readBytes(r.buf[:4]); err != nil {
 		return err
 	}
 	r.currentBlock.length -= 4
-	r.currentOption.code = optionCode(r.getUint16(r.buf[:2]))
+	r.currentOption.code = ngOptionCode(r.getUint16(r.buf[:2]))
 	length := r.getUint16(r.buf[2:4])
-	if r.currentOption.code == optionEndOfOptions {
+	if r.currentOption.code == ngOptionCodeEndOfOptions {
 		if length != 0 {
 			return errors.New("End of Options must be zero length")
 		}
@@ -192,9 +192,9 @@ func (r *Reader) readOption() (err error) {
 
 // readSectionHeader parses the full section header and implements section skipping in case of version mismatch
 // if needed, the first interface is read
-func (r *Reader) readSectionHeader() (err error) {
+func (r *NgReader) readSectionHeader() (err error) {
 	if r.options.SectionEndCallback != nil && r.activeSection {
-		interfaces := make([]Interface, len(r.ifaces))
+		interfaces := make([]NgInterface, len(r.ifaces))
 		for i := range r.ifaces {
 			interfaces[i] = r.ifaces[i]
 		}
@@ -213,11 +213,11 @@ RESTART:
 
 	vMajor := r.getUint16(r.buf[0:2])
 	vMinor := r.getUint16(r.buf[2:4])
-	if vMajor != versionMajor || vMinor != versionMinor {
+	if vMajor != ngVersionMajor || vMinor != ngVersionMinor {
 		if !r.options.SkipUnknownVersion {
 			// Well the standard actually says to skip unknown version section headers,
 			// but this would mean user would be kept in the dark about whats going on...
-			return ErrVersionMismatch
+			return ErrNgVersionMismatch
 		}
 		if _, err = r.r.Discard(int(r.currentBlock.length)); err != nil {
 			return
@@ -228,22 +228,22 @@ RESTART:
 		goto RESTART
 	}
 
-	var section SectionInfo
+	var section NgSectionInfo
 
 	for {
 		if err = r.readOption(); err != nil {
 			return
 		}
 		switch r.currentOption.code {
-		case optionEndOfOptions:
+		case ngOptionCodeEndOfOptions:
 			goto DONE
-		case optionComment:
+		case ngOptionCodeComment:
 			section.Comment = string(r.currentOption.value)
-		case optionHardware:
+		case ngOptionCodeHardware:
 			section.Hardware = string(r.currentOption.value)
-		case optionOS:
+		case ngOptionCodeOS:
 			section.OS = string(r.currentOption.value)
-		case optionUserApplication:
+		case ngOptionCodeUserApplication:
 			section.Application = string(r.currentOption.value)
 		}
 	}
@@ -266,12 +266,12 @@ DONE:
 }
 
 // skipSection skips blocks until the next section
-func (r *Reader) skipSection() (err error) {
+func (r *NgReader) skipSection() (err error) {
 	for {
 		if err = r.readBlock(); err != nil {
 			return err
 		}
-		if r.currentBlock.typ == blockTypeSectionHeader {
+		if r.currentBlock.typ == ngBlockTypeSectionHeader {
 			return
 		}
 		if _, err = r.r.Discard(int(r.currentBlock.length)); err != nil {
@@ -281,7 +281,7 @@ func (r *Reader) skipSection() (err error) {
 }
 
 // SkipSection skips the contents of the rest of the current section and reads the next section header.
-func (r *Reader) SkipSection() (err error) {
+func (r *NgReader) SkipSection() (err error) {
 	if err = r.skipSection(); err != nil {
 		return
 	}
@@ -290,13 +290,13 @@ func (r *Reader) SkipSection() (err error) {
 }
 
 // firstInterface reads the first interface from the section and panics if a packet is encountered.
-func (r *Reader) firstInterface() (err error) {
+func (r *NgReader) firstInterface() (err error) {
 	for {
 		if err = r.readBlock(); err != nil {
 			return
 		}
 		switch r.currentBlock.typ {
-		case blockTypeInterfaceDescriptor:
+		case ngBlockTypeInterfaceDescriptor:
 			if err = r.readInterfaceDescriptor(); err != nil {
 				return
 			}
@@ -305,13 +305,13 @@ func (r *Reader) firstInterface() (err error) {
 				r.firstSectionFound = true
 			} else if r.linkType != r.ifaces[0].LinkType {
 				if r.options.ErrorOnMismatchingLinkType {
-					err = ErrLinkTypeMismatch
+					err = ErrNgLinkTypeMismatch
 					return
 				}
 				continue
 			}
 			return
-		case blockTypePacket, blockTypeEnhancedPacket, blockTypeSimplePacket, blockTypeInterfaceStatistics:
+		case ngBlockTypePacket, ngBlockTypeEnhancedPacket, ngBlockTypeSimplePacket, ngBlockTypeInterfaceStatistics:
 			return errors.New("A section must have an interface before a packet block")
 		}
 		if _, err = r.r.Discard(int(r.currentBlock.length)); err != nil {
@@ -321,12 +321,12 @@ func (r *Reader) firstInterface() (err error) {
 }
 
 // readInterfaceDescriptor parses an interface descriptor, prepares timing calculation, and adds the interface details to the current list
-func (r *Reader) readInterfaceDescriptor() (err error) {
+func (r *NgReader) readInterfaceDescriptor() (err error) {
 	if err = r.readBytes(r.buf[:8]); err != nil {
 		return
 	}
 	r.currentBlock.length -= 8
-	var intf Interface
+	var intf NgInterface
 	intf.LinkType = layers.LinkType(r.getUint16(r.buf[:2]))
 	intf.SnapLength = r.getUint32(r.buf[4:8])
 
@@ -335,23 +335,23 @@ func (r *Reader) readInterfaceDescriptor() (err error) {
 			return
 		}
 		switch r.currentOption.code {
-		case optionEndOfOptions:
+		case ngOptionCodeEndOfOptions:
 			goto DONE
-		case optionInterfaceName:
+		case ngOptionCodeInterfaceName:
 			intf.Name = string(r.currentOption.value)
-		case optionComment:
+		case ngOptionCodeComment:
 			intf.Comment = string(r.currentOption.value)
-		case optionInterfaceDescription:
+		case ngOptionCodeInterfaceDescription:
 			intf.Description = string(r.currentOption.value)
-		case optionInterfaceFilter:
+		case ngOptionCodeInterfaceFilter:
 			// ignore filter type (first byte) since it is not specified
 			intf.Filter = string(r.currentOption.value[1:])
-		case optionInterfaceOS:
+		case ngOptionCodeInterfaceOS:
 			intf.OS = string(r.currentOption.value)
-		case optionInterfaceTimestampOffset:
+		case ngOptionCodeInterfaceTimestampOffset:
 			intf.TimestampOffset = r.getUint64(r.currentOption.value[:8])
-		case optionInterfaceTimestampResolution:
-			intf.TimestampResolution = Resolution(r.currentOption.value[0])
+		case ngOptionCodeInterfaceTimestampResolution:
+			intf.TimestampResolution = NgResolution(r.currentOption.value[0])
 		}
 	}
 DONE:
@@ -385,13 +385,13 @@ DONE:
 }
 
 // convertTime adds offset + shifts the given time value according to the given interface
-func (r *Reader) convertTime(ifaceID int, ts uint64) (int64, int64) {
+func (r *NgReader) convertTime(ifaceID int, ts uint64) (int64, int64) {
 	iface := r.ifaces[ifaceID]
 	return int64(ts/iface.secondMask + iface.TimestampOffset), int64(ts % iface.secondMask * iface.scaleUp / iface.scaleDown)
 }
 
 // readInterfaceStatistics updates the statistics of the given interface
-func (r *Reader) readInterfaceStatistics() (err error) {
+func (r *NgReader) readInterfaceStatistics() (err error) {
 	if err = r.readBytes(r.buf[:12]); err != nil {
 		return
 	}
@@ -403,7 +403,7 @@ func (r *Reader) readInterfaceStatistics() (err error) {
 		return
 	}
 	stats := &r.ifaces[ifaceID].Statistics
-	*stats = emptyStatistics
+	*stats = ngEmptyStatistics
 	stats.LastUpdate = time.Unix(r.convertTime(ifaceID, ts)).UTC()
 
 	for {
@@ -411,19 +411,19 @@ func (r *Reader) readInterfaceStatistics() (err error) {
 			return
 		}
 		switch r.currentOption.code {
-		case optionEndOfOptions:
+		case ngOptionCodeEndOfOptions:
 			goto DONE
-		case optionComment:
+		case ngOptionCodeComment:
 			stats.Comment = string(r.currentOption.value)
-		case optionInterfaceStatisticsStartTime:
+		case ngOptionCodeInterfaceStatisticsStartTime:
 			ts = uint64(r.getUint32(r.currentOption.value[:4]))<<32 | uint64(r.getUint32(r.currentOption.value[4:8]))
 			stats.StartTime = time.Unix(r.convertTime(ifaceID, ts)).UTC()
-		case optionInterfaceStatisticsEndTime:
+		case ngOptionCodeInterfaceStatisticsEndTime:
 			ts = uint64(r.getUint32(r.currentOption.value[:4]))<<32 | uint64(r.getUint32(r.currentOption.value[4:8]))
 			stats.EndTime = time.Unix(r.convertTime(ifaceID, ts)).UTC()
-		case optionInterfaceStatisticsInterfaceReceived:
+		case ngOptionCodeInterfaceStatisticsInterfaceReceived:
 			stats.PacketsReceived = r.getUint64(r.currentOption.value[:8])
-		case optionInterfaceStatisticsInterfaceDropped:
+		case ngOptionCodeInterfaceStatisticsInterfaceDropped:
 			stats.PacketsDropped = r.getUint64(r.currentOption.value[:8])
 		}
 	}
@@ -440,14 +440,14 @@ DONE:
 // readPacketHeader looks for a packet (enhanced, simple, or packet) and parses the header.
 // If an interface descriptor, an interface statistics block, or a section header is encountered, those are handled accordingly.
 // All other block types are skipped. New block types must be added here.
-func (r *Reader) readPacketHeader() (err error) {
+func (r *NgReader) readPacketHeader() (err error) {
 RESTART:
 	for {
 		if err = r.readBlock(); err != nil {
 			return
 		}
 		switch r.currentBlock.typ {
-		case blockTypeEnhancedPacket:
+		case ngBlockTypeEnhancedPacket:
 			if err = r.readBytes(r.buf[:20]); err != nil {
 				return
 			}
@@ -461,7 +461,7 @@ RESTART:
 			r.ci.CaptureLength = int(r.getUint32(r.buf[12:16]))
 			r.ci.Length = int(r.getUint32(r.buf[16:20]))
 			goto DONE
-		case blockTypeSimplePacket:
+		case ngBlockTypeSimplePacket:
 			if err = r.readBytes(r.buf[:4]); err != nil {
 				return
 			}
@@ -478,19 +478,19 @@ RESTART:
 				r.ci.CaptureLength = int(r.ifaces[0].SnapLength)
 			}
 			goto DONE
-		case blockTypeInterfaceDescriptor:
+		case ngBlockTypeInterfaceDescriptor:
 			if err = r.readInterfaceDescriptor(); err != nil {
 				return
 			}
-		case blockTypeInterfaceStatistics:
+		case ngBlockTypeInterfaceStatistics:
 			if err = r.readInterfaceStatistics(); err != nil {
 				return
 			}
-		case blockTypeSectionHeader:
+		case ngBlockTypeSectionHeader:
 			if err = r.readSectionHeader(); err != nil {
 				return
 			}
-		case blockTypePacket:
+		case ngBlockTypePacket:
 			if err = r.readBytes(r.buf[:20]); err != nil {
 				return
 			}
@@ -517,7 +517,7 @@ DONE:
 				return
 			}
 			if r.options.ErrorOnMismatchingLinkType {
-				err = ErrLinkTypeMismatch
+				err = ErrNgLinkTypeMismatch
 				return
 			}
 			goto RESTART
@@ -530,7 +530,7 @@ DONE:
 
 // ReadPacketData returns the next packet available from this data source.
 // If WantMixedLinkType is true, ci.AncillaryData[0] contains the link type.
-func (r *Reader) ReadPacketData() (data []byte, ci gopacket.CaptureInfo, err error) {
+func (r *NgReader) ReadPacketData() (data []byte, ci gopacket.CaptureInfo, err error) {
 	if err = r.readPacketHeader(); err != nil {
 		return
 	}
@@ -551,7 +551,7 @@ func (r *Reader) ReadPacketData() (data []byte, ci gopacket.CaptureInfo, err err
 // ZeroCopyReadPacketData returns the next packet available from this data source.
 // If WantMixedLinkType is true, ci.AncillaryData[0] contains the link type.
 // Warning: Like data, ci.AncillaryData is also reused and overwritten on the next call to ZeroCopyReadPacketData.
-func (r *Reader) ZeroCopyReadPacketData() (data []byte, ci gopacket.CaptureInfo, err error) {
+func (r *NgReader) ZeroCopyReadPacketData() (data []byte, ci gopacket.CaptureInfo, err error) {
 	if err = r.readPacketHeader(); err != nil {
 		return
 	}
@@ -576,24 +576,24 @@ func (r *Reader) ZeroCopyReadPacketData() (data []byte, ci gopacket.CaptureInfo,
 }
 
 // LinkType returns the link type of the first interface, as a layers.LinkType. This is only valid, if WantMixedLinkType is false.
-func (r *Reader) LinkType() layers.LinkType {
+func (r *NgReader) LinkType() layers.LinkType {
 	return r.linkType
 }
 
 // SectionInfo returns information about the current section.
-func (r *Reader) SectionInfo() SectionInfo {
+func (r *NgReader) SectionInfo() NgSectionInfo {
 	return r.sectionInfo
 }
 
 // Interface returns interface information and statistics of interface with the given id.
-func (r *Reader) Interface(i int) (Interface, error) {
+func (r *NgReader) Interface(i int) (NgInterface, error) {
 	if i >= len(r.ifaces) || i < 0 {
-		return Interface{}, fmt.Errorf("Interface %d invalid. There are only %d interfaces", i, len(r.ifaces))
+		return NgInterface{}, fmt.Errorf("Interface %d invalid. There are only %d interfaces", i, len(r.ifaces))
 	}
 	return r.ifaces[i], nil
 }
 
 // NInterfaces returns the current number of interfaces.
-func (r *Reader) NInterfaces() int {
+func (r *NgReader) NInterfaces() int {
 	return len(r.ifaces)
 }

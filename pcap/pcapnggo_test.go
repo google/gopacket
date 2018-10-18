@@ -11,10 +11,10 @@ import (
 
 	"github.com/google/gopacket"
 	"github.com/google/gopacket/layers"
-	"github.com/google/gopacket/pcapnggo"
+	"github.com/google/gopacket/pcapgo"
 )
 
-func TestPCAPNGGoWrite(t *testing.T) {
+func TestPCAPGoNgWrite(t *testing.T) {
 	f, err := ioutil.TempFile("", "pcapnggo")
 	if err != nil {
 		t.Fatal(err)
@@ -27,7 +27,7 @@ func TestPCAPNGGoWrite(t *testing.T) {
 	}
 	func() {
 		defer f.Close()
-		w, err := pcapnggo.NewWriter(f, layers.LinkTypeEthernet)
+		w, err := pcapgo.NewNgWriter(f, layers.LinkTypeEthernet)
 		if err != nil {
 			t.Fatal(err)
 		}
