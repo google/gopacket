@@ -75,7 +75,7 @@ func NewNgWriterInterface(w io.Writer, intf NgInterface, options NgWriterOptions
 }
 
 // ngOptionLength returns the needed length for one option value (without padding)
-func ngOptionLength(option ngOption) (length int) {
+func ngOptionLength(option ngOption) int {
 	switch val := option.raw.(type) {
 	case []byte:
 		return len(val)
@@ -95,7 +95,8 @@ func ngOptionLength(option ngOption) (length int) {
 }
 
 // prepareNgOptions fills out the length value of the given options and returns the number of octets needed for all the given options including padding.
-func prepareNgOptions(options []ngOption) (ret uint32) {
+func prepareNgOptions(options []ngOption) uint32 {
+	var ret uint32
 	for i, option := range options {
 		length := ngOptionLength(option)
 		options[i].length = uint16(length)
@@ -106,65 +107,65 @@ func prepareNgOptions(options []ngOption) (ret uint32) {
 	if ret > 0 {
 		ret += 4 // end of options
 	}
-	return
+	return ret
 }
 
 // writeOptions writes the given options to the file. prepareOptions must be called beforehand.
-func (w *NgWriter) writeOptions(options []ngOption) (err error) {
+func (w *NgWriter) writeOptions(options []ngOption) error {
 	if len(options) == 0 {
-		return
+		return nil
 	}
 
 	var zero [4]byte
 	for _, option := range options {
 		binary.LittleEndian.PutUint16(w.buf[0:2], uint16(option.code))
 		binary.LittleEndian.PutUint16(w.buf[2:4], option.length)
-		if _, err = w.w.Write(w.buf[:4]); err != nil {
-			return
+		if _, err := w.w.Write(w.buf[:4]); err != nil {
+			return err
 		}
 		switch val := option.raw.(type) {
 		case []byte:
-			if _, err = w.w.Write(val); err != nil {
-				return
+			if _, err := w.w.Write(val); err != nil {
+				return err
 			}
 			padding := uint8((4 - option.length&3) & 3)
 			if padding < 4 {
-				if _, err = w.w.Write(zero[:padding]); err != nil {
-					return
+				if _, err := w.w.Write(zero[:padding]); err != nil {
+					return err
 				}
 			}
 		case string:
-			if _, err = w.w.Write([]byte(val)); err != nil {
-				return
+			if _, err := w.w.Write([]byte(val)); err != nil {
+				return err
 			}
 			padding := uint8((4 - option.length&3) & 3)
 			if padding < 4 {
-				if _, err = w.w.Write(zero[:padding]); err != nil {
-					return
+				if _, err := w.w.Write(zero[:padding]); err != nil {
+					return err
 				}
 			}
 		case time.Time:
 			ts := val.UnixNano()
 			binary.LittleEndian.PutUint32(w.buf[:4], uint32(ts>>32))
 			binary.LittleEndian.PutUint32(w.buf[4:8], uint32(ts))
-			if _, err = w.w.Write(w.buf[:8]); err != nil {
-				return
+			if _, err := w.w.Write(w.buf[:8]); err != nil {
+				return err
 			}
 		case uint64:
 			binary.LittleEndian.PutUint64(w.buf[:8], val)
-			if _, err = w.w.Write(w.buf[:8]); err != nil {
-				return
+			if _, err := w.w.Write(w.buf[:8]); err != nil {
+				return err
 			}
 		case uint32:
 			binary.LittleEndian.PutUint32(w.buf[:4], val)
-			if _, err = w.w.Write(w.buf[:4]); err != nil {
-				return
+			if _, err := w.w.Write(w.buf[:4]); err != nil {
+				return err
 			}
 		case uint8:
 			binary.LittleEndian.PutUint32(w.buf[:4], 0) // padding
 			w.buf[0] = val
-			if _, err = w.w.Write(w.buf[:4]); err != nil {
-				return
+			if _, err := w.w.Write(w.buf[:4]); err != nil {
+				return err
 			}
 		default:
 			panic("This should never happen")
@@ -174,12 +175,12 @@ func (w *NgWriter) writeOptions(options []ngOption) (err error) {
 	// options must be folled by an end of options option
 	binary.LittleEndian.PutUint16(w.buf[0:2], uint16(ngOptionCodeEndOfOptions))
 	binary.LittleEndian.PutUint16(w.buf[2:4], 0)
-	_, err = w.w.Write(w.buf[:4])
-	return
+	_, err := w.w.Write(w.buf[:4])
+	return err
 }
 
 // writeSectionHeader writes a section header to the file
-func (w *NgWriter) writeSectionHeader() (err error) {
+func (w *NgWriter) writeSectionHeader() error {
 	var scratch [4]ngOption
 	i := 0
 	info := w.options.SectionInfo
@@ -215,17 +216,17 @@ func (w *NgWriter) writeSectionHeader() (err error) {
 	binary.LittleEndian.PutUint16(w.buf[12:14], ngVersionMajor)
 	binary.LittleEndian.PutUint16(w.buf[14:16], ngVersionMinor)
 	binary.LittleEndian.PutUint64(w.buf[16:24], 0xFFFFFFFFFFFFFFFF) // unspecified
-	if _, err = w.w.Write(w.buf[:24]); err != nil {
-		return
+	if _, err := w.w.Write(w.buf[:24]); err != nil {
+		return err
 	}
 
-	if err = w.writeOptions(options); err != nil {
-		return
+	if err := w.writeOptions(options); err != nil {
+		return err
 	}
 
 	binary.LittleEndian.PutUint32(w.buf[0:4], length)
-	_, err = w.w.Write(w.buf[:4])
-	return
+	_, err := w.w.Write(w.buf[:4])
+	return err
 }
 
 // AddInterface adds the specified interface to the file, excluding statistics. Interface timestamp resolution is fixed to 9 (to match time.Time). Empty values are not written.
@@ -279,21 +280,21 @@ func (w *NgWriter) AddInterface(intf NgInterface) (id int, err error) {
 	binary.LittleEndian.PutUint16(w.buf[8:10], uint16(intf.LinkType))
 	binary.LittleEndian.PutUint16(w.buf[10:12], 0) // reserved value
 	binary.LittleEndian.PutUint32(w.buf[12:16], intf.SnapLength)
-	if _, err = w.w.Write(w.buf[:16]); err != nil {
-		return
+	if _, err := w.w.Write(w.buf[:16]); err != nil {
+		return 0, err
 	}
 
-	if err = w.writeOptions(options); err != nil {
-		return
+	if err := w.writeOptions(options); err != nil {
+		return 0, err
 	}
 
 	binary.LittleEndian.PutUint32(w.buf[0:4], length)
 	_, err = w.w.Write(w.buf[:4])
-	return
+	return id, err
 }
 
 // WriteInterfaceStats writes the given interface statistics for the given interface id to the file. Empty values are not written.
-func (w *NgWriter) WriteInterfaceStats(intf int, stats NgInterfaceStatistics) (err error) {
+func (w *NgWriter) WriteInterfaceStats(intf int, stats NgInterfaceStatistics) error {
 	if intf >= int(w.intf) || intf < 0 {
 		return fmt.Errorf("Can't send statistics for non existent interface %d; have only %d interfaces", intf, w.intf)
 	}
@@ -334,21 +335,21 @@ func (w *NgWriter) WriteInterfaceStats(intf int, stats NgInterfaceStatistics) (e
 	binary.LittleEndian.PutUint32(w.buf[8:12], uint32(intf))
 	binary.LittleEndian.PutUint32(w.buf[12:16], uint32(ts>>32))
 	binary.LittleEndian.PutUint32(w.buf[16:20], uint32(ts))
-	if _, err = w.w.Write(w.buf[:20]); err != nil {
-		return
+	if _, err := w.w.Write(w.buf[:20]); err != nil {
+		return err
 	}
 
-	if err = w.writeOptions(options); err != nil {
-		return
+	if err := w.writeOptions(options); err != nil {
+		return err
 	}
 
 	binary.LittleEndian.PutUint32(w.buf[0:4], length)
-	_, err = w.w.Write(w.buf[:4])
-	return
+	_, err := w.w.Write(w.buf[:4])
+	return err
 }
 
 // WritePacket writes out packet with the given data and capture info. The given InterfaceIndex must already be added to the file. InterfaceIndex 0 is automatically added by the NewWriter* methods.
-func (w *NgWriter) WritePacket(ci gopacket.CaptureInfo, data []byte) (err error) {
+func (w *NgWriter) WritePacket(ci gopacket.CaptureInfo, data []byte) error {
 	if ci.InterfaceIndex >= int(w.intf) || ci.InterfaceIndex < 0 {
 		return fmt.Errorf("Can't send statistics for non existent interface %d; have only %d interfaces", ci.InterfaceIndex, w.intf)
 	}
@@ -373,17 +374,17 @@ func (w *NgWriter) WritePacket(ci gopacket.CaptureInfo, data []byte) (err error)
 	binary.LittleEndian.PutUint32(w.buf[20:24], uint32(ci.CaptureLength))
 	binary.LittleEndian.PutUint32(w.buf[24:28], uint32(ci.Length))
 
-	if _, err = w.w.Write(w.buf[:28]); err != nil {
-		return
+	if _, err := w.w.Write(w.buf[:28]); err != nil {
+		return err
 	}
 
-	if _, err = w.w.Write(data); err != nil {
-		return
+	if _, err := w.w.Write(data); err != nil {
+		return err
 	}
 
 	binary.LittleEndian.PutUint32(w.buf[:4], 0)
-	_, err = w.w.Write(w.buf[4-padding : 8]) // padding + length
-	return
+	_, err := w.w.Write(w.buf[4-padding : 8]) // padding + length
+	return err
 }
 
 // Flush writes out buffered data to the storage media. Must be called before closing the underlying file.
