@@ -1,6 +1,6 @@
 // Copyright 2018 The GoPacket Authors. All rights reserved.
 
-package pcapnggo
+package pcapgo
 
 import (
 	"bufio"
@@ -14,53 +14,53 @@ import (
 	"github.com/google/gopacket/layers"
 )
 
-// WriterOptions holds options for creating a pcapng file
-type WriterOptions struct {
+// NgWriterOptions holds options for creating a pcapng file
+type NgWriterOptions struct {
 	// SectionInfo will be written to the section header
-	SectionInfo SectionInfo
+	SectionInfo NgSectionInfo
 }
 
-// DefaultWriterOptions contain defaults for a pcapng writer used by NewWriter
-var DefaultWriterOptions = WriterOptions{
-	SectionInfo: SectionInfo{
+// DefaultNgWriterOptions contain defaults for a pcapng writer used by NewWriter
+var DefaultNgWriterOptions = NgWriterOptions{
+	SectionInfo: NgSectionInfo{
 		Hardware:    runtime.GOARCH,
 		OS:          runtime.GOOS,
 		Application: "gopacket", //spread the word
 	},
 }
 
-// DefaultInterface contains default interface options used by NewWriter
-var DefaultInterface = Interface{
+// DefaultNgInterface contains default interface options used by NewWriter
+var DefaultNgInterface = NgInterface{
 	Name:                "intf0",
 	OS:                  runtime.GOOS,
 	SnapLength:          0, //unlimited
 	TimestampResolution: 9,
 }
 
-// Writer holds the internal state of a pcapng file writer. Internally a bufio.Writer is used, therefore Flush must be called before closing the underlying file.
-type Writer struct {
+// NgWriter holds the internal state of a pcapng file writer. Internally a bufio.NgWriter is used, therefore Flush must be called before closing the underlying file.
+type NgWriter struct {
 	w       *bufio.Writer
-	options WriterOptions
+	options NgWriterOptions
 	intf    uint32
 	buf     [28]byte
 }
 
-// NewWriter initializes and returns a new writer. Additionally, one section and one interface (without statistics) is written to the file. Interface and section options are used from DefaultInterface and DefaultWriterOptions.
+// NewNgWriter initializes and returns a new writer. Additionally, one section and one interface (without statistics) is written to the file. Interface and section options are used from DefaultNgInterface and DefaultNgWriterOptions.
 // Flush must be called before the file is closed, or if eventual unwritten information should be written out to the storage device.
 //
 // Written files are in little endian format. Interface timestamp resolution is fixed to 9 (to match time.Time).
-func NewWriter(w io.Writer, linkType layers.LinkType) (*Writer, error) {
-	intf := DefaultInterface
+func NewNgWriter(w io.Writer, linkType layers.LinkType) (*NgWriter, error) {
+	intf := DefaultNgInterface
 	intf.LinkType = linkType
-	return NewWriterInterface(w, intf, DefaultWriterOptions)
+	return NewNgWriterInterface(w, intf, DefaultNgWriterOptions)
 }
 
-// NewWriterInterface initializes and returns a new writer. Additionally, one section and one interface (without statistics) is written to the file.
+// NewNgWriterInterface initializes and returns a new writer. Additionally, one section and one interface (without statistics) is written to the file.
 // Flush must be called before the file is closed, or if eventual unwritten information should be written out to the storage device.
 //
 // Written files are in little endian format. Interface timestamp resolution is fixed to 9 (to match time.Time).
-func NewWriterInterface(w io.Writer, intf Interface, options WriterOptions) (*Writer, error) {
-	ret := &Writer{
+func NewNgWriterInterface(w io.Writer, intf NgInterface, options NgWriterOptions) (*NgWriter, error) {
+	ret := &NgWriter{
 		w:       bufio.NewWriter(w),
 		options: options,
 	}
@@ -74,8 +74,8 @@ func NewWriterInterface(w io.Writer, intf Interface, options WriterOptions) (*Wr
 	return ret, nil
 }
 
-// optionLength returns the needed length for one option value (without padding)
-func optionLength(option option) (length int) {
+// ngOptionLength returns the needed length for one option value (without padding)
+func ngOptionLength(option ngOption) (length int) {
 	switch val := option.raw.(type) {
 	case []byte:
 		return len(val)
@@ -94,10 +94,10 @@ func optionLength(option option) (length int) {
 	}
 }
 
-// prepareOptions fills out the length value of the given options and returns the number of octets needed for all the given options including padding.
-func prepareOptions(options []option) (ret uint32) {
+// prepareNgOptions fills out the length value of the given options and returns the number of octets needed for all the given options including padding.
+func prepareNgOptions(options []ngOption) (ret uint32) {
 	for i, option := range options {
-		length := optionLength(option)
+		length := ngOptionLength(option)
 		options[i].length = uint16(length)
 		length += (4-length&3)&3 + // padding
 			4 //header
@@ -110,7 +110,7 @@ func prepareOptions(options []option) (ret uint32) {
 }
 
 // writeOptions writes the given options to the file. prepareOptions must be called beforehand.
-func (w *Writer) writeOptions(options []option) (err error) {
+func (w *NgWriter) writeOptions(options []ngOption) (err error) {
 	if len(options) == 0 {
 		return
 	}
@@ -172,48 +172,48 @@ func (w *Writer) writeOptions(options []option) (err error) {
 	}
 
 	// options must be folled by an end of options option
-	binary.LittleEndian.PutUint16(w.buf[0:2], uint16(optionEndOfOptions))
+	binary.LittleEndian.PutUint16(w.buf[0:2], uint16(ngOptionCodeEndOfOptions))
 	binary.LittleEndian.PutUint16(w.buf[2:4], 0)
 	_, err = w.w.Write(w.buf[:4])
 	return
 }
 
 // writeSectionHeader writes a section header to the file
-func (w *Writer) writeSectionHeader() (err error) {
-	var scratch [4]option
+func (w *NgWriter) writeSectionHeader() (err error) {
+	var scratch [4]ngOption
 	i := 0
 	info := w.options.SectionInfo
 	if info.Application != "" {
-		scratch[i].code = optionUserApplication
+		scratch[i].code = ngOptionCodeUserApplication
 		scratch[i].raw = info.Application
 		i++
 	}
 	if info.Comment != "" {
-		scratch[i].code = optionComment
+		scratch[i].code = ngOptionCodeComment
 		scratch[i].raw = info.Comment
 		i++
 	}
 	if info.Hardware != "" {
-		scratch[i].code = optionHardware
+		scratch[i].code = ngOptionCodeHardware
 		scratch[i].raw = info.Hardware
 		i++
 	}
 	if info.OS != "" {
-		scratch[i].code = optionOS
+		scratch[i].code = ngOptionCodeOS
 		scratch[i].raw = info.OS
 		i++
 	}
 	options := scratch[:i]
 
-	length := prepareOptions(options) +
+	length := prepareNgOptions(options) +
 		24 + // header
 		4 // trailer
 
-	binary.LittleEndian.PutUint32(w.buf[:4], uint32(blockTypeSectionHeader))
+	binary.LittleEndian.PutUint32(w.buf[:4], uint32(ngBlockTypeSectionHeader))
 	binary.LittleEndian.PutUint32(w.buf[4:8], length)
-	binary.LittleEndian.PutUint32(w.buf[8:12], byteOrderMagic)
-	binary.LittleEndian.PutUint16(w.buf[12:14], versionMajor)
-	binary.LittleEndian.PutUint16(w.buf[14:16], versionMinor)
+	binary.LittleEndian.PutUint32(w.buf[8:12], ngByteOrderMagic)
+	binary.LittleEndian.PutUint16(w.buf[12:14], ngVersionMajor)
+	binary.LittleEndian.PutUint16(w.buf[14:16], ngVersionMinor)
 	binary.LittleEndian.PutUint64(w.buf[16:24], 0xFFFFFFFFFFFFFFFF) // unspecified
 	if _, err = w.w.Write(w.buf[:24]); err != nil {
 		return
@@ -229,52 +229,52 @@ func (w *Writer) writeSectionHeader() (err error) {
 }
 
 // AddInterface adds the specified interface to the file, excluding statistics. Interface timestamp resolution is fixed to 9 (to match time.Time). Empty values are not written.
-func (w *Writer) AddInterface(intf Interface) (id int, err error) {
+func (w *NgWriter) AddInterface(intf NgInterface) (id int, err error) {
 	id = int(w.intf)
 	w.intf++
 
-	var scratch [7]option
+	var scratch [7]ngOption
 	i := 0
 	if intf.Name != "" {
-		scratch[i].code = optionInterfaceName
+		scratch[i].code = ngOptionCodeInterfaceName
 		scratch[i].raw = intf.Name
 		i++
 	}
 	if intf.Comment != "" {
-		scratch[i].code = optionComment
+		scratch[i].code = ngOptionCodeComment
 		scratch[i].raw = intf.Comment
 		i++
 	}
 	if intf.Description != "" {
-		scratch[i].code = optionInterfaceDescription
+		scratch[i].code = ngOptionCodeInterfaceDescription
 		scratch[i].raw = intf.Description
 		i++
 	}
 	if intf.Filter != "" {
-		scratch[i].code = optionInterfaceFilter
+		scratch[i].code = ngOptionCodeInterfaceFilter
 		scratch[i].raw = append([]byte{0}, []byte(intf.Filter)...)
 		i++
 	}
 	if intf.OS != "" {
-		scratch[i].code = optionInterfaceOS
+		scratch[i].code = ngOptionCodeInterfaceOS
 		scratch[i].raw = intf.OS
 		i++
 	}
 	if intf.TimestampOffset != 0 {
-		scratch[i].code = optionInterfaceTimestampOffset
+		scratch[i].code = ngOptionCodeInterfaceTimestampOffset
 		scratch[i].raw = intf.TimestampOffset
 		i++
 	}
-	scratch[i].code = optionInterfaceTimestampResolution
+	scratch[i].code = ngOptionCodeInterfaceTimestampResolution
 	scratch[i].raw = uint8(9) // fix resolution to nanoseconds (time.Time) in decimal
 	i++
 	options := scratch[:i]
 
-	length := prepareOptions(options) +
+	length := prepareNgOptions(options) +
 		16 + // header
 		4 // trailer
 
-	binary.LittleEndian.PutUint32(w.buf[:4], uint32(blockTypeInterfaceDescriptor))
+	binary.LittleEndian.PutUint32(w.buf[:4], uint32(ngBlockTypeInterfaceDescriptor))
 	binary.LittleEndian.PutUint32(w.buf[4:8], length)
 	binary.LittleEndian.PutUint16(w.buf[8:10], uint16(intf.LinkType))
 	binary.LittleEndian.PutUint16(w.buf[10:12], 0) // reserved value
@@ -293,43 +293,43 @@ func (w *Writer) AddInterface(intf Interface) (id int, err error) {
 }
 
 // WriteInterfaceStats writes the given interface statistics for the given interface id to the file. Empty values are not written.
-func (w *Writer) WriteInterfaceStats(intf int, stats InterfaceStatistics) (err error) {
+func (w *NgWriter) WriteInterfaceStats(intf int, stats NgInterfaceStatistics) (err error) {
 	if intf >= int(w.intf) || intf < 0 {
 		return fmt.Errorf("Can't send statistics for non existent interface %d; have only %d interfaces", intf, w.intf)
 	}
 
-	var scratch [4]option
+	var scratch [4]ngOption
 	i := 0
 	if !stats.StartTime.IsZero() {
-		scratch[i].code = optionInterfaceStatisticsStartTime
+		scratch[i].code = ngOptionCodeInterfaceStatisticsStartTime
 		scratch[i].raw = stats.StartTime
 		i++
 	}
 	if !stats.EndTime.IsZero() {
-		scratch[i].code = optionInterfaceStatisticsEndTime
+		scratch[i].code = ngOptionCodeInterfaceStatisticsEndTime
 		scratch[i].raw = stats.EndTime
 		i++
 	}
-	if stats.PacketsDropped != NoValue64 {
-		scratch[i].code = optionInterfaceStatisticsInterfaceDropped
+	if stats.PacketsDropped != NgNoValue64 {
+		scratch[i].code = ngOptionCodeInterfaceStatisticsInterfaceDropped
 		scratch[i].raw = stats.PacketsDropped
 		i++
 	}
-	if stats.PacketsReceived != NoValue64 {
-		scratch[i].code = optionInterfaceStatisticsInterfaceReceived
+	if stats.PacketsReceived != NgNoValue64 {
+		scratch[i].code = ngOptionCodeInterfaceStatisticsInterfaceReceived
 		scratch[i].raw = stats.PacketsReceived
 		i++
 	}
 	options := scratch[:i]
 
-	length := prepareOptions(options) + 24
+	length := prepareNgOptions(options) + 24
 
 	ts := stats.LastUpdate.UnixNano()
 	if stats.LastUpdate.IsZero() {
 		ts = 0
 	}
 
-	binary.LittleEndian.PutUint32(w.buf[:4], uint32(blockTypeInterfaceStatistics))
+	binary.LittleEndian.PutUint32(w.buf[:4], uint32(ngBlockTypeInterfaceStatistics))
 	binary.LittleEndian.PutUint32(w.buf[4:8], length)
 	binary.LittleEndian.PutUint32(w.buf[8:12], uint32(intf))
 	binary.LittleEndian.PutUint32(w.buf[12:16], uint32(ts>>32))
@@ -348,7 +348,7 @@ func (w *Writer) WriteInterfaceStats(intf int, stats InterfaceStatistics) (err e
 }
 
 // WritePacket writes out packet with the given data and capture info. The given InterfaceIndex must already be added to the file. InterfaceIndex 0 is automatically added by the NewWriter* methods.
-func (w *Writer) WritePacket(ci gopacket.CaptureInfo, data []byte) (err error) {
+func (w *NgWriter) WritePacket(ci gopacket.CaptureInfo, data []byte) (err error) {
 	if ci.InterfaceIndex >= int(w.intf) || ci.InterfaceIndex < 0 {
 		return fmt.Errorf("Can't send statistics for non existent interface %d; have only %d interfaces", ci.InterfaceIndex, w.intf)
 	}
@@ -365,7 +365,7 @@ func (w *Writer) WritePacket(ci gopacket.CaptureInfo, data []byte) (err error) {
 
 	ts := ci.Timestamp.UnixNano()
 
-	binary.LittleEndian.PutUint32(w.buf[:4], uint32(blockTypeEnhancedPacket))
+	binary.LittleEndian.PutUint32(w.buf[:4], uint32(ngBlockTypeEnhancedPacket))
 	binary.LittleEndian.PutUint32(w.buf[4:8], length)
 	binary.LittleEndian.PutUint32(w.buf[8:12], uint32(ci.InterfaceIndex))
 	binary.LittleEndian.PutUint32(w.buf[12:16], uint32(ts>>32))
@@ -387,6 +387,6 @@ func (w *Writer) WritePacket(ci gopacket.CaptureInfo, data []byte) (err error) {
 }
 
 // Flush writes out buffered data to the storage media. Must be called before closing the underlying file.
-func (w *Writer) Flush() error {
+func (w *NgWriter) Flush() error {
 	return w.w.Flush()
 }

@@ -1,6 +1,6 @@
 // Copyright 2018 The GoPacket Authors. All rights reserved.
 
-package pcapnggo
+package pcapgo
 
 import (
 	"bytes"
@@ -11,20 +11,20 @@ import (
 	"github.com/google/gopacket/layers"
 )
 
-func TestPcapngWriteSimple(t *testing.T) {
+func TestNgWriteSimple(t *testing.T) {
 	buffer := &bytes.Buffer{}
 
-	w, err := NewWriter(buffer, layers.LinkTypeEthernet)
+	w, err := NewNgWriter(buffer, layers.LinkTypeEthernet)
 	if err != nil {
 		t.Fatal("Opening file failed with: ", err)
 	}
 	ci := gopacket.CaptureInfo{
 		Timestamp:      time.Unix(0, 0).UTC(),
-		Length:         len(packetSource[0]),
-		CaptureLength:  len(packetSource[0]),
+		Length:         len(ngPacketSource[0]),
+		CaptureLength:  len(ngPacketSource[0]),
 		InterfaceIndex: 0,
 	}
-	err = w.WritePacket(ci, packetSource[0])
+	err = w.WritePacket(ci, ngPacketSource[0])
 	if err != nil {
 		t.Fatal("Couldn't write packet", err)
 	}
@@ -33,47 +33,47 @@ func TestPcapngWriteSimple(t *testing.T) {
 		t.Fatal("Couldn't flush buffer", err)
 	}
 
-	interf := DefaultInterface
+	interf := DefaultNgInterface
 	interf.LinkType = layers.LinkTypeEthernet
 
-	test := fileReadTest{
+	test := ngFileReadTest{
 		testContents: bytes.NewReader(buffer.Bytes()),
 		linkType:     layers.LinkTypeEthernet,
-		sections: []fileReadTestSection{
+		sections: []ngFileReadTestSection{
 			{
-				sectionInfo: DefaultWriterOptions.SectionInfo,
-				ifaces: []Interface{
+				sectionInfo: DefaultNgWriterOptions.SectionInfo,
+				ifaces: []NgInterface{
 					interf,
 				},
 			},
 		},
-		packets: []fileReadTestPacket{
+		packets: []ngFileReadTestPacket{
 			{
-				data: packetSource[0],
+				data: ngPacketSource[0],
 				ci:   ci,
 			},
 		},
 	}
 
-	runFileReadTest(test, "", false, t)
+	ngRunFileReadTest(test, "", false, t)
 }
 
-func TestPcapngWriteComplex(t *testing.T) {
-	test := fileReadTest{
+func TestNgWriteComplex(t *testing.T) {
+	test := ngFileReadTest{
 		linkType: layers.LinkTypeEthernet,
-		sections: []fileReadTestSection{
+		sections: []ngFileReadTestSection{
 			{
-				sectionInfo: SectionInfo{
+				sectionInfo: NgSectionInfo{
 					Comment: "A test",
 				},
-				ifaces: []Interface{
+				ifaces: []NgInterface{
 					{
 						Name:                "in0",
 						Comment:             "test0",
 						Description:         "some test interface",
 						LinkType:            layers.LinkTypeEthernet,
 						TimestampResolution: 3,
-						Statistics: InterfaceStatistics{
+						Statistics: NgInterfaceStatistics{
 							LastUpdate:      time.Unix(1519128000, 195312500).UTC(),
 							StartTime:       time.Unix(1519128000-100, 195312500).UTC(),
 							EndTime:         time.Unix(1519128000, 195312500).UTC(),
@@ -88,56 +88,56 @@ func TestPcapngWriteComplex(t *testing.T) {
 						OS:              "not needed",
 						LinkType:        layers.LinkTypeEthernet,
 						TimestampOffset: 100,
-						Statistics: InterfaceStatistics{
+						Statistics: NgInterfaceStatistics{
 							LastUpdate: time.Unix(1519128000, 195312500).UTC(),
 						},
 					},
 				},
 			},
 		},
-		packets: []fileReadTestPacket{
+		packets: []ngFileReadTestPacket{
 			{
-				data: packetSource[0],
+				data: ngPacketSource[0],
 				ci: gopacket.CaptureInfo{
 					Timestamp:      time.Unix(1519128000-900, 195312500).UTC(),
-					Length:         len(packetSource[0]),
-					CaptureLength:  len(packetSource[0]),
+					Length:         len(ngPacketSource[0]),
+					CaptureLength:  len(ngPacketSource[0]),
 					InterfaceIndex: 0,
 				},
 			},
 			{
-				data: packetSource[4],
+				data: ngPacketSource[4],
 				ci: gopacket.CaptureInfo{
 					Timestamp:      time.Unix(1519128000-800, 195312500).UTC(),
-					Length:         len(packetSource[4]),
-					CaptureLength:  len(packetSource[4]),
+					Length:         len(ngPacketSource[4]),
+					CaptureLength:  len(ngPacketSource[4]),
 					InterfaceIndex: 1,
 				},
 			},
 			{
-				data: packetSource[1],
+				data: ngPacketSource[1],
 				ci: gopacket.CaptureInfo{
 					Timestamp:      time.Unix(1519128000-500, 195312500).UTC(),
-					Length:         len(packetSource[1]),
-					CaptureLength:  len(packetSource[1]),
+					Length:         len(ngPacketSource[1]),
+					CaptureLength:  len(ngPacketSource[1]),
 					InterfaceIndex: 0,
 				},
 			},
 			{
-				data: packetSource[2][:96],
+				data: ngPacketSource[2][:96],
 				ci: gopacket.CaptureInfo{
 					Timestamp:      time.Unix(1519128000-300, 195312500).UTC(),
-					Length:         len(packetSource[2]),
+					Length:         len(ngPacketSource[2]),
 					CaptureLength:  96,
 					InterfaceIndex: 0,
 				},
 			},
 			{
-				data: packetSource[3],
+				data: ngPacketSource[3],
 				ci: gopacket.CaptureInfo{
 					Timestamp:      time.Unix(1519128000-200, 195312500).UTC(),
-					Length:         len(packetSource[3]),
-					CaptureLength:  len(packetSource[3]),
+					Length:         len(ngPacketSource[3]),
+					CaptureLength:  len(ngPacketSource[3]),
 					InterfaceIndex: 0,
 				},
 			},
@@ -146,11 +146,11 @@ func TestPcapngWriteComplex(t *testing.T) {
 
 	buffer := &bytes.Buffer{}
 
-	options := WriterOptions{
+	options := NgWriterOptions{
 		SectionInfo: test.sections[0].sectionInfo,
 	}
 
-	w, err := NewWriterInterface(buffer, test.sections[0].ifaces[0], options)
+	w, err := NewNgWriterInterface(buffer, test.sections[0].ifaces[0], options)
 	if err != nil {
 		t.Fatal("Opening file failed with: ", err)
 	}
@@ -207,23 +207,23 @@ func TestPcapngWriteComplex(t *testing.T) {
 
 	test.testContents = bytes.NewReader(buffer.Bytes())
 
-	runFileReadTest(test, "", false, t)
+	ngRunFileReadTest(test, "", false, t)
 }
 
-type devNull struct{}
+type ngDevNull struct{}
 
-func (w *devNull) Write(p []byte) (n int, err error) {
+func (w *ngDevNull) Write(p []byte) (n int, err error) {
 	return len(p), nil
 }
 
-func BenchmarkWritePacket(b *testing.B) {
+func BenchmarkNgWritePacket(b *testing.B) {
 	ci := gopacket.CaptureInfo{
 		Timestamp:     time.Unix(0x01020304, 0xAA*1000),
 		Length:        0xABCD,
 		CaptureLength: 10,
 	}
 	data := []byte{9, 8, 7, 6, 5, 4, 3, 2, 1, 0}
-	w, err := NewWriter(&devNull{}, layers.LinkTypeEthernet)
+	w, err := NewNgWriter(&ngDevNull{}, layers.LinkTypeEthernet)
 	if err != nil {
 		b.Fatal("Failed creating writer:", err)
 	}
