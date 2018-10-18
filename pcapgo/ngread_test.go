@@ -1,6 +1,6 @@
 // Copyright 2018 The GoPacket Authors. All rights reserved.
 
-package pcapnggo
+package pcapgo
 
 import (
 	"bufio"
@@ -18,7 +18,7 @@ import (
 	"github.com/google/gopacket/layers"
 )
 
-func mustDecode(s string) []byte {
+func ngMustDecode(s string) []byte {
 	ret, err := hex.DecodeString(s)
 	if err != nil {
 		log.Panic("Initialization failed")
@@ -26,26 +26,26 @@ func mustDecode(s string) []byte {
 	return ret
 }
 
-var packetSource = [...][]byte{
-	mustDecode("ffffffffffff000b8201fc4208004500012ca8360000fa11178b00000000ffffffff004400430118591f0101060000003d1d0000000000000000000000000000000000000000000b8201fc4200000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000638253633501013d0701000b8201fc4232040000000037040103062aff00000000000000"),
-	mustDecode("000b8201fc42000874adf19b0800450001480445000080110000c0a80001c0a8000a00430044013422330201060000003d1d0000000000000000c0a8000ac0a8000100000000000b8201fc4200000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000638253633501020104ffffff003a04000007083b0400000c4e330400000e103604c0a80001ff0000000000000000000000000000000000000000000000000000"),
-	mustDecode("ffffffffffff000b8201fc4208004500012ca8370000fa11178a00000000ffffffff0044004301189fbd0101060000003d1e0000000000000000000000000000000000000000000b8201fc4200000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000638253633501033d0701000b8201fc423204c0a8000a3604c0a8000137040103062aff00"),
-	mustDecode("000b8201fc42000874adf19b0800450001480446000080110000c0a80001c0a8000a004300440134dfdb0201060000003d1e0000000000000000c0a8000a0000000000000000000b8201fc4200000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000638253633501053a04000007083b0400000c4e330400000e103604c0a800010104ffffff00ff0000000000000000000000000000000000000000000000000000"),
-	mustDecode("02000000450000a4c6ce00004011f147c0a8018bffffffff445c445c0090ba037b22686f73745f696e74223a20343039343531343438332c202276657273696f6e223a205b312c20385d2c2022646973706c61796e616d65223a2022222c2022706f7274223a2031373530302c20226e616d65737061636573223a205b32303532343235372c203633393533393037322c203633393533393333372c203633393533393535355d7d"),
+var ngPacketSource = [...][]byte{
+	ngMustDecode("ffffffffffff000b8201fc4208004500012ca8360000fa11178b00000000ffffffff004400430118591f0101060000003d1d0000000000000000000000000000000000000000000b8201fc4200000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000638253633501013d0701000b8201fc4232040000000037040103062aff00000000000000"),
+	ngMustDecode("000b8201fc42000874adf19b0800450001480445000080110000c0a80001c0a8000a00430044013422330201060000003d1d0000000000000000c0a8000ac0a8000100000000000b8201fc4200000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000638253633501020104ffffff003a04000007083b0400000c4e330400000e103604c0a80001ff0000000000000000000000000000000000000000000000000000"),
+	ngMustDecode("ffffffffffff000b8201fc4208004500012ca8370000fa11178a00000000ffffffff0044004301189fbd0101060000003d1e0000000000000000000000000000000000000000000b8201fc4200000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000638253633501033d0701000b8201fc423204c0a8000a3604c0a8000137040103062aff00"),
+	ngMustDecode("000b8201fc42000874adf19b0800450001480446000080110000c0a80001c0a8000a004300440134dfdb0201060000003d1e0000000000000000c0a8000a0000000000000000000b8201fc4200000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000638253633501053a04000007083b0400000c4e330400000e103604c0a800010104ffffff00ff0000000000000000000000000000000000000000000000000000"),
+	ngMustDecode("02000000450000a4c6ce00004011f147c0a8018bffffffff445c445c0090ba037b22686f73745f696e74223a20343039343531343438332c202276657273696f6e223a205b312c20385d2c2022646973706c61796e616d65223a2022222c2022706f7274223a2031373530302c20226e616d65737061636573223a205b32303532343235372c203633393533393037322c203633393533393333372c203633393533393535355d7d"),
 }
 
-type fileReadTestPacket struct {
+type ngFileReadTestPacket struct {
 	data []byte
 	ci   gopacket.CaptureInfo
 	err  error
 }
 
-type fileReadTestSection struct {
-	sectionInfo SectionInfo
-	ifaces      []Interface
+type ngFileReadTestSection struct {
+	sectionInfo NgSectionInfo
+	ifaces      []NgInterface
 }
 
-type fileReadTest struct {
+type ngFileReadTest struct {
 	testName                   string
 	testContents               io.Reader
 	testType                   string
@@ -55,11 +55,11 @@ type fileReadTest struct {
 	skipUnknownVersion         bool
 
 	linkType layers.LinkType
-	sections []fileReadTestSection
-	packets  []fileReadTestPacket
+	sections []ngFileReadTestSection
+	packets  []ngFileReadTestPacket
 }
 
-func runFileReadTest(test fileReadTest, be string, zerocopy bool, t *testing.T) {
+func ngRunFileReadTest(test ngFileReadTest, be string, zerocopy bool, t *testing.T) {
 	var err error
 	var f io.Reader
 	if test.testContents == nil {
@@ -73,10 +73,10 @@ func runFileReadTest(test fileReadTest, be string, zerocopy bool, t *testing.T) 
 		f = test.testContents
 	}
 
-	var r *Reader
+	var r *NgReader
 
 	section := 0
-	checkInterface := func(intf Interface, i int) {
+	checkInterface := func(intf NgInterface, i int) {
 		currentInterface := test.sections[section].ifaces[i]
 
 		// fix non-zero defaults
@@ -92,7 +92,7 @@ func runFileReadTest(test fileReadTest, be string, zerocopy bool, t *testing.T) 
 			t.Fatalf("[section %d] interface %d mismatches:\ngot:\n%#v\nwant:\n%#v\n\n", section, i, intf, currentInterface)
 		}
 	}
-	testSection := func(intf []Interface, sectionInfo SectionInfo) {
+	testSection := func(intf []NgInterface, sectionInfo NgSectionInfo) {
 		currentSection := test.sections[section]
 
 		if !reflect.DeepEqual(sectionInfo, currentSection.sectionInfo) {
@@ -122,7 +122,7 @@ func runFileReadTest(test fileReadTest, be string, zerocopy bool, t *testing.T) 
 		section++
 	}
 
-	options := DefaultReaderOptions
+	options := DefaultNgReaderOptions
 	options.ErrorOnMismatchingLinkType = test.errorOnMismatchingLinkType
 	options.WantMixedLinkType = test.wantMixedLinkType
 	options.SkipUnknownVersion = test.skipUnknownVersion
@@ -130,7 +130,7 @@ func runFileReadTest(test fileReadTest, be string, zerocopy bool, t *testing.T) 
 		options.SectionEndCallback = testSection
 	}
 
-	r, err = NewReader(f, options)
+	r, err = NewNgReader(f, options)
 	if err != nil {
 		t.Fatal("Couldn't read start of file:", err)
 	}
@@ -162,7 +162,7 @@ func runFileReadTest(test fileReadTest, be string, zerocopy bool, t *testing.T) 
 			if err != packet.err {
 				t.Fatalf("[packet %d] Expected error %s, but got %s", i, packet.err, err)
 			}
-			if err != ErrVersionMismatch {
+			if err != ErrNgVersionMismatch {
 				testSection(nil, r.SectionInfo())
 			}
 			return
@@ -195,20 +195,20 @@ func runFileReadTest(test fileReadTest, be string, zerocopy bool, t *testing.T) 
 	}
 }
 
-func TestPcapngFileRead(t *testing.T) {
-	for _, todo := range []fileReadTest{
+func TestNgFileRead(t *testing.T) {
+	for _, todo := range []ngFileReadTest{
 		{
 			testName: "test001",
 			linkType: layers.LinkTypeEthernet,
-			sections: []fileReadTestSection{
+			sections: []ngFileReadTestSection{
 				{
-					sectionInfo: SectionInfo{
+					sectionInfo: NgSectionInfo{
 						Hardware:    "Apple MBP",
 						OS:          "OS-X 10.10.5",
 						Application: "pcap_writer.lua",
 						Comment:     "test001",
 					},
-					ifaces: []Interface{
+					ifaces: []NgInterface{
 						{
 							LinkType:   layers.LinkTypeEthernet,
 							SnapLength: 0,
@@ -217,40 +217,40 @@ func TestPcapngFileRead(t *testing.T) {
 					},
 				},
 			},
-			packets: []fileReadTestPacket{
+			packets: []ngFileReadTestPacket{
 				{
-					data: packetSource[0],
+					data: ngPacketSource[0],
 					ci: gopacket.CaptureInfo{
 						Timestamp:      time.Unix(0, 0).UTC(),
-						Length:         len(packetSource[0]),
-						CaptureLength:  len(packetSource[0]),
+						Length:         len(ngPacketSource[0]),
+						CaptureLength:  len(ngPacketSource[0]),
 						InterfaceIndex: 0,
 					},
 				},
 				{
-					data: packetSource[1],
+					data: ngPacketSource[1],
 					ci: gopacket.CaptureInfo{
 						Timestamp:      time.Unix(0, 0).UTC(),
-						Length:         len(packetSource[1]),
-						CaptureLength:  len(packetSource[1]),
+						Length:         len(ngPacketSource[1]),
+						CaptureLength:  len(ngPacketSource[1]),
 						InterfaceIndex: 0,
 					},
 				},
 				{
-					data: packetSource[2],
+					data: ngPacketSource[2],
 					ci: gopacket.CaptureInfo{
 						Timestamp:      time.Unix(0, 0).UTC(),
-						Length:         len(packetSource[2]),
-						CaptureLength:  len(packetSource[2]),
+						Length:         len(ngPacketSource[2]),
+						CaptureLength:  len(ngPacketSource[2]),
 						InterfaceIndex: 0,
 					},
 				},
 				{
-					data: packetSource[3],
+					data: ngPacketSource[3],
 					ci: gopacket.CaptureInfo{
 						Timestamp:      time.Unix(0, 0).UTC(),
-						Length:         len(packetSource[3]),
-						CaptureLength:  len(packetSource[3]),
+						Length:         len(ngPacketSource[3]),
+						CaptureLength:  len(ngPacketSource[3]),
 						InterfaceIndex: 0,
 					},
 				},
@@ -259,9 +259,9 @@ func TestPcapngFileRead(t *testing.T) {
 		{
 			testName:          "test002",
 			wantMixedLinkType: true,
-			sections: []fileReadTestSection{
+			sections: []ngFileReadTestSection{
 				{
-					sectionInfo: SectionInfo{
+					sectionInfo: NgSectionInfo{
 						Hardware:    "Apple MBP",
 						OS:          "OS-X 10.10.5",
 						Application: "pcap_writer.lua",
@@ -273,15 +273,15 @@ func TestPcapngFileRead(t *testing.T) {
 		{
 			testName: "test003",
 			linkType: layers.LinkTypeEthernet,
-			sections: []fileReadTestSection{
+			sections: []ngFileReadTestSection{
 				{
-					sectionInfo: SectionInfo{
+					sectionInfo: NgSectionInfo{
 						Hardware:    "Apple MBP",
 						OS:          "OS-X 10.10.5",
 						Application: "pcap_writer.lua",
 						Comment:     "test003",
 					},
-					ifaces: []Interface{
+					ifaces: []NgInterface{
 						{
 							LinkType:   layers.LinkTypeEthernet,
 							SnapLength: 96,
@@ -294,15 +294,15 @@ func TestPcapngFileRead(t *testing.T) {
 		{
 			testName: "test004",
 			linkType: layers.LinkTypeEthernet,
-			sections: []fileReadTestSection{
+			sections: []ngFileReadTestSection{
 				{
-					sectionInfo: SectionInfo{
+					sectionInfo: NgSectionInfo{
 						Hardware:    "Apple MBP",
 						OS:          "OS-X 10.10.5",
 						Application: "pcap_writer.lua",
 						Comment:     "test004",
 					},
-					ifaces: []Interface{
+					ifaces: []NgInterface{
 						{
 							LinkType:   layers.LinkTypeEthernet,
 							SnapLength: 96,
@@ -316,39 +316,39 @@ func TestPcapngFileRead(t *testing.T) {
 					},
 				},
 			},
-			packets: []fileReadTestPacket{
+			packets: []ngFileReadTestPacket{
 				{
-					data: packetSource[0][:96],
+					data: ngPacketSource[0][:96],
 					ci: gopacket.CaptureInfo{
 						Timestamp:      time.Unix(0, 0x4c39764ca47aa*1000).UTC(),
-						Length:         len(packetSource[0]),
+						Length:         len(ngPacketSource[0]),
 						CaptureLength:  96,
 						InterfaceIndex: 0,
 					},
 				},
 				{
-					data: packetSource[1][:128],
+					data: ngPacketSource[1][:128],
 					ci: gopacket.CaptureInfo{
 						Timestamp:      time.Unix(0, 0x4c39764ca47aa*1000+1000*1000).UTC(),
-						Length:         len(packetSource[1]),
+						Length:         len(ngPacketSource[1]),
 						CaptureLength:  128,
 						InterfaceIndex: 1,
 					},
 				},
 				{
-					data: packetSource[2][:96],
+					data: ngPacketSource[2][:96],
 					ci: gopacket.CaptureInfo{
 						Timestamp:      time.Unix(0, 0x4c39764ca47aa*1000+2000*1000).UTC(),
-						Length:         len(packetSource[2]),
+						Length:         len(ngPacketSource[2]),
 						CaptureLength:  96,
 						InterfaceIndex: 0,
 					},
 				},
 				{
-					data: packetSource[3][:128],
+					data: ngPacketSource[3][:128],
 					ci: gopacket.CaptureInfo{
 						Timestamp:      time.Unix(0, 0x4c39764ca47aa*1000+3000*1000).UTC(),
-						Length:         len(packetSource[3]),
+						Length:         len(ngPacketSource[3]),
 						CaptureLength:  128,
 						InterfaceIndex: 1,
 					},
@@ -358,15 +358,15 @@ func TestPcapngFileRead(t *testing.T) {
 		{
 			testName: "test005",
 			linkType: layers.LinkTypeEthernet,
-			sections: []fileReadTestSection{
+			sections: []ngFileReadTestSection{
 				{
-					sectionInfo: SectionInfo{
+					sectionInfo: NgSectionInfo{
 						Hardware:    "Apple MBP",
 						OS:          "OS-X 10.10.5",
 						Application: "pcap_writer.lua",
 						Comment:     "test005",
 					},
-					ifaces: []Interface{
+					ifaces: []NgInterface{
 						{
 							LinkType:   layers.LinkTypeEthernet,
 							SnapLength: 96,
@@ -380,39 +380,39 @@ func TestPcapngFileRead(t *testing.T) {
 					},
 				},
 			},
-			packets: []fileReadTestPacket{
+			packets: []ngFileReadTestPacket{
 				{
-					data: packetSource[0][:96],
+					data: ngPacketSource[0][:96],
 					ci: gopacket.CaptureInfo{
 						Timestamp:      time.Unix(0, 0x4c39764ca47aa*1000).UTC(),
-						Length:         len(packetSource[0]),
+						Length:         len(ngPacketSource[0]),
 						CaptureLength:  96,
 						InterfaceIndex: 0,
 					},
 				},
 				{
-					data: packetSource[1][:128],
+					data: ngPacketSource[1][:128],
 					ci: gopacket.CaptureInfo{
 						Timestamp:      time.Unix(0, 0x4c39764ca47aa*1000+1000*1000).UTC(),
-						Length:         len(packetSource[1]),
+						Length:         len(ngPacketSource[1]),
 						CaptureLength:  128,
 						InterfaceIndex: 1,
 					},
 				},
 				{
-					data: packetSource[2][:96],
+					data: ngPacketSource[2][:96],
 					ci: gopacket.CaptureInfo{
 						Timestamp:      time.Unix(0, 0x4c39764ca47aa*1000+2000*1000).UTC(),
-						Length:         len(packetSource[2]),
+						Length:         len(ngPacketSource[2]),
 						CaptureLength:  96,
 						InterfaceIndex: 0,
 					},
 				},
 				{
-					data: packetSource[3][:128],
+					data: ngPacketSource[3][:128],
 					ci: gopacket.CaptureInfo{
 						Timestamp:      time.Unix(0, 0x4c39764ca47aa*1000+3000*1000).UTC(),
-						Length:         len(packetSource[3]),
+						Length:         len(ngPacketSource[3]),
 						CaptureLength:  128,
 						InterfaceIndex: 1,
 					},
@@ -422,15 +422,15 @@ func TestPcapngFileRead(t *testing.T) {
 		{
 			testName: "test006",
 			linkType: layers.LinkTypeEthernet,
-			sections: []fileReadTestSection{
+			sections: []ngFileReadTestSection{
 				{
-					sectionInfo: SectionInfo{
+					sectionInfo: NgSectionInfo{
 						Hardware:    "Apple MBP",
 						OS:          "OS-X 10.10.5",
 						Application: "pcap_writer.lua",
 						Comment:     "test006",
 					},
-					ifaces: []Interface{
+					ifaces: []NgInterface{
 						{
 							LinkType:   layers.LinkTypeEthernet,
 							SnapLength: 96,
@@ -444,39 +444,39 @@ func TestPcapngFileRead(t *testing.T) {
 				},
 			},
 
-			packets: []fileReadTestPacket{
+			packets: []ngFileReadTestPacket{
 				{
-					data: packetSource[0][:96],
+					data: ngPacketSource[0][:96],
 					ci: gopacket.CaptureInfo{
 						Timestamp:      time.Unix(0, 0x4c39764ca47aa*1000).UTC(),
-						Length:         len(packetSource[0]),
+						Length:         len(ngPacketSource[0]),
 						CaptureLength:  96,
 						InterfaceIndex: 0,
 					},
 				},
 				{
-					data: packetSource[1][:96],
+					data: ngPacketSource[1][:96],
 					ci: gopacket.CaptureInfo{
 						Timestamp:      time.Unix(0, 0x4c39764ca47aa*1000+2000*1000).UTC(),
-						Length:         len(packetSource[1]),
+						Length:         len(ngPacketSource[1]),
 						CaptureLength:  96,
 						InterfaceIndex: 0,
 					},
 				},
 				{
-					data: packetSource[2][:96],
+					data: ngPacketSource[2][:96],
 					ci: gopacket.CaptureInfo{
 						Timestamp:      time.Unix(0, 0x4c39764ca47aa*1000+3000*1000).UTC(),
-						Length:         len(packetSource[2]),
+						Length:         len(ngPacketSource[2]),
 						CaptureLength:  96,
 						InterfaceIndex: 0,
 					},
 				},
 				{
-					data: packetSource[3][:96],
+					data: ngPacketSource[3][:96],
 					ci: gopacket.CaptureInfo{
 						Timestamp:      time.Unix(0, 0x4c39764ca47aa*1000+4000*1000).UTC(),
-						Length:         len(packetSource[3]),
+						Length:         len(ngPacketSource[3]),
 						CaptureLength:  96,
 						InterfaceIndex: 0,
 					},
@@ -488,15 +488,15 @@ func TestPcapngFileRead(t *testing.T) {
 			testType:                   "/ErrorOnMismatchingLink",
 			errorOnMismatchingLinkType: true,
 			linkType:                   layers.LinkTypeEthernet,
-			sections: []fileReadTestSection{
+			sections: []ngFileReadTestSection{
 				{
-					sectionInfo: SectionInfo{
+					sectionInfo: NgSectionInfo{
 						Hardware:    "Apple MBP",
 						OS:          "OS-X 10.10.5",
 						Application: "pcap_writer.lua",
 						Comment:     "test006",
 					},
-					ifaces: []Interface{
+					ifaces: []NgInterface{
 						{
 							LinkType:   layers.LinkTypeEthernet,
 							SnapLength: 96,
@@ -509,17 +509,17 @@ func TestPcapngFileRead(t *testing.T) {
 					},
 				},
 			},
-			packets: []fileReadTestPacket{
+			packets: []ngFileReadTestPacket{
 				{
-					data: packetSource[0][:96],
+					data: ngPacketSource[0][:96],
 					ci: gopacket.CaptureInfo{
 						Timestamp:      time.Unix(0, 0x4c39764ca47aa*1000).UTC(),
-						Length:         len(packetSource[0]),
+						Length:         len(ngPacketSource[0]),
 						CaptureLength:  96,
 						InterfaceIndex: 0,
 					},
 				},
-				{err: ErrLinkTypeMismatch},
+				{err: ErrNgLinkTypeMismatch},
 			},
 		},
 		{
@@ -527,15 +527,15 @@ func TestPcapngFileRead(t *testing.T) {
 			testType:          "/WantMixedLinkType",
 			wantMixedLinkType: true,
 			linkType:          layers.LinkTypeEthernet,
-			sections: []fileReadTestSection{
+			sections: []ngFileReadTestSection{
 				{
-					sectionInfo: SectionInfo{
+					sectionInfo: NgSectionInfo{
 						Hardware:    "Apple MBP",
 						OS:          "OS-X 10.10.5",
 						Application: "pcap_writer.lua",
 						Comment:     "test006",
 					},
-					ifaces: []Interface{
+					ifaces: []NgInterface{
 						{
 							LinkType:   layers.LinkTypeEthernet,
 							SnapLength: 96,
@@ -548,52 +548,52 @@ func TestPcapngFileRead(t *testing.T) {
 					},
 				},
 			},
-			packets: []fileReadTestPacket{
+			packets: []ngFileReadTestPacket{
 				{
-					data: packetSource[0][:96],
+					data: ngPacketSource[0][:96],
 					ci: gopacket.CaptureInfo{
 						Timestamp:      time.Unix(0, 0x4c39764ca47aa*1000).UTC(),
-						Length:         len(packetSource[0]),
+						Length:         len(ngPacketSource[0]),
 						CaptureLength:  96,
 						InterfaceIndex: 0,
 						AncillaryData:  []interface{}{layers.LinkTypeEthernet},
 					},
 				},
 				{
-					data: packetSource[4],
+					data: ngPacketSource[4],
 					ci: gopacket.CaptureInfo{
 						Timestamp:      time.Unix(0, 0x4c39764ca47aa*1000+1000*1000).UTC(),
-						Length:         len(packetSource[4]),
-						CaptureLength:  len(packetSource[4]),
+						Length:         len(ngPacketSource[4]),
+						CaptureLength:  len(ngPacketSource[4]),
 						InterfaceIndex: 1,
 						AncillaryData:  []interface{}{layers.LinkTypeNull},
 					},
 				},
 				{
-					data: packetSource[1][:96],
+					data: ngPacketSource[1][:96],
 					ci: gopacket.CaptureInfo{
 						Timestamp:      time.Unix(0, 0x4c39764ca47aa*1000+2000*1000).UTC(),
-						Length:         len(packetSource[1]),
+						Length:         len(ngPacketSource[1]),
 						CaptureLength:  96,
 						InterfaceIndex: 0,
 						AncillaryData:  []interface{}{layers.LinkTypeEthernet},
 					},
 				},
 				{
-					data: packetSource[2][:96],
+					data: ngPacketSource[2][:96],
 					ci: gopacket.CaptureInfo{
 						Timestamp:      time.Unix(0, 0x4c39764ca47aa*1000+3000*1000).UTC(),
-						Length:         len(packetSource[2]),
+						Length:         len(ngPacketSource[2]),
 						CaptureLength:  96,
 						InterfaceIndex: 0,
 						AncillaryData:  []interface{}{layers.LinkTypeEthernet},
 					},
 				},
 				{
-					data: packetSource[3][:96],
+					data: ngPacketSource[3][:96],
 					ci: gopacket.CaptureInfo{
 						Timestamp:      time.Unix(0, 0x4c39764ca47aa*1000+4000*1000).UTC(),
-						Length:         len(packetSource[3]),
+						Length:         len(ngPacketSource[3]),
 						CaptureLength:  96,
 						InterfaceIndex: 0,
 						AncillaryData:  []interface{}{layers.LinkTypeEthernet},
@@ -604,15 +604,15 @@ func TestPcapngFileRead(t *testing.T) {
 		{
 			testName: "test007",
 			linkType: layers.LinkTypeEthernet,
-			sections: []fileReadTestSection{
+			sections: []ngFileReadTestSection{
 				{
-					sectionInfo: SectionInfo{
+					sectionInfo: NgSectionInfo{
 						Hardware:    "Apple MBP",
 						OS:          "OS-X 10.10.5",
 						Application: "pcap_writer.lua",
 						Comment:     "test007",
 					},
-					ifaces: []Interface{
+					ifaces: []NgInterface{
 						{
 							LinkType:   layers.LinkTypeEthernet,
 							SnapLength: 96,
@@ -621,12 +621,12 @@ func TestPcapngFileRead(t *testing.T) {
 					},
 				},
 			},
-			packets: []fileReadTestPacket{
+			packets: []ngFileReadTestPacket{
 				{
-					data: packetSource[0][:96],
+					data: ngPacketSource[0][:96],
 					ci: gopacket.CaptureInfo{
 						Timestamp:      time.Unix(0, 0x4c39764ca47aa*1000).UTC(),
-						Length:         len(packetSource[0]),
+						Length:         len(ngPacketSource[0]),
 						CaptureLength:  96,
 						InterfaceIndex: 0,
 					},
@@ -636,15 +636,15 @@ func TestPcapngFileRead(t *testing.T) {
 		{
 			testName: "test008",
 			linkType: layers.LinkTypeEthernet,
-			sections: []fileReadTestSection{
+			sections: []ngFileReadTestSection{
 				{
-					sectionInfo: SectionInfo{
+					sectionInfo: NgSectionInfo{
 						Hardware:    "Apple MBP",
 						OS:          "OS-X 10.10.5",
 						Application: "pcap_writer.lua",
 						Comment:     "test008",
 					},
-					ifaces: []Interface{
+					ifaces: []NgInterface{
 						{
 							LinkType:            layers.LinkTypeEthernet,
 							SnapLength:          96,
@@ -668,39 +668,39 @@ func TestPcapngFileRead(t *testing.T) {
 					},
 				},
 			},
-			packets: []fileReadTestPacket{
+			packets: []ngFileReadTestPacket{
 				{
-					data: packetSource[0][:96],
+					data: ngPacketSource[0][:96],
 					ci: gopacket.CaptureInfo{
 						Timestamp:      time.Unix(0, 0x4c39764ca47aa).UTC(),
-						Length:         len(packetSource[0]),
+						Length:         len(ngPacketSource[0]),
 						CaptureLength:  96,
 						InterfaceIndex: 0,
 					},
 				},
 				{
-					data: packetSource[1][:128],
+					data: ngPacketSource[1][:128],
 					ci: gopacket.CaptureInfo{
 						Timestamp:      time.Unix(0, 0x4c39764ca47aa+1000).UTC(),
-						Length:         len(packetSource[1]),
+						Length:         len(ngPacketSource[1]),
 						CaptureLength:  128,
 						InterfaceIndex: 1,
 					},
 				},
 				{
-					data: packetSource[2][:96],
+					data: ngPacketSource[2][:96],
 					ci: gopacket.CaptureInfo{
 						Timestamp:      time.Unix(0, 0x4c39764ca47aa+2000).UTC(),
-						Length:         len(packetSource[2]),
+						Length:         len(ngPacketSource[2]),
 						CaptureLength:  96,
 						InterfaceIndex: 0,
 					},
 				},
 				{
-					data: packetSource[3][:128],
+					data: ngPacketSource[3][:128],
 					ci: gopacket.CaptureInfo{
 						Timestamp:      time.Unix(0, 0x4c39764ca47aa+3000).UTC(),
-						Length:         len(packetSource[3]),
+						Length:         len(ngPacketSource[3]),
 						CaptureLength:  128,
 						InterfaceIndex: 1,
 					},
@@ -710,15 +710,15 @@ func TestPcapngFileRead(t *testing.T) {
 		{
 			testName: "test009",
 			linkType: layers.LinkTypeEthernet,
-			sections: []fileReadTestSection{
+			sections: []ngFileReadTestSection{
 				{
-					sectionInfo: SectionInfo{
+					sectionInfo: NgSectionInfo{
 						Hardware:    "Apple MBP",
 						OS:          "OS-X 10.10.5",
 						Application: "pcap_writer.lua",
 						Comment:     "test009",
 					},
-					ifaces: []Interface{
+					ifaces: []NgInterface{
 						{
 							LinkType:   layers.LinkTypeEthernet,
 							SnapLength: 0,
@@ -727,22 +727,22 @@ func TestPcapngFileRead(t *testing.T) {
 					},
 				},
 			},
-			packets: []fileReadTestPacket{
+			packets: []ngFileReadTestPacket{
 				{
-					data: packetSource[0],
+					data: ngPacketSource[0],
 					ci: gopacket.CaptureInfo{
 						Timestamp:      time.Unix(0, 0x4c39764ca47aa*1000).UTC(),
-						Length:         len(packetSource[0]),
-						CaptureLength:  len(packetSource[0]),
+						Length:         len(ngPacketSource[0]),
+						CaptureLength:  len(ngPacketSource[0]),
 						InterfaceIndex: 0,
 					},
 				},
 				{
-					data: packetSource[1],
+					data: ngPacketSource[1],
 					ci: gopacket.CaptureInfo{
 						Timestamp:      time.Unix(0, 0x4c39764ca47aa*1000+1000*1000).UTC(),
-						Length:         len(packetSource[1]),
-						CaptureLength:  len(packetSource[1]),
+						Length:         len(ngPacketSource[1]),
+						CaptureLength:  len(ngPacketSource[1]),
 						InterfaceIndex: 0,
 					},
 				},
@@ -751,15 +751,15 @@ func TestPcapngFileRead(t *testing.T) {
 		{
 			testName: "test010",
 			linkType: layers.LinkTypeEthernet,
-			sections: []fileReadTestSection{
+			sections: []ngFileReadTestSection{
 				{
-					sectionInfo: SectionInfo{
+					sectionInfo: NgSectionInfo{
 						Hardware:    "Apple MBP",
 						OS:          "OS-X 10.10.5",
 						Application: "pcap_writer.lua",
 						Comment:     "test010",
 					},
-					ifaces: []Interface{
+					ifaces: []NgInterface{
 						{
 							LinkType:   layers.LinkTypeEthernet,
 							SnapLength: 0,
@@ -768,40 +768,40 @@ func TestPcapngFileRead(t *testing.T) {
 					},
 				},
 			},
-			packets: []fileReadTestPacket{
+			packets: []ngFileReadTestPacket{
 				{
-					data: packetSource[0],
+					data: ngPacketSource[0],
 					ci: gopacket.CaptureInfo{
 						Timestamp:      time.Time{},
-						Length:         len(packetSource[0]),
-						CaptureLength:  len(packetSource[0]),
+						Length:         len(ngPacketSource[0]),
+						CaptureLength:  len(ngPacketSource[0]),
 						InterfaceIndex: 0,
 					},
 				},
 				{
-					data: packetSource[1],
+					data: ngPacketSource[1],
 					ci: gopacket.CaptureInfo{
 						Timestamp:      time.Time{},
-						Length:         len(packetSource[1]),
-						CaptureLength:  len(packetSource[1]),
+						Length:         len(ngPacketSource[1]),
+						CaptureLength:  len(ngPacketSource[1]),
 						InterfaceIndex: 0,
 					},
 				},
 				{
-					data: packetSource[2],
+					data: ngPacketSource[2],
 					ci: gopacket.CaptureInfo{
 						Timestamp:      time.Time{},
-						Length:         len(packetSource[2]),
-						CaptureLength:  len(packetSource[2]),
+						Length:         len(ngPacketSource[2]),
+						CaptureLength:  len(ngPacketSource[2]),
 						InterfaceIndex: 0,
 					},
 				},
 				{
-					data: packetSource[3],
+					data: ngPacketSource[3],
 					ci: gopacket.CaptureInfo{
 						Timestamp:      time.Time{},
-						Length:         len(packetSource[3]),
-						CaptureLength:  len(packetSource[3]),
+						Length:         len(ngPacketSource[3]),
+						CaptureLength:  len(ngPacketSource[3]),
 						InterfaceIndex: 0,
 					},
 				},
@@ -810,15 +810,15 @@ func TestPcapngFileRead(t *testing.T) {
 		{
 			testName: "test011",
 			linkType: layers.LinkTypeEthernet,
-			sections: []fileReadTestSection{
+			sections: []ngFileReadTestSection{
 				{
-					sectionInfo: SectionInfo{
+					sectionInfo: NgSectionInfo{
 						Hardware:    "Apple MBP",
 						OS:          "OS-X 10.10.5",
 						Application: "pcap_writer.lua",
 						Comment:     "test011",
 					},
-					ifaces: []Interface{
+					ifaces: []NgInterface{
 						{
 							LinkType:   layers.LinkTypeEthernet,
 							SnapLength: 0,
@@ -827,40 +827,40 @@ func TestPcapngFileRead(t *testing.T) {
 					},
 				},
 			},
-			packets: []fileReadTestPacket{
+			packets: []ngFileReadTestPacket{
 				{
-					data: packetSource[0],
+					data: ngPacketSource[0],
 					ci: gopacket.CaptureInfo{
 						Timestamp:      time.Time{},
-						Length:         len(packetSource[0]),
-						CaptureLength:  len(packetSource[0]),
+						Length:         len(ngPacketSource[0]),
+						CaptureLength:  len(ngPacketSource[0]),
 						InterfaceIndex: 0,
 					},
 				},
 				{
-					data: packetSource[1],
+					data: ngPacketSource[1],
 					ci: gopacket.CaptureInfo{
 						Timestamp:      time.Unix(0, 0x4c39764ca47aa*1000).UTC(),
-						Length:         len(packetSource[1]),
-						CaptureLength:  len(packetSource[1]),
+						Length:         len(ngPacketSource[1]),
+						CaptureLength:  len(ngPacketSource[1]),
 						InterfaceIndex: 0,
 					},
 				},
 				{
-					data: packetSource[2],
+					data: ngPacketSource[2],
 					ci: gopacket.CaptureInfo{
 						Timestamp:      time.Time{},
-						Length:         len(packetSource[2]),
-						CaptureLength:  len(packetSource[2]),
+						Length:         len(ngPacketSource[2]),
+						CaptureLength:  len(ngPacketSource[2]),
 						InterfaceIndex: 0,
 					},
 				},
 				{
-					data: packetSource[3],
+					data: ngPacketSource[3],
 					ci: gopacket.CaptureInfo{
 						Timestamp:      time.Unix(0, 0x4c39764ca47aa*1000+1000*2000).UTC(),
-						Length:         len(packetSource[3]),
-						CaptureLength:  len(packetSource[3]),
+						Length:         len(ngPacketSource[3]),
+						CaptureLength:  len(ngPacketSource[3]),
 						InterfaceIndex: 0,
 					},
 				},
@@ -869,15 +869,15 @@ func TestPcapngFileRead(t *testing.T) {
 		{
 			testName: "test012",
 			linkType: layers.LinkTypeEthernet,
-			sections: []fileReadTestSection{
+			sections: []ngFileReadTestSection{
 				{
-					sectionInfo: SectionInfo{
+					sectionInfo: NgSectionInfo{
 						Hardware:    "Apple MBP",
 						OS:          "OS-X 10.10.5",
 						Application: "pcap_writer.lua",
 						Comment:     "test012",
 					},
-					ifaces: []Interface{
+					ifaces: []NgInterface{
 						{
 							LinkType:   layers.LinkTypeEthernet,
 							SnapLength: 315,
@@ -886,39 +886,39 @@ func TestPcapngFileRead(t *testing.T) {
 					},
 				},
 			},
-			packets: []fileReadTestPacket{
+			packets: []ngFileReadTestPacket{
 				{
-					data: packetSource[0],
+					data: ngPacketSource[0],
 					ci: gopacket.CaptureInfo{
 						Timestamp:      time.Time{},
-						Length:         len(packetSource[0]),
-						CaptureLength:  len(packetSource[0]),
+						Length:         len(ngPacketSource[0]),
+						CaptureLength:  len(ngPacketSource[0]),
 						InterfaceIndex: 0,
 					},
 				},
 				{
-					data: packetSource[1][:315],
+					data: ngPacketSource[1][:315],
 					ci: gopacket.CaptureInfo{
 						Timestamp:      time.Time{},
-						Length:         len(packetSource[1]),
+						Length:         len(ngPacketSource[1]),
 						CaptureLength:  315,
 						InterfaceIndex: 0,
 					},
 				},
 				{
-					data: packetSource[2],
+					data: ngPacketSource[2],
 					ci: gopacket.CaptureInfo{
 						Timestamp:      time.Unix(0, 0).UTC(),
-						Length:         len(packetSource[2]),
-						CaptureLength:  len(packetSource[2]),
+						Length:         len(ngPacketSource[2]),
+						CaptureLength:  len(ngPacketSource[2]),
 						InterfaceIndex: 0,
 					},
 				},
 				{
-					data: packetSource[3][:315],
+					data: ngPacketSource[3][:315],
 					ci: gopacket.CaptureInfo{
 						Timestamp:      time.Unix(0, 0).UTC(),
-						Length:         len(packetSource[3]),
+						Length:         len(ngPacketSource[3]),
 						CaptureLength:  315,
 						InterfaceIndex: 0,
 					},
@@ -928,25 +928,25 @@ func TestPcapngFileRead(t *testing.T) {
 		{
 			testName: "test013",
 			linkType: layers.LinkTypeEthernet,
-			sections: []fileReadTestSection{
+			sections: []ngFileReadTestSection{
 				{
-					sectionInfo: SectionInfo{
+					sectionInfo: NgSectionInfo{
 						Hardware:    "Apple MBP",
 						OS:          "OS-X 10.10.5",
 						Application: "pcap_writer.lua",
 						Comment:     "test013",
 					},
-					ifaces: []Interface{
+					ifaces: []NgInterface{
 						{
 							LinkType:   layers.LinkTypeEthernet,
 							SnapLength: 96,
 							Name:       "silly ethernet interface",
-							Statistics: InterfaceStatistics{
+							Statistics: NgInterfaceStatistics{
 								LastUpdate:      time.Unix(0, 0).UTC(),
 								StartTime:       time.Unix(0, 0x4c39764ca47aa*1000).UTC(),
 								EndTime:         time.Unix(0, 0x4c39764ca47aa*1000+1000*1000).UTC(),
 								PacketsDropped:  10,
-								PacketsReceived: NoValue64,
+								PacketsReceived: NgNoValue64,
 							},
 						},
 					},
@@ -956,49 +956,49 @@ func TestPcapngFileRead(t *testing.T) {
 		{
 			testName:          "test014",
 			wantMixedLinkType: true,
-			sections: []fileReadTestSection{
+			sections: []ngFileReadTestSection{
 				{
-					sectionInfo: SectionInfo{
+					sectionInfo: NgSectionInfo{
 						Hardware:    "Apple MBP",
 						OS:          "OS-X 10.10.5",
 						Application: "pcap_writer.lua",
 						Comment:     "test014",
 					},
-					ifaces: []Interface{
+					ifaces: []NgInterface{
 						{
 							LinkType:   layers.LinkTypeEthernet,
 							SnapLength: 96,
 							Name:       "eth0",
-							Statistics: InterfaceStatistics{
+							Statistics: NgInterfaceStatistics{
 								LastUpdate:      time.Unix(0, 0x4c39764ca47aa*1000).UTC(),
 								StartTime:       time.Unix(0, 0x4c39764ca47aa*1000).UTC(),
 								EndTime:         time.Unix(0, 0x4c39764ca47aa*1000+1000*1000).UTC(),
 								PacketsDropped:  10,
-								PacketsReceived: NoValue64,
+								PacketsReceived: NgNoValue64,
 							},
 						},
 						{
 							LinkType:   layers.LinkTypeNull,
 							SnapLength: 0,
 							Name:       "null1",
-							Statistics: InterfaceStatistics{
+							Statistics: NgInterfaceStatistics{
 								LastUpdate:      time.Unix(0, 0x4c39764ca47aa*1000).UTC(),
 								StartTime:       time.Unix(0, 0x4c39764ca47aa*1000).UTC(),
 								EndTime:         time.Unix(0, 0x4c39764ca47aa*1000+1000*1000).UTC(),
 								PacketsDropped:  10,
-								PacketsReceived: NoValue64,
+								PacketsReceived: NgNoValue64,
 							},
 						},
 						{
 							LinkType:   layers.LinkTypeEthernet,
 							SnapLength: 128,
 							Name:       "silly ethernet interface 2",
-							Statistics: InterfaceStatistics{
+							Statistics: NgInterfaceStatistics{
 								LastUpdate:      time.Unix(0, 0x4c39764ca47aa*1000).UTC(),
 								StartTime:       time.Unix(0, 0x4c39764ca47aa*1000).UTC(),
 								EndTime:         time.Unix(0, 0x4c39764ca47aa*1000+1000*1000).UTC(),
 								PacketsDropped:  10,
-								PacketsReceived: NoValue64,
+								PacketsReceived: NgNoValue64,
 								Comment:         "test014 ISB",
 							},
 						},
@@ -1009,15 +1009,15 @@ func TestPcapngFileRead(t *testing.T) {
 		{
 			testName: "test015",
 			linkType: layers.LinkTypeEthernet,
-			sections: []fileReadTestSection{
+			sections: []ngFileReadTestSection{
 				{
-					sectionInfo: SectionInfo{
+					sectionInfo: NgSectionInfo{
 						Hardware:    "Apple MBP",
 						OS:          "OS-X 10.10.5",
 						Application: "pcap_writer.lua",
 						Comment:     "test015",
 					},
-					ifaces: []Interface{
+					ifaces: []NgInterface{
 						{
 							LinkType:   layers.LinkTypeEthernet,
 							SnapLength: 96,
@@ -1031,15 +1031,15 @@ func TestPcapngFileRead(t *testing.T) {
 		{
 			testName: "test016",
 			linkType: layers.LinkTypeEthernet,
-			sections: []fileReadTestSection{
+			sections: []ngFileReadTestSection{
 				{
-					sectionInfo: SectionInfo{
+					sectionInfo: NgSectionInfo{
 						Hardware:    "Apple MBP",
 						OS:          "OS-X 10.10.5",
 						Application: "pcap_writer.lua",
 						Comment:     "test016",
 					},
-					ifaces: []Interface{
+					ifaces: []NgInterface{
 						{
 							LinkType:   layers.LinkTypeEthernet,
 							SnapLength: 0,
@@ -1048,40 +1048,40 @@ func TestPcapngFileRead(t *testing.T) {
 					},
 				},
 			},
-			packets: []fileReadTestPacket{
+			packets: []ngFileReadTestPacket{
 				{
-					data: packetSource[0],
+					data: ngPacketSource[0],
 					ci: gopacket.CaptureInfo{
 						Timestamp:      time.Time{},
-						Length:         len(packetSource[0]),
-						CaptureLength:  len(packetSource[0]),
+						Length:         len(ngPacketSource[0]),
+						CaptureLength:  len(ngPacketSource[0]),
 						InterfaceIndex: 0,
 					},
 				},
 				{
-					data: packetSource[1],
+					data: ngPacketSource[1],
 					ci: gopacket.CaptureInfo{
 						Timestamp:      time.Unix(0, 0x4c39764ca47aa*1000).UTC(),
-						Length:         len(packetSource[1]),
-						CaptureLength:  len(packetSource[1]),
+						Length:         len(ngPacketSource[1]),
+						CaptureLength:  len(ngPacketSource[1]),
 						InterfaceIndex: 0,
 					},
 				},
 				{
-					data: packetSource[2],
+					data: ngPacketSource[2],
 					ci: gopacket.CaptureInfo{
 						Timestamp:      time.Time{},
-						Length:         len(packetSource[2]),
-						CaptureLength:  len(packetSource[2]),
+						Length:         len(ngPacketSource[2]),
+						CaptureLength:  len(ngPacketSource[2]),
 						InterfaceIndex: 0,
 					},
 				},
 				{
-					data: packetSource[3],
+					data: ngPacketSource[3],
 					ci: gopacket.CaptureInfo{
 						Timestamp:      time.Unix(0, 0x4c39764ca47aa*1000+1000*2000).UTC(),
-						Length:         len(packetSource[3]),
-						CaptureLength:  len(packetSource[3]),
+						Length:         len(ngPacketSource[3]),
+						CaptureLength:  len(ngPacketSource[3]),
 						InterfaceIndex: 0,
 					},
 				},
@@ -1090,9 +1090,9 @@ func TestPcapngFileRead(t *testing.T) {
 		{
 			testName:          "test017",
 			wantMixedLinkType: true,
-			sections: []fileReadTestSection{
+			sections: []ngFileReadTestSection{
 				{
-					sectionInfo: SectionInfo{
+					sectionInfo: NgSectionInfo{
 						Hardware:    "Apple MBP",
 						OS:          "OS-X 10.10.5",
 						Application: "pcap_writer.lua",
@@ -1104,15 +1104,15 @@ func TestPcapngFileRead(t *testing.T) {
 		{
 			testName: "test018",
 			linkType: layers.LinkTypeEthernet,
-			sections: []fileReadTestSection{
+			sections: []ngFileReadTestSection{
 				{
-					sectionInfo: SectionInfo{
+					sectionInfo: NgSectionInfo{
 						Hardware:    "Apple MBP",
 						OS:          "OS-X 10.10.5",
 						Application: "pcap_writer.lua",
 						Comment:     "test018",
 					},
-					ifaces: []Interface{
+					ifaces: []NgInterface{
 						{
 							LinkType:   layers.LinkTypeEthernet,
 							SnapLength: 0,
@@ -1121,40 +1121,40 @@ func TestPcapngFileRead(t *testing.T) {
 					},
 				},
 			},
-			packets: []fileReadTestPacket{
+			packets: []ngFileReadTestPacket{
 				{
-					data: packetSource[0],
+					data: ngPacketSource[0],
 					ci: gopacket.CaptureInfo{
 						Timestamp:      time.Time{},
-						Length:         len(packetSource[0]),
-						CaptureLength:  len(packetSource[0]),
+						Length:         len(ngPacketSource[0]),
+						CaptureLength:  len(ngPacketSource[0]),
 						InterfaceIndex: 0,
 					},
 				},
 				{
-					data: packetSource[1],
+					data: ngPacketSource[1],
 					ci: gopacket.CaptureInfo{
 						Timestamp:      time.Unix(0, 0x4c39764ca47aa*1000).UTC(),
-						Length:         len(packetSource[1]),
-						CaptureLength:  len(packetSource[1]),
+						Length:         len(ngPacketSource[1]),
+						CaptureLength:  len(ngPacketSource[1]),
 						InterfaceIndex: 0,
 					},
 				},
 				{
-					data: packetSource[2],
+					data: ngPacketSource[2],
 					ci: gopacket.CaptureInfo{
 						Timestamp:      time.Time{},
-						Length:         len(packetSource[2]),
-						CaptureLength:  len(packetSource[2]),
+						Length:         len(ngPacketSource[2]),
+						CaptureLength:  len(ngPacketSource[2]),
 						InterfaceIndex: 0,
 					},
 				},
 				{
-					data: packetSource[3],
+					data: ngPacketSource[3],
 					ci: gopacket.CaptureInfo{
 						Timestamp:      time.Unix(0, 0x4c39764ca47aa*1000+1000*2000).UTC(),
-						Length:         len(packetSource[3]),
-						CaptureLength:  len(packetSource[3]),
+						Length:         len(ngPacketSource[3]),
+						CaptureLength:  len(ngPacketSource[3]),
 						InterfaceIndex: 0,
 					},
 				},
@@ -1163,15 +1163,15 @@ func TestPcapngFileRead(t *testing.T) {
 		{
 			testName: "test100",
 			linkType: layers.LinkTypeEthernet,
-			sections: []fileReadTestSection{
+			sections: []ngFileReadTestSection{
 				{
-					sectionInfo: SectionInfo{
+					sectionInfo: NgSectionInfo{
 						Hardware:    "Apple MBP",
 						OS:          "OS-X 10.10.5",
 						Application: "pcap_writer.lua",
 						Comment:     "test100",
 					},
-					ifaces: []Interface{
+					ifaces: []NgInterface{
 						{
 							LinkType:   layers.LinkTypeEthernet,
 							SnapLength: 0,
@@ -1190,40 +1190,40 @@ func TestPcapngFileRead(t *testing.T) {
 					},
 				},
 			},
-			packets: []fileReadTestPacket{
+			packets: []ngFileReadTestPacket{
 				{
-					data: packetSource[0],
+					data: ngPacketSource[0],
 					ci: gopacket.CaptureInfo{
 						Timestamp:      time.Time{},
-						Length:         len(packetSource[0]),
-						CaptureLength:  len(packetSource[0]),
+						Length:         len(ngPacketSource[0]),
+						CaptureLength:  len(ngPacketSource[0]),
 						InterfaceIndex: 0,
 					},
 				},
 				{
-					data: packetSource[1],
+					data: ngPacketSource[1],
 					ci: gopacket.CaptureInfo{
 						Timestamp:      time.Unix(0, 0x4c39764ca47aa*1000).UTC(),
-						Length:         len(packetSource[1]),
-						CaptureLength:  len(packetSource[1]),
+						Length:         len(ngPacketSource[1]),
+						CaptureLength:  len(ngPacketSource[1]),
 						InterfaceIndex: 0,
 					},
 				},
 				{
-					data: packetSource[2],
+					data: ngPacketSource[2],
 					ci: gopacket.CaptureInfo{
 						Timestamp:      time.Time{},
-						Length:         len(packetSource[2]),
-						CaptureLength:  len(packetSource[2]),
+						Length:         len(ngPacketSource[2]),
+						CaptureLength:  len(ngPacketSource[2]),
 						InterfaceIndex: 0,
 					},
 				},
 				{
-					data: packetSource[3],
+					data: ngPacketSource[3],
 					ci: gopacket.CaptureInfo{
 						Timestamp:      time.Unix(0, 0x4c39764ca47aa*1000+1000*2000).UTC(),
-						Length:         len(packetSource[3]),
-						CaptureLength:  len(packetSource[3]),
+						Length:         len(ngPacketSource[3]),
+						CaptureLength:  len(ngPacketSource[3]),
 						InterfaceIndex: 0,
 					},
 				},
@@ -1232,75 +1232,75 @@ func TestPcapngFileRead(t *testing.T) {
 		{
 			testName: "test101",
 			linkType: layers.LinkTypeEthernet,
-			sections: []fileReadTestSection{
+			sections: []ngFileReadTestSection{
 				{
-					sectionInfo: SectionInfo{
+					sectionInfo: NgSectionInfo{
 						Hardware:    "Apple MBP",
 						OS:          "OS-X 10.10.5",
 						Application: "pcap_writer.lua",
 						Comment:     "test101",
 					},
-					ifaces: []Interface{
+					ifaces: []NgInterface{
 						{
 							LinkType:   layers.LinkTypeEthernet,
 							SnapLength: 96,
 							Name:       "eth0",
-							Statistics: InterfaceStatistics{
+							Statistics: NgInterfaceStatistics{
 								LastUpdate:      time.Unix(0, 0).UTC(),
-								PacketsDropped:  NoValue64,
-								PacketsReceived: NoValue64,
+								PacketsDropped:  NgNoValue64,
+								PacketsReceived: NgNoValue64,
 							},
 						},
 						{
 							LinkType:   layers.LinkTypeNull,
 							SnapLength: 0,
 							Name:       "null1",
-							Statistics: InterfaceStatistics{
+							Statistics: NgInterfaceStatistics{
 								LastUpdate:      time.Unix(0, 0x4c39764ca47aa*1000-1000*1000).UTC(),
-								PacketsDropped:  NoValue64,
-								PacketsReceived: NoValue64,
+								PacketsDropped:  NgNoValue64,
+								PacketsReceived: NgNoValue64,
 							},
 						},
 						{
 							LinkType:   layers.LinkTypeEthernet,
 							SnapLength: 128,
 							Name:       "silly ethernet interface 2",
-							Statistics: InterfaceStatistics{
+							Statistics: NgInterfaceStatistics{
 								LastUpdate:      time.Unix(0, 0x4c39764ca47aa*1000+1000*1000).UTC(),
 								StartTime:       time.Unix(0, 0x4c39764ca47aa*1000).UTC(),
 								EndTime:         time.Unix(0, 0x4c39764ca47aa*1000+1000*1000).UTC(),
 								PacketsDropped:  10,
-								PacketsReceived: NoValue64,
+								PacketsReceived: NgNoValue64,
 								Comment:         "test101 ISB-2",
 							},
 						},
 					},
 				},
 			},
-			packets: []fileReadTestPacket{
+			packets: []ngFileReadTestPacket{
 				{
-					data: packetSource[0][:96],
+					data: ngPacketSource[0][:96],
 					ci: gopacket.CaptureInfo{
 						Timestamp:      time.Unix(0, 0x4c39764ca47aa*1000).UTC(),
-						Length:         len(packetSource[0]),
+						Length:         len(ngPacketSource[0]),
 						CaptureLength:  96,
 						InterfaceIndex: 0,
 					},
 				},
 				{
-					data: packetSource[1][:128],
+					data: ngPacketSource[1][:128],
 					ci: gopacket.CaptureInfo{
 						Timestamp:      time.Unix(0, 0x4c39764ca47aa*1000).UTC(),
-						Length:         len(packetSource[1]),
+						Length:         len(ngPacketSource[1]),
 						CaptureLength:  128,
 						InterfaceIndex: 2,
 					},
 				},
 				{
-					data: packetSource[2][:96],
+					data: ngPacketSource[2][:96],
 					ci: gopacket.CaptureInfo{
 						Timestamp:      time.Time{},
-						Length:         len(packetSource[2]),
+						Length:         len(ngPacketSource[2]),
 						CaptureLength:  96,
 						InterfaceIndex: 0,
 					},
@@ -1310,84 +1310,84 @@ func TestPcapngFileRead(t *testing.T) {
 		{
 			testName: "test102",
 			linkType: layers.LinkTypeEthernet,
-			sections: []fileReadTestSection{
+			sections: []ngFileReadTestSection{
 				{
-					sectionInfo: SectionInfo{
+					sectionInfo: NgSectionInfo{
 						Hardware:    "Apple MBP",
 						OS:          "OS-X 10.10.5",
 						Application: "pcap_writer.lua",
 						Comment:     "test102",
 					},
-					ifaces: []Interface{
+					ifaces: []NgInterface{
 						{
 							LinkType:   layers.LinkTypeEthernet,
 							SnapLength: 96,
 							Name:       "eth0",
-							Statistics: InterfaceStatistics{
+							Statistics: NgInterfaceStatistics{
 								LastUpdate:      time.Unix(0, 0).UTC(),
-								PacketsDropped:  NoValue64,
-								PacketsReceived: NoValue64,
+								PacketsDropped:  NgNoValue64,
+								PacketsReceived: NgNoValue64,
 							},
 						},
 						{
 							LinkType:   layers.LinkTypeNull,
 							SnapLength: 0,
 							Name:       "null1",
-							Statistics: InterfaceStatistics{
+							Statistics: NgInterfaceStatistics{
 								LastUpdate:      time.Unix(0, 0x4c39764ca47aa*1000-1000*1000).UTC(),
-								PacketsDropped:  NoValue64,
-								PacketsReceived: NoValue64,
+								PacketsDropped:  NgNoValue64,
+								PacketsReceived: NgNoValue64,
 							},
 						},
 						{
 							LinkType:   layers.LinkTypeEthernet,
 							SnapLength: 0,
 							Name:       "silly!\r\nethernet interface 2",
-							Statistics: InterfaceStatistics{
+							Statistics: NgInterfaceStatistics{
 								LastUpdate:      time.Unix(0, 0x4c39764ca47aa*1000+1000*1000).UTC(),
 								StartTime:       time.Unix(0, 0x4c39764ca47aa*1000).UTC(),
 								EndTime:         time.Unix(0, 0x4c39764ca47aa*1000+1000*1000).UTC(),
 								PacketsDropped:  10,
-								PacketsReceived: NoValue64,
+								PacketsReceived: NgNoValue64,
 								Comment:         "test102 ISB-2",
 							},
 						},
 					},
 				},
 			},
-			packets: []fileReadTestPacket{
+			packets: []ngFileReadTestPacket{
 				{
-					data: packetSource[0][:96],
+					data: ngPacketSource[0][:96],
 					ci: gopacket.CaptureInfo{
 						Timestamp:      time.Unix(0, 0x4c39764ca47aa*1000).UTC(),
-						Length:         len(packetSource[0]),
+						Length:         len(ngPacketSource[0]),
 						CaptureLength:  96,
 						InterfaceIndex: 0,
 					},
 				},
 				{
-					data: packetSource[1],
+					data: ngPacketSource[1],
 					ci: gopacket.CaptureInfo{
 						Timestamp:      time.Unix(0, 0x4c39764ca47aa*1000).UTC(),
-						Length:         len(packetSource[1]),
-						CaptureLength:  len(packetSource[1]),
+						Length:         len(ngPacketSource[1]),
+						CaptureLength:  len(ngPacketSource[1]),
 						InterfaceIndex: 2,
 					},
 				},
 				{
-					data: packetSource[2][:96],
+					data: ngPacketSource[2][:96],
 					ci: gopacket.CaptureInfo{
 						Timestamp:      time.Time{},
-						Length:         len(packetSource[2]),
+						Length:         len(ngPacketSource[2]),
 						CaptureLength:  96,
 						InterfaceIndex: 0,
 					},
 				},
 				{
-					data: packetSource[3][:96],
+					data: ngPacketSource[3][:96],
 					ci: gopacket.CaptureInfo{
 						Timestamp:      time.Unix(0, 0x4c39764ca47aa*1000+2000*1000).UTC(),
-						Length:         len(packetSource[3]),
+						Length:         len(ngPacketSource[3]),
 						CaptureLength:  96,
 						InterfaceIndex: 0,
 					},
@@ -1397,15 +1397,15 @@ func TestPcapngFileRead(t *testing.T) {
 		{
 			testName: "test200",
 			linkType: layers.LinkTypeEthernet,
-			sections: []fileReadTestSection{
+			sections: []ngFileReadTestSection{
 				{
-					sectionInfo: SectionInfo{
+					sectionInfo: NgSectionInfo{
 						Hardware:    "Apple MBP",
 						OS:          "OS-X 10.10.5",
 						Application: "pcap_writer.lua",
 						Comment:     "test200",
 					},
-					ifaces: []Interface{
+					ifaces: []NgInterface{
 						{
 							LinkType:   layers.LinkTypeEthernet,
 							SnapLength: 96,
@@ -1414,13 +1414,13 @@ func TestPcapngFileRead(t *testing.T) {
 					},
 				},
 				{
-					sectionInfo: SectionInfo{
+					sectionInfo: NgSectionInfo{
 						Hardware:    "Apple MBP",
 						OS:          "OS-X 10.10.5",
 						Application: "pcap_writer.lua",
 						Comment:     "test200",
 					},
-					ifaces: []Interface{
+					ifaces: []NgInterface{
 						{
 							LinkType:   layers.LinkTypeEthernet,
 							SnapLength: 0,
@@ -1429,13 +1429,13 @@ func TestPcapngFileRead(t *testing.T) {
 					},
 				},
 				{
-					sectionInfo: SectionInfo{
+					sectionInfo: NgSectionInfo{
 						Hardware:    "Apple MBP",
 						OS:          "OS-X 10.10.5",
 						Application: "pcap_writer.lua",
 						Comment:     "test200",
 					},
-					ifaces: []Interface{
+					ifaces: []NgInterface{
 						{
 							LinkType:   layers.LinkTypeNull,
 							SnapLength: 128,
@@ -1448,15 +1448,15 @@ func TestPcapngFileRead(t *testing.T) {
 		{
 			testName: "test201",
 			linkType: layers.LinkTypeEthernet,
-			sections: []fileReadTestSection{
+			sections: []ngFileReadTestSection{
 				{
-					sectionInfo: SectionInfo{
+					sectionInfo: NgSectionInfo{
 						Hardware:    "Apple MBP",
 						OS:          "OS-X 10.10.5",
 						Application: "pcap_writer.lua",
 						Comment:     "test201 SHB-0",
 					},
-					ifaces: []Interface{
+					ifaces: []NgInterface{
 						{
 							LinkType:   layers.LinkTypeEthernet,
 							SnapLength: 96,
@@ -1466,53 +1466,53 @@ func TestPcapngFileRead(t *testing.T) {
 							LinkType:   layers.LinkTypeNull,
 							SnapLength: 0,
 							Name:       "null1",
-							Statistics: InterfaceStatistics{
+							Statistics: NgInterfaceStatistics{
 								LastUpdate:      time.Unix(0, 0x4c39764ca47aa*1000).UTC(),
-								PacketsDropped:  NoValue64,
-								PacketsReceived: NoValue64,
+								PacketsDropped:  NgNoValue64,
+								PacketsReceived: NgNoValue64,
 							},
 						},
 					},
 				},
 				{
-					sectionInfo: SectionInfo{
+					sectionInfo: NgSectionInfo{
 						Hardware:    "Apple MBP",
 						OS:          "OS-X 10.10.5",
 						Application: "pcap_writer.lua",
 						Comment:     "test201 SHB-1",
 					},
-					ifaces: []Interface{
+					ifaces: []NgInterface{
 						{
 							LinkType:   layers.LinkTypeEthernet,
 							SnapLength: 128,
 							Name:       "silly ethernet interface 2",
-							Statistics: InterfaceStatistics{
+							Statistics: NgInterfaceStatistics{
 								LastUpdate:      time.Unix(0, 0x4c39764ca47aa*1000+1000*1000).UTC(),
 								StartTime:       time.Unix(0, 0x4c39764ca47aa*1000).UTC(),
 								EndTime:         time.Unix(0, 0x4c39764ca47aa*1000+1000*1000).UTC(),
 								PacketsDropped:  10,
-								PacketsReceived: NoValue64,
+								PacketsReceived: NgNoValue64,
 								Comment:         "test201 ISB-2",
 							},
 						},
 					},
 				},
 				{
-					sectionInfo: SectionInfo{
+					sectionInfo: NgSectionInfo{
 						Hardware:    "Apple MBP",
 						OS:          "OS-X 10.10.5",
 						Application: "pcap_writer.lua",
 						Comment:     "test201 SHB-2",
 					},
-					ifaces: []Interface{
+					ifaces: []NgInterface{
 						{
 							LinkType:   layers.LinkTypeEthernet,
 							SnapLength: 96,
 							Name:       "eth0",
-							Statistics: InterfaceStatistics{
+							Statistics: NgInterfaceStatistics{
 								LastUpdate:      time.Unix(0, 0).UTC(),
-								PacketsDropped:  NoValue64,
-								PacketsReceived: NoValue64,
+								PacketsDropped:  NgNoValue64,
+								PacketsReceived: NgNoValue64,
 							},
 						},
 						{
@@ -1523,30 +1523,30 @@ func TestPcapngFileRead(t *testing.T) {
 					},
 				},
 			},
-			packets: []fileReadTestPacket{
+			packets: []ngFileReadTestPacket{
 				{
-					data: packetSource[0][:96],
+					data: ngPacketSource[0][:96],
 					ci: gopacket.CaptureInfo{
 						Timestamp:      time.Unix(0, 0x4c39764ca47aa*1000).UTC(),
-						Length:         len(packetSource[0]),
+						Length:         len(ngPacketSource[0]),
 						CaptureLength:  96,
 						InterfaceIndex: 0,
 					},
 				},
 				{
-					data: packetSource[1][:128],
+					data: ngPacketSource[1][:128],
 					ci: gopacket.CaptureInfo{
 						Timestamp:      time.Unix(0, 0x4c39764ca47aa*1000).UTC(),
-						Length:         len(packetSource[1]),
+						Length:         len(ngPacketSource[1]),
 						CaptureLength:  128,
 						InterfaceIndex: 0,
 					},
 				},
 				{
-					data: packetSource[2][:128],
+					data: ngPacketSource[2][:128],
 					ci: gopacket.CaptureInfo{
 						Timestamp:      time.Time{},
-						Length:         len(packetSource[2]),
+						Length:         len(ngPacketSource[2]),
 						CaptureLength:  128,
 						InterfaceIndex: 0,
 					},
@@ -1556,15 +1556,15 @@ func TestPcapngFileRead(t *testing.T) {
 		{
 			testName: "test202",
 			linkType: layers.LinkTypeEthernet,
-			sections: []fileReadTestSection{
+			sections: []ngFileReadTestSection{
 				{
-					sectionInfo: SectionInfo{
+					sectionInfo: NgSectionInfo{
 						Hardware:    "Apple MBP",
 						OS:          "OS-X 10.10.5",
 						Application: "pcap_writer.lua",
 						Comment:     "test202 SHB-0",
 					},
-					ifaces: []Interface{
+					ifaces: []NgInterface{
 						{
 							LinkType:   layers.LinkTypeEthernet,
 							SnapLength: 96,
@@ -1574,50 +1574,50 @@ func TestPcapngFileRead(t *testing.T) {
 							LinkType:   layers.LinkTypeNull,
 							SnapLength: 0,
 							Name:       "null1",
-							Statistics: InterfaceStatistics{
+							Statistics: NgInterfaceStatistics{
 								LastUpdate:      time.Unix(0, 0x4c39764ca47aa*1000).UTC(),
-								PacketsDropped:  NoValue64,
-								PacketsReceived: NoValue64,
+								PacketsDropped:  NgNoValue64,
+								PacketsReceived: NgNoValue64,
 							},
 						},
 					},
 				},
 				{
-					sectionInfo: SectionInfo{
+					sectionInfo: NgSectionInfo{
 						Hardware:    "Apple MBP",
 						OS:          "OS-X 10.10.5",
 						Application: "pcap_writer.lua",
 						Comment:     "test202 SHB-1",
 					},
-					ifaces: []Interface{
+					ifaces: []NgInterface{
 						{
 							LinkType:   layers.LinkTypeEthernet,
 							SnapLength: 128,
 							Name:       "silly ethernet interface 2",
-							Statistics: InterfaceStatistics{
+							Statistics: NgInterfaceStatistics{
 								LastUpdate:      time.Unix(0, 0x4c39764ca47aa*1000+1000*1000).UTC(),
 								StartTime:       time.Unix(0, 0x4c39764ca47aa*1000).UTC(),
 								EndTime:         time.Unix(0, 0x4c39764ca47aa*1000+1000*1000).UTC(),
 								PacketsDropped:  10,
-								PacketsReceived: NoValue64,
+								PacketsReceived: NgNoValue64,
 								Comment:         "test202 ISB-2",
 							},
 						},
 					},
 				},
 				{
-					sectionInfo: SectionInfo{
+					sectionInfo: NgSectionInfo{
 						Hardware:    "Apple MBP",
 						OS:          "OS-X 10.10.5",
 						Application: "pcap_writer.lua",
 						Comment:     "test202 SHB-2",
 					},
-					ifaces: []Interface{
+					ifaces: []NgInterface{
 						{
 							LinkType:   layers.LinkTypeEthernet,
 							SnapLength: 96,
 							Name:       "eth0",
-							Statistics: InterfaceStatistics{
+							Statistics: NgInterfaceStatistics{
 								LastUpdate:      time.Unix(0, 0).UTC(),
 								StartTime:       time.Unix(0, 0x4c39764ca47aa*1000).UTC(),
 								EndTime:         time.Unix(0, 0x4c39764ca47aa*1000+1000*1000).UTC(),
@@ -1634,57 +1634,57 @@ func TestPcapngFileRead(t *testing.T) {
 					},
 				},
 			},
-			packets: []fileReadTestPacket{
+			packets: []ngFileReadTestPacket{
 				{
-					data: packetSource[0][:96],
+					data: ngPacketSource[0][:96],
 					ci: gopacket.CaptureInfo{
 						Timestamp:      time.Unix(0, 0x4c39764ca47aa*1000).UTC(),
-						Length:         len(packetSource[0]),
+						Length:         len(ngPacketSource[0]),
 						CaptureLength:  96,
 						InterfaceIndex: 0,
 					},
 				},
 				{
-					data: packetSource[1][:96],
+					data: ngPacketSource[1][:96],
 					ci: gopacket.CaptureInfo{
 						Timestamp:      time.Unix(0, 0x4c39764ca47aa*1000).UTC(),
-						Length:         len(packetSource[1]),
+						Length:         len(ngPacketSource[1]),
 						CaptureLength:  96,
 						InterfaceIndex: 0,
 					},
 				},
 				{
-					data: packetSource[0][:128],
+					data: ngPacketSource[0][:128],
 					ci: gopacket.CaptureInfo{
 						Timestamp:      time.Time{},
-						Length:         len(packetSource[0]),
+						Length:         len(ngPacketSource[0]),
 						CaptureLength:  128,
 						InterfaceIndex: 0,
 					},
 				},
 				{
-					data: packetSource[1][:128],
+					data: ngPacketSource[1][:128],
 					ci: gopacket.CaptureInfo{
 						Timestamp:      time.Unix(0, 0x4c39764ca47aa*1000).UTC(),
-						Length:         len(packetSource[1]),
+						Length:         len(ngPacketSource[1]),
 						CaptureLength:  128,
 						InterfaceIndex: 0,
 					},
 				},
 				{
-					data: packetSource[2][:128],
+					data: ngPacketSource[2][:128],
 					ci: gopacket.CaptureInfo{
 						Timestamp:      time.Time{},
-						Length:         len(packetSource[2]),
+						Length:         len(ngPacketSource[2]),
 						CaptureLength:  128,
 						InterfaceIndex: 0,
 					},
 				},
 				{
-					data: packetSource[3][:128],
+					data: ngPacketSource[3][:128],
 					ci: gopacket.CaptureInfo{
 						Timestamp:      time.Unix(0, 0x4c39764ca47aa*1000).UTC(),
-						Length:         len(packetSource[3]),
+						Length:         len(ngPacketSource[3]),
 						CaptureLength:  128,
 						InterfaceIndex: 0,
 					},
@@ -1694,15 +1694,15 @@ func TestPcapngFileRead(t *testing.T) {
 		{
 			testName: "test901",
 			linkType: layers.LinkTypeEthernet,
-			sections: []fileReadTestSection{
+			sections: []ngFileReadTestSection{
 				{
-					sectionInfo: SectionInfo{
+					sectionInfo: NgSectionInfo{
 						Hardware:    "my computer",
 						OS:          "linux",
 						Application: "pcap_writer.lua",
 						Comment:     "test901 SHB-0",
 					},
-					ifaces: []Interface{
+					ifaces: []NgInterface{
 						{
 							LinkType:   layers.LinkTypeEthernet,
 							SnapLength: 0,
@@ -1711,32 +1711,32 @@ func TestPcapngFileRead(t *testing.T) {
 					},
 				},
 			},
-			packets: []fileReadTestPacket{
+			packets: []ngFileReadTestPacket{
 				{
-					data: packetSource[0],
+					data: ngPacketSource[0],
 					ci: gopacket.CaptureInfo{
 						Timestamp:      time.Unix(0, 0x4c39764ca47aa*1000).UTC(),
-						Length:         len(packetSource[0]),
-						CaptureLength:  len(packetSource[0]),
+						Length:         len(ngPacketSource[0]),
+						CaptureLength:  len(ngPacketSource[0]),
 						InterfaceIndex: 0,
 					},
 				},
-				{err: ErrVersionMismatch},
+				{err: ErrNgVersionMismatch},
 			},
 		},
 		{
 			testName:           "test901",
 			skipUnknownVersion: true,
 			linkType:           layers.LinkTypeEthernet,
-			sections: []fileReadTestSection{
+			sections: []ngFileReadTestSection{
 				{
-					sectionInfo: SectionInfo{
+					sectionInfo: NgSectionInfo{
 						Hardware:    "my computer",
 						OS:          "linux",
 						Application: "pcap_writer.lua",
 						Comment:     "test901 SHB-0",
 					},
-					ifaces: []Interface{
+					ifaces: []NgInterface{
 						{
 							LinkType:   layers.LinkTypeEthernet,
 							SnapLength: 0,
@@ -1745,13 +1745,13 @@ func TestPcapngFileRead(t *testing.T) {
 					},
 				},
 				{
-					sectionInfo: SectionInfo{
+					sectionInfo: NgSectionInfo{
 						Hardware:    "my computer",
 						OS:          "linux",
 						Application: "pcap_writer.lua",
 						Comment:     "test901 SHB-2",
 					},
-					ifaces: []Interface{
+					ifaces: []NgInterface{
 						{
 							LinkType:   layers.LinkTypeEthernet,
 							SnapLength: 0,
@@ -1760,22 +1760,22 @@ func TestPcapngFileRead(t *testing.T) {
 					},
 				},
 			},
-			packets: []fileReadTestPacket{
+			packets: []ngFileReadTestPacket{
 				{
-					data: packetSource[0],
+					data: ngPacketSource[0],
 					ci: gopacket.CaptureInfo{
 						Timestamp:      time.Unix(0, 0x4c39764ca47aa*1000).UTC(),
-						Length:         len(packetSource[0]),
-						CaptureLength:  len(packetSource[0]),
+						Length:         len(ngPacketSource[0]),
+						CaptureLength:  len(ngPacketSource[0]),
 						InterfaceIndex: 0,
 					},
 				},
 				{
-					data: packetSource[2],
+					data: ngPacketSource[2],
 					ci: gopacket.CaptureInfo{
 						Timestamp:      time.Unix(0, 0x4c39764ca47aa*1000).UTC(),
-						Length:         len(packetSource[2]),
-						CaptureLength:  len(packetSource[2]),
+						Length:         len(ngPacketSource[2]),
+						CaptureLength:  len(ngPacketSource[2]),
 						InterfaceIndex: 0,
 					},
 				},
@@ -1784,15 +1784,15 @@ func TestPcapngFileRead(t *testing.T) {
 		{
 			testName: "test902",
 			linkType: layers.LinkTypeEthernet,
-			sections: []fileReadTestSection{
+			sections: []ngFileReadTestSection{
 				{
-					sectionInfo: SectionInfo{
+					sectionInfo: NgSectionInfo{
 						Hardware:    "my computer",
 						OS:          "linux",
 						Application: "pcap_writer.lua",
 						Comment:     "test902",
 					},
-					ifaces: []Interface{
+					ifaces: []NgInterface{
 						{
 							LinkType:            layers.LinkTypeEthernet,
 							SnapLength:          0,
@@ -1802,13 +1802,13 @@ func TestPcapngFileRead(t *testing.T) {
 					},
 				},
 			},
-			packets: []fileReadTestPacket{
+			packets: []ngFileReadTestPacket{
 				{
-					data: packetSource[0],
+					data: ngPacketSource[0],
 					ci: gopacket.CaptureInfo{
 						Timestamp:      time.Unix(1519128000, 195312500).UTC(),
-						Length:         len(packetSource[0]),
-						CaptureLength:  len(packetSource[0]),
+						Length:         len(ngPacketSource[0]),
+						CaptureLength:  len(ngPacketSource[0]),
 						InterfaceIndex: 0,
 					},
 				},
@@ -1821,42 +1821,42 @@ func TestPcapngFileRead(t *testing.T) {
 				t.Skip(test.skip)
 			}
 			t.Parallel()
-			runFileReadTest(test, "be", false, t)
+			ngRunFileReadTest(test, "be", false, t)
 		})
 		t.Run(test.testName+"/le"+test.testType, func(t *testing.T) {
 			if test.skip != "" {
 				t.Skip(test.skip)
 			}
 			t.Parallel()
-			runFileReadTest(test, "le", false, t)
+			ngRunFileReadTest(test, "le", false, t)
 		})
 		t.Run(test.testName+"/be/zerocopy"+test.testType, func(t *testing.T) {
 			if test.skip != "" {
 				t.Skip(test.skip)
 			}
 			t.Parallel()
-			runFileReadTest(test, "be", true, t)
+			ngRunFileReadTest(test, "be", true, t)
 		})
 		t.Run(test.testName+"/le/zerocopy"+test.testType, func(t *testing.T) {
 			if test.skip != "" {
 				t.Skip(test.skip)
 			}
 			t.Parallel()
-			runFileReadTest(test, "le", true, t)
+			ngRunFileReadTest(test, "le", true, t)
 		})
 	}
 }
 
-type endlessPacketReader struct {
+type endlessNgPacketReader struct {
 	packet []byte
 }
 
-func (e endlessPacketReader) Read(p []byte) (n int, err error) {
+func (e endlessNgPacketReader) Read(p []byte) (n int, err error) {
 	n = copy(p, e.packet)
 	return
 }
 
-func setupReadBenchmark(b *testing.B) *Reader {
+func setupNgReadBenchmark(b *testing.B) *NgReader {
 	header := bytes.NewBuffer([]byte{
 		0x0A, 0x0D, 0x0D, 0x0A, // Section Header
 		0, 0, 0, 28, // block total length
@@ -1873,7 +1873,7 @@ func setupReadBenchmark(b *testing.B) *Reader {
 		0, 0, 0, 20, // block total length
 	})
 
-	packet := endlessPacketReader{
+	packet := endlessNgPacketReader{
 		[]byte{
 			0, 0, 0, 6, // EPB
 			0, 0, 0, 48, // block total length
@@ -1901,7 +1901,7 @@ func setupReadBenchmark(b *testing.B) *Reader {
 	}
 	packetReader := bufio.NewReaderSize(packet, len(packet.packet))
 
-	r, err := NewReader(header, DefaultReaderOptions)
+	r, err := NewNgReader(header, DefaultNgReaderOptions)
 
 	if err != nil {
 		b.Fatal("Couldn't read header + IDB:", err)
@@ -1910,16 +1910,16 @@ func setupReadBenchmark(b *testing.B) *Reader {
 	return r
 }
 
-func BenchmarkReadPacketData(b *testing.B) {
-	r := setupReadBenchmark(b)
+func BenchmarkNgReadPacketData(b *testing.B) {
+	r := setupNgReadBenchmark(b)
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
 		_, _, _ = r.ReadPacketData()
 	}
 }
 
-func BenchmarkZeroCopyReadPacketData(b *testing.B) {
-	r := setupReadBenchmark(b)
+func BenchmarkNgZeroCopyReadPacketData(b *testing.B) {
+	r := setupNgReadBenchmark(b)
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
 		_, _, _ = r.ZeroCopyReadPacketData()
