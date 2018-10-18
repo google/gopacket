@@ -232,13 +232,14 @@ RESTART:
 
 	var section NgSectionInfo
 
+OPTIONS:
 	for {
 		if err := r.readOption(); err != nil {
 			return err
 		}
 		switch r.currentOption.code {
 		case ngOptionCodeEndOfOptions:
-			goto DONE
+			break OPTIONS
 		case ngOptionCodeComment:
 			section.Comment = string(r.currentOption.value)
 		case ngOptionCodeHardware:
@@ -249,7 +250,7 @@ RESTART:
 			section.Application = string(r.currentOption.value)
 		}
 	}
-DONE:
+
 	if _, err := r.r.Discard(int(r.currentBlock.length)); err != nil {
 		return err
 	}
@@ -330,13 +331,14 @@ func (r *NgReader) readInterfaceDescriptor() error {
 	intf.LinkType = layers.LinkType(r.getUint16(r.buf[:2]))
 	intf.SnapLength = r.getUint32(r.buf[4:8])
 
+OPTIONS:
 	for {
 		if err := r.readOption(); err != nil {
 			return err
 		}
 		switch r.currentOption.code {
 		case ngOptionCodeEndOfOptions:
-			goto DONE
+			break OPTIONS
 		case ngOptionCodeInterfaceName:
 			intf.Name = string(r.currentOption.value)
 		case ngOptionCodeComment:
@@ -354,7 +356,6 @@ func (r *NgReader) readInterfaceDescriptor() error {
 			intf.TimestampResolution = NgResolution(r.currentOption.value[0])
 		}
 	}
-DONE:
 	if _, err := r.r.Discard(int(r.currentBlock.length)); err != nil {
 		return err
 	}
@@ -405,13 +406,14 @@ func (r *NgReader) readInterfaceStatistics() error {
 	*stats = ngEmptyStatistics
 	stats.LastUpdate = time.Unix(r.convertTime(ifaceID, ts)).UTC()
 
+OPTIONS:
 	for {
 		if err := r.readOption(); err != nil {
 			return err
 		}
 		switch r.currentOption.code {
 		case ngOptionCodeEndOfOptions:
-			goto DONE
+			break OPTIONS
 		case ngOptionCodeComment:
 			stats.Comment = string(r.currentOption.value)
 		case ngOptionCodeInterfaceStatisticsStartTime:
@@ -426,7 +428,6 @@ func (r *NgReader) readInterfaceStatistics() error {
 			stats.PacketsDropped = r.getUint64(r.currentOption.value[:8])
 		}
 	}
-DONE:
 	if _, err := r.r.Discard(int(r.currentBlock.length)); err != nil {
 		return err
 	}
@@ -441,6 +442,7 @@ DONE:
 // All other block types are skipped. New block types must be added here.
 func (r *NgReader) readPacketHeader() error {
 RESTART:
+FIND_PACKET:
 	for {
 		if err := r.readBlock(); err != nil {
 			return err
@@ -458,7 +460,7 @@ RESTART:
 			r.ci.Timestamp = time.Unix(r.convertTime(r.ci.InterfaceIndex, uint64(r.getUint32(r.buf[4:8]))<<32|uint64(r.getUint32(r.buf[8:12])))).UTC()
 			r.ci.CaptureLength = int(r.getUint32(r.buf[12:16]))
 			r.ci.Length = int(r.getUint32(r.buf[16:20]))
-			goto DONE
+			break FIND_PACKET
 		case ngBlockTypeSimplePacket:
 			if err := r.readBytes(r.buf[:4]); err != nil {
 				return err
@@ -474,7 +476,7 @@ RESTART:
 			if r.ifaces[0].SnapLength != 0 && uint32(r.ci.CaptureLength) > r.ifaces[0].SnapLength {
 				r.ci.CaptureLength = int(r.ifaces[0].SnapLength)
 			}
-			goto DONE
+			break FIND_PACKET
 		case ngBlockTypeInterfaceDescriptor:
 			if err := r.readInterfaceDescriptor(); err != nil {
 				return err
@@ -499,14 +501,13 @@ RESTART:
 			r.ci.Timestamp = time.Unix(r.convertTime(r.ci.InterfaceIndex, uint64(r.getUint32(r.buf[4:8]))<<32|uint64(r.getUint32(r.buf[8:12])))).UTC()
 			r.ci.CaptureLength = int(r.getUint32(r.buf[12:16]))
 			r.ci.Length = int(r.getUint32(r.buf[16:20]))
-			goto DONE
+			break FIND_PACKET
 		default:
 			if _, err := r.r.Discard(int(r.currentBlock.length)); err != nil {
 				return err
 			}
 		}
 	}
-DONE:
 	if !r.options.WantMixedLinkType {
 		if r.ifaces[r.ci.InterfaceIndex].LinkType != r.linkType {
 			if _, err := r.r.Discard(int(r.currentBlock.length)); err != nil {
