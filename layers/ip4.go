@@ -186,6 +186,10 @@ func (ip *IPv4) flagsfrags() (ff uint16) {
 
 // DecodeFromBytes decodes the given bytes into this layer.
 func (ip *IPv4) DecodeFromBytes(data []byte, df gopacket.DecodeFeedback) error {
+	if len(data) < 20 {
+		df.SetTruncated()
+		return fmt.Errorf("Invalid ip4 header. Length %d less than 20", len(data))
+	}
 	flagsfrags := binary.BigEndian.Uint16(data[6:8])
 
 	ip.Version = uint8(data[0]) >> 4
