@@ -15,6 +15,7 @@ import (
 
 	"bufio"
 	"compress/gzip"
+
 	"github.com/google/gopacket"
 	"github.com/google/gopacket/layers"
 )
@@ -121,7 +122,11 @@ func (r *Reader) ReadPacketData() (data []byte, ci gopacket.CaptureInfo, err err
 		return
 	}
 	if ci.CaptureLength > int(r.snaplen) {
-		err = fmt.Errorf("capture length exceeds snap length: %d > %d", 16+ci.CaptureLength, r.snaplen)
+		err = fmt.Errorf("capture length exceeds snap length: %d > %d", ci.CaptureLength, r.snaplen)
+		return
+	}
+	if ci.CaptureLength > ci.Length {
+		err = fmt.Errorf("capture length exceeds original packet length: %d > %d", ci.CaptureLength, ci.Length)
 		return
 	}
 	data = make([]byte, ci.CaptureLength)
