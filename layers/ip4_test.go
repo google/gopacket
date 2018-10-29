@@ -9,9 +9,11 @@
 package layers
 
 import (
+	"bytes"
 	"encoding/binary"
 	"encoding/hex"
 	"net"
+	"reflect"
 	"testing"
 
 	"github.com/google/gopacket"
@@ -126,6 +128,97 @@ func TestChecksum(t *testing.T) {
 
 		if got, want := checksum(bytes), binary.BigEndian.Uint16(wantBytes); got != want {
 			t.Errorf("In test %q, got incorrect checksum: got(%x), want(%x)", test.name, got, want)
+		}
+	}
+}
+
+func TestIPv4InvalidOptionLength(t *testing.T) {
+	// ip4 Packet with option 136 length set to zero
+	b, err := hex.DecodeString("460000705f5b0000ff114e02af2db00295ab7e0f88001234")
+	if err != nil {
+		t.Fatalf("Failed to Decode header: %v", err)
+	}
+	var ip4 IPv4
+	err = ip4.DecodeFromBytes(b, gopacket.NilDecodeFeedback)
+	if err == nil {
+		t.Fatal("Expected 'invalid IP option length' error, but got none.")
+	}
+}
+
+func TestIPv4Options(t *testing.T) {
+	var ip4 IPv4 // reuse ip4 to test reset
+	for _, test := range []struct {
+		packet  string
+		options []IPv4Option
+		padding []byte
+	}{
+		{
+			packet: "4800002803040000fe01c1e0af2db00095ab7e0b820b00000000000000000000",
+			options: []IPv4Option{
+				{
+					OptionType:   130,
+					OptionData:   []byte{0, 0, 0, 0, 0, 0, 0, 0, 0},
+					OptionLength: 11,
+				},
+				{
+					OptionType:   0,
+					OptionLength: 1,
+				},
+			},
+		},
+		{
+			packet: "4900002803040000fe01c1e0af2db00095ab7e0b01820b00000000000000000000010203",
+			options: []IPv4Option{
+				{
+					OptionType:   1,
+					OptionLength: 1,
+				},
+				{
+					OptionType:   130,
+					OptionData:   []byte{0, 0, 0, 0, 0, 0, 0, 0, 0},
+					OptionLength: 11,
+				},
+				{
+					OptionType:   0,
+					OptionLength: 1,
+				},
+			},
+			padding: []byte{1, 2, 3},
+		},
+		{
+			packet: "4800002803040000fe01c1e0af2db00095ab7e0b820c00000000000000000000",
+			options: []IPv4Option{
+				{
+					OptionType:   130,
+					OptionData:   []byte{0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
+					OptionLength: 12,
+				},
+			},
+		},
+		{
+			packet: "4900002803040000fe01c1e0af2db00095ab7e0b00820b00000000000000000000010203",
+			options: []IPv4Option{
+				{
+					OptionType:   0,
+					OptionLength: 1,
+				},
+			},
+			padding: []byte{0x82, 0x0b, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 2, 3},
+		},
+	} {
+		b, err := hex.DecodeString(test.packet)
+		if err != nil {
+			t.Fatalf("Failed to Decode header: %v", err)
+		}
+		err = ip4.DecodeFromBytes(b, gopacket.NilDecodeFeedback)
+		if err != nil {
+			t.Fatal("Unexpected error during decoding:", err)
+		}
+		if !reflect.DeepEqual(ip4.Options, test.options) {
+			t.Fatalf("Options mismatch.\nGot:\n%#v\nExpected:\n%#v\n", ip4.Options, test.options)
+		}
+		if !bytes.Equal(ip4.Padding, test.padding) {
+			t.Fatalf("Padding mismatch.\nGot:\n%#v\nExpected:\n%#v\n", ip4.Padding, test.padding)
 		}
 	}
 }
