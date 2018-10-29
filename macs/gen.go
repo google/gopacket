@@ -60,6 +60,7 @@ func (m macs) Less(i, j int) bool { return bytes.Compare(m[i].prefix[:], m[j].pr
 func (m macs) Swap(i, j int)      { m[i], m[j] = m[j], m[i] }
 
 func main() {
+	flag.Parse()
 	fmt.Fprintf(os.Stderr, "Fetching MACs from %q\n", *url)
 	resp, err := http.Get(*url)
 	if err != nil {
