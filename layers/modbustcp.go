@@ -26,6 +26,13 @@ const mbapRecordSizeInBytes int = 7
 const modbusPDUMinimumRecordSizeInBytes int = 2
 const modbusPDUMaximumRecordSizeInBytes int = 253
 
+// ModbusProtocol type
+type ModbusProtocol uint16
+
+const (
+	ModbusProtocolModbus ModbusProtocol = 0
+)
+
 //******************************************************************************
 
 // ModbusTCP Type
@@ -37,10 +44,10 @@ const modbusPDUMaximumRecordSizeInBytes int = 253
 type ModbusTCP struct {
 	BaseLayer // Stores the packet bytes and payload (Modbus PDU) bytes .
 
-	TransactionIdentifier uint16 // Identification of a MODBUS Request/Response transaction
-	ProtocolIdentifier    uint16 // 0 = MODBUS protocol
-	Length                uint16 // Number of following bytes (includes 1 byte for UnitIdentifier + Modbus data length
-	UnitIdentifier        uint8  // Identification of a remote slave connected on a serial line or on other buses
+	TransactionIdentifier uint16         // Identification of a MODBUS Request/Response transaction
+	ProtocolIdentifier    ModbusProtocol // It is used for intra-system multiplexing
+	Length                uint16         // Number of following bytes (includes 1 byte for UnitIdentifier + Modbus data length
+	UnitIdentifier        uint8          // Identification of a remote slave connected on a serial line or on other buses
 }
 
 //******************************************************************************
@@ -105,7 +112,7 @@ func (d *ModbusTCP) DecodeFromBytes(data []byte, df gopacket.DecodeFeedback) err
 	// Extract the fields from the block of bytes.
 	// The fields can just be copied in big endian order.
 	d.TransactionIdentifier = binary.BigEndian.Uint16(data[:2])
-	d.ProtocolIdentifier = binary.BigEndian.Uint16(data[2:4])
+	d.ProtocolIdentifier = ModbusProtocol(binary.BigEndian.Uint16(data[2:4]))
 	d.Length = binary.BigEndian.Uint16(data[4:6])
 
 	// Length should have the size of the payload plus one byte (size of UnitIdentifier)
@@ -115,7 +122,6 @@ func (d *ModbusTCP) DecodeFromBytes(data []byte, df gopacket.DecodeFeedback) err
 	}
 	d.UnitIdentifier = uint8(data[6])
 
-	// Return no error.
 	return nil
 }
 
@@ -132,7 +138,3 @@ func (d *ModbusTCP) NextLayerType() gopacket.LayerType {
 func (d *ModbusTCP) Payload() []byte {
 	return d.BaseLayer.Payload
 }
-
-//******************************************************************************
-//*                            End Of ModbusTCP File                           *
-//******************************************************************************
