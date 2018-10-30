@@ -29,9 +29,19 @@ const modbusPDUMaximumRecordSizeInBytes int = 253
 // ModbusProtocol type
 type ModbusProtocol uint16
 
+// ModbusProtocol known values.
 const (
 	ModbusProtocolModbus ModbusProtocol = 0
 )
+
+func (mp ModbusProtocol) String() string {
+	switch mp {
+	default:
+		return "Unknown"
+	case ModbusProtocolModbus:
+		return "Modbus"
+	}
+}
 
 //******************************************************************************
 
