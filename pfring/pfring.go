@@ -8,22 +8,41 @@
 package pfring
 
 /*
+// lpcap is needed for bpf
 #cgo LDFLAGS: -lpfring -lpcap
 #include <stdlib.h>
 #include <pfring.h>
 #include <linux/pf_ring.h>
 
+struct metadata {
+	u_int64_t timestamp_ns;
+	u_int32_t caplen;
+	u_int32_t len;
+	int32_t if_index;
+};
+
+// In pfring 7.2 pfring_pkthdr struct was changed to packed
+// Since this is incompatible with go, copy the values we need to a custom
+// struct (struct metadata above).
+// Another way to do this, would be to store the struct offsets in defines
+// and use encoding/binary in go-land. But this has the downside, that there is
+// no native endianess in encoding/binary and storing ByteOrder in a variable
+// leads to an expensive itab lookup + call (instead of very fast inlined and
+// optimized movs). Using unsafe magic could lead to problems with unaligned
+// access.
+// Additionally, this does the same uintptr-dance as pcap.
 int pfring_readpacketdatato_wrapper(
     pfring* ring,
-    u_char* buffer,
-    u_int buffer_len,
-    struct pfring_pkthdr* hdr) {
-  // We can't pass a Go pointer to a Go pointer which means we can't pass
-  // buffer as a uchar**, like pfring_recv wants, for ReadPacketDataTo.  So,
-  // this wrapper does the pointer conversion in C code.  Since this isn't
-  // zero-copy, it turns out that the pointer-to-pointer part of things isn't
-  // actually used anyway.
-  return pfring_recv(ring, &buffer, buffer_len, hdr, 1);
+    uintptr_t buffer,
+    uintptr_t meta) {
+  struct metadata* ci = (struct metadata* )meta;
+  struct pfring_pkthdr hdr;
+  int ret = pfring_recv(ring, (u_char**)buffer, 0, &hdr, 1);
+  ci->timestamp_ns = hdr.extended_hdr.timestamp_ns;
+  ci->caplen = hdr.caplen;
+  ci->len = hdr.len;
+  ci->if_index = hdr.extended_hdr.if_index;
+  return ret;
 }
 */
 import "C"
@@ -36,6 +55,7 @@ import (
 	"fmt"
 	"net"
 	"os"
+	"reflect"
 	"strconv"
 	"sync"
 	"time"
@@ -48,17 +68,12 @@ const errorBufferSize = 256
 
 // Ring provides a handle to a pf_ring.
 type Ring struct {
-	// cptr is the handle for the actual pcap C object.
 	cptr                    *C.pfring
-	snaplen                 int
 	useExtendedPacketHeader bool
 	interfaceIndex          int
 	mu                      sync.Mutex
-	// Since pointers to these objects are passed into a C function, if
-	// they're declared locally then the Go compiler thinks they may have
-	// escaped into C-land, so it allocates them on the heap.  This causes a
-	// huge memory hit, so to handle that we store them here instead.
-	pkthdr C.struct_pfring_pkthdr
+
+	meta   C.struct_metadata
 	bufPtr *C.u_char
 }
 
@@ -86,7 +101,7 @@ func NewRing(device string, snaplen uint32, flags Flag) (ring *Ring, _ error) {
 	if cptr == nil || err != nil {
 		return nil, fmt.Errorf("pfring NewRing error: %v", err)
 	}
-	ring = &Ring{cptr: cptr, snaplen: int(snaplen)}
+	ring = &Ring{cptr: cptr}
 
 	if flags&FlagLongHeader == FlagLongHeader {
 		ring.useExtendedPacketHeader = true
@@ -132,45 +147,77 @@ func (n NextResult) Error() string {
 	return strconv.Itoa(int(n))
 }
 
-// ReadPacketDataTo reads packet data into a user-supplied buffer.
-// This function ignores snaplen and instead reads up to the length of the
-// passed-in slice.
-// The number of bytes read into data will be returned in ci.CaptureLength.
-func (r *Ring) ReadPacketDataTo(data []byte) (ci gopacket.CaptureInfo, err error) {
-	// This tricky bufPtr points to the start of our slice data, so pfring_recv
-	// will actually write directly into our Go slice.  Nice!
-	r.mu.Lock()
-	r.bufPtr = (*C.u_char)(unsafe.Pointer(&data[0]))
-	result := NextResult(C.pfring_readpacketdatato_wrapper(r.cptr, r.bufPtr, C.u_int(len(data)), &r.pkthdr))
+// shared code (Read-functions), that fetches a packet + metadata from pf_ring
+func (r *Ring) getNextBufPtrLocked(ci *gopacket.CaptureInfo) error {
+	result := NextResult(C.pfring_readpacketdatato_wrapper(r.cptr, C.uintptr_t(uintptr(unsafe.Pointer(&r.bufPtr))), C.uintptr_t(uintptr(unsafe.Pointer(&r.meta)))))
 	if result != NextOk {
-		err = result
-		r.mu.Unlock()
-		return
+		return result
 	}
-	ci.Timestamp = time.Unix(int64(r.pkthdr.ts.tv_sec),
-		int64(r.pkthdr.ts.tv_usec)*1000) // convert micros to nanos
-	ci.CaptureLength = int(r.pkthdr.caplen)
-	ci.Length = int(r.pkthdr.len)
+	ci.Timestamp = time.Unix(0, int64(r.meta.timestamp_ns))
+	ci.CaptureLength = int(r.meta.caplen)
+	ci.Length = int(r.meta.len)
 	if r.useExtendedPacketHeader {
-		ci.InterfaceIndex = int(r.pkthdr.extended_hdr.if_index)
+		ci.InterfaceIndex = int(r.meta.if_index)
 	} else {
 		ci.InterfaceIndex = r.interfaceIndex
+	}
+	return nil
+}
+
+// ReadPacketDataTo reads packet data into a user-supplied buffer.
+//
+// Deprecated: This function is provided for legacy code only. Use ReadPacketData or ZeroCopyReadPacketData
+// This function does an additional copy, and is therefore slower than ZeroCopyReadPacketData.
+// The old implementation did the same inside the pf_ring library.
+func (r *Ring) ReadPacketDataTo(data []byte) (ci gopacket.CaptureInfo, err error) {
+	r.mu.Lock()
+	err = r.getNextBufPtrLocked(&ci)
+	if err == nil {
+		var buf []byte
+		slice := (*reflect.SliceHeader)(unsafe.Pointer(&buf))
+		slice.Data = uintptr(unsafe.Pointer(r.bufPtr))
+		slice.Len = ci.CaptureLength
+		slice.Cap = ci.CaptureLength
+		copy(data, buf)
 	}
 	r.mu.Unlock()
 	return
 }
 
-// ReadPacketData returns the next packet read from the pcap handle, along with an error
-// code associated with that packet.  If the packet is read successfully, the
+// ReadPacketData returns the next packet read from pf_ring, along with an error
+// code associated with that packet. If the packet is read successfully, the
 // returned error is nil.
 func (r *Ring) ReadPacketData() (data []byte, ci gopacket.CaptureInfo, err error) {
-	data = make([]byte, r.snaplen)
-	ci, err = r.ReadPacketDataTo(data)
-	if err != nil {
-		data = nil
-		return
+	r.mu.Lock()
+	err = r.getNextBufPtrLocked(&ci)
+	if err == nil {
+		data = C.GoBytes(unsafe.Pointer(r.bufPtr), C.int(ci.CaptureLength))
 	}
-	data = data[:ci.CaptureLength]
+	r.mu.Unlock()
+	return
+}
+
+// ZeroCopyReadPacketData returns the next packet read from pf_ring, along with an error
+// code associated with that packet.
+// The slice returned by ZeroCopyReadPacketData points to bytes inside a pf_ring
+// ring. Each call to ZeroCopyReadPacketData might invalidate any data previously
+// returned by ZeroCopyReadPacketData. Care must be taken not to keep pointers
+// to old bytes when using ZeroCopyReadPacketData... if you need to keep data past
+// the next time you call ZeroCopyReadPacketData, use ReadPacketData, which copies
+// the bytes into a new buffer for you.
+//  data1, _, _ := handle.ZeroCopyReadPacketData()
+//  // do everything you want with data1 here, copying bytes out of it if you'd like to keep them around.
+//  data2, _, _ := handle.ZeroCopyReadPacketData()  // invalidates bytes in data1
+func (r *Ring) ZeroCopyReadPacketData() (data []byte, ci gopacket.CaptureInfo, err error) {
+	r.mu.Lock()
+	err = r.getNextBufPtrLocked(&ci)
+	if err == nil {
+		slice := (*reflect.SliceHeader)(unsafe.Pointer(&data))
+		slice.Data = uintptr(unsafe.Pointer(r.bufPtr))
+		slice.Len = ci.CaptureLength
+		slice.Cap = ci.CaptureLength
+	}
+	r.mu.Unlock()
 	return
 }
 
