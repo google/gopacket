@@ -170,7 +170,7 @@ func (t *TCP) SerializeTo(b gopacket.SerializeBuffer, opts gopacket.SerializeOpt
 			}
 			bytes[start+1] = o.OptionLength
 			copy(bytes[start+2:start+len(o.OptionData)+2], o.OptionData)
-			start += int(o.OptionLength)
+			start += len(o.OptionData) + 2
 		}
 	}
 	copy(bytes[start:], t.Padding)
