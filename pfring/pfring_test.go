@@ -22,7 +22,7 @@ func BenchmarkPfringRead(b *testing.B) {
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
 		_, ci, _ := ring.ReadPacketData()
-                b.SetBytes(int64(ci.CaptureLength))
+		b.SetBytes(int64(ci.CaptureLength))
 	}
 }
 
@@ -40,7 +40,7 @@ func BenchmarkPfringReadZero(b *testing.B) {
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
 		_, ci, _ := ring.ZeroCopyReadPacketData()
-                b.SetBytes(int64(ci.CaptureLength))
+		b.SetBytes(int64(ci.CaptureLength))
 	}
 }
 
@@ -59,6 +59,6 @@ func BenchmarkPfringReadTo(b *testing.B) {
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
 		ci, _ := ring.ReadPacketDataTo(buffer)
-                b.SetBytes(int64(ci.CaptureLength))
+		b.SetBytes(int64(ci.CaptureLength))
 	}
 }
