@@ -10,6 +10,7 @@ package layers
 import (
 	"errors"
 	"fmt"
+	"runtime"
 
 	"github.com/google/gopacket"
 )
@@ -375,6 +376,13 @@ func initActualTypeData() {
 	LinkTypeMetadata[LinkTypeLoop] = EnumMetadata{DecodeWith: gopacket.DecodeFunc(decodeLoopback), Name: "Loop"}
 	LinkTypeMetadata[LinkTypeIEEE802_11] = EnumMetadata{DecodeWith: gopacket.DecodeFunc(decodeDot11), Name: "802.11"}
 	LinkTypeMetadata[LinkTypeRaw] = EnumMetadata{DecodeWith: gopacket.DecodeFunc(decodeIPv4or6), Name: "Raw"}
+	// See https://github.com/the-tcpdump-group/libpcap/blob/170f717e6e818cdc4bcbbfd906b63088eaa88fa0/pcap/dlt.h#L85
+	// Or https://github.com/wireshark/wireshark/blob/854cfe53efe44080609c78053ecfb2342ad84a08/wiretap/pcap-common.c#L508
+	if runtime.GOOS == "openbsd" {
+		LinkTypeMetadata[14] = EnumMetadata{DecodeWith: gopacket.DecodeFunc(decodeIPv4or6), Name: "Raw"}
+	} else {
+		LinkTypeMetadata[12] = EnumMetadata{DecodeWith: gopacket.DecodeFunc(decodeIPv4or6), Name: "Raw"}
+	}
 	LinkTypeMetadata[LinkTypePFLog] = EnumMetadata{DecodeWith: gopacket.DecodeFunc(decodePFLog), Name: "PFLog"}
 	LinkTypeMetadata[LinkTypeIEEE80211Radio] = EnumMetadata{DecodeWith: gopacket.DecodeFunc(decodeRadioTap), Name: "RadioTap"}
 	LinkTypeMetadata[LinkTypeLinuxUSB] = EnumMetadata{DecodeWith: gopacket.DecodeFunc(decodeUSB), Name: "USB"}
