@@ -189,3 +189,11 @@ func (r *Reader) SetSnaplen(newSnaplen uint32) {
 func (r *Reader) String() string {
 	return fmt.Sprintf("PcapFile  maj: %x min: %x snaplen: %d linktype: %s", r.versionMajor, r.versionMinor, r.snaplen, r.linkType)
 }
+
+// Resolution returns the timestamp resolution of acquired timestamps before scaling to NanosecondTimestampResolution.
+func (r *Reader) Resolution() gopacket.TimestampResolution {
+	if r.nanoSecsFactor == 1 {
+		return gopacket.TimestampResolutionMillisecond
+	}
+	return gopacket.TimestampResolutionNanosecond
+}
