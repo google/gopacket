@@ -11,6 +11,7 @@ import (
 	"math"
 	"time"
 
+	"github.com/google/gopacket"
 	"github.com/google/gopacket/layers"
 )
 
@@ -155,6 +156,17 @@ type NgInterface struct {
 	secondMask uint64
 	scaleUp    uint64
 	scaleDown  uint64
+}
+
+// Resolution returns the timestamp resolution of acquired timestamps before scaling to NanosecondTimestampResolution.
+func (i NgInterface) Resolution() (ret gopacket.TimestampResolution) {
+	if i.TimestampResolution.Binary() {
+		ret.Base = 2
+	} else {
+		ret.Base = 10
+	}
+	ret.Exponent = -int(i.TimestampResolution.Exponent())
+	return
 }
 
 // NgSectionInfo contains additional information of a pcapng section
