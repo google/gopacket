@@ -33,9 +33,40 @@ package pcap
 // See http://upstream-tracker.org/versions/libpcap.html
 
 #ifndef PCAP_ERROR_TSTAMP_PRECISION_NOTSUP  // < v1.5
+#define PCAP_ERROR_TSTAMP_PRECISION_NOTSUP -12
 
 int pcap_set_immediate_mode(pcap_t *p, int mode) {
   return PCAP_ERROR;
+}
+
+#define PCAP_TSTAMP_PRECISION_MICRO	0
+#define PCAP_TSTAMP_PRECISION_NANO	1
+
+#ifdef WIN32
+pcap_t *pcap_hopen_offline_with_tstamp_precision(intptr_t osfd, u_int precision,
+  char *errbuf) {
+  return pcap_hopen_offline(osdf, errbuf);
+}
+#else
+pcap_t *pcap_fopen_offline_with_tstamp_precision(FILE *fp, u_int precision,
+  char *errbuf) {
+  return pcap_fopen_offline(fp, errbuf);
+}
+#endif
+
+pcap_t *pcap_open_offline_with_tstamp_precision(const char *fname, u_int precision,
+  char *errbuf) {
+  return pcap_open_offline(fname, errbuf);
+}
+
+int pcap_set_tstamp_precision(pcap_t *p, int tstamp_precision) {
+  if (tstamp_precision == PCAP_TSTAMP_PRECISION_MICRO)
+    return 0;
+  return PCAP_ERROR_TSTAMP_PRECISION_NOTSUP;
+}
+
+int pcap_get_tstamp_precision(pcap_t *p) {
+  return PCAP_TSTAMP_PRECISION_MICRO
 }
 
 #ifndef PCAP_TSTAMP_HOST  // < v1.2
@@ -159,12 +190,13 @@ type Handle struct {
 	// This must be the first entry to ensure alignment for sync.atomic
 	stop uint64
 	// cptr is the handle for the actual pcap C object.
-	cptr        *C.pcap_t
-	timeout     time.Duration
-	device      string
-	deviceIndex int
-	mu          sync.Mutex
-	closeMu     sync.Mutex
+	cptr           *C.pcap_t
+	timeout        time.Duration
+	device         string
+	deviceIndex    int
+	mu             sync.Mutex
+	closeMu        sync.Mutex
+	nanoSecsFactor int64
 
 	// Since pointers to these objects are passed into a C function, if
 	// they're declared locally then the Go compiler thinks they may have
@@ -239,7 +271,8 @@ func timeoutMillis(timeout time.Duration) C.int {
 // OpenLive opens a device and returns a *Handle.
 // It takes as arguments the name of the device ("eth0"), the maximum size to
 // read for each packet (snaplen), whether to put the interface in promiscuous
-// mode, and a timeout.
+// mode, and a timeout. Warning: this function supports only microsecond timestamps.
+// For nanosecond resolution use an InactiveHandle.
 //
 // See the package documentation for important details regarding 'timeout'.
 func OpenLive(device string, snaplen int32, promisc bool, timeout time.Duration) (handle *Handle, _ error) {
@@ -268,6 +301,7 @@ func OpenLive(device string, snaplen int32, promisc bool, timeout time.Duration)
 	if p.cptr == nil {
 		return nil, errors.New(C.GoString(buf))
 	}
+	p.nanoSecsFactor = 1000
 
 	// Only set the PCAP handle into non-blocking mode if we have a timeout
 	// greater than zero. If the user wants to block forever, we'll let libpcap
@@ -282,22 +316,33 @@ func OpenLive(device string, snaplen int32, promisc bool, timeout time.Duration)
 	return p, nil
 }
 
-// OpenOffline opens a file and returns its contents as a *Handle.
+// OpenOffline opens a file and returns its contents as a *Handle. Depending on libpcap support and
+// on the timestamp resolution used in the file, nanosecond or microsecond resolution is used
+// internally. All returned timestamps are scaled to nanosecond resolution. Resolution() can be used
+// to query the actual resolution used.
 func OpenOffline(file string) (handle *Handle, err error) {
 	buf := (*C.char)(C.calloc(errorBufferSize, 1))
 	defer C.free(unsafe.Pointer(buf))
 	cf := C.CString(file)
 	defer C.free(unsafe.Pointer(cf))
 
-	cptr := C.pcap_open_offline(cf, buf)
+	cptr := C.pcap_open_offline_with_tstamp_precision(cf, C.PCAP_TSTAMP_PRECISION_NANO, buf)
 	if cptr == nil {
 		return nil, errors.New(C.GoString(buf))
 	}
 	h := &Handle{cptr: cptr}
+	if C.pcap_get_tstamp_precision(cptr) == C.PCAP_TSTAMP_PRECISION_NANO {
+		h.nanoSecsFactor = 1
+	} else {
+		h.nanoSecsFactor = 1000
+	}
 	return h, nil
 }
 
-// OpenOfflineFile returns contents of input file as a *Handle.
+// OpenOfflineFile returns contents of input file as a *Handle. Depending on libpcap support and
+// on the timestamp resolution used in the file, nanosecond or microsecond resolution is used
+// internally. All returned timestamps are scaled to nanosecond resolution. Resolution() can be used
+// to query the actual resolution used.
 func OpenOfflineFile(file *os.File) (handle *Handle, err error) {
 	return openOfflineFile(file)
 }
@@ -408,7 +453,7 @@ func (p *Handle) getNextBufPtrLocked(ci *gopacket.CaptureInfo) error {
 			// got a packet, set capture info and return
 			sec := int64(p.pkthdr.ts.tv_sec)
 			// convert micros to nanos
-			nanos := int64(p.pkthdr.ts.tv_usec) * 1000
+			nanos := int64(p.pkthdr.ts.tv_usec) * p.nanoSecsFactor
 
 			ci.Timestamp = time.Unix(sec, nanos)
 			ci.CaptureLength = int(p.pkthdr.caplen)
@@ -923,6 +968,14 @@ func (p *Handle) SnapLen() int {
 	return int(len)
 }
 
+// Resolution returns the timestamp resolution of acquired timestamps before scaling to NanosecondTimestampResolution.
+func (p *Handle) Resolution() gopacket.TimestampResolution {
+	if p.nanoSecsFactor == 1 {
+		return gopacket.TimestampResolutionMillisecond
+	}
+	return gopacket.TimestampResolutionNanosecond
+}
+
 // TimestampSource tells PCAP which type of timestamp to use for packets.
 type TimestampSource C.int
 
@@ -968,6 +1021,8 @@ func (p *InactiveHandle) Error() error {
 // Activate activates the handle.  The current InactiveHandle becomes invalid
 // and all future function calls on it will fail.
 func (p *InactiveHandle) Activate() (*Handle, error) {
+	// ignore error with set_tstamp_precision, since the actual precision is queried later anyway
+	C.pcap_set_tstamp_precision(p.cptr, C.PCAP_TSTAMP_PRECISION_NANO)
 	err := activateError(C.pcap_activate(p.cptr))
 	if err != aeNoError {
 		if err == aeWarning {
@@ -980,6 +1035,11 @@ func (p *InactiveHandle) Activate() (*Handle, error) {
 		timeout:     p.timeout,
 		device:      p.device,
 		deviceIndex: p.deviceIndex,
+	}
+	if C.pcap_get_tstamp_precision(h.cptr) == C.PCAP_TSTAMP_PRECISION_NANO {
+		h.nanoSecsFactor = 1
+	} else {
+		h.nanoSecsFactor = 1000
 	}
 	p.cptr = nil
 	return h, nil

@@ -36,9 +36,15 @@ func openOfflineFile(file *os.File) (handle *Handle, err error) {
 	defer C.free(unsafe.Pointer(buf))
 	cf := C.intptr_t(file.Fd())
 
-	cptr := C.pcap_hopen_offline(cf, buf)
+	cptr := C.pcap_hopen_offline_with_tstamp_precision(cf, C.PCAP_TSTAMP_PRECISION_NANO, buf)
 	if cptr == nil {
 		return nil, errors.New(C.GoString(buf))
 	}
-	return &Handle{cptr: cptr}, nil
+	h := &Handle{cptr: cptr}
+	if C.pcap_get_tstamp_precision(cptr) == C.PCAP_TSTAMP_PRECISION_NANO {
+		h.nanoSecsFactor = 1
+	} else {
+		h.nanoSecsFactor = 1000
+	}
+	return h, nil
 }
