@@ -9,9 +9,11 @@ package ip4defrag
 import (
 	"bytes"
 	"fmt"
+	"encoding/binary"
 	"net"
 	"testing"
 	"time"
+
 
 	"github.com/google/gopacket"
 	"github.com/google/gopacket/bytediff"
@@ -239,6 +241,23 @@ func TestDefragMaxSize(t *testing.T) {
 		t.Fatal(err)
 		t.Fatalf("defrag: Maximum length is supposed to be 65535")
 	}
+}
+
+func TestDefragIDField(t *testing.T) {
+	defrag := NewIPv4Defragmenter()
+
+	expectedID := binary.BigEndian.Uint16(testPing1Frag1[18:])
+
+	gentestDefrag(t, defrag, testPing1Frag1, false, "Ping1Frag1")
+	gentestDefrag(t, defrag, testPing1Frag3, false, "Ping1Frag3")
+	gentestDefrag(t, defrag, testPing1Frag2, false, "Ping1Frag2")
+	ipFragmented := gentestDefrag(t, defrag, testPing1Frag4, true, "Ping1Frag4")
+
+	if ipFragmented.Id != expectedID {
+		t.Fatalf("defrag: expecting a fragmented packet with ID %d, got %d",
+			expectedID, ipFragmented.Id)
+	}
+
 }
 
 func gentestDefrag(t *testing.T, defrag *IPv4Defragmenter, buf []byte, expect bool, label string) *layers.IPv4 {

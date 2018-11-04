@@ -309,7 +309,7 @@ func (f *fragmentList) build(in *layers.IPv4) (*layers.IPv4, error) {
 		IHL:        in.IHL,
 		TOS:        in.TOS,
 		Length:     f.Highest,
-		Id:         0,
+		Id:         in.Id,
 		Flags:      0,
 		FragOffset: 0,
 		TTL:        in.TTL,
