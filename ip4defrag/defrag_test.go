@@ -8,12 +8,11 @@ package ip4defrag
 
 import (
 	"bytes"
-	"fmt"
 	"encoding/binary"
+	"fmt"
 	"net"
 	"testing"
 	"time"
-
 
 	"github.com/google/gopacket"
 	"github.com/google/gopacket/bytediff"
