@@ -100,16 +100,16 @@ type Dot11Reason uint16
 // TODO: Verify these reasons, and append more reasons if necessary.
 
 const (
-	Dot11ReasonReserved          Dot11Reason = 1
-	Dot11ReasonUnspecified       Dot11Reason = 2
-	Dot11ReasonAuthExpired       Dot11Reason = 3
-	Dot11ReasonDeauthStLeaving   Dot11Reason = 4
-	Dot11ReasonInactivity        Dot11Reason = 5
-	Dot11ReasonApFull            Dot11Reason = 6
-	Dot11ReasonClass2FromNonAuth Dot11Reason = 7
-	Dot11ReasonClass3FromNonAss  Dot11Reason = 8
-	Dot11ReasonDisasStLeaving    Dot11Reason = 9
-	Dot11ReasonStNotAuth         Dot11Reason = 10
+	Dot11ReasonReserved          Dot11Reason = 0
+	Dot11ReasonUnspecified       Dot11Reason = 1
+	Dot11ReasonAuthExpired       Dot11Reason = 2
+	Dot11ReasonDeauthStLeaving   Dot11Reason = 3
+	Dot11ReasonInactivity        Dot11Reason = 4
+	Dot11ReasonApFull            Dot11Reason = 5
+	Dot11ReasonClass2FromNonAuth Dot11Reason = 6
+	Dot11ReasonClass3FromNonAss  Dot11Reason = 7
+	Dot11ReasonDisasStLeaving    Dot11Reason = 8
+	Dot11ReasonStNotAuth         Dot11Reason = 9
 )
 
 // String provides a human readable string for Dot11Reason.
