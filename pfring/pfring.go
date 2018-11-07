@@ -12,6 +12,7 @@ package pfring
 #cgo LDFLAGS: -lpfring -lpcap
 #include <stdlib.h>
 #include <pfring.h>
+#include <stdint.h>
 #include <linux/pf_ring.h>
 
 struct metadata {
