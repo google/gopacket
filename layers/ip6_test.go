@@ -8,7 +8,7 @@ package layers
 
 import (
 	"bytes"
-	"github.com/google/gopacket"
+	"github.com/fako1024/gopacket"
 	"net"
 	"reflect"
 	"testing"

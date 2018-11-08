@@ -2,17 +2,17 @@ language: go
 before_install:
  - sudo apt-get install libpcap-dev
 install:
- - go get github.com/google/gopacket
- - go get github.com/google/gopacket/layers
- - go get github.com/google/gopacket/pcapgo
- - go get github.com/google/gopacket/tcpassembly
- - go get github.com/google/gopacket/reassembly
+ - go get github.com/fako1024/gopacket
+ - go get github.com/fako1024/gopacket/layers
+ - go get github.com/fako1024/gopacket/pcapgo
+ - go get github.com/fako1024/gopacket/tcpassembly
+ - go get github.com/fako1024/gopacket/reassembly
 script:
- - go test github.com/google/gopacket
- - go test github.com/google/gopacket/layers
- - go test github.com/google/gopacket/pcapgo 
- - go test github.com/google/gopacket/tcpassembly
- - go test github.com/google/gopacket/reassembly
+ - go test github.com/fako1024/gopacket
+ - go test github.com/fako1024/gopacket/layers
+ - go test github.com/fako1024/gopacket/pcapgo 
+ - go test github.com/fako1024/gopacket/tcpassembly
+ - go test github.com/fako1024/gopacket/reassembly
  - ./.travis.gofmt.sh
  - ./.travis.govet.sh
  - ./.travis.golint.sh

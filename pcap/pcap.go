@@ -9,7 +9,7 @@ package pcap
 
 /*
 #cgo solaris LDFLAGS: -L /opt/local/lib -lpcap
-#cgo linux LDFLAGS: -lpcap
+#cgo linux LDFLAGS: ${SRCDIR}/libpcap/libpcap_linux.a
 #cgo dragonfly LDFLAGS: -lpcap
 #cgo freebsd LDFLAGS: -lpcap
 #cgo openbsd LDFLAGS: -lpcap
@@ -130,8 +130,8 @@ import (
 	"time"
 	"unsafe"
 
-	"github.com/google/gopacket"
-	"github.com/google/gopacket/layers"
+	"github.com/fako1024/gopacket"
+	"github.com/fako1024/gopacket/layers"
 )
 
 const errorBufferSize = 256
