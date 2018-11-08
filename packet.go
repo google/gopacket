@@ -31,6 +31,8 @@ type CaptureInfo struct {
 	Length int
 	// InterfaceIndex
 	InterfaceIndex int
+	// Addition to account for LIBPCAP direction patch
+	Inbound uint8
 	// The packet source can place ancillary data of various types here.
 	// For example, the afpacket source can report the VLAN of captured
 	// packets this way.
