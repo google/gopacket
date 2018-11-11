@@ -39,6 +39,17 @@ int pcap_set_immediate_mode(pcap_t *p, int mode) {
   return PCAP_ERROR;
 }
 
+
+//  libpcap version < v1.5 doesn't have timestamp precision (everything is microsecond)
+//
+//  This means *_tstamp_* functions and macros are missing. Therefore, we emulate these
+//  functions here and pretend the setting the precision works. This is actually the way
+//  the pcap_open_offline_with_tstamp_precision works, because it doesn't return an error
+//  if it was not possible to set the precision, which depends on support by the given file.
+//  => The rest of the functions always pretend as if they could set nano precision and
+//  verify the actual precision with pcap_get_tstamp_precision, which is emulated for <v1.5
+//  to always return micro resolution.
+
 #define PCAP_TSTAMP_PRECISION_MICRO	0
 #define PCAP_TSTAMP_PRECISION_NANO	1
 
