@@ -9,6 +9,16 @@ package pcap
 
 /*
 #include <pcap.h>
+
+// libpcap version < v1.5 doesn't have timestamp precision (everything is microsecond)
+// see pcap.go for an explanation of why precision is ignored
+#ifndef PCAP_ERROR_TSTAMP_PRECISION_NOTSUP  // < v1.5
+pcap_t *pcap_hopen_offline_with_tstamp_precision(intptr_t osfd, u_int precision,
+  char *errbuf) {
+  return pcap_hopen_offline(osdf, errbuf);
+}
+#endif  // < v1.5
+
 */
 import "C"
 

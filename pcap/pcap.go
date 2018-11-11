@@ -53,18 +53,6 @@ int pcap_set_immediate_mode(pcap_t *p, int mode) {
 #define PCAP_TSTAMP_PRECISION_MICRO	0
 #define PCAP_TSTAMP_PRECISION_NANO	1
 
-#ifdef WIN32
-pcap_t *pcap_hopen_offline_with_tstamp_precision(intptr_t osfd, u_int precision,
-  char *errbuf) {
-  return pcap_hopen_offline(osdf, errbuf);
-}
-#else
-pcap_t *pcap_fopen_offline_with_tstamp_precision(FILE *fp, u_int precision,
-  char *errbuf) {
-  return pcap_fopen_offline(fp, errbuf);
-}
-#endif
-
 pcap_t *pcap_open_offline_with_tstamp_precision(const char *fname, u_int precision,
   char *errbuf) {
   return pcap_open_offline(fname, errbuf);

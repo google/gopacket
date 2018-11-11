@@ -38,6 +38,16 @@ int pcap_wait(pcap_t *p, int usec) {
 	// block indefinitely if no timeout provided
 	return select(fd+1, &fds, NULL, NULL, NULL);
 }
+
+// libpcap version < v1.5 doesn't have timestamp precision (everything is microsecond)
+// see pcap.go for an explanation of why precision is ignored
+#ifndef PCAP_ERROR_TSTAMP_PRECISION_NOTSUP  // < v1.5
+pcap_t *pcap_fopen_offline_with_tstamp_precision(FILE *fp, u_int precision,
+  char *errbuf) {
+  return pcap_fopen_offline(fp, errbuf);
+}
+#endif  // < v1.5
+
 */
 import "C"
 
