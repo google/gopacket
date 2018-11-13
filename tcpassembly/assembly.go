@@ -188,7 +188,7 @@ type Stream interface {
 // new TCP session.
 type StreamFactory interface {
 	// New should return a new stream for the given TCP key.
-	New(netFlow, tcpFlow gopacket.Flow) Stream
+	New(netFlow, tcpFlow gopacket.Flow, ts time.Time) Stream
 }
 
 func (p *StreamPool) connections() []*connection {
@@ -500,7 +500,7 @@ func (p *StreamPool) getConnection(k key, end bool, ts time.Time) *connection {
 	if end || conn != nil {
 		return conn
 	}
-	s := p.factory.New(k[0], k[1])
+	s := p.factory.New(k[0], k[1], ts)
 	p.mu.Lock()
 	conn = p.newConnection(k, s, ts)
 	if conn2 := p.conns[k]; conn2 != nil {
