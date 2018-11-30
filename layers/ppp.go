@@ -15,7 +15,8 @@ import (
 // PPP is the layer for PPP encapsulation headers.
 type PPP struct {
 	BaseLayer
-	PPPType PPPType
+	PPPType       PPPType
+	HasPPTPHeader bool
 }
 
 // PPPEndpoint is a singleton endpoint for PPP.  Since there is no actual
@@ -39,6 +40,7 @@ func decodePPP(data []byte, p gopacket.PacketBuilder) error {
 	offset := 0
 	if data[0] == 0xff && data[1] == 0x03 {
 		offset = 2
+		ppp.HasPPTPHeader = true
 	}
 	if data[offset]&0x1 == 0 {
 		if data[offset+1]&0x1 == 0 {
@@ -73,6 +75,14 @@ func (p *PPP) SerializeTo(b gopacket.SerializeBuffer, opts gopacket.SerializeOpt
 			return err
 		}
 		bytes[0] = uint8(p.PPPType)
+	}
+	if p.HasPPTPHeader {
+		bytes, err := b.PrependBytes(2)
+		if err != nil {
+			return err
+		}
+		bytes[0] = 0xff
+		bytes[1] = 0x03
 	}
 	return nil
 }
