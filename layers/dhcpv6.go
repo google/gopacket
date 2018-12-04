@@ -157,7 +157,7 @@ func (d *DHCPv6) SerializeTo(b gopacket.SerializeBuffer, opts gopacket.Serialize
 
 	if len(d.Options) > 0 {
 		for _, o := range d.Options {
-			if err := o.encode(data[offset:]); err != nil {
+			if err := o.encode(data[offset:], opts); err != nil {
 				return err
 			}
 			offset += int(o.Length) + 4 // 2 from option code, 2 from option length

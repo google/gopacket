@@ -11,6 +11,7 @@ import (
 	"encoding/binary"
 	"errors"
 	"fmt"
+	"github.com/google/gopacket"
 )
 
 // DHCPv6Opt represents a DHCP option or parameter from RFC-3315
@@ -594,9 +595,13 @@ func NewDHCPv6Option(code DHCPv6Opt, data []byte) DHCPv6Option {
 	return o
 }
 
-func (o *DHCPv6Option) encode(b []byte) error {
+func (o *DHCPv6Option) encode(b []byte, opts gopacket.SerializeOptions) error {
 	binary.BigEndian.PutUint16(b[0:2], uint16(o.Code))
-	binary.BigEndian.PutUint16(b[2:4], o.Length)
+	if opts.FixLengths {
+		binary.BigEndian.PutUint16(b[2:4], uint16(len(o.Data)))
+	} else {
+		binary.BigEndian.PutUint16(b[2:4], o.Length)
+	}
 	copy(b[4:], o.Data)
 
 	return nil
