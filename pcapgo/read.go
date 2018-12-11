@@ -138,6 +138,9 @@ func (r *Reader) ReadPacketData() (data []byte, ci gopacket.CaptureInfo, err err
 
 // ZeroCopyReadPacketData reads next packet from file. The data buffer is owned by the Reader,
 // and each call to ZeroCopyReadPacketData invalidates data returned by the previous one.
+//
+// It is not true zero copy, as data is still copied from the underlying reader. However,
+// this method avoids allocating heap memory for every packet.
 func (r *Reader) ZeroCopyReadPacketData() (data []byte, ci gopacket.CaptureInfo, err error) {
 	if ci, err = r.readPacketHeader(); err != nil {
 		return
