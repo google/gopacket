@@ -41,6 +41,8 @@ type Reader struct {
 	linkType layers.LinkType
 	// reusable buffer
 	buf [16]byte
+	// buffer for ZeroCopyReadPacketData
+	packetBuf []byte
 }
 
 const magicNanoseconds = 0xA1B23C4D
@@ -130,6 +132,33 @@ func (r *Reader) ReadPacketData() (data []byte, ci gopacket.CaptureInfo, err err
 		return
 	}
 	data = make([]byte, ci.CaptureLength)
+	_, err = io.ReadFull(r.r, data)
+	return data, ci, err
+}
+
+// ZeroCopyReadPacketData reads next packet from file. The data buffer is owned by the Reader,
+// and each call to ZeroCopyReadPacketData invalidates data returned by the previous one.
+func (r *Reader) ZeroCopyReadPacketData() (data []byte, ci gopacket.CaptureInfo, err error) {
+	if ci, err = r.readPacketHeader(); err != nil {
+		return
+	}
+	if ci.CaptureLength > int(r.snaplen) {
+		err = fmt.Errorf("capture length exceeds snap length: %d > %d", ci.CaptureLength, r.snaplen)
+		return
+	}
+	if ci.CaptureLength > ci.Length {
+		err = fmt.Errorf("capture length exceeds original packet length: %d > %d", ci.CaptureLength, ci.Length)
+		return
+	}
+
+	if cap(r.packetBuf) < ci.CaptureLength {
+		snaplen := int(r.snaplen)
+		if snaplen < ci.CaptureLength {
+			snaplen = ci.CaptureLength
+		}
+		r.packetBuf = make([]byte, snaplen)
+	}
+	data = r.packetBuf[:ci.CaptureLength]
 	_, err = io.ReadFull(r.r, data)
 	return data, ci, err
 }
