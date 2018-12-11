@@ -10,7 +10,7 @@ import (
 	"encoding/hex"
 	"testing"
 
-	"github.com/google/gopacket"
+	"github.com/fako1024/gopacket"
 )
 
 var (

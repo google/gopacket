@@ -9,7 +9,8 @@ package pcap
 
 /*
 #cgo solaris LDFLAGS: -L /opt/local/lib -lpcap
-#cgo linux LDFLAGS: -lpcap
+#cgo linux CFLAGS: -I ${SRCDIR}/libpcap
+#cgo linux LDFLAGS: ${SRCDIR}/libpcap/libpcap_linux.a
 #cgo dragonfly LDFLAGS: -lpcap
 #cgo freebsd LDFLAGS: -lpcap
 #cgo openbsd LDFLAGS: -lpcap
@@ -130,8 +131,8 @@ import (
 	"time"
 	"unsafe"
 
-	"github.com/google/gopacket"
-	"github.com/google/gopacket/layers"
+	"github.com/fako1024/gopacket"
+	"github.com/fako1024/gopacket/layers"
 )
 
 const errorBufferSize = 256
@@ -414,6 +415,7 @@ func (p *Handle) getNextBufPtrLocked(ci *gopacket.CaptureInfo) error {
 			ci.CaptureLength = int(p.pkthdr.caplen)
 			ci.Length = int(p.pkthdr.len)
 			ci.InterfaceIndex = p.deviceIndex
+			ci.Inbound = uint8(p.pkthdr.inbound)
 
 			return nil
 		case NextErrorNoMorePackets:

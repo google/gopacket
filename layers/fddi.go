@@ -7,7 +7,7 @@
 package layers
 
 import (
-	"github.com/google/gopacket"
+	"github.com/fako1024/gopacket"
 	"net"
 )
 

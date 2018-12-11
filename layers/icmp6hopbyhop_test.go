@@ -8,7 +8,7 @@
 package layers
 
 import (
-	"github.com/google/gopacket"
+	"github.com/fako1024/gopacket"
 	"testing"
 )
 
@@ -80,6 +80,6 @@ func TestPacketICMPv6WithHopByHop(t *testing.T) {
 		t.Error("Failed to decode packet:", p.ErrorLayer().Error())
 	}
 	checkLayers(p, []gopacket.LayerType{LayerTypeEthernet, LayerTypeIPv6, LayerTypeIPv6HopByHop, LayerTypeICMPv6}, t)
-	// See https://github.com/google/gopacket/issues/517
+	// See https://github.com/fako1024/gopacket/issues/517
 	// checkSerialization(p, t)
 }

@@ -10,7 +10,7 @@ import (
 	"encoding/binary"
 	"fmt"
 
-	"github.com/google/gopacket"
+	"github.com/fako1024/gopacket"
 )
 
 // OSPFType denotes what kind of OSPF type it is

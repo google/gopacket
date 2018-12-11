@@ -10,7 +10,7 @@ package layers
 
 import (
 	"crypto/rand"
-	"github.com/google/gopacket"
+	"github.com/fako1024/gopacket"
 	"io"
 	"reflect"
 	"testing"

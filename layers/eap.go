@@ -9,7 +9,7 @@ package layers
 import (
 	"encoding/binary"
 	"fmt"
-	"github.com/google/gopacket"
+	"github.com/fako1024/gopacket"
 )
 
 type EAPCode uint8

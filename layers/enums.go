@@ -11,7 +11,7 @@ import (
 	"errors"
 	"fmt"
 
-	"github.com/google/gopacket"
+	"github.com/fako1024/gopacket"
 )
 
 // EnumMetadata keeps track of a set of metadata for each enumeration value
@@ -103,6 +103,7 @@ const (
 	LinkTypeSLIP           LinkType = 8
 	LinkTypePPP            LinkType = 9
 	LinkTypeFDDI           LinkType = 10
+	LinkTypeOVPN           LinkType = 12
 	LinkTypePPP_HDLC       LinkType = 50
 	LinkTypePPPEthernet    LinkType = 51
 	LinkTypeATM_RFC1483    LinkType = 100
@@ -375,6 +376,7 @@ func initActualTypeData() {
 	LinkTypeMetadata[LinkTypeLoop] = EnumMetadata{DecodeWith: gopacket.DecodeFunc(decodeLoopback), Name: "Loop"}
 	LinkTypeMetadata[LinkTypeIEEE802_11] = EnumMetadata{DecodeWith: gopacket.DecodeFunc(decodeDot11), Name: "802.11"}
 	LinkTypeMetadata[LinkTypeRaw] = EnumMetadata{DecodeWith: gopacket.DecodeFunc(decodeIPv4or6), Name: "Raw"}
+	LinkTypeMetadata[LinkTypeOVPN] = EnumMetadata{DecodeWith: gopacket.DecodeFunc(decodeIPv4or6), Name: "OVPN"} // Open Systems addition for OpenVPN tunnels
 	LinkTypeMetadata[LinkTypePFLog] = EnumMetadata{DecodeWith: gopacket.DecodeFunc(decodePFLog), Name: "PFLog"}
 	LinkTypeMetadata[LinkTypeIEEE80211Radio] = EnumMetadata{DecodeWith: gopacket.DecodeFunc(decodeRadioTap), Name: "RadioTap"}
 	LinkTypeMetadata[LinkTypeLinuxUSB] = EnumMetadata{DecodeWith: gopacket.DecodeFunc(decodeUSB), Name: "USB"}

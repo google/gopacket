@@ -1,0 +1,25 @@
+diff -rupN libpcap-1.9.0/pcap/pcap.h libpcap-1.9.0_patched/pcap/pcap.h
+--- libpcap-1.9.0/pcap/pcap.h	2018-07-23 03:08:39.000000000 +1000
++++ libpcap-1.9.0_patched/pcap/pcap.h	2018-11-01 19:29:00.000000000 +1100
+@@ -200,6 +200,7 @@ struct pcap_pkthdr {
+ 	struct timeval ts;	/* time stamp */
+ 	bpf_u_int32 caplen;	/* length of portion present */
+ 	bpf_u_int32 len;	/* length this packet (off wire) */
++	u_int8_t inbound;	/* direction as seen from interface */
+ };
+ 
+ /*
+diff -rupN libpcap-1.9.0/pcap-linux.c libpcap-1.9.0_patched/pcap-linux.c
+--- libpcap-1.9.0/pcap-linux.c	2018-07-23 03:08:39.000000000 +1000
++++ libpcap-1.9.0_patched/pcap-linux.c	2018-11-01 19:29:40.000000000 +1100
+@@ -4931,6 +4931,10 @@ static int pcap_handle_packet_mmap(
+ 
+ 	/* if required build in place the sll header*/
+ 	sll = (void *)frame + TPACKET_ALIGN(handlep->tp_hdrlen);
++
++ 	/* OSAG addition: store direction of packet */
++ 	pcaphdr.inbound = ( sll->sll_pkttype == PACKET_OUTGOING ? 0 : 1 );
++
+ 	if (handlep->cooked) {
+ 		struct sll_header *hdrp;
+ 
