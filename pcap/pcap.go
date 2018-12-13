@@ -15,7 +15,8 @@ package pcap
 #cgo freebsd LDFLAGS: -lpcap
 #cgo openbsd LDFLAGS: -lpcap
 #cgo netbsd LDFLAGS: -lpcap
-#cgo darwin LDFLAGS: -lpcap
+#cgo darwin CFLAGS: -I ${SRCDIR}/libpcap
+#cgo darwin LDFLAGS: ${SRCDIR}/libpcap/libpcap_darwin.a
 #cgo windows CFLAGS: -I C:/WpdPack/Include
 #cgo windows,386 LDFLAGS: -L C:/WpdPack/Lib -lwpcap
 #cgo windows,amd64 LDFLAGS: -L C:/WpdPack/Lib/x64 -lwpcap
