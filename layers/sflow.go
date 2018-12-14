@@ -693,7 +693,12 @@ const (
 	SFlowTypeTokenRingInterfaceCounters SFlowCounterRecordType = 3
 	SFlowType100BaseVGInterfaceCounters SFlowCounterRecordType = 4
 	SFlowTypeVLANCounters               SFlowCounterRecordType = 5
+	SFlowTypeLACPCounters               SFlowCounterRecordType = 7
 	SFlowTypeProcessorCounters          SFlowCounterRecordType = 1001
+	SFlowTypeOpenflowPortCounters       SFlowCounterRecordType = 1004
+	SFlowTypePORTNAMECounters           SFlowCounterRecordType = 1005
+	SFLowTypeAPPRESOURCESCounters       SFlowCounterRecordType = 2203
+	SFlowTypeOVSDPCounters              SFlowCounterRecordType = 2207
 )
 
 func (cr SFlowCounterRecordType) String() string {
@@ -708,8 +713,18 @@ func (cr SFlowCounterRecordType) String() string {
 		return "100BaseVG Interface Counters"
 	case SFlowTypeVLANCounters:
 		return "VLAN Counters"
+	case SFlowTypeLACPCounters:
+		return "LACP Counters"
 	case SFlowTypeProcessorCounters:
 		return "Processor Counters"
+	case SFlowTypeOpenflowPortCounters:
+		return "Openflow Port Counters"
+	case SFlowTypePORTNAMECounters:
+		return "PORT NAME Counters"
+	case SFLowTypeAPPRESOURCESCounters:
+		return "App Resources Counters"
+	case SFlowTypeOVSDPCounters:
+		return "OVSDP Counters"
 	default:
 		return ""
 
@@ -760,8 +775,35 @@ func decodeCounterSample(data *[]byte, expanded bool) (SFlowCounterSample, error
 		case SFlowTypeVLANCounters:
 			skipRecord(data)
 			return s, errors.New("skipping TypeVLANCounters")
+		case SFlowTypeLACPCounters:
+			skipRecord(data)
+			return s, errors.New("skipping TypeLACPCounters")
 		case SFlowTypeProcessorCounters:
 			if record, err := decodeProcessorCounters(data); err == nil {
+				s.Records = append(s.Records, record)
+			} else {
+				return s, err
+			}
+		case SFlowTypeOpenflowPortCounters:
+			if record, err := decodeOpenflowportCounters(data); err == nil {
+				s.Records = append(s.Records, record)
+			} else {
+				return s, err
+			}
+		case SFlowTypePORTNAMECounters:
+			if record, err := decodePortnameCounters(data); err == nil {
+				s.Records = append(s.Records, record)
+			} else {
+				return s, err
+			}
+		case SFLowTypeAPPRESOURCESCounters:
+			if record, err := decodeAppresourcesCounters(data); err == nil {
+				s.Records = append(s.Records, record)
+			} else {
+				return s, err
+			}
+		case SFlowTypeOVSDPCounters:
+			if record, err := decodeOVSDPCounters(data); err == nil {
 				s.Records = append(s.Records, record)
 			} else {
 				return s, err
@@ -1979,9 +2021,18 @@ func (bcr SFlowBaseCounterRecord) GetType() SFlowCounterRecordType {
 		return SFlowType100BaseVGInterfaceCounters
 	case SFlowTypeVLANCounters:
 		return SFlowTypeVLANCounters
+	case SFlowTypeLACPCounters:
+		return SFlowTypeLACPCounters
 	case SFlowTypeProcessorCounters:
 		return SFlowTypeProcessorCounters
-
+	case SFlowTypeOpenflowPortCounters:
+		return SFlowTypeOpenflowPortCounters
+	case SFlowTypePORTNAMECounters:
+		return SFlowTypePORTNAMECounters
+	case SFLowTypeAPPRESOURCESCounters:
+		return SFLowTypeAPPRESOURCESCounters
+	case SFlowTypeOVSDPCounters:
+		return SFlowTypeOVSDPCounters
 	}
 	unrecognized := fmt.Sprint("Unrecognized counter record type:", bcr.Format)
 	panic(unrecognized)
@@ -2234,4 +2285,104 @@ func decodeEthernetFrameFlowRecord(data *[]byte) (SFlowEthernetFrameFlowRecord, 
 	*data, es.DstMac = (*data)[8:], net.HardwareAddr((*data)[:6])
 	*data, es.Type = (*data)[4:], binary.BigEndian.Uint32((*data)[:4])
 	return es, nil
+}
+
+//SFlowOpenflowPortCounters  :  OVS-Sflow OpenFlow Port Counter  ( 20 Bytes )
+type SFlowOpenflowPortCounters struct {
+	SFlowBaseCounterRecord
+	DatapathID uint64
+	PortNo     uint32
+}
+
+func decodeOpenflowportCounters(data *[]byte) (SFlowOpenflowPortCounters, error) {
+	ofp := SFlowOpenflowPortCounters{}
+	var cdf SFlowCounterDataFormat
+
+	*data, cdf = (*data)[4:], SFlowCounterDataFormat(binary.BigEndian.Uint32((*data)[:4]))
+	ofp.EnterpriseID, ofp.Format = cdf.decode()
+	*data, ofp.FlowDataLength = (*data)[4:], binary.BigEndian.Uint32((*data)[:4])
+	*data, ofp.DatapathID = (*data)[8:], binary.BigEndian.Uint64((*data)[:8])
+	*data, ofp.PortNo = (*data)[4:], binary.BigEndian.Uint32((*data)[:4])
+
+	return ofp, nil
+}
+
+//SFlowAppresourcesCounters  :  OVS_Sflow App Resources Counter ( 48 Bytes )
+type SFlowAppresourcesCounters struct {
+	SFlowBaseCounterRecord
+	UserTime   uint32
+	SystemTime uint32
+	MemUsed    uint64
+	MemMax     uint64
+	FdOpen     uint32
+	FdMax      uint32
+	ConnOpen   uint32
+	ConnMax    uint32
+}
+
+func decodeAppresourcesCounters(data *[]byte) (SFlowAppresourcesCounters, error) {
+	app := SFlowAppresourcesCounters{}
+	var cdf SFlowCounterDataFormat
+
+	*data, cdf = (*data)[4:], SFlowCounterDataFormat(binary.BigEndian.Uint32((*data)[:4]))
+	app.EnterpriseID, app.Format = cdf.decode()
+	*data, app.FlowDataLength = (*data)[4:], binary.BigEndian.Uint32((*data)[:4])
+	*data, app.UserTime = (*data)[4:], binary.BigEndian.Uint32((*data)[:4])
+	*data, app.SystemTime = (*data)[4:], binary.BigEndian.Uint32((*data)[:4])
+	*data, app.MemUsed = (*data)[8:], binary.BigEndian.Uint64((*data)[:8])
+	*data, app.MemMax = (*data)[8:], binary.BigEndian.Uint64((*data)[:8])
+	*data, app.FdOpen = (*data)[4:], binary.BigEndian.Uint32((*data)[:4])
+	*data, app.FdMax = (*data)[4:], binary.BigEndian.Uint32((*data)[:4])
+	*data, app.ConnOpen = (*data)[4:], binary.BigEndian.Uint32((*data)[:4])
+	*data, app.ConnMax = (*data)[4:], binary.BigEndian.Uint32((*data)[:4])
+
+	return app, nil
+}
+
+//SFlowOVSDPCounters  :  OVS-Sflow DataPath Counter  ( 32 Bytes )
+type SFlowOVSDPCounters struct {
+	SFlowBaseCounterRecord
+	NHit     uint32
+	NMissed  uint32
+	NLost    uint32
+	NMaskHit uint32
+	NFlows   uint32
+	NMasks   uint32
+}
+
+func decodeOVSDPCounters(data *[]byte) (SFlowOVSDPCounters, error) {
+	dp := SFlowOVSDPCounters{}
+	var cdf SFlowCounterDataFormat
+
+	*data, cdf = (*data)[4:], SFlowCounterDataFormat(binary.BigEndian.Uint32((*data)[:4]))
+	dp.EnterpriseID, dp.Format = cdf.decode()
+	*data, dp.FlowDataLength = (*data)[4:], binary.BigEndian.Uint32((*data)[:4])
+	*data, dp.NHit = (*data)[4:], binary.BigEndian.Uint32((*data)[:4])
+	*data, dp.NMissed = (*data)[4:], binary.BigEndian.Uint32((*data)[:4])
+	*data, dp.NLost = (*data)[4:], binary.BigEndian.Uint32((*data)[:4])
+	*data, dp.NMaskHit = (*data)[4:], binary.BigEndian.Uint32((*data)[:4])
+	*data, dp.NFlows = (*data)[4:], binary.BigEndian.Uint32((*data)[:4])
+	*data, dp.NMasks = (*data)[4:], binary.BigEndian.Uint32((*data)[:4])
+
+	return dp, nil
+}
+
+//SFlowPORTNAME  :  OVS-Sflow PORTNAME Counter Sampletype ( 20 Bytes )
+type SFlowPORTNAME struct {
+	SFlowBaseCounterRecord
+	Len uint32
+	Str string
+}
+
+func decodePortnameCounters(data *[]byte) (SFlowPORTNAME, error) {
+	pn := SFlowPORTNAME{}
+	var cdf SFlowCounterDataFormat
+
+	*data, cdf = (*data)[4:], SFlowCounterDataFormat(binary.BigEndian.Uint32((*data)[:4]))
+	pn.EnterpriseID, pn.Format = cdf.decode()
+	*data, pn.FlowDataLength = (*data)[4:], binary.BigEndian.Uint32((*data)[:4])
+	*data, pn.Len = (*data)[4:], binary.BigEndian.Uint32((*data)[:4])
+	*data, pn.Str = (*data)[8:], string(binary.BigEndian.Uint64((*data)[:8]))
+
+	return pn, nil
 }
