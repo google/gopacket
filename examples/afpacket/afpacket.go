@@ -69,9 +69,8 @@ func newAfpacketHandle(device string, snaplen int, block_size int, num_blocks in
 	return h, err
 }
 
-// ReadPacketData satisfies PacketDataSource interface. Here it will use
-// zero copy mode.
-func (h *afpacketHandle) ReadPacketData() (data []byte, ci gopacket.CaptureInfo, err error) {
+// ZeroCopyReadPacketData satisfies ZeroCopyPacketDataSource interface
+func (h *afpacketHandle) ZeroCopyReadPacketData() (data []byte, ci gopacket.CaptureInfo, err error) {
 	return h.TPacket.ZeroCopyReadPacketData()
 }
 
@@ -165,13 +164,13 @@ func main() {
 	if err != nil {
 		log.Fatal(err)
 	}
-	source := gopacket.PacketDataSource(afpacketHandle)
+	source := gopacket.ZeroCopyPacketDataSource(afpacketHandle)
 	defer afpacketHandle.Close()
 
 	bytes := uint64(0)
 	packets := uint64(0)
 	for ; *count != 0; *count-- {
-		data, _, err := source.ReadPacketData()
+		data, _, err := source.ZeroCopyReadPacketData()
 		if err != nil {
 			log.Fatal(err)
 		}
