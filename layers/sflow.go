@@ -2193,9 +2193,10 @@ func decodeProcessorCounters(data *[]byte) (SFlowProcessorCounters, error) {
 // An agent may or may not provide this information.
 type SFlowEthernetFrameFlowRecord struct {
 	SFlowBaseFlowRecord
-	SrcMac net.HardwareAddr
-	DstMac net.HardwareAddr
-	Type   uint32
+	FrameLength uint32
+	SrcMac      net.HardwareAddr
+	DstMac      net.HardwareAddr
+	Type        uint32
 }
 
 // Ethernet frame flow records have the following structure:
@@ -2220,8 +2221,10 @@ func decodeEthernetFrameFlowRecord(data *[]byte) (SFlowEthernetFrameFlowRecord, 
 	*data, fdf = (*data)[4:], SFlowFlowDataFormat(binary.BigEndian.Uint32((*data)[:4]))
 	es.EnterpriseID, es.Format = fdf.decode()
 	*data, es.FlowDataLength = (*data)[4:], binary.BigEndian.Uint32((*data)[:4])
-	*data, es.SrcMac = (*data)[6:], net.HardwareAddr((*data)[:6])
-	*data, es.DstMac = (*data)[6:], net.HardwareAddr((*data)[:6])
+
+	*data, es.FrameLength = (*data)[4:], binary.BigEndian.Uint32((*data)[:4])
+	*data, es.SrcMac = (*data)[8:], net.HardwareAddr((*data)[:6])
+	*data, es.DstMac = (*data)[8:], net.HardwareAddr((*data)[:6])
 	*data, es.Type = (*data)[4:], binary.BigEndian.Uint32((*data)[:4])
 	return es, nil
 }
