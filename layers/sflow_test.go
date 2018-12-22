@@ -6,10 +6,11 @@
 package layers
 
 import (
-	"github.com/google/gopacket"
 	"net"
 	"reflect"
 	"testing"
+
+	"github.com/google/gopacket"
 )
 
 // Test packet collected from live network. See the test below for contents
@@ -1129,6 +1130,11 @@ func TestDecodeExtendedIpv4TunnelIngressFlow(t *testing.T) {
 							FlowDataLength: 0x20,
 						},
 						SFlowIpv4Record: SFlowIpv4Record{
+							SFlowBaseFlowRecord: SFlowBaseFlowRecord{
+								EnterpriseID:   0x0,
+								Format:         SFlowTypeIpv4Flow,
+								FlowDataLength: 0x20,
+							},
 							Length:   0x0,
 							Protocol: 0x2f,
 							IPSrc:    net.IP{0xc0, 0xa8, 0x0, 0x54},
