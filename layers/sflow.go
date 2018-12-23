@@ -486,141 +486,148 @@ func decodeFlowSample(data *[]byte, expanded bool) (SFlowFlowSample, error) {
 
 	for i := uint32(0); i < s.RecordCount; i++ {
 		rdf := SFlowFlowDataFormat(binary.BigEndian.Uint32((*data)[:4]))
-		_, flowRecordType := rdf.decode()
+		enterpriseID, flowRecordType := rdf.decode()
 
-		switch flowRecordType {
-		case SFlowTypeRawPacketFlow:
-			if record, err := decodeRawPacketFlowRecord(data); err == nil {
-				s.Records = append(s.Records, record)
-			} else {
-				return s, err
+		// Try to decode when EnterpriseID is 0 signaling
+		// default sflow structs are used according specification
+		// Unexpected behavior detected for e.g. with pmacct
+		if enterpriseID == 0 {
+			switch flowRecordType {
+			case SFlowTypeRawPacketFlow:
+				if record, err := decodeRawPacketFlowRecord(data); err == nil {
+					s.Records = append(s.Records, record)
+				} else {
+					return s, err
+				}
+			case SFlowTypeExtendedUserFlow:
+				if record, err := decodeExtendedUserFlow(data); err == nil {
+					s.Records = append(s.Records, record)
+				} else {
+					return s, err
+				}
+			case SFlowTypeExtendedUrlFlow:
+				if record, err := decodeExtendedURLRecord(data); err == nil {
+					s.Records = append(s.Records, record)
+				} else {
+					return s, err
+				}
+			case SFlowTypeExtendedSwitchFlow:
+				if record, err := decodeExtendedSwitchFlowRecord(data); err == nil {
+					s.Records = append(s.Records, record)
+				} else {
+					return s, err
+				}
+			case SFlowTypeExtendedRouterFlow:
+				if record, err := decodeExtendedRouterFlowRecord(data); err == nil {
+					s.Records = append(s.Records, record)
+				} else {
+					return s, err
+				}
+			case SFlowTypeExtendedGatewayFlow:
+				if record, err := decodeExtendedGatewayFlowRecord(data); err == nil {
+					s.Records = append(s.Records, record)
+				} else {
+					return s, err
+				}
+			case SFlowTypeEthernetFrameFlow:
+				if record, err := decodeEthernetFrameFlowRecord(data); err == nil {
+					s.Records = append(s.Records, record)
+				} else {
+					return s, err
+				}
+			case SFlowTypeIpv4Flow:
+				if record, err := decodeSFlowIpv4Record(data); err == nil {
+					s.Records = append(s.Records, record)
+				} else {
+					return s, err
+				}
+			case SFlowTypeIpv6Flow:
+				if record, err := decodeSFlowIpv6Record(data); err == nil {
+					s.Records = append(s.Records, record)
+				} else {
+					return s, err
+				}
+			case SFlowTypeExtendedMlpsFlow:
+				// TODO
+				skipRecord(data)
+				return s, errors.New("skipping TypeExtendedMlpsFlow")
+			case SFlowTypeExtendedNatFlow:
+				// TODO
+				skipRecord(data)
+				return s, errors.New("skipping TypeExtendedNatFlow")
+			case SFlowTypeExtendedMlpsTunnelFlow:
+				// TODO
+				skipRecord(data)
+				return s, errors.New("skipping TypeExtendedMlpsTunnelFlow")
+			case SFlowTypeExtendedMlpsVcFlow:
+				// TODO
+				skipRecord(data)
+				return s, errors.New("skipping TypeExtendedMlpsVcFlow")
+			case SFlowTypeExtendedMlpsFecFlow:
+				// TODO
+				skipRecord(data)
+				return s, errors.New("skipping TypeExtendedMlpsFecFlow")
+			case SFlowTypeExtendedMlpsLvpFecFlow:
+				// TODO
+				skipRecord(data)
+				return s, errors.New("skipping TypeExtendedMlpsLvpFecFlow")
+			case SFlowTypeExtendedVlanFlow:
+				// TODO
+				skipRecord(data)
+				return s, errors.New("skipping TypeExtendedVlanFlow")
+			case SFlowTypeExtendedIpv4TunnelEgressFlow:
+				if record, err := decodeExtendedIpv4TunnelEgress(data); err == nil {
+					s.Records = append(s.Records, record)
+				} else {
+					return s, err
+				}
+			case SFlowTypeExtendedIpv4TunnelIngressFlow:
+				if record, err := decodeExtendedIpv4TunnelIngress(data); err == nil {
+					s.Records = append(s.Records, record)
+				} else {
+					return s, err
+				}
+			case SFlowTypeExtendedIpv6TunnelEgressFlow:
+				if record, err := decodeExtendedIpv6TunnelEgress(data); err == nil {
+					s.Records = append(s.Records, record)
+				} else {
+					return s, err
+				}
+			case SFlowTypeExtendedIpv6TunnelIngressFlow:
+				if record, err := decodeExtendedIpv6TunnelIngress(data); err == nil {
+					s.Records = append(s.Records, record)
+				} else {
+					return s, err
+				}
+			case SFlowTypeExtendedDecapsulateEgressFlow:
+				if record, err := decodeExtendedDecapsulateEgress(data); err == nil {
+					s.Records = append(s.Records, record)
+				} else {
+					return s, err
+				}
+			case SFlowTypeExtendedDecapsulateIngressFlow:
+				if record, err := decodeExtendedDecapsulateIngress(data); err == nil {
+					s.Records = append(s.Records, record)
+				} else {
+					return s, err
+				}
+			case SFlowTypeExtendedVniEgressFlow:
+				if record, err := decodeExtendedVniEgress(data); err == nil {
+					s.Records = append(s.Records, record)
+				} else {
+					return s, err
+				}
+			case SFlowTypeExtendedVniIngressFlow:
+				if record, err := decodeExtendedVniIngress(data); err == nil {
+					s.Records = append(s.Records, record)
+				} else {
+					return s, err
+				}
+			default:
+				return s, fmt.Errorf("Unsupported flow record type: %d", flowRecordType)
 			}
-		case SFlowTypeExtendedUserFlow:
-			if record, err := decodeExtendedUserFlow(data); err == nil {
-				s.Records = append(s.Records, record)
-			} else {
-				return s, err
-			}
-		case SFlowTypeExtendedUrlFlow:
-			if record, err := decodeExtendedURLRecord(data); err == nil {
-				s.Records = append(s.Records, record)
-			} else {
-				return s, err
-			}
-		case SFlowTypeExtendedSwitchFlow:
-			if record, err := decodeExtendedSwitchFlowRecord(data); err == nil {
-				s.Records = append(s.Records, record)
-			} else {
-				return s, err
-			}
-		case SFlowTypeExtendedRouterFlow:
-			if record, err := decodeExtendedRouterFlowRecord(data); err == nil {
-				s.Records = append(s.Records, record)
-			} else {
-				return s, err
-			}
-		case SFlowTypeExtendedGatewayFlow:
-			if record, err := decodeExtendedGatewayFlowRecord(data); err == nil {
-				s.Records = append(s.Records, record)
-			} else {
-				return s, err
-			}
-		case SFlowTypeEthernetFrameFlow:
-			if record, err := decodeEthernetFrameFlowRecord(data); err == nil {
-				s.Records = append(s.Records, record)
-			} else {
-				return s, err
-			}
-		case SFlowTypeIpv4Flow:
-			if record, err := decodeSFlowIpv4Record(data); err == nil {
-				s.Records = append(s.Records, record)
-			} else {
-				return s, err
-			}
-		case SFlowTypeIpv6Flow:
-			if record, err := decodeSFlowIpv6Record(data); err == nil {
-				s.Records = append(s.Records, record)
-			} else {
-				return s, err
-			}
-		case SFlowTypeExtendedMlpsFlow:
-			// TODO
+		} else {
 			skipRecord(data)
-			return s, errors.New("skipping TypeExtendedMlpsFlow")
-		case SFlowTypeExtendedNatFlow:
-			// TODO
-			skipRecord(data)
-			return s, errors.New("skipping TypeExtendedNatFlow")
-		case SFlowTypeExtendedMlpsTunnelFlow:
-			// TODO
-			skipRecord(data)
-			return s, errors.New("skipping TypeExtendedMlpsTunnelFlow")
-		case SFlowTypeExtendedMlpsVcFlow:
-			// TODO
-			skipRecord(data)
-			return s, errors.New("skipping TypeExtendedMlpsVcFlow")
-		case SFlowTypeExtendedMlpsFecFlow:
-			// TODO
-			skipRecord(data)
-			return s, errors.New("skipping TypeExtendedMlpsFecFlow")
-		case SFlowTypeExtendedMlpsLvpFecFlow:
-			// TODO
-			skipRecord(data)
-			return s, errors.New("skipping TypeExtendedMlpsLvpFecFlow")
-		case SFlowTypeExtendedVlanFlow:
-			// TODO
-			skipRecord(data)
-			return s, errors.New("skipping TypeExtendedVlanFlow")
-		case SFlowTypeExtendedIpv4TunnelEgressFlow:
-			if record, err := decodeExtendedIpv4TunnelEgress(data); err == nil {
-				s.Records = append(s.Records, record)
-			} else {
-				return s, err
-			}
-		case SFlowTypeExtendedIpv4TunnelIngressFlow:
-			if record, err := decodeExtendedIpv4TunnelIngress(data); err == nil {
-				s.Records = append(s.Records, record)
-			} else {
-				return s, err
-			}
-		case SFlowTypeExtendedIpv6TunnelEgressFlow:
-			if record, err := decodeExtendedIpv6TunnelEgress(data); err == nil {
-				s.Records = append(s.Records, record)
-			} else {
-				return s, err
-			}
-		case SFlowTypeExtendedIpv6TunnelIngressFlow:
-			if record, err := decodeExtendedIpv6TunnelIngress(data); err == nil {
-				s.Records = append(s.Records, record)
-			} else {
-				return s, err
-			}
-		case SFlowTypeExtendedDecapsulateEgressFlow:
-			if record, err := decodeExtendedDecapsulateEgress(data); err == nil {
-				s.Records = append(s.Records, record)
-			} else {
-				return s, err
-			}
-		case SFlowTypeExtendedDecapsulateIngressFlow:
-			if record, err := decodeExtendedDecapsulateIngress(data); err == nil {
-				s.Records = append(s.Records, record)
-			} else {
-				return s, err
-			}
-		case SFlowTypeExtendedVniEgressFlow:
-			if record, err := decodeExtendedVniEgress(data); err == nil {
-				s.Records = append(s.Records, record)
-			} else {
-				return s, err
-			}
-		case SFlowTypeExtendedVniIngressFlow:
-			if record, err := decodeExtendedVniIngress(data); err == nil {
-				s.Records = append(s.Records, record)
-			} else {
-				return s, err
-			}
-		default:
-			return s, fmt.Errorf("Unsupported flow record type: %d", flowRecordType)
 		}
 	}
 	return s, nil
