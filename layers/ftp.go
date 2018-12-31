@@ -17,8 +17,10 @@ import (
 	"github.com/google/gopacket"
 )
 
+// FTPCommand defines the different commands fo the FTP Protocol
 type FTPCommand uint16
 
+// Here are all the FTP commands
 const (
 	FTPCommandAbor FTPCommand = iota + 1 // ABOR Abort an active file transfer.
 	FTPCommandAcct                       // ACCT Account information.
@@ -239,6 +241,7 @@ func (fc FTPCommand) String() string {
 	}
 }
 
+// GetFTPCommand returns the constant of a FTP command from its string
 func GetFTPCommand(command string) (FTPCommand, error) {
 	switch strings.ToUpper(command) {
 	case "ABOR":
@@ -386,6 +389,7 @@ func GetFTPCommand(command string) (FTPCommand, error) {
 	}
 }
 
+// FTP object contains information about an FTP packet
 type FTP struct {
 	BaseLayer
 
@@ -411,14 +415,19 @@ func decodeFTP(data []byte, p gopacket.PacketBuilder) error {
 
 }
 
+// LayerType returns gopacket.LayerTypeFTP
 func (f *FTP) LayerType() gopacket.LayerType { return LayerTypeFTP }
 
+// Payload returns the base layer payload (nil)
 func (f *FTP) Payload() []byte { return nil }
 
+// CanDecode returns gopacket.LayerTypeFTP
 func (f *FTP) CanDecode() gopacket.LayerClass { return LayerTypeFTP }
 
+// NextLayerType returns gopacket.LayerTypeZero
 func (f *FTP) NextLayerType() gopacket.LayerType { return gopacket.LayerTypeZero }
 
+// DecodeFromBytes decodes the slice into the FTP struct.
 func (f *FTP) DecodeFromBytes(data []byte, df gopacket.DecodeFeedback) error {
 	var countLines int
 	var line []byte
@@ -447,12 +456,12 @@ func (f *FTP) DecodeFromBytes(data []byte, df gopacket.DecodeFeedback) error {
 		line = bytes.Trim(line, "\r\n")
 
 		if countLines == 0 {
-			err = f.ParseFirstLine(line)
+			err = f.parseFirstLine(line)
 			if err != nil {
 				return err
 			}
 		} else {
-			err = f.ParseFollowupLine(line)
+			err = f.parseFollowupLine(line)
 			if err != nil {
 				return err
 			}
@@ -466,7 +475,7 @@ func (f *FTP) DecodeFromBytes(data []byte, df gopacket.DecodeFeedback) error {
 	return nil
 }
 
-func (f *FTP) ParseFirstLine(line []byte) error {
+func (f *FTP) parseFirstLine(line []byte) error {
 	var err error
 	if len(line) < 3 {
 		return fmt.Errorf("invalid first FTP line: '%s'", string(line))
@@ -495,7 +504,7 @@ func (f *FTP) ParseFirstLine(line []byte) error {
 	return nil
 }
 
-func (f *FTP) ParseFollowupLine(line []byte) error {
+func (f *FTP) parseFollowupLine(line []byte) error {
 	if f.IsResponse {
 		f.ResponseStatus += "\n" + string(line)
 	} else {
@@ -504,6 +513,8 @@ func (f *FTP) ParseFollowupLine(line []byte) error {
 	return nil
 }
 
+// SerializeTo writes the serialized form of this layer into the
+// SerializationBuffer, implementing gopacket.SerializableLayer.
 func (f *FTP) SerializeTo(b gopacket.SerializeBuffer, opts gopacket.SerializeOptions) error {
 	if f.IsResponse {
 		bytes, err := b.PrependBytes(len(f.ResponseStatus) + len(f.Delimiter) + 5)
