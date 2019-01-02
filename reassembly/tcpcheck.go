@@ -54,7 +54,7 @@ func NewTCPOptionCheck() TCPOptionCheck {
 }
 
 // Accept checks whether the packet should be accepted by checking TCP options
-func (t *TCPOptionCheck) Accept(tcp *layers.TCP, ci gopacket.CaptureInfo, dir TCPFlowDirection, acked Sequence, start *bool) error {
+func (t *TCPOptionCheck) Accept(tcp *layers.TCP, ci gopacket.CaptureInfo, dir TCPFlowDirection, nextSeq Sequence, start *bool) error {
 	options := t.getOptions(dir)
 	if tcp.SYN {
 		mss := -1
@@ -78,18 +78,18 @@ func (t *TCPOptionCheck) Accept(tcp *layers.TCP, ci gopacket.CaptureInfo, dir TC
 		options.mss = mss
 		options.scale = scale
 	} else {
-		if acked != invalidSequence {
+		if nextSeq != invalidSequence {
 			revOptions := t.getOptions(dir.Reverse())
 			length := len(tcp.Payload)
 
 			// Check packet is in the correct window
-			diff := acked.Difference(Sequence(tcp.Seq))
+			diff := nextSeq.Difference(Sequence(tcp.Seq))
 			if diff == -1 && (length == 1 || length == 0) {
 				// This is probably a Keep-alive
 				// TODO: check byte is ok
 			} else if diff < 0 {
 				return fmt.Errorf("Re-emitted packet (diff:%d,seq:%d,rev-ack:%d)", diff,
-					tcp.Seq, acked)
+					tcp.Seq, nextSeq)
 			} else if revOptions.mss > 0 && length > revOptions.mss {
 				return fmt.Errorf("%d > mss (%d)", length, revOptions.mss)
 			} else if revOptions.receiveWindow != 0 && revOptions.scale < 0 && diff > int(revOptions.receiveWindow) {

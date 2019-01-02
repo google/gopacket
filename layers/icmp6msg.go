@@ -151,6 +151,20 @@ func (i *ICMPv6Echo) DecodeFromBytes(data []byte, df gopacket.DecodeFeedback) er
 	return nil
 }
 
+// SerializeTo writes the serialized form of this layer into the
+// SerializationBuffer, implementing gopacket.SerializableLayer.
+// See the docs for gopacket.SerializableLayer for more info.
+func (i *ICMPv6Echo) SerializeTo(b gopacket.SerializeBuffer, opts gopacket.SerializeOptions) error {
+	buf, err := b.PrependBytes(4)
+	if err != nil {
+		return err
+	}
+
+	binary.BigEndian.PutUint16(buf, i.Identifier)
+	binary.BigEndian.PutUint16(buf[2:], i.SeqNumber)
+	return nil
+}
+
 // LayerType returns LayerTypeICMPv6.
 func (i *ICMPv6RouterSolicitation) LayerType() gopacket.LayerType {
 	return LayerTypeICMPv6RouterSolicitation
@@ -190,6 +204,11 @@ func (i *ICMPv6RouterSolicitation) SerializeTo(b gopacket.SerializeBuffer, opts 
 
 	copy(buf, lotsOfZeros[:4])
 	return nil
+}
+
+// CanDecode returns the set of layer types that this DecodingLayer can decode.
+func (i *ICMPv6RouterSolicitation) CanDecode() gopacket.LayerClass {
+	return LayerTypeICMPv6RouterSolicitation
 }
 
 // LayerType returns LayerTypeICMPv6RouterAdvertisement.
@@ -242,6 +261,11 @@ func (i *ICMPv6RouterAdvertisement) SerializeTo(b gopacket.SerializeBuffer, opts
 	binary.BigEndian.PutUint32(buf[4:], i.ReachableTime)
 	binary.BigEndian.PutUint32(buf[8:], i.RetransTimer)
 	return nil
+}
+
+// CanDecode returns the set of layer types that this DecodingLayer can decode.
+func (i *ICMPv6RouterAdvertisement) CanDecode() gopacket.LayerClass {
+	return LayerTypeICMPv6RouterAdvertisement
 }
 
 // ManagedAddressConfig is true when addresses are available via DHCPv6. If
@@ -300,6 +324,11 @@ func (i *ICMPv6NeighborSolicitation) SerializeTo(b gopacket.SerializeBuffer, opt
 	return nil
 }
 
+// CanDecode returns the set of layer types that this DecodingLayer can decode.
+func (i *ICMPv6NeighborSolicitation) CanDecode() gopacket.LayerClass {
+	return LayerTypeICMPv6NeighborSolicitation
+}
+
 // LayerType returns LayerTypeICMPv6NeighborAdvertisement.
 func (i *ICMPv6NeighborAdvertisement) LayerType() gopacket.LayerType {
 	return LayerTypeICMPv6NeighborAdvertisement
@@ -344,6 +373,11 @@ func (i *ICMPv6NeighborAdvertisement) SerializeTo(b gopacket.SerializeBuffer, op
 	copy(buf[1:], lotsOfZeros[:3])
 	copy(buf[4:], i.TargetAddress)
 	return nil
+}
+
+// CanDecode returns the set of layer types that this DecodingLayer can decode.
+func (i *ICMPv6NeighborAdvertisement) CanDecode() gopacket.LayerClass {
+	return LayerTypeICMPv6NeighborAdvertisement
 }
 
 // Router indicates whether the sender is a router or not.
@@ -408,6 +442,11 @@ func (i *ICMPv6Redirect) SerializeTo(b gopacket.SerializeBuffer, opts gopacket.S
 	return nil
 }
 
+// CanDecode returns the set of layer types that this DecodingLayer can decode.
+func (i *ICMPv6Redirect) CanDecode() gopacket.LayerClass {
+	return LayerTypeICMPv6Redirect
+}
+
 func (i ICMPv6Option) String() string {
 	hd := hex.EncodeToString(i.Data)
 	if len(hd) > 0 {
@@ -459,6 +498,11 @@ func (i *ICMPv6Options) DecodeFromBytes(data []byte, df gopacket.DecodeFeedback)
 
 		// unit is 8 octets, convert to bytes
 		length := int(data[1]) * 8
+
+		if length == 0 {
+			df.SetTruncated()
+			return errors.New("ICMPv6 message option with length 0")
+		}
 
 		if len(data) < length {
 			df.SetTruncated()

@@ -117,13 +117,16 @@ func (h *httpReader) Read(p []byte) (int, error) {
 
 var outputLevel int
 var errorsMap map[string]uint
+var errorsMapMutex sync.Mutex
 var errors uint
 
 // Too bad for perf that a... is evaluated
 func Error(t string, s string, a ...interface{}) {
+	errorsMapMutex.Lock()
 	errors++
 	nb, _ := errorsMap[t]
 	errorsMap[t] = nb + 1
+	errorsMapMutex.Unlock()
 	if outputLevel >= 0 {
 		fmt.Printf(s, a...)
 	}
@@ -160,15 +163,19 @@ func (h *httpReader) run(wg *sync.WaitGroup) {
 			}
 			req.Body.Close()
 			Info("HTTP/%s Request: %s %s (body:%d)\n", h.ident, req.Method, req.URL, s)
+			h.parent.Lock()
 			h.parent.urls = append(h.parent.urls, req.URL.String())
+			h.parent.Unlock()
 		} else {
 			res, err := http.ReadResponse(b, nil)
 			var req string
+			h.parent.Lock()
 			if len(h.parent.urls) == 0 {
 				req = fmt.Sprintf("<no-request-seen>")
 			} else {
 				req, h.parent.urls = h.parent.urls[0], h.parent.urls[1:]
 			}
+			h.parent.Unlock()
 			if err == io.EOF || err == io.ErrUnexpectedEOF {
 				break
 			} else if err != nil {
@@ -323,9 +330,10 @@ type tcpStream struct {
 	server         httpReader
 	urls           []string
 	ident          string
+	sync.Mutex
 }
 
-func (t *tcpStream) Accept(tcp *layers.TCP, ci gopacket.CaptureInfo, dir reassembly.TCPFlowDirection, acked reassembly.Sequence, start *bool, ac reassembly.AssemblerContext) bool {
+func (t *tcpStream) Accept(tcp *layers.TCP, ci gopacket.CaptureInfo, dir reassembly.TCPFlowDirection, nextSeq reassembly.Sequence, start *bool, ac reassembly.AssemblerContext) bool {
 	// FSM
 	if !t.tcpstate.CheckState(tcp, dir) {
 		Error("FSM", "%s: Packet rejected by FSM (state:%s)\n", t.ident, t.tcpstate.String())
@@ -339,7 +347,7 @@ func (t *tcpStream) Accept(tcp *layers.TCP, ci gopacket.CaptureInfo, dir reassem
 		}
 	}
 	// Options
-	err := t.optchecker.Accept(tcp, ci, dir, acked, start)
+	err := t.optchecker.Accept(tcp, ci, dir, nextSeq, start)
 	if err != nil {
 		Error("OptionChecker", "%s: Packet rejected by OptionChecker: %s\n", t.ident, err)
 		stats.rejectOpt++
@@ -594,7 +602,10 @@ func main() {
 
 		done := *maxcount > 0 && count >= *maxcount
 		if count%*statsevery == 0 || done {
-			fmt.Fprintf(os.Stderr, "Processed %v packets (%v bytes) in %v (errors: %v, type:%v)\n", count, bytes, time.Since(start), errors, len(errorsMap))
+			errorsMapMutex.Lock()
+			errorMapLen := len(errorsMap)
+			errorsMapMutex.Unlock()
+			fmt.Fprintf(os.Stderr, "Processed %v packets (%v bytes) in %v (errors: %v, errTypes:%v)\n", count, bytes, time.Since(start), errors, errorMapLen)
 		}
 		select {
 		case <-signalChan:
