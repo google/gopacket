@@ -15,6 +15,7 @@ import (
 
 	"bufio"
 	"compress/gzip"
+
 	"github.com/google/gopacket"
 	"github.com/google/gopacket/layers"
 )
@@ -40,6 +41,8 @@ type Reader struct {
 	linkType layers.LinkType
 	// reusable buffer
 	buf [16]byte
+	// buffer for ZeroCopyReadPacketData
+	packetBuf []byte
 }
 
 const magicNanoseconds = 0xA1B23C4D
@@ -121,10 +124,44 @@ func (r *Reader) ReadPacketData() (data []byte, ci gopacket.CaptureInfo, err err
 		return
 	}
 	if ci.CaptureLength > int(r.snaplen) {
-		err = fmt.Errorf("capture length exceeds snap length: %d > %d", 16+ci.CaptureLength, r.snaplen)
+		err = fmt.Errorf("capture length exceeds snap length: %d > %d", ci.CaptureLength, r.snaplen)
+		return
+	}
+	if ci.CaptureLength > ci.Length {
+		err = fmt.Errorf("capture length exceeds original packet length: %d > %d", ci.CaptureLength, ci.Length)
 		return
 	}
 	data = make([]byte, ci.CaptureLength)
+	_, err = io.ReadFull(r.r, data)
+	return data, ci, err
+}
+
+// ZeroCopyReadPacketData reads next packet from file. The data buffer is owned by the Reader,
+// and each call to ZeroCopyReadPacketData invalidates data returned by the previous one.
+//
+// It is not true zero copy, as data is still copied from the underlying reader. However,
+// this method avoids allocating heap memory for every packet.
+func (r *Reader) ZeroCopyReadPacketData() (data []byte, ci gopacket.CaptureInfo, err error) {
+	if ci, err = r.readPacketHeader(); err != nil {
+		return
+	}
+	if ci.CaptureLength > int(r.snaplen) {
+		err = fmt.Errorf("capture length exceeds snap length: %d > %d", ci.CaptureLength, r.snaplen)
+		return
+	}
+	if ci.CaptureLength > ci.Length {
+		err = fmt.Errorf("capture length exceeds original packet length: %d > %d", ci.CaptureLength, ci.Length)
+		return
+	}
+
+	if cap(r.packetBuf) < ci.CaptureLength {
+		snaplen := int(r.snaplen)
+		if snaplen < ci.CaptureLength {
+			snaplen = ci.CaptureLength
+		}
+		r.packetBuf = make([]byte, snaplen)
+	}
+	data = r.packetBuf[:ci.CaptureLength]
 	_, err = io.ReadFull(r.r, data)
 	return data, ci, err
 }
@@ -168,14 +205,14 @@ func (r *Reader) Snaplen() uint32 {
 // and uses it (https://github.com/the-tcpdump-group/tcpdump/blob/66384fa15b04b47ad08c063d4728df3b9c1c0677/print.c#L343-L358).
 //
 // For further reading:
-// - https://github.com/the-tcpdump-group/tcpdump/issues/389
-// - https://bugs.wireshark.org/bugzilla/show_bug.cgi?id=8808
-// - https://www.wireshark.org/lists/wireshark-dev/201307/msg00061.html
-// - https://github.com/wireshark/wireshark/blob/bfd51199e707c1d5c28732be34b44a9ee8a91cd8/wiretap/pcap-common.c#L723-L742
-//   - https://github.com/wireshark/wireshark/blob/f07fb6cdfc0904905627707b88450054e921f092/wiretap/libpcap.c#L592-L598
-//   - https://github.com/wireshark/wireshark/blob/f07fb6cdfc0904905627707b88450054e921f092/wiretap/libpcap.c#L714-L727
-// - https://github.com/the-tcpdump-group/tcpdump/commit/d033c1bc381c76d13e4aface97a4f4ec8c3beca2
-// - https://github.com/the-tcpdump-group/tcpdump/blob/88e87cb2cb74c5f939792171379acd9e0efd8b9a/netdissect.h#L263-L290
+//  - https://github.com/the-tcpdump-group/tcpdump/issues/389
+//  - https://bugs.wireshark.org/bugzilla/show_bug.cgi?id=8808
+//  - https://www.wireshark.org/lists/wireshark-dev/201307/msg00061.html
+//  - https://github.com/wireshark/wireshark/blob/bfd51199e707c1d5c28732be34b44a9ee8a91cd8/wiretap/pcap-common.c#L723-L742
+//    - https://github.com/wireshark/wireshark/blob/f07fb6cdfc0904905627707b88450054e921f092/wiretap/libpcap.c#L592-L598
+//    - https://github.com/wireshark/wireshark/blob/f07fb6cdfc0904905627707b88450054e921f092/wiretap/libpcap.c#L714-L727
+//  - https://github.com/the-tcpdump-group/tcpdump/commit/d033c1bc381c76d13e4aface97a4f4ec8c3beca2
+//  - https://github.com/the-tcpdump-group/tcpdump/blob/88e87cb2cb74c5f939792171379acd9e0efd8b9a/netdissect.h#L263-L290
 func (r *Reader) SetSnaplen(newSnaplen uint32) {
 	r.snaplen = newSnaplen
 }

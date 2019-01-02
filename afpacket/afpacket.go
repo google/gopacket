@@ -20,6 +20,7 @@ import (
 	"runtime"
 	"sync"
 	"sync/atomic"
+	"syscall"
 	"time"
 	"unsafe"
 
@@ -53,6 +54,13 @@ func tpacketAlign(v int) int {
 	return int((uint(v) + tpacketAlignment - 1) & ((^tpacketAlignment) - 1))
 }
 
+// AncillaryVLAN structures are used to pass the captured VLAN
+// as ancillary data via CaptureInfo.
+type AncillaryVLAN struct {
+	// The VLAN VID provided by the kernel.
+	VLAN int
+}
+
 // Stats is a set of counters detailing the work TPacket has done so far.
 type Stats struct {
 	// Packets is the total number of packets returned to the caller.
@@ -66,11 +74,38 @@ type Stats struct {
 // SocketStats is a struct where socket stats are stored
 type SocketStats C.struct_tpacket_stats
 
+// Packets returns the number of packets seen by this socket.
+func (s *SocketStats) Packets() uint {
+	return uint(s.tp_packets)
+}
+
+// Drops returns the number of packets dropped on this socket.
+func (s *SocketStats) Drops() uint {
+	return uint(s.tp_drops)
+}
+
 // SocketStatsV3 is a struct where socket stats for TPacketV3 are stored
 type SocketStatsV3 C.struct_tpacket_stats_v3
 
+// Packets returns the number of packets seen by this socket.
+func (s *SocketStatsV3) Packets() uint {
+	return uint(s.tp_packets)
+}
+
+// Drops returns the number of packets dropped on this socket.
+func (s *SocketStatsV3) Drops() uint {
+	return uint(s.tp_drops)
+}
+
+// QueueFreezes returns the number of queue freezes on this socket.
+func (s *SocketStatsV3) QueueFreezes() uint {
+	return uint(s.tp_freeze_q_cnt)
+}
+
 // TPacket implements packet receiving for Linux AF_PACKET versions 1, 2, and 3.
 type TPacket struct {
+	// stats is simple statistics on TPacket's run. This MUST be the first entry to ensure alignment for sync.atomic
+	stats Stats
 	// fd is the C file descriptor.
 	fd int
 	// ring points to the memory space of the ring buffer shared by tpacket and the kernel.
@@ -84,8 +119,6 @@ type TPacket struct {
 	offset int
 	// current is the current header.
 	current header
-	// pollset is used by TPacket for its poll() call.
-	pollset unix.PollFd
 	// shouldReleasePacket is set to true whenever we return packet data, to make sure we remember to release that data back to the kernel.
 	shouldReleasePacket bool
 	// headerNextNeeded is set to true when header need to move to the next packet. No need to move it case of poll error.
@@ -98,8 +131,6 @@ type TPacket struct {
 	v3 v3wrapper
 
 	statsMu sync.Mutex // guards stats below
-	// stats is simple statistics on TPacket's run.
-	stats Stats
 	// socketStats contains stats from the socket
 	socketStats SocketStats
 	// same as socketStats, but with an extra field freeze_q_cnt
@@ -288,6 +319,10 @@ retry:
 	ci.CaptureLength = len(data)
 	ci.Length = h.current.getLength()
 	ci.InterfaceIndex = h.current.getIfaceIndex()
+	vlan := h.current.getVLAN()
+	if vlan >= 0 {
+		ci.AncillaryData = append(ci.AncillaryData, AncillaryVLAN{vlan})
+	}
 	atomic.AddInt64(&h.stats.Packets, 1)
 	h.headerNextNeeded = true
 	h.mu.Unlock()
@@ -421,17 +456,23 @@ func (h *TPacket) getTPacketHeader() header {
 func (h *TPacket) pollForFirstPacket(hdr header) error {
 	tm := int(h.opts.pollTimeout / time.Millisecond)
 	for hdr.getStatus()&C.TP_STATUS_USER == 0 {
-		h.pollset.Fd = int32(h.fd)
-		h.pollset.Events = unix.POLLIN
-		h.pollset.Revents = 0
-		n, err := unix.Poll([]unix.PollFd{h.pollset}, tm)
+		pollset := [1]unix.PollFd{
+			{
+				Fd:     int32(h.fd),
+				Events: unix.POLLIN,
+			},
+		}
+		n, err := unix.Poll(pollset[:], tm)
 		if n == 0 {
 			return ErrTimeout
 		}
 
 		atomic.AddInt64(&h.stats.Polls, 1)
-		if h.pollset.Revents&unix.POLLERR > 0 {
+		if pollset[0].Revents&unix.POLLERR > 0 {
 			return ErrPoll
+		}
+		if err == syscall.EINTR {
+			continue
 		}
 		if err != nil {
 			return err
