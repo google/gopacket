@@ -110,14 +110,14 @@ var testPacketSIPResponse = []byte{
 func TestSIPMain(t *testing.T) {
 
 	expectedHeaders := map[string]string{"Call-ID": "306366781@172_16_254_66", "Contact": "<sip:bob@172.16.254.66:5060>"}
-	_TestPacketSIP(t, testPacketSIPRequest, SIPMethodRegister, false, 3, expectedHeaders)
+	_TestPacketSIP(t, testPacketSIPRequest, SIPMethodRegister, false, 3, expectedHeaders, "sip:sip.provider.com")
 
 	expectedHeaders = map[string]string{"Call-ID": "306366781@172_16_254_66", "Contact": "<sip:bob@172.16.254.66:5060>;expires=1800"}
-	_TestPacketSIP(t, testPacketSIPResponse, SIPMethodRegister, true, 3, expectedHeaders)
+	_TestPacketSIP(t, testPacketSIPResponse, SIPMethodRegister, true, 3, expectedHeaders, "")
 
 }
 
-func _TestPacketSIP(t *testing.T, packetData []byte, methodWanted SIPMethod, isResponse bool, wantedCseq int64, expectedHeaders map[string]string) {
+func _TestPacketSIP(t *testing.T, packetData []byte, methodWanted SIPMethod, isResponse bool, wantedCseq int64, expectedHeaders map[string]string, expectedRequestURI string) {
 
 	p := gopacket.NewPacket(packetData, LinkTypeEthernet, gopacket.Default)
 	if p.ErrorLayer() != nil {
@@ -134,6 +134,13 @@ func _TestPacketSIP(t *testing.T, packetData []byte, methodWanted SIPMethod, isR
 		// Check if it's right packet type
 		if got.IsResponse != isResponse {
 			t.Errorf("SIP packet type is not the same as expected")
+		}
+
+		// Check the RequestURI if it's a request
+		if !isResponse {
+			if got.RequestURI != expectedRequestURI {
+				t.Errorf("SIP packet type is not the same as expected")
+			}
 		}
 
 		// Check headers
