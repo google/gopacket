@@ -92,6 +92,9 @@ func byteSliceToString(bval []byte) string {
 // WARNING: ONLY SAFE WITH IF r POINTS TO C MEMORY!
 // govet will complain about this function for the reason stated above
 func bytePtrToString(r uintptr) string {
+	if r == 0 {
+		return ""
+	}
 	bval := (*[1 << 30]byte)(unsafe.Pointer(r))
 	return byteSliceToString(bval[:])
 }
