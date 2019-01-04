@@ -23,18 +23,13 @@ import (
 
 const npcapPath = "\\Npcap"
 
-func initDllPath() {
-	h, err := syscall.LoadLibrary("kernel32.dll")
-	if err != nil {
-		panic("couldn't load kernel32.dll")
-	}
-	defer syscall.FreeLibrary(h)
-	setDllDirectory, err := syscall.GetProcAddress(h, "SetDllDirectoryA")
+func initDllPath(kernel32 syscall.Handle) {
+	setDllDirectory, err := syscall.GetProcAddress(kernel32, "SetDllDirectoryA")
 	if err != nil {
 		// we can't do anything since SetDllDirectoryA is missing - fall back to use first wpcap.dll we encounter
 		return
 	}
-	getSystemDirectory, err := syscall.GetProcAddress(h, "GetSystemDirectoryA")
+	getSystemDirectory, err := syscall.GetProcAddress(kernel32, "GetSystemDirectoryA")
 	if err != nil {
 		// we can't do anything since SetDllDirectoryA is missing - fall back to use first wpcap.dll we encounter
 		return
@@ -50,10 +45,28 @@ func initDllPath() {
 	// ignore errors here - we just fallback to load wpcap.dll from default locations
 }
 
+// loadedDllPath will hold the full pathname of the loaded wpcap.dll after init if possible
+var loadedDllPath = "wpcap.dll"
+
+func initLoadedDllPath(kernel32 syscall.Handle) {
+	getModuleFileName, err := syscall.GetProcAddress(kernel32, "GetModuleFileNameA")
+	if err != nil {
+		// we can't get the filename of the loaded module in this case - just leave default of wpcap.dll
+		return
+	}
+	buf := make([]byte, 4096)
+	r, _, _ := syscall.Syscall(getModuleFileName, 3, uintptr(wpcapHandle), uintptr(unsafe.Pointer(&buf[0])), uintptr(len(buf)))
+	if r == 0 {
+		// we can't get the filename of the loaded module in this case - just leave default of wpcap.dll
+		return
+	}
+	loadedDllPath = string(buf[:int(r)])
+}
+
 func mustLoad(fun string) uintptr {
 	addr, err := syscall.GetProcAddress(wpcapHandle, fun)
 	if err != nil {
-		panic(fmt.Sprintf("Couldn't load function %s from wpcap.dll", fun))
+		panic(fmt.Sprintf("Couldn't load function %s from %s", fun, loadedDllPath))
 	}
 	return addr
 }
@@ -132,12 +145,19 @@ var (
 )
 
 func init() {
-	initDllPath()
-	var err error
+	kernel32, err := syscall.LoadLibrary("kernel32.dll")
+	if err != nil {
+		panic("couldn't load kernel32.dll")
+	}
+	defer syscall.FreeLibrary(kernel32)
+
+	initDllPath(kernel32)
+
 	wpcapHandle, err = syscall.LoadLibrary("wpcap.dll")
 	if err != nil {
 		panic("Couldn't load wpcap.dll")
 	}
+	initLoadedDllPath(kernel32)
 	msvcrtHandle, err = syscall.LoadLibrary("msvcrt.dll")
 	if err != nil {
 		panic("Couldn't load msvcrt.dll")
@@ -146,6 +166,7 @@ func init() {
 	if err != nil {
 		panic("Couldn't get calloc function")
 	}
+
 	pcapStrerrorPtr = mustLoad("pcap_strerror")
 	pcapStatustostrPtr = mightLoad("pcap_statustostr") // not available on winpcap
 	pcapOpenLivePtr = mustLoad("pcap_open_live")
