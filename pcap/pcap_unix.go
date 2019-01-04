@@ -518,7 +518,6 @@ func pcapCreate(device string) (*InactiveHandle, error) {
 	dev := C.CString(device)
 	defer C.free(unsafe.Pointer(dev))
 
-	// This copies a bunch of the pcap_open_live implementation from pcap.c:
 	cptr := C.pcap_create(dev, buf)
 	if cptr == nil {
 		return nil, errors.New(C.GoString(buf))
