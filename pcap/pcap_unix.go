@@ -258,8 +258,15 @@ func pcapBpfProgramFromInstructions(bpfInstructions []BPFInstruction) pcapBpfPro
 	var bpf pcapBpfProgram
 	bpf.bf_len = C.u_int(len(bpfInstructions))
 	cbpfInsns := C.calloc(C.size_t(len(bpfInstructions)), C.size_t(unsafe.Sizeof(bpfInstructions[0])))
+	gbpfInsns := (*[bpfInstructionBufferSize]_Ctype_struct_bpf_insn)(cbpfInsns)
 
-	copy((*[bpfInstructionBufferSize]BPFInstruction)(cbpfInsns)[0:len(bpfInstructions)], bpfInstructions)
+	for i, v := range bpfInstructions {
+		gbpfInsns[i].code = C.ushort(v.Code)
+		gbpfInsns[i].jt = C.uchar(v.Jt)
+		gbpfInsns[i].jf = C.uchar(v.Jf)
+		gbpfInsns[i].k = C.uint(v.K)
+	}
+
 	bpf.bf_insns = (*_Ctype_struct_bpf_insn)(cbpfInsns)
 	return bpf
 }
