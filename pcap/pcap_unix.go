@@ -211,7 +211,7 @@ func (p *Handle) pcapGeterr() error {
 
 func (p *Handle) pcapStats() (*Stats, error) {
 	var cstats _Ctype_struct_pcap_stat
-	if -1 == C.pcap_stats(p.cptr, &cstats) {
+	if C.pcap_stats(p.cptr, &cstats) < 0 {
 		return nil, p.pcapGeterr()
 	}
 	return &Stats{
@@ -231,7 +231,7 @@ func (p *Handle) pcapCompile(expr string, maskp uint32) (pcapBpfProgram, error) 
 
 	pcapCompileMu.Lock()
 	defer pcapCompileMu.Unlock()
-	if -1 == C.pcap_compile(p.cptr, (*_Ctype_struct_bpf_program)(&bpf), cexpr, 1, C.bpf_u_int32(maskp)) {
+	if C.pcap_compile(p.cptr, (*_Ctype_struct_bpf_program)(&bpf), cexpr, 1, C.bpf_u_int32(maskp)) < 0 {
 		return bpf, p.pcapGeterr()
 	}
 	return bpf, nil
@@ -269,12 +269,12 @@ func pcapLookupnet(device string) (netp, maskp uint32, err error) {
 	defer C.free(unsafe.Pointer(errorBuf))
 	dev := C.CString(device)
 	defer C.free(unsafe.Pointer(dev))
-	if -1 == C.pcap_lookupnet(
+	if C.pcap_lookupnet(
 		dev,
 		(*C.bpf_u_int32)(unsafe.Pointer(&netp)),
 		(*C.bpf_u_int32)(unsafe.Pointer(&maskp)),
 		errorBuf,
-	) {
+	) < 0 {
 		return 0, 0, errors.New(C.GoString(errorBuf))
 		// We can't lookup the network, but that could be because the interface
 		// doesn't have an IPv4.
@@ -293,7 +293,7 @@ func (b *BPF) pcapOfflineFilter(ci gopacket.CaptureInfo, data []byte) bool {
 }
 
 func (p *Handle) pcapSetfilter(bpf pcapBpfProgram) error {
-	if -1 == C.pcap_setfilter(p.cptr, (*_Ctype_struct_bpf_program)(&bpf)) {
+	if C.pcap_setfilter(p.cptr, (*_Ctype_struct_bpf_program)(&bpf)) < 0 {
 		return p.pcapGeterr()
 	}
 	return nil
@@ -303,7 +303,7 @@ func (p *Handle) pcapListDatalinks() (datalinks []Datalink, err error) {
 	var dltbuf *C.int
 
 	n := int(C.pcap_list_datalinks(p.cptr, &dltbuf))
-	if -1 == n {
+	if n < 0 {
 		return nil, p.pcapGeterr()
 	}
 
@@ -311,7 +311,7 @@ func (p *Handle) pcapListDatalinks() (datalinks []Datalink, err error) {
 
 	datalinks = make([]Datalink, n)
 
-	dltArray := (*[100]C.int)(unsafe.Pointer(dltbuf))
+	dltArray := (*[1 << 30]C.int)(unsafe.Pointer(dltbuf))
 
 	for i := 0; i < n; i++ {
 		datalinks[i].Name = pcapDatalinkValToName(int((*dltArray)[i]))
@@ -344,7 +344,7 @@ func (p *Handle) pcapDatalink() layers.LinkType {
 }
 
 func (p *Handle) pcapSetDatalink(dlt layers.LinkType) error {
-	if -1 == C.pcap_set_datalink(p.cptr, C.int(dlt)) {
+	if C.pcap_set_datalink(p.cptr, C.int(dlt)) < 0 {
 		return p.pcapGeterr()
 	}
 	return nil
@@ -452,14 +452,14 @@ func pcapFindAllDevs() (pcapDevices, error) {
 	defer C.free(unsafe.Pointer(buf))
 	var alldevsp pcapDevices
 
-	if -1 == C.pcap_findalldevs((**C.pcap_if_t)(&alldevsp.all), buf) {
+	if C.pcap_findalldevs((**C.pcap_if_t)(&alldevsp.all), buf) < 0 {
 		return pcapDevices{}, errors.New(C.GoString(buf))
 	}
 	return alldevsp, nil
 }
 
 func (p *Handle) pcapSendpacket(data []byte) error {
-	if -1 == C.pcap_sendpacket(p.cptr, (*C.u_char)(&data[0]), (C.int)(len(data))) {
+	if C.pcap_sendpacket(p.cptr, (*C.u_char)(&data[0]), (C.int)(len(data))) < 0 {
 		return p.pcapGeterr()
 	}
 	return nil
@@ -553,8 +553,11 @@ func (p *InactiveHandle) pcapSetTimeout(timeout time.Duration) error {
 func (p *InactiveHandle) pcapListTstampTypes() (out []TimestampSource) {
 	var types *C.int
 	n := int(C.pcap_list_tstamp_types(p.cptr, &types))
+	if n < 0 {
+		return // public interface doesn't have error :(
+	}
 	defer C.pcap_free_tstamp_types(types)
-	typesArray := (*[100]C.int)(unsafe.Pointer(types))
+	typesArray := (*[1 << 30]C.int)(unsafe.Pointer(types))
 	for i := 0; i < n; i++ {
 		out = append(out, TimestampSource((*typesArray)[i]))
 	}
@@ -611,7 +614,7 @@ func (p *Handle) setNonBlocking() error {
 
 	// Change the device to non-blocking, we'll use pcap_wait to wait until the
 	// handle is ready to read.
-	if v := C.pcap_setnonblock(p.cptr, 1, buf); v == -1 {
+	if v := C.pcap_setnonblock(p.cptr, 1, buf); v < -1 {
 		return errors.New(C.GoString(buf))
 	}
 

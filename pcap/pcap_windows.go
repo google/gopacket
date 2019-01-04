@@ -285,7 +285,7 @@ func (p *Handle) pcapGeterr() error {
 func (p *Handle) pcapStats() (*Stats, error) {
 	var cstats pcapStats
 	ret, _, _ := syscall.Syscall(pcapStatsPtr, 2, uintptr(p.cptr), uintptr(unsafe.Pointer(&cstats)), 0)
-	if pcapCint(ret) == -1 {
+	if pcapCint(ret) < 0 {
 		return nil, p.pcapGeterr()
 	}
 	return &Stats{
@@ -307,7 +307,7 @@ func (p *Handle) pcapCompile(expr string, maskp uint32) (pcapBpfProgram, error) 
 	pcapCompileMu.Lock()
 	defer pcapCompileMu.Unlock()
 	res, _, _ := syscall.Syscall6(pcapCompilePtr, 5, uintptr(p.cptr), uintptr(unsafe.Pointer(&bpf)), uintptr(unsafe.Pointer(cexpr)), uintptr(1), uintptr(maskp), 0)
-	if pcapCint(res) == -1 {
+	if pcapCint(res) < 0 {
 		return bpf, p.pcapGeterr()
 	}
 	return bpf, nil
@@ -348,7 +348,7 @@ func pcapLookupnet(device string) (netp, maskp uint32, err error) {
 		return 0, 0, err
 	}
 	e, _, _ := syscall.Syscall6(pcapLookupnetPtr, 4, uintptr(unsafe.Pointer(dev)), uintptr(unsafe.Pointer(&netp)), uintptr(unsafe.Pointer(&maskp)), uintptr(unsafe.Pointer(&buf[0])), 0, 0)
-	if pcapCint(e) == -1 {
+	if pcapCint(e) < 0 {
 		return 0, 0, errors.New(byteSliceToString(buf))
 	}
 	return
@@ -366,7 +366,7 @@ func (b *BPF) pcapOfflineFilter(ci gopacket.CaptureInfo, data []byte) bool {
 
 func (p *Handle) pcapSetfilter(bpf pcapBpfProgram) error {
 	e, _, _ := syscall.Syscall(pcapSetfilterPtr, 2, uintptr(p.cptr), uintptr(unsafe.Pointer(&bpf)), 0)
-	if pcapCint(e) == -1 {
+	if pcapCint(e) < 0 {
 		return p.pcapGeterr()
 	}
 	return nil
@@ -378,14 +378,14 @@ func (p *Handle) pcapListDatalinks() (datalinks []Datalink, err error) {
 
 	n := int(pcapCint(ret))
 
-	if n == -1 {
+	if n < 0 {
 		return nil, p.pcapGeterr()
 	}
 	defer syscall.Syscall(pcapFreeDatalinksPtr, 1, uintptr(unsafe.Pointer(dltbuf)), 0, 0)
 
 	datalinks = make([]Datalink, n)
 
-	dltArray := (*[100]pcapCint)(unsafe.Pointer(dltbuf))
+	dltArray := (*[1 << 30]pcapCint)(unsafe.Pointer(dltbuf))
 
 	for i := 0; i < n; i++ {
 		datalinks[i].Name = pcapDatalinkValToName(int((*dltArray)[i]))
@@ -423,7 +423,7 @@ func (p *Handle) pcapDatalink() layers.LinkType {
 
 func (p *Handle) pcapSetDatalink(dlt layers.LinkType) error {
 	ret, _, _ := syscall.Syscall(pcapSetDatalinkPtr, 2, uintptr(p.cptr), uintptr(dlt), 0)
-	if pcapCint(ret) == -1 {
+	if pcapCint(ret) < 0 {
 		return p.pcapGeterr()
 	}
 	return nil
@@ -537,7 +537,7 @@ func pcapFindAllDevs() (pcapDevices, error) {
 
 	ret, _, _ := syscall.Syscall(pcapFindalldevsPtr, 2, uintptr(unsafe.Pointer(&alldevsp.all)), uintptr(unsafe.Pointer(&buf[0])), 0)
 
-	if pcapCint(ret) == -1 {
+	if pcapCint(ret) < 0 {
 		return pcapDevices{}, errors.New(byteSliceToString(buf))
 	}
 	return alldevsp, nil
@@ -545,7 +545,7 @@ func pcapFindAllDevs() (pcapDevices, error) {
 
 func (p *Handle) pcapSendpacket(data []byte) error {
 	ret, _, _ := syscall.Syscall(pcapSendpacketPtr, 3, uintptr(p.cptr), uintptr(unsafe.Pointer(&data[0])), uintptr(len(data)))
-	if pcapCint(ret) == -1 {
+	if pcapCint(ret) < 0 {
 		return p.pcapGeterr()
 	}
 	return nil
@@ -665,8 +665,11 @@ func (p *InactiveHandle) pcapListTstampTypes() (out []TimestampSource) {
 	var types *pcapCint
 	ret, _, _ := syscall.Syscall(pcapListTstampTypesPtr, 2, uintptr(p.cptr), uintptr(unsafe.Pointer(&types)), 0)
 	n := int(pcapCint(ret))
+	if n < 0 {
+		return // public interface doesn't have error :(
+	}
 	defer syscall.Syscall(pcapFreeTstampTypesPtr, 1, uintptr(unsafe.Pointer(types)), 0, 0)
-	typesArray := (*[100]pcapCint)(unsafe.Pointer(types))
+	typesArray := (*[1 << 30]pcapCint)(unsafe.Pointer(types))
 	for i := 0; i < n; i++ {
 		out = append(out, TimestampSource((*typesArray)[i]))
 	}
