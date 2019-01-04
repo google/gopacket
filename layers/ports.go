@@ -60,9 +60,12 @@ func (a TCPPort) LayerType() gopacket.LayerType {
 }
 
 var tcpPortLayerType = [65536]gopacket.LayerType{
+	25:   LayerTypeSMTP,
 	53:   LayerTypeDNS,
 	443:  LayerTypeTLS,       // https
+	465:  LayerTypeTLS,       // smtps
 	502:  LayerTypeModbusTCP, // modbustcp
+	587:  LayerTypeTLS,       // smtps/submission
 	636:  LayerTypeTLS,       // ldaps
 	989:  LayerTypeTLS,       // ftps-data
 	990:  LayerTypeTLS,       // ftps
