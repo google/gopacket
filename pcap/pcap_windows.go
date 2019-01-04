@@ -334,9 +334,15 @@ func pcapBpfProgramFromInstructions(bpfInstructions []BPFInstruction) pcapBpfPro
 	var bpf pcapBpfProgram
 	bpf.Len = uint32(len(bpfInstructions))
 	cbpfInsns, _, _ := syscall.Syscall(callocPtr, 2, uintptr(len(bpfInstructions)), uintptr(unsafe.Sizeof(bpfInstructions[0])), 0)
+	gbpfInsns := (*[bpfInstructionBufferSize]pcapBpfInstruction)(unsafe.Pointer(cbpfInsns))
 
-	//SMELL: this looks strange:
-	copy((*[bpfInstructionBufferSize]BPFInstruction)(unsafe.Pointer(cbpfInsns))[0:len(bpfInstructions)], bpfInstructions)
+	for i, v := range bpfInstructions {
+		gbpfInsns[i].Code = v.Code
+		gbpfInsns[i].Jt = v.Jt
+		gbpfInsns[i].Jf = v.Jf
+		gbpfInsns[i].K = v.K
+	}
+
 	bpf.Insns = (*pcapBpfInstruction)(unsafe.Pointer(cbpfInsns))
 	return bpf
 }
