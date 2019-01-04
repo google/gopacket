@@ -59,9 +59,9 @@ func GetSMTPCommand(command string) (SMTPCommandType, error) {
 	switch strings.ToUpper(command) {
 	case "HELO":
 		return SMTPCommandTypeHELO, nil
-	case "MAILFROM":
+	case "MAIL FROM":
 		return SMTPCommandTypeMAILFROM, nil
-	case "RCPTTO":
+	case "RCPT TO":
 		return SMTPCommandTypeRCPTTO, nil
 	case "DATA":
 		return SMTPCommandTypeDATA, nil
@@ -75,7 +75,7 @@ func GetSMTPCommand(command string) (SMTPCommandType, error) {
 		return SMTPCommandTypeQUIT, nil
 	case "EHLO":
 		return SMTPCommandTypeEHLO, nil
-	case "AUTH":
+	case "AUTH LOGIN":
 		return SMTPCommandTypeAUTH, nil
 	case "STARTTLS":
 		return SMTPCommandTypeSTARTTLS, nil
@@ -195,21 +195,28 @@ func (smtp *SMTP) parseLine(line []byte) error {
 		smtp.IsResponse = true
 		smtp.ResponseLines = append(smtp.ResponseLines, response)
 	} else {
-		commandSplit := strings.SplitN(string(lineTrimmed), " ", 2)
-		command := SMTPCommand{}
-		command.Command, cmdErr = GetSMTPCommand(strings.Replace(commandSplit[0], " ", "", -1))
-		if cmdErr != nil { // no valid command, treating it as the content of DATA, adding it to payload
-			smtp.Command = SMTPCommand{
-				Command: SMTPCommandTypeMSG,
+		re := regexp.MustCompile("^(helo|ehlo|EHLO|HELO|[\\w]*[ ]?[\\w]+)[ :-]?(.*)")
+		if res := re.FindStringSubmatch(string(lineTrimmed)); res != nil {
+			command := SMTPCommand{}
+
+			command.Command, cmdErr = GetSMTPCommand(smtp.cleanString(res[1]))
+			if cmdErr != nil { // no valid command, treating it as the content of DATA, adding it to payload
+				smtp.Command = SMTPCommand{
+					Command: SMTPCommandTypeMSG,
+				}
+				smtp.BaseLayer.Payload = append(smtp.BaseLayer.Payload, line...)
+			} else {
+				if len(res) >= 3 {
+					command.Parameter = res[2]
+				}
+				smtp.Command = command
 			}
-			smtp.BaseLayer.Payload = append(smtp.BaseLayer.Payload, line...)
-		} else {
-			if len(commandSplit) >= 2 {
-				command.Parameter = commandSplit[1]
-			}
-			smtp.Command = command
 		}
 	}
 
 	return nil
+}
+
+func (smtp *SMTP) cleanString(str string) string {
+	return strings.Trim(str, ":")
 }
