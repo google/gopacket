@@ -121,11 +121,11 @@ func (smtp *SMTP) CanDecode() gopacket.LayerClass { return LayerTypeSMTP }
 
 // NextLayerType returns gopacket.LayerTypeZero
 func (smtp *SMTP) NextLayerType() gopacket.LayerType {
+	lt := gopacket.LayerTypeZero
 	if len(smtp.BaseLayer.Payload) > 0 {
-		return gopacket.LayerTypeFragment
-	} else {
-		return gopacket.LayerTypeZero
+		lt = gopacket.LayerTypeFragment
 	}
+	return lt
 }
 
 // DecodeFromBytes decodes the SMTP layer from bytes
