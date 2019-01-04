@@ -368,7 +368,7 @@ func (p *Handle) ListDataLinks() (datalinks []Datalink, err error) {
 	return p.pcapListDatalinks()
 }
 
-// compileBPFFilter always returns an allocated _Ctype_struct_bpf_program
+// compileBPFFilter always returns an allocated C.struct_bpf_program
 // It is the callers responsibility to free the memory again, e.g.
 //
 //    C.pcap_freecode(&bpf)

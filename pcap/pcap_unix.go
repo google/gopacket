@@ -210,7 +210,7 @@ func (p *Handle) pcapGeterr() error {
 }
 
 func (p *Handle) pcapStats() (*Stats, error) {
-	var cstats _Ctype_struct_pcap_stat
+	var cstats C.struct_pcap_stat
 	if C.pcap_stats(p.cptr, &cstats) < 0 {
 		return nil, p.pcapGeterr()
 	}
@@ -231,18 +231,18 @@ func (p *Handle) pcapCompile(expr string, maskp uint32) (pcapBpfProgram, error) 
 
 	pcapCompileMu.Lock()
 	defer pcapCompileMu.Unlock()
-	if C.pcap_compile(p.cptr, (*_Ctype_struct_bpf_program)(&bpf), cexpr, 1, C.bpf_u_int32(maskp)) < 0 {
+	if C.pcap_compile(p.cptr, (*C.struct_bpf_program)(&bpf), cexpr, 1, C.bpf_u_int32(maskp)) < 0 {
 		return bpf, p.pcapGeterr()
 	}
 	return bpf, nil
 }
 
 func (p pcapBpfProgram) free() {
-	C.pcap_freecode((*_Ctype_struct_bpf_program)(&p))
+	C.pcap_freecode((*C.struct_bpf_program)(&p))
 }
 
 func (p pcapBpfProgram) toBPFInstruction() []BPFInstruction {
-	bpfInsn := (*[bpfInstructionBufferSize]_Ctype_struct_bpf_insn)(unsafe.Pointer(p.bf_insns))[0:p.bf_len:p.bf_len]
+	bpfInsn := (*[bpfInstructionBufferSize]C.struct_bpf_insn)(unsafe.Pointer(p.bf_insns))[0:p.bf_len:p.bf_len]
 	bpfInstruction := make([]BPFInstruction, len(bpfInsn), len(bpfInsn))
 
 	for i, v := range bpfInsn {
@@ -258,7 +258,7 @@ func pcapBpfProgramFromInstructions(bpfInstructions []BPFInstruction) pcapBpfPro
 	var bpf pcapBpfProgram
 	bpf.bf_len = C.u_int(len(bpfInstructions))
 	cbpfInsns := C.calloc(C.size_t(len(bpfInstructions)), C.size_t(unsafe.Sizeof(bpfInstructions[0])))
-	gbpfInsns := (*[bpfInstructionBufferSize]_Ctype_struct_bpf_insn)(cbpfInsns)
+	gbpfInsns := (*[bpfInstructionBufferSize]C.struct_bpf_insn)(cbpfInsns)
 
 	for i, v := range bpfInstructions {
 		gbpfInsns[i].code = C.ushort(v.Code)
@@ -267,7 +267,7 @@ func pcapBpfProgramFromInstructions(bpfInstructions []BPFInstruction) pcapBpfPro
 		gbpfInsns[i].k = C.uint(v.K)
 	}
 
-	bpf.bf_insns = (*_Ctype_struct_bpf_insn)(cbpfInsns)
+	bpf.bf_insns = (*C.struct_bpf_insn)(cbpfInsns)
 	return bpf
 }
 
@@ -296,11 +296,11 @@ func (b *BPF) pcapOfflineFilter(ci gopacket.CaptureInfo, data []byte) bool {
 	hdr.caplen = C.bpf_u_int32(len(data)) // Trust actual length over ci.Length.
 	hdr.len = C.bpf_u_int32(ci.Length)
 	dataptr := (*C.u_char)(unsafe.Pointer(&data[0]))
-	return C.pcap_offline_filter((*_Ctype_struct_bpf_program)(&b.bpf), &hdr, dataptr) != 0
+	return C.pcap_offline_filter((*C.struct_bpf_program)(&b.bpf), &hdr, dataptr) != 0
 }
 
 func (p *Handle) pcapSetfilter(bpf pcapBpfProgram) error {
-	if C.pcap_setfilter(p.cptr, (*_Ctype_struct_bpf_program)(&bpf)) < 0 {
+	if C.pcap_setfilter(p.cptr, (*C.struct_bpf_program)(&bpf)) < 0 {
 		return p.pcapGeterr()
 	}
 	return nil
