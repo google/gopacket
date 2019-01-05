@@ -225,7 +225,7 @@ func (r *Reader) String() string {
 // Resolution returns the timestamp resolution of acquired timestamps before scaling to NanosecondTimestampResolution.
 func (r *Reader) Resolution() gopacket.TimestampResolution {
 	if r.nanoSecsFactor == 1 {
-		return gopacket.TimestampResolutionMillisecond
+		return gopacket.TimestampResolutionMicrosecond
 	}
 	return gopacket.TimestampResolutionNanosecond
 }

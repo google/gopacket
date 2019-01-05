@@ -6,7 +6,11 @@
 
 package gopacket
 
-import "fmt"
+import (
+	"fmt"
+	"math"
+	"time"
+)
 
 // TimestampResolution represents the resolution of timestamps in Base^Exponent.
 type TimestampResolution struct {
@@ -17,11 +21,36 @@ func (t TimestampResolution) String() string {
 	return fmt.Sprintf("%d^%d", t.Base, t.Exponent)
 }
 
+// ToDuration returns the smallest representable time difference as a time.Duration
+func (t TimestampResolution) ToDuration() time.Duration {
+	if t.Base == 0 {
+		return 0
+	}
+	if t.Exponent == 0 {
+		return time.Second
+	}
+	switch t.Base {
+	case 10:
+		return time.Duration(math.Pow10(t.Exponent + 9))
+	case 2:
+		if t.Exponent < 0 {
+			return time.Second >> uint(-t.Exponent)
+		}
+		return time.Second << uint(t.Exponent)
+	default:
+		// this might loose precision
+		return time.Duration(float64(time.Second) * math.Pow(float64(t.Base), float64(t.Exponent)))
+	}
+}
+
 // TimestampResolutionInvalid represents an invalid timestamp resolution
 var TimestampResolutionInvalid = TimestampResolution{}
 
-// TimestampResolutionMillisecond is a resolution of 10^-6s
-var TimestampResolutionMillisecond = TimestampResolution{10, -6}
+// TimestampResolutionMillisecond is a resolution of 10^-3s
+var TimestampResolutionMillisecond = TimestampResolution{10, -3}
+
+// TimestampResolutionMicrosecond is a resolution of 10^-6s
+var TimestampResolutionMicrosecond = TimestampResolution{10, -6}
 
 // TimestampResolutionNanosecond is a resolution of 10^-9s
 var TimestampResolutionNanosecond = TimestampResolution{10, -9}
