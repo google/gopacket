@@ -29,7 +29,7 @@ var TimestampResolutionNanosecond = TimestampResolution{10, -9}
 // TimestampResolutionNTP is the resolution of NTP timestamps which is 2^-32 ≈ 233 picoseconds
 var TimestampResolutionNTP = TimestampResolution{2, -32}
 
-// TimestampResolutionCaptureInfo is the resolution used in CaptureInfo, whic his currently nanosecond
+// TimestampResolutionCaptureInfo is the resolution used in CaptureInfo, which his currently nanosecond
 var TimestampResolutionCaptureInfo = TimestampResolutionNanosecond
 
 // PacketSourceResolution is an interface for packet data sources that
