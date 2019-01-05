@@ -761,6 +761,12 @@ func (p *InactiveHandle) Activate() (*Handle, error) {
 		return nil, err
 	}
 	handle.timeout = p.timeout
+	if p.timeout > 0 {
+		if err := handle.setNonBlocking(); err != nil {
+			handle.pcapClose()
+			return nil, err
+		}
+	}
 	handle.device = p.device
 	handle.deviceIndex = p.deviceIndex
 	if pcapGetTstampPrecision(handle.cptr) == pcapTstampPrecisionNano {
