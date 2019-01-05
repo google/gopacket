@@ -945,15 +945,13 @@ func (a *Assembler) overlapExisting(half *halfconnection, start, end Sequence, b
 		half.overlapPackets++
 		half.overlapBytes += diff
 	}
-	start = start.Add(diff)
 	s += diff
 	if s >= e {
 		// Completely included in sent
 		s = e
 	}
 	bytes = bytes[s:]
-	e -= diff
-	return bytes, start
+	return bytes, half.nextSeq
 }
 
 // Prepare send or queue

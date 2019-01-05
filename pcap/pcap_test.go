@@ -39,13 +39,13 @@ func TestPcapFileRead(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+	invalidPcap.Close() // if the file is still open later, the invalid test fails with permission denied on windows
 	defer os.Remove(invalidPcap.Name())
 
 	err = ioutil.WriteFile(invalidPcap.Name(), invalidData, 0644)
 	if err != nil {
 		t.Fatal(err)
 	}
-	defer invalidPcap.Close()
 
 	for _, file := range []struct {
 		filename       string
