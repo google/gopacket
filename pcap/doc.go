@@ -16,7 +16,7 @@ Depending on libpcap version, os support, or file timestamp resolution,
 nanosecond resolution is used for the internal timestamps. Returned timestamps
 are always scaled to nanosecond resolution due to the usage of time.Time.
 libpcap must be at least version 1.5 to support nanosecond timestamps. OpenLive
-suports only microsecond resolution.
+supports only microsecond resolution.
 
 Reading PCAP Files
 
