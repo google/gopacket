@@ -135,6 +135,10 @@ var (
 	pcapListTstampTypesPtr,
 	pcapFreeTstampTypesPtr,
 	pcapSetTstampTypePtr,
+	pcapGetTstampPrecisionPtr,
+	pcapSetTstampPrecisionPtr,
+	pcapOpenOfflineWithTstampPrecisionPtr,
+	pcapHOpenOfflineWithTstampPrecisionPtr,
 	pcapActivatePtr,
 	pcapCreatePtr,
 	pcapSetSnaplenPtr,
@@ -203,6 +207,10 @@ func init() {
 	pcapListTstampTypesPtr = mightLoad("pcap_list_tstamp_types")
 	pcapFreeTstampTypesPtr = mightLoad("pcap_free_tstamp_types")
 	pcapSetTstampTypePtr = mightLoad("pcap_set_tstamp_type")
+	pcapGetTstampPrecisionPtr = mightLoad("pcap_get_tstamp_precision")
+	pcapSetTstampPrecisionPtr = mightLoad("pcap_set_tstamp_precision")
+	pcapOpenOfflineWithTstampPrecisionPtr = mightLoad("pcap_open_offline_with_tstamp_precision")
+	pcapHOpenOfflineWithTstampPrecisionPtr = mightLoad("pcap_hopen_offline_with_tstamp_precision")
 	pcapActivatePtr = mustLoad("pcap_activate")
 	pcapCreatePtr = mustLoad("pcap_create")
 	pcapSetSnaplenPtr = mustLoad("pcap_set_snaplen")
@@ -243,6 +251,25 @@ func statusError(status pcapCint) error {
 	return errors.New(bytePtrToString(ret))
 }
 
+func pcapGetTstampPrecision(cptr pcapTPtr) int {
+	if pcapGetTstampPrecisionPtr == 0 {
+		return pcapTstampPrecisionMicro
+	}
+	ret, _, _ := syscall.Syscall(pcapGetTstampPrecisionPtr, 1, uintptr(cptr), 0, 0)
+	return int(pcapCint(ret))
+}
+
+func pcapSetTstampPrecision(cptr pcapTPtr, precision int) error {
+	if pcapSetTstampPrecisionPtr == 0 {
+		return errors.New("Not supported")
+	}
+	ret, _, _ := syscall.Syscall(pcapSetTstampPrecisionPtr, 2, uintptr(cptr), uintptr(precision), 0)
+	if pcapCint(ret) < 0 {
+		return errors.New("Not supported")
+	}
+	return nil
+}
+
 func pcapOpenLive(device string, snaplen int, pro int, timeout int) (*Handle, error) {
 	buf := make([]byte, errorBufferSize)
 	dev, err := syscall.BytePtrFromString(device)
@@ -265,12 +292,19 @@ func openOffline(file string) (handle *Handle, err error) {
 		return nil, err
 	}
 
-	cptr, _, _ := syscall.Syscall(pcapOpenOfflinePtr, 2, uintptr(unsafe.Pointer(f)), uintptr(unsafe.Pointer(&buf[0])), 0)
+	var cptr uintptr
+	if pcapOpenOfflineWithTstampPrecisionPtr == 0 {
+		cptr, _, _ = syscall.Syscall(pcapOpenOfflinePtr, 2, uintptr(unsafe.Pointer(f)), uintptr(unsafe.Pointer(&buf[0])), 0)
+	} else {
+		cptr, _, _ = syscall.Syscall(pcapOpenOfflineWithTstampPrecisionPtr, 3, uintptr(unsafe.Pointer(f)), uintptr(pcapTstampPrecisionNano), uintptr(unsafe.Pointer(&buf[0])))
+	}
 
 	if cptr == 0 {
 		return nil, errors.New(byteSliceToString(buf))
 	}
-	return &Handle{cptr: pcapTPtr(cptr)}, nil
+
+	h := &Handle{cptr: pcapTPtr(cptr)}
+	return h, nil
 }
 
 func (p *Handle) pcapClose() {
@@ -762,7 +796,13 @@ func openOfflineFile(file *os.File) (handle *Handle, err error) {
 	buf := make([]byte, errorBufferSize)
 	cf := file.Fd()
 
-	cptr, _, _ := syscall.Syscall(pcapHopenOfflinePtr, 2, cf, uintptr(unsafe.Pointer(&buf[0])), 0)
+	var cptr uintptr
+	if pcapOpenOfflineWithTstampPrecisionPtr == 0 {
+		cptr, _, _ = syscall.Syscall(pcapHopenOfflinePtr, 2, cf, uintptr(unsafe.Pointer(&buf[0])), 0)
+	} else {
+		cptr, _, _ = syscall.Syscall(pcapHOpenOfflineWithTstampPrecisionPtr, 3, cf, uintptr(pcapTstampPrecisionNano), uintptr(unsafe.Pointer(&buf[0])))
+	}
+
 	if cptr == 0 {
 		return nil, errors.New(byteSliceToString(buf))
 	}

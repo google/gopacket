@@ -45,9 +45,38 @@ import (
 // See http://upstream-tracker.org/versions/libpcap.html
 
 #ifndef PCAP_ERROR_TSTAMP_PRECISION_NOTSUP  // < v1.5
+#define PCAP_ERROR_TSTAMP_PRECISION_NOTSUP -12
 
 int pcap_set_immediate_mode(pcap_t *p, int mode) {
   return PCAP_ERROR;
+}
+
+//  libpcap version < v1.5 doesn't have timestamp precision (everything is microsecond)
+//
+//  This means *_tstamp_* functions and macros are missing. Therefore, we emulate these
+//  functions here and pretend the setting the precision works. This is actually the way
+//  the pcap_open_offline_with_tstamp_precision works, because it doesn't return an error
+//  if it was not possible to set the precision, which depends on support by the given file.
+//  => The rest of the functions always pretend as if they could set nano precision and
+//  verify the actual precision with pcap_get_tstamp_precision, which is emulated for <v1.5
+//  to always return micro resolution.
+
+#define PCAP_TSTAMP_PRECISION_MICRO	0
+#define PCAP_TSTAMP_PRECISION_NANO	1
+
+pcap_t *pcap_open_offline_with_tstamp_precision(const char *fname, u_int precision,
+  char *errbuf) {
+  return pcap_open_offline(fname, errbuf);
+}
+
+int pcap_set_tstamp_precision(pcap_t *p, int tstamp_precision) {
+  if (tstamp_precision == PCAP_TSTAMP_PRECISION_MICRO)
+    return 0;
+  return PCAP_ERROR_TSTAMP_PRECISION_NOTSUP;
+}
+
+int pcap_get_tstamp_precision(pcap_t *p) {
+  return PCAP_TSTAMP_PRECISION_MICRO
 }
 
 #ifndef PCAP_TSTAMP_HOST  // < v1.2
@@ -127,23 +156,35 @@ int pcap_wait(pcap_t *p, int usec) {
 	// block indefinitely if no timeout provided
 	return select(fd+1, &fds, NULL, NULL, NULL);
 }
+
+// libpcap version < v1.5 doesn't have timestamp precision (everything is microsecond)
+// see pcap.go for an explanation of why precision is ignored
+#ifndef PCAP_ERROR_TSTAMP_PRECISION_NOTSUP  // < v1.5
+pcap_t *pcap_fopen_offline_with_tstamp_precision(FILE *fp, u_int precision,
+  char *errbuf) {
+  return pcap_fopen_offline(fp, errbuf);
+}
+#endif  // < v1.5
+
 */
 import "C"
 
 const errorBufferSize = C.PCAP_ERRBUF_SIZE
 
 const (
-	pcapErrorNotActivated = C.PCAP_ERROR_NOT_ACTIVATED
-	pcapErrorActivated    = C.PCAP_ERROR_ACTIVATED
-	pcapWarningPromisc    = C.PCAP_WARNING_PROMISC_NOTSUP
-	pcapErrorNoSuchDevice = C.PCAP_ERROR_NO_SUCH_DEVICE
-	pcapErrorDenied       = C.PCAP_ERROR_PERM_DENIED
-	pcapErrorNotUp        = C.PCAP_ERROR_IFACE_NOT_UP
-	pcapWarning           = C.PCAP_WARNING
-	pcapDIN               = C.PCAP_D_IN
-	pcapDOUT              = C.PCAP_D_OUT
-	pcapDINOUT            = C.PCAP_D_INOUT
-	pcapNetmaskUnknown    = C.PCAP_NETMASK_UNKNOWN
+	pcapErrorNotActivated    = C.PCAP_ERROR_NOT_ACTIVATED
+	pcapErrorActivated       = C.PCAP_ERROR_ACTIVATED
+	pcapWarningPromisc       = C.PCAP_WARNING_PROMISC_NOTSUP
+	pcapErrorNoSuchDevice    = C.PCAP_ERROR_NO_SUCH_DEVICE
+	pcapErrorDenied          = C.PCAP_ERROR_PERM_DENIED
+	pcapErrorNotUp           = C.PCAP_ERROR_IFACE_NOT_UP
+	pcapWarning              = C.PCAP_WARNING
+	pcapDIN                  = C.PCAP_D_IN
+	pcapDOUT                 = C.PCAP_D_OUT
+	pcapDINOUT               = C.PCAP_D_INOUT
+	pcapNetmaskUnknown       = C.PCAP_NETMASK_UNKNOWN
+	pcapTstampPrecisionMicro = C.PCAP_TSTAMP_PRECISION_MICRO
+	pcapTstampPrecisionNano  = C.PCAP_TSTAMP_PRECISION_NANO
 )
 
 type pcapPkthdr C.struct_pcap_pkthdr
@@ -164,6 +205,18 @@ func (h *pcapPkthdr) getLen() int {
 
 func (h *pcapPkthdr) getCaplen() int {
 	return int(h.caplen)
+}
+
+func pcapGetTstampPrecision(cptr pcapTPtr) int {
+	return int(C.pcap_get_tstamp_precision(cptr))
+}
+
+func pcapSetTstampPrecision(cptr pcapTPtr, precision int) error {
+	ret := C.pcap_set_tstamp_precision(cptr, C.int(precision))
+	if ret < 0 {
+		return errors.New(C.GoString(C.pcap_geterr(cptr)))
+	}
+	return nil
 }
 
 func statusError(status C.int) error {
@@ -190,12 +243,11 @@ func openOffline(file string) (handle *Handle, err error) {
 	cf := C.CString(file)
 	defer C.free(unsafe.Pointer(cf))
 
-	cptr := C.pcap_open_offline(cf, buf)
+	cptr := C.pcap_open_offline_with_tstamp_precision(cf, C.PCAP_TSTAMP_PRECISION_NANO, buf)
 	if cptr == nil {
 		return nil, errors.New(C.GoString(buf))
 	}
-	h := &Handle{cptr: cptr}
-	return h, nil
+	return &Handle{cptr: cptr}, nil
 }
 
 func (p *Handle) pcapClose() {
@@ -647,7 +699,7 @@ func openOfflineFile(file *os.File) (handle *Handle, err error) {
 	defer C.free(unsafe.Pointer(cmode))
 	cf := C.fdopen(C.int(file.Fd()), cmode)
 
-	cptr := C.pcap_fopen_offline(cf, buf)
+	cptr := C.pcap_fopen_offline_with_tstamp_precision(cf, C.PCAP_TSTAMP_PRECISION_NANO, buf)
 	if cptr == nil {
 		return nil, errors.New(C.GoString(buf))
 	}

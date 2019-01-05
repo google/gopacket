@@ -15,18 +15,20 @@ import "syscall"
 const errorBufferSize = 0x100
 
 const (
-	pcapErrorNotActivated = -0x3
-	pcapErrorActivated    = -0x4
-	pcapWarningPromisc    = 0x2
-	pcapErrorNoSuchDevice = -0x5
-	pcapErrorDenied       = -0x8
-	pcapErrorNotUp        = -0x9
-	pcapError             = -0x1
-	pcapWarning           = 0x1
-	pcapDIN               = 0x1
-	pcapDOUT              = 0x2
-	pcapDINOUT            = 0x0
-	pcapNetmaskUnknown    = 0xffffffff
+	pcapErrorNotActivated    = -0x3
+	pcapErrorActivated       = -0x4
+	pcapWarningPromisc       = 0x2
+	pcapErrorNoSuchDevice    = -0x5
+	pcapErrorDenied          = -0x8
+	pcapErrorNotUp           = -0x9
+	pcapError                = -0x1
+	pcapWarning              = 0x1
+	pcapDIN                  = 0x1
+	pcapDOUT                 = 0x2
+	pcapDINOUT               = 0x0
+	pcapNetmaskUnknown       = 0xffffffff
+	pcapTstampPrecisionMicro = 0x0
+	pcapTstampPrecisionNano  = 0x1
 )
 
 type timeval struct {

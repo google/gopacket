@@ -48,18 +48,20 @@ import "syscall" // needed for RawSockaddr
 const errorBufferSize = C.PCAP_ERRBUF_SIZE
 
 const (
-	pcapErrorNotActivated = C.PCAP_ERROR_NOT_ACTIVATED
-	pcapErrorActivated    = C.PCAP_ERROR_ACTIVATED
-	pcapWarningPromisc    = C.PCAP_WARNING_PROMISC_NOTSUP
-	pcapErrorNoSuchDevice = C.PCAP_ERROR_NO_SUCH_DEVICE
-	pcapErrorDenied       = C.PCAP_ERROR_PERM_DENIED
-	pcapErrorNotUp        = C.PCAP_ERROR_IFACE_NOT_UP
-	pcapError             = C.PCAP_ERROR
-	pcapWarning           = C.PCAP_WARNING
-	pcapDIN               = C.PCAP_D_IN
-	pcapDOUT              = C.PCAP_D_OUT
-	pcapDINOUT            = C.PCAP_D_INOUT
-	pcapNetmaskUnknown    = C.PCAP_NETMASK_UNKNOWN
+	pcapErrorNotActivated    = C.PCAP_ERROR_NOT_ACTIVATED
+	pcapErrorActivated       = C.PCAP_ERROR_ACTIVATED
+	pcapWarningPromisc       = C.PCAP_WARNING_PROMISC_NOTSUP
+	pcapErrorNoSuchDevice    = C.PCAP_ERROR_NO_SUCH_DEVICE
+	pcapErrorDenied          = C.PCAP_ERROR_PERM_DENIED
+	pcapErrorNotUp           = C.PCAP_ERROR_IFACE_NOT_UP
+	pcapError                = C.PCAP_ERROR
+	pcapWarning              = C.PCAP_WARNING
+	pcapDIN                  = C.PCAP_D_IN
+	pcapDOUT                 = C.PCAP_D_OUT
+	pcapDINOUT               = C.PCAP_D_INOUT
+	pcapNetmaskUnknown       = C.PCAP_NETMASK_UNKNOWN
+	pcapTstampPrecisionMicro = C.PCAP_TSTAMP_PRECISION_MICRO
+	pcapTstampPrecisionNano  = C.PCAP_TSTAMP_PRECISION_NANO
 )
 
 type timeval C.struct_timeval

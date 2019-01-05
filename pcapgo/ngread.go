@@ -596,3 +596,11 @@ func (r *NgReader) Interface(i int) (NgInterface, error) {
 func (r *NgReader) NInterfaces() int {
 	return len(r.ifaces)
 }
+
+// Resolution returns the timestamp resolution of acquired timestamps before scaling to NanosecondTimestampResolution.
+func (r *NgReader) Resolution() gopacket.TimestampResolution {
+	if r.options.WantMixedLinkType {
+		return gopacket.TimestampResolution{}
+	}
+	return r.ifaces[0].Resolution()
+}
