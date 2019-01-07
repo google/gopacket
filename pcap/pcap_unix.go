@@ -313,10 +313,10 @@ func pcapBpfProgramFromInstructions(bpfInstructions []BPFInstruction) pcapBpfPro
 	gbpfInsns := (*[bpfInstructionBufferSize]C.struct_bpf_insn)(cbpfInsns)
 
 	for i, v := range bpfInstructions {
-		gbpfInsns[i].code = C.ushort(v.Code)
-		gbpfInsns[i].jt = C.uchar(v.Jt)
-		gbpfInsns[i].jf = C.uchar(v.Jf)
-		gbpfInsns[i].k = C.uint(v.K)
+		gbpfInsns[i].code = C.u_short(v.Code)
+		gbpfInsns[i].jt = C.u_char(v.Jt)
+		gbpfInsns[i].jf = C.u_char(v.Jf)
+		gbpfInsns[i].k = C.bpf_u_int32(v.K)
 	}
 
 	bpf.bf_insns = (*C.struct_bpf_insn)(cbpfInsns)
