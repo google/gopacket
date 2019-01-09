@@ -146,7 +146,7 @@ func initV3Wrapper(block unsafe.Pointer) (w v3wrapper) {
 
 func (w *v3wrapper) getVLAN() int {
 	if w.packet.tp_status&C.TP_STATUS_VLAN_VALID != 0 {
-		hv1 := (*_Ctype_struct_tpacket_hdr_variant1)(unsafe.Pointer(&w.packet.anon0[0]))
+		hv1 := (*C.struct_tpacket_hdr_variant1)(unsafe.Pointer(&w.packet.anon0[0]))
 		return int(hv1.tp_vlan_tci & 0xfff)
 	}
 	return -1
