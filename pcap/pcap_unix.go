@@ -370,7 +370,7 @@ func (p *Handle) pcapListDatalinks() (datalinks []Datalink, err error) {
 
 	datalinks = make([]Datalink, n)
 
-	dltArray := (*[1 << 30]C.int)(unsafe.Pointer(dltbuf))
+	dltArray := (*[1 << 28]C.int)(unsafe.Pointer(dltbuf))
 
 	for i := 0; i < n; i++ {
 		datalinks[i].Name = pcapDatalinkValToName(int((*dltArray)[i]))
@@ -616,7 +616,7 @@ func (p *InactiveHandle) pcapListTstampTypes() (out []TimestampSource) {
 		return // public interface doesn't have error :(
 	}
 	defer C.pcap_free_tstamp_types(types)
-	typesArray := (*[1 << 30]C.int)(unsafe.Pointer(types))
+	typesArray := (*[1 << 28]C.int)(unsafe.Pointer(types))
 	for i := 0; i < n; i++ {
 		out = append(out, TimestampSource((*typesArray)[i]))
 	}
