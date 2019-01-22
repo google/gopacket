@@ -22,7 +22,7 @@ Specification has this to say:
     An agent must not mix compact/expanded encodings.  If an agent
     will never use ifIndex numbers >= 2^24 then it must use compact
     encodings for all interfaces.  Otherwise the expanded formats must
-	be used for all interfaces.
+    be used for all interfaces.
 
 This decoder only supports the compact form, because that is the only
 one for which data was avaialble.
@@ -2239,9 +2239,7 @@ type SFLLACPPortState struct {
 type SFlowLACPCounters struct {
 	SFlowBaseCounterRecord
 	ActorSystemID        net.HardwareAddr
-	pad1                 [2]uint8
 	PartnerSystemID      net.HardwareAddr
-	pad2                 [2]uint8
 	AttachedAggID        uint32
 	LacpPortState        SFLLACPPortState
 	LACPDUsRx            uint32
@@ -2262,11 +2260,9 @@ func decodeLACPCounters(data *[]byte) (SFlowLACPCounters, error) {
 	la.EnterpriseID, la.Format = cdf.decode()
 	*data, la.FlowDataLength = (*data)[4:], binary.BigEndian.Uint32((*data)[:4])
 	*data, la.ActorSystemID = (*data)[6:], (*data)[:6]
-	*data, la.pad1[0] = (*data)[1:], (*data)[0]
-	*data, la.pad1[1] = (*data)[1:], (*data)[0]
+	*data = (*data)[2:] // remove padding
 	*data, la.PartnerSystemID = (*data)[6:], (*data)[:6]
-	*data, la.pad2[0] = (*data)[1:], (*data)[0]
-	*data, la.pad2[1] = (*data)[1:], (*data)[0]
+	*data = (*data)[2:] //remove padding
 	*data, la.AttachedAggID = (*data)[4:], binary.BigEndian.Uint32((*data)[:4])
 	*data, la.LacpPortState.PortStateAll = (*data)[4:], binary.BigEndian.Uint32((*data)[:4])
 	*data, la.LACPDUsRx = (*data)[4:], binary.BigEndian.Uint32((*data)[:4])
