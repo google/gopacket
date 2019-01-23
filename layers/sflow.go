@@ -773,11 +773,17 @@ func decodeCounterSample(data *[]byte, expanded bool) (SFlowCounterSample, error
 			skipRecord(data)
 			return s, errors.New("skipping Type100BaseVGInterfaceCounters")
 		case SFlowTypeVLANCounters:
-			skipRecord(data)
-			return s, errors.New("skipping TypeVLANCounters")
+			if record, err := decodeVLANCounters(data); err == nil {
+				s.Records = append(s.Records, record)
+			} else {
+				return s, err
+			}
 		case SFlowTypeLACPCounters:
-			skipRecord(data)
-			return s, errors.New("skipping TypeLACPCounters")
+			if record, err := decodeLACPCounters(data); err == nil {
+				s.Records = append(s.Records, record)
+			} else {
+				return s, err
+			}
 		case SFlowTypeProcessorCounters:
 			if record, err := decodeProcessorCounters(data); err == nil {
 				s.Records = append(s.Records, record)
@@ -2193,6 +2199,83 @@ func decodeEthernetCounters(data *[]byte) (SFlowEthernetCounters, error) {
 	*data, ec.InternalMacReceiveErrors = (*data)[4:], binary.BigEndian.Uint32((*data)[:4])
 	*data, ec.SymbolErrors = (*data)[4:], binary.BigEndian.Uint32((*data)[:4])
 	return ec, nil
+}
+
+// VLAN Counter
+
+type SFlowVLANCounters struct {
+	SFlowBaseCounterRecord
+	VlanID        uint32
+	Octets        uint64
+	UcastPkts     uint32
+	MulticastPkts uint32
+	BroadcastPkts uint32
+	Discards      uint32
+}
+
+func decodeVLANCounters(data *[]byte) (SFlowVLANCounters, error) {
+	vc := SFlowVLANCounters{}
+	var cdf SFlowCounterDataFormat
+
+	*data, cdf = (*data)[4:], SFlowCounterDataFormat(binary.BigEndian.Uint32((*data)[:4]))
+	vc.EnterpriseID, vc.Format = cdf.decode()
+	vc.EnterpriseID, vc.Format = cdf.decode()
+	*data, vc.FlowDataLength = (*data)[4:], binary.BigEndian.Uint32((*data)[:4])
+	*data, vc.VlanID = (*data)[4:], binary.BigEndian.Uint32((*data)[:4])
+	*data, vc.Octets = (*data)[8:], binary.BigEndian.Uint64((*data)[:8])
+	*data, vc.UcastPkts = (*data)[4:], binary.BigEndian.Uint32((*data)[:4])
+	*data, vc.MulticastPkts = (*data)[4:], binary.BigEndian.Uint32((*data)[:4])
+	*data, vc.BroadcastPkts = (*data)[4:], binary.BigEndian.Uint32((*data)[:4])
+	*data, vc.Discards = (*data)[4:], binary.BigEndian.Uint32((*data)[:4])
+	return vc, nil
+}
+
+//SFLLACPportState  :  SFlow LACP Port State (All(4) - 32 bit)
+type SFLLACPPortState struct {
+	PortStateAll uint32
+}
+
+//LACPcounters  :  LACP SFlow Counters  ( 64 Bytes )
+type SFlowLACPCounters struct {
+	SFlowBaseCounterRecord
+	ActorSystemID        net.HardwareAddr
+	PartnerSystemID      net.HardwareAddr
+	AttachedAggID        uint32
+	LacpPortState        SFLLACPPortState
+	LACPDUsRx            uint32
+	MarkerPDUsRx         uint32
+	MarkerResponsePDUsRx uint32
+	UnknownRx            uint32
+	IllegalRx            uint32
+	LACPDUsTx            uint32
+	MarkerPDUsTx         uint32
+	MarkerResponsePDUsTx uint32
+}
+
+func decodeLACPCounters(data *[]byte) (SFlowLACPCounters, error) {
+	la := SFlowLACPCounters{}
+	var cdf SFlowCounterDataFormat
+
+	*data, cdf = (*data)[4:], SFlowCounterDataFormat(binary.BigEndian.Uint32((*data)[:4]))
+	la.EnterpriseID, la.Format = cdf.decode()
+	*data, la.FlowDataLength = (*data)[4:], binary.BigEndian.Uint32((*data)[:4])
+	*data, la.ActorSystemID = (*data)[6:], (*data)[:6]
+	*data = (*data)[2:] // remove padding
+	*data, la.PartnerSystemID = (*data)[6:], (*data)[:6]
+	*data = (*data)[2:] //remove padding
+	*data, la.AttachedAggID = (*data)[4:], binary.BigEndian.Uint32((*data)[:4])
+	*data, la.LacpPortState.PortStateAll = (*data)[4:], binary.BigEndian.Uint32((*data)[:4])
+	*data, la.LACPDUsRx = (*data)[4:], binary.BigEndian.Uint32((*data)[:4])
+	*data, la.MarkerPDUsRx = (*data)[4:], binary.BigEndian.Uint32((*data)[:4])
+	*data, la.MarkerResponsePDUsRx = (*data)[4:], binary.BigEndian.Uint32((*data)[:4])
+	*data, la.UnknownRx = (*data)[4:], binary.BigEndian.Uint32((*data)[:4])
+	*data, la.IllegalRx = (*data)[4:], binary.BigEndian.Uint32((*data)[:4])
+	*data, la.LACPDUsTx = (*data)[4:], binary.BigEndian.Uint32((*data)[:4])
+	*data, la.MarkerPDUsTx = (*data)[4:], binary.BigEndian.Uint32((*data)[:4])
+	*data, la.MarkerResponsePDUsTx = (*data)[4:], binary.BigEndian.Uint32((*data)[:4])
+
+	return la, nil
+
 }
 
 // **************************************************
