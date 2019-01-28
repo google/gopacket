@@ -288,7 +288,10 @@ the packet's information.  A quick example:
    parser := gopacket.NewDecodingLayerParser(layers.LayerTypeEthernet, &eth, &ip4, &ip6, &tcp)
    decoded := []gopacket.LayerType{}
    for packetData := range somehowGetPacketData() {
-     err := parser.DecodeLayers(packetData, &decoded)
+     if err := parser.DecodeLayers(packetData, &decoded); err != nil {
+       fmt.Fprintf(os.Stderr, "Could not decode layers: %v\n", err)
+       continue
+     }
      for _, layerType := range decoded {
        switch layerType {
          case layers.LayerTypeIPv6:
