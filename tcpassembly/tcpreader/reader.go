@@ -12,7 +12,7 @@
 // The io.Reader interface, on the other hand, is used throughout much of Go
 // code as an easy mechanism for reading in data streams and decoding them.  For
 // example, the net/http package provides the ReadRequest function, which can
-// parase an HTTP request from a live data stream, just what we'd want when
+// parse an HTTP request from a live data stream, just what we'd want when
 // sniffing HTTP traffic.  Using ReaderStream, this is relatively easy to set
 // up:
 //
