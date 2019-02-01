@@ -131,6 +131,10 @@ int pcap_next_ex_escaping(pcap_t *p, uintptr_t pkt_hdr, uintptr_t pkt_data) {
   return ex;
 }
 
+int pcap_offline_filter_escaping(struct bpf_program *fp, uintptr_t pkt_hdr, uintptr_t pkt) {
+	return pcap_offline_filter(fp, (struct pcap_pkthdr*)(pkt_hdr), (const u_char*)(pkt));
+}
+
 // pcap_wait returns when the next packet is available or the timeout expires.
 // Since it uses pcap_get_selectable_fd, it will not work in Windows.
 int pcap_wait(pcap_t *p, int usec) {
@@ -342,13 +346,15 @@ func pcapLookupnet(device string) (netp, maskp uint32, err error) {
 }
 
 func (b *BPF) pcapOfflineFilter(ci gopacket.CaptureInfo, data []byte) bool {
-	var hdr C.struct_pcap_pkthdr
+	hdr := (*C.struct_pcap_pkthdr)(&b.hdr)
 	hdr.ts.tv_sec = C.gopacket_time_secs_t(ci.Timestamp.Unix())
 	hdr.ts.tv_usec = C.gopacket_time_usecs_t(ci.Timestamp.Nanosecond() / 1000)
 	hdr.caplen = C.bpf_u_int32(len(data)) // Trust actual length over ci.Length.
 	hdr.len = C.bpf_u_int32(ci.Length)
 	dataptr := (*C.u_char)(unsafe.Pointer(&data[0]))
-	return C.pcap_offline_filter((*C.struct_bpf_program)(&b.bpf), &hdr, dataptr) != 0
+	return C.pcap_offline_filter_escaping((*C.struct_bpf_program)(&b.bpf),
+		C.uintptr_t(uintptr(unsafe.Pointer(hdr))),
+		C.uintptr_t(uintptr(unsafe.Pointer(dataptr)))) != 0
 }
 
 func (p *Handle) pcapSetfilter(bpf pcapBpfProgram) error {
