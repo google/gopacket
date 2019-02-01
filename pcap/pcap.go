@@ -100,6 +100,7 @@ type InterfaceAddress struct {
 type BPF struct {
 	orig string
 	bpf  pcapBpfProgram // takes a finalizer, not overriden by outsiders
+	hdr  pcapPkthdr     // allocate on the heap to enable optimizations
 }
 
 // BPFInstruction is a byte encoded structure holding a BPF instruction
