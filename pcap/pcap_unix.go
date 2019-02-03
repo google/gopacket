@@ -76,7 +76,7 @@ int pcap_set_tstamp_precision(pcap_t *p, int tstamp_precision) {
 }
 
 int pcap_get_tstamp_precision(pcap_t *p) {
-  return PCAP_TSTAMP_PRECISION_MICRO
+  return PCAP_TSTAMP_PRECISION_MICRO;
 }
 
 #ifndef PCAP_TSTAMP_HOST  // < v1.2
