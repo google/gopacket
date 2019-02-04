@@ -21,6 +21,8 @@ import (
 	"github.com/google/gopacket/layers"
 )
 
+var pcapLoaded = false
+
 const npcapPath = "\\Npcap"
 
 func initDllPath(kernel32 syscall.Handle) {
@@ -152,9 +154,18 @@ var (
 )
 
 func init() {
+	LoadWinPCAP()
+}
+
+// LoadWinPCAP attempts to dynamically load the wpcap DLL and resolve necessary functions
+func LoadWinPCAP() error {
+	if pcapLoaded {
+		return nil
+	}
+
 	kernel32, err := syscall.LoadLibrary("kernel32.dll")
 	if err != nil {
-		panic("couldn't load kernel32.dll")
+		return fmt.Errorf("couldn't load kernel32.dll")
 	}
 	defer syscall.FreeLibrary(kernel32)
 
@@ -162,16 +173,16 @@ func init() {
 
 	wpcapHandle, err = syscall.LoadLibrary("wpcap.dll")
 	if err != nil {
-		panic("Couldn't load wpcap.dll")
+		return fmt.Errorf("couldn't load wpcap.dll")
 	}
 	initLoadedDllPath(kernel32)
 	msvcrtHandle, err = syscall.LoadLibrary("msvcrt.dll")
 	if err != nil {
-		panic("Couldn't load msvcrt.dll")
+		return fmt.Errorf("couldn't load msvcrt.dll")
 	}
 	callocPtr, err = syscall.GetProcAddress(msvcrtHandle, "calloc")
 	if err != nil {
-		panic("Couldn't get calloc function")
+		return fmt.Errorf("couldn't get calloc function")
 	}
 
 	pcapStrerrorPtr = mustLoad("pcap_strerror")
@@ -223,6 +234,9 @@ func init() {
 	//libpcap <1.5 does not have pcap_set_immediate_mode
 	pcapSetImmediateModePtr = mightLoad("pcap_set_immediate_mode")
 	pcapHopenOfflinePtr = mustLoad("pcap_hopen_offline")
+
+	pcapLoaded = true
+	return nil
 }
 
 func (h *pcapPkthdr) getSec() int64 {
