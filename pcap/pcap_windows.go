@@ -285,6 +285,11 @@ func pcapSetTstampPrecision(cptr pcapTPtr, precision int) error {
 }
 
 func pcapOpenLive(device string, snaplen int, pro int, timeout int) (*Handle, error) {
+	err := LoadWinPCAP()
+	if err != nil {
+		return nil, err
+	}
+
 	buf := make([]byte, errorBufferSize)
 	dev, err := syscall.BytePtrFromString(device)
 	if err != nil {
@@ -300,6 +305,11 @@ func pcapOpenLive(device string, snaplen int, pro int, timeout int) (*Handle, er
 }
 
 func openOffline(file string) (handle *Handle, err error) {
+	err = LoadWinPCAP()
+	if err != nil {
+		return nil, err
+	}
+
 	buf := make([]byte, errorBufferSize)
 	f, err := syscall.BytePtrFromString(file)
 	if err != nil {
@@ -399,6 +409,11 @@ func pcapBpfProgramFromInstructions(bpfInstructions []BPFInstruction) pcapBpfPro
 }
 
 func pcapLookupnet(device string) (netp, maskp uint32, err error) {
+	err = LoadWinPCAP()
+	if err != nil {
+		return 0, 0, err
+	}
+
 	buf := make([]byte, errorBufferSize)
 	dev, err := syscall.BytePtrFromString(device)
 	if err != nil {
@@ -453,6 +468,11 @@ func (p *Handle) pcapListDatalinks() (datalinks []Datalink, err error) {
 }
 
 func pcapOpenDead(linkType layers.LinkType, captureLength int) (*Handle, error) {
+	err := LoadWinPCAP()
+	if err != nil {
+		return nil, err
+	}
+
 	cptr, _, _ := syscall.Syscall(pcapOpenDeadPtr, 2, uintptr(linkType), uintptr(captureLength), 0)
 	if cptr == 0 {
 		return nil, errors.New("error opening dead capture")
@@ -506,6 +526,10 @@ func pcapDatalinkNameToVal(name string) int {
 }
 
 func pcapLibVersion() string {
+	err := LoadWinPCAP()
+	if err != nil {
+		panic(err)
+	}
 	ret, _, _ := syscall.Syscall(pcapLibVersionPtr, 0, 0, 0, 0)
 	return bytePtrToString(ret)
 }
@@ -589,8 +613,13 @@ func (p pcapDevices) addresses() pcapAddresses {
 }
 
 func pcapFindAllDevs() (pcapDevices, error) {
-	buf := make([]byte, errorBufferSize)
 	var alldevsp pcapDevices
+	err := LoadWinPCAP()
+	if err != nil {
+		return alldevsp, err
+	}
+
+	buf := make([]byte, errorBufferSize)
 
 	ret, _, _ := syscall.Syscall(pcapFindalldevsPtr, 2, uintptr(unsafe.Pointer(&alldevsp.all)), uintptr(unsafe.Pointer(&buf[0])), 0)
 
@@ -807,6 +836,11 @@ func (p *Handle) waitForPacket() {
 
 // openOfflineFile returns contents of input file as a *Handle.
 func openOfflineFile(file *os.File) (handle *Handle, err error) {
+	err = LoadWinPCAP()
+	if err != nil {
+		return nil, err
+	}
+
 	buf := make([]byte, errorBufferSize)
 	cf := file.Fd()
 
