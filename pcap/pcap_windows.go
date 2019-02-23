@@ -507,16 +507,28 @@ func (p *Handle) pcapSetDatalink(dlt layers.LinkType) error {
 }
 
 func pcapDatalinkValToName(dlt int) string {
+	err := LoadWinPCAP()
+	if err != nil {
+		panic(err)
+	}
 	ret, _, _ := syscall.Syscall(pcapDatalinkValToNamePtr, 1, uintptr(dlt), 0, 0)
 	return bytePtrToString(ret)
 }
 
 func pcapDatalinkValToDescription(dlt int) string {
+	err := LoadWinPCAP()
+	if err != nil {
+		panic(err)
+	}
 	ret, _, _ := syscall.Syscall(pcapDatalinkValToDescriptionPtr, 1, uintptr(dlt), 0, 0)
 	return bytePtrToString(ret)
 }
 
 func pcapDatalinkNameToVal(name string) int {
+	err := LoadWinPCAP()
+	if err != nil {
+		panic(err)
+	}
 	cptr, err := syscall.BytePtrFromString(name)
 	if err != nil {
 		return 0
@@ -651,6 +663,11 @@ func (p *Handle) pcapSnapshot() int {
 }
 
 func (t TimestampSource) pcapTstampTypeValToName() string {
+	err := LoadWinPCAP()
+	if err != nil {
+		return err.Error()
+	}
+
 	//libpcap <1.2 doesn't have pcap_*_tstamp_* functions
 	if pcapTstampTypeValToNamePtr == 0 {
 		return "pcap timestamp types not supported"
@@ -660,6 +677,11 @@ func (t TimestampSource) pcapTstampTypeValToName() string {
 }
 
 func pcapTstampTypeNameToVal(s string) (TimestampSource, error) {
+	err := LoadWinPCAP()
+	if err != nil {
+		return 0, err
+	}
+
 	//libpcap <1.2 doesn't have pcap_*_tstamp_* functions
 	if pcapTstampTypeNameToValPtr == 0 {
 		return 0, statusError(pcapCint(pcapError))
@@ -702,6 +724,11 @@ func (p *InactiveHandle) pcapClose() {
 }
 
 func pcapCreate(device string) (*InactiveHandle, error) {
+	err := LoadWinPCAP()
+	if err != nil {
+		return nil, err
+	}
+
 	buf := make([]byte, errorBufferSize)
 	dev, err := syscall.BytePtrFromString(device)
 	if err != nil {
