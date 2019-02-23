@@ -181,8 +181,8 @@ func ips(n *net.IPNet) (out []net.IP) {
 		var buf [4]byte
 		binary.BigEndian.PutUint32(buf[:], num)
 		out = append(out, net.IP(buf[:]))
-		mask += 1
-		num += 1
+		mask++
+		num++
 	}
 	return
 }
