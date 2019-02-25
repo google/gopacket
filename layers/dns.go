@@ -707,10 +707,16 @@ func encodeName(name []byte, data []byte, offset int) int {
 			l++
 		}
 	}
-	// length for final portion
-	data[offset+len(name)-l] = byte(l)
-	data[offset+len(name)+1] = 0x00 // terminal
-	return offset + len(name) + 2
+
+	if len(name) > 0 {
+		// length for final portion
+		data[offset+len(name)-l] = byte(l)
+		data[offset+len(name)+1] = 0x00 // terminal
+		return offset + len(name) + 2
+	} else {
+		data[offset] = 0x00 // terminal
+		return offset + 1
+	}
 }
 
 func (rr *DNSResourceRecord) encode(data []byte, offset int, opts gopacket.SerializeOptions) (int, error) {
