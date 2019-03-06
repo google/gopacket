@@ -52,6 +52,8 @@ type header interface {
 	next() bool
 }
 
+const tpacketAlignment = uint(C.TPACKET_ALIGNMENT)
+
 func tpAlign(x int) int {
 	return int((uint(x) + tpacketAlignment - 1) &^ (tpacketAlignment - 1))
 }
@@ -184,7 +186,7 @@ func (w *v3wrapper) next() bool {
 	if w.packet.tp_next_offset != 0 {
 		next += uintptr(w.packet.tp_next_offset)
 	} else {
-		next += uintptr(tpacketAlign(int(w.packet.tp_snaplen) + int(w.packet.tp_mac)))
+		next += uintptr(tpAlign(int(w.packet.tp_snaplen) + int(w.packet.tp_mac)))
 	}
 	w.packet = (*C.struct_tpacket3_hdr)(unsafe.Pointer(next))
 	return true
