@@ -42,17 +42,12 @@ import (
 import "C"
 
 var pageSize = unix.Getpagesize()
-var tpacketAlignment = uint(C.TPACKET_ALIGNMENT)
 
 // ErrPoll returned by poll
 var ErrPoll = errors.New("packet poll failed")
 
 // ErrTimeout returned on poll timeout
 var ErrTimeout = errors.New("packet poll timeout expired")
-
-func tpacketAlign(v int) int {
-	return int((uint(v) + tpacketAlignment - 1) & ((^tpacketAlignment) - 1))
-}
 
 // AncillaryVLAN structures are used to pass the captured VLAN
 // as ancillary data via CaptureInfo.
