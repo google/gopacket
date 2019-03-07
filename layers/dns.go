@@ -707,6 +707,12 @@ func encodeName(name []byte, data []byte, offset int) int {
 			l++
 		}
 	}
+
+	if len(name) == 0 {
+		data[offset] = 0x00 // terminal
+		return offset + 1
+	}
+
 	// length for final portion
 	data[offset+len(name)-l] = byte(l)
 	data[offset+len(name)+1] = 0x00 // terminal
