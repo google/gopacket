@@ -10,11 +10,13 @@ package pcapgo
 import (
 	"fmt"
 	"net"
+	"runtime"
 	"sync"
 	"syscall"
 	"time"
 	"unsafe"
 
+	"golang.org/x/net/bpf"
 	"golang.org/x/sys/unix"
 
 	"github.com/google/gopacket"
@@ -34,6 +36,8 @@ type EthernetHandle struct {
 	oob    []byte
 	ancil  []interface{}
 	mu     sync.Mutex
+	intf   int
+	addr   net.HardwareAddr
 }
 
 // readOne reads a packet from the handle and returns a capture info + vlan info
@@ -68,7 +72,7 @@ func (h *EthernetHandle) readOne() (ci gopacket.CaptureInfo, vlan int, haveVlan 
 	if sa.Family == unix.AF_PACKET {
 		ci.InterfaceIndex = int(sa.Ifindex)
 	} else {
-		ci.InterfaceIndex = -1 // this should never happen
+		ci.InterfaceIndex = h.intf
 	}
 
 	// custom aux parsing so we don't allocate stuff (unix.ParseSocketControlMessage allocates a slice)
@@ -156,7 +160,11 @@ func (h *EthernetHandle) ZeroCopyReadPacketData() ([]byte, gopacket.CaptureInfo,
 
 // Close closes the underlying socket
 func (h *EthernetHandle) Close() {
-	unix.Close(h.fd)
+	if h.fd != -1 {
+		unix.Close(h.fd)
+		h.fd = -1
+		runtime.SetFinalizer(h, nil)
+	}
 }
 
 // SetCaptureLength sets the maximum capture length to the given value
@@ -166,6 +174,61 @@ func (h *EthernetHandle) SetCaptureLength(len int) error {
 	}
 	h.buffer = make([]byte, len)
 	return nil
+}
+
+// GetCaptureLength returns the maximum capture length
+func (h *EthernetHandle) GetCaptureLength() int {
+	return len(h.buffer)
+}
+
+// SetBPF attaches the given BPF filter to the socket. After this, only the packets for which the filter returns a value greater than zero are received.
+// If a filter was already attached, it will be overwritten. To remove the filter, provide an empty slice.
+func (h *EthernetHandle) SetBPF(filter []bpf.RawInstruction) error {
+	if len(filter) == 0 {
+		return unix.SetsockoptInt(h.fd, unix.SOL_SOCKET, unix.SO_DETACH_FILTER, 0)
+	}
+	f := make([]unix.SockFilter, len(filter))
+	for i := range filter {
+		f[i].Code = filter[i].Op
+		f[i].Jf = filter[i].Jf
+		f[i].Jt = filter[i].Jt
+		f[i].K = filter[i].K
+	}
+	fprog := &unix.SockFprog{
+		Len:    uint16(len(filter)),
+		Filter: &f[0],
+	}
+	return unix.SetsockoptSockFprog(h.fd, unix.SOL_SOCKET, unix.SO_ATTACH_FILTER, fprog)
+}
+
+// LocalAddr returns the local network address
+func (h *EthernetHandle) LocalAddr() net.HardwareAddr {
+	// Hardware Address might have changed. Fetch new one and fall back to the stored one if fetching interface fails
+	intf, err := net.InterfaceByIndex(h.intf)
+	if err == nil {
+		h.addr = intf.HardwareAddr
+	}
+	return h.addr
+}
+
+// SetPromiscuous sets promiscous mode to the required value. If it is enabled, traffic not destined for the interface will also be captured.
+func (h *EthernetHandle) SetPromiscuous(b bool) error {
+	mreq := unix.PacketMreq{
+		Ifindex: int32(h.intf),
+		Type:    unix.PACKET_MR_PROMISC,
+	}
+
+	opt := unix.PACKET_ADD_MEMBERSHIP
+	if !b {
+		opt = unix.PACKET_DROP_MEMBERSHIP
+	}
+
+	return unix.SetsockoptPacketMreq(h.fd, unix.SOL_PACKET, opt, &mreq)
+}
+
+// Stats returns number of packets and dropped packets. This will be the number of packets/dropped packets since the last call to stats (not the cummulative sum!).
+func (h *EthernetHandle) Stats() (*unix.TpacketStats, error) {
+	return unix.GetsockoptTpacketStats(h.fd, unix.SOL_PACKET, unix.PACKET_STATISTICS)
 }
 
 // NewEthernetHandle implements pcap.OpenLive for network devices.
@@ -210,10 +273,14 @@ func NewEthernetHandle(ifname string) (*EthernetHandle, error) {
 		ooblen += timensLen
 	}
 
-	return &EthernetHandle{
+	handle := &EthernetHandle{
 		fd:     fd,
 		buffer: make([]byte, intf.MTU),
 		oob:    make([]byte, ooblen),
 		ancil:  make([]interface{}, 1),
-	}, nil
+		intf:   intf.Index,
+		addr:   intf.HardwareAddr,
+	}
+	runtime.SetFinalizer(handle, (*EthernetHandle).Close)
+	return handle, nil
 }
