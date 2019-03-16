@@ -809,18 +809,25 @@ func (p *PacketSource) NextPacket() (Packet, error) {
 }
 
 // packetsToChannel reads in all packets from the packet source and sends them
-// to the given channel.  When it receives an error, it ignores it, unless it is
-// a io.EOF, syscall.EBADF, or a ErrFileClosing, where it it closes the channel.
-// The use of a string match to handle internal/poll.ErrFileClosing is not
-// great, but how things are done: https://github.com/golang/go/issues/29828
+// to the given channel. This routine terminates when an io.EOF, syscall.EBADF,
+// or ErrFileClosing error is returned, or if over 100 calls to NextPacket()
+// in a row return an error response. The use of a string match to handle the
+// internal/poll.ErrFileClosing is not great, but this is how it is done:
+//    https://github.com/golang/go/issues/29828
 func (p *PacketSource) packetsToChannel() {
 	defer close(p.c)
+	ecnt := 0
+
 	for {
 		packet, err := p.NextPacket()
-		if err == io.EOF || err == syscall.EBADF || strings.Contains(err.Error(), "use of closed file") {
-			return
-		} else if err == nil {
+		if err == nil {
 			p.c <- packet
+			ecnt = 0
+		}
+
+		ecnt++
+		if ecnt > 100 || err == io.EOF || err == syscall.EBADF || strings.Contains(err.Error(), "use of closed file") {
+			break
 		}
 	}
 }
