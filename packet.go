@@ -823,6 +823,7 @@ func (p *PacketSource) packetsToChannel() {
 		if err == nil {
 			p.c <- packet
 			ecnt = 0
+			continue
 		}
 
 		ecnt++
