@@ -11,6 +11,7 @@ import (
 	"errors"
 	"fmt"
 	"net"
+	"strings"
 
 	"github.com/google/gopacket"
 )
@@ -69,6 +70,7 @@ const (
 	DNSTypeTXT   DNSType = 16 // text strings
 	DNSTypeAAAA  DNSType = 28 // a IPv6 host address [RFC3596]
 	DNSTypeSRV   DNSType = 33 // server discovery [RFC2782] [RFC6195]
+	DNSTypeOPT   DNSType = 41 // OPT Pseudo-RR [RFC6891]
 )
 
 func (dt DNSType) String() string {
@@ -111,6 +113,8 @@ func (dt DNSType) String() string {
 		return "AAAA"
 	case DNSTypeSRV:
 		return "SRV"
+	case DNSTypeOPT:
+		return "OPT"
 	}
 }
 
@@ -423,6 +427,12 @@ func recSize(rr *DNSResourceRecord) int {
 		return l
 	case DNSTypeSRV:
 		return 6 + len(rr.SRV.Name) + 2
+	case DNSTypeOPT:
+		l := len(rr.OPT) * 4
+		for _, opt := range rr.OPT {
+			l += len(opt.Data)
+		}
+		return l
 	}
 
 	return 0
@@ -672,6 +682,7 @@ type DNSResourceRecord struct {
 	SOA            DNSSOA
 	SRV            DNSSRV
 	MX             DNSMX
+	OPT            []DNSOPT // See RFC 6891, section 6.1.2
 
 	// Undecoded TXT for backward compatibility
 	TXT []byte
@@ -768,6 +779,14 @@ func (rr *DNSResourceRecord) encode(data []byte, offset int, opts gopacket.Seria
 		binary.BigEndian.PutUint16(data[noff+12:], rr.SRV.Weight)
 		binary.BigEndian.PutUint16(data[noff+14:], rr.SRV.Port)
 		encodeName(rr.SRV.Name, data, noff+16)
+	case DNSTypeOPT:
+		noff2 := noff + 10
+		for _, opt := range rr.OPT {
+			binary.BigEndian.PutUint16(data[noff2:], opt.Code)
+			binary.BigEndian.PutUint16(data[noff2+2:], uint16(len(opt.Data)))
+			copy(data[noff2+4:], opt.Data)
+			noff2 += 4 + len(opt.Data)
+		}
 	default:
 		return 0, fmt.Errorf("serializing resource record of type %v not supported", rr.Type)
 	}
@@ -797,6 +816,13 @@ func (rr *DNSResourceRecord) String() string {
 			return "PTR " + string(rr.PTR)
 		case DNSTypeTXT:
 			return "TXT " + string(rr.TXT)
+		case DNSTypeOPT:
+			var sb strings.Builder
+			sb.WriteString("OPT ")
+			for _, opt := range rr.OPT {
+				sb.WriteString(opt.String())
+			}
+			return sb.String()
 		}
 	}
 
@@ -814,6 +840,29 @@ func decodeCharacterStrings(data []byte) ([][]byte, error) {
 		strings = append(strings, data[index+1:index2])
 	}
 	return strings, nil
+}
+
+func decodeOPTs(data []byte, offset int) ([]DNSOPT, error) {
+	allOPT := []DNSOPT{}
+	end := len(data)
+
+	if offset == end {
+		return allOPT, nil // There is no data to read
+	}
+
+	if offset+4 > end {
+		return allOPT, fmt.Errorf("DNSOPT record is of length %d, it should be at least length 4", end-offset)
+	}
+
+	for i := offset; i < end; {
+		opt := DNSOPT{}
+		opt.Code = binary.BigEndian.Uint16(data[offset : offset+2])
+		l := binary.BigEndian.Uint16(data[offset+2 : offset+4])
+		opt.Data = data[offset+4 : offset+4+int(l)]
+		allOPT = append(allOPT, opt)
+		i += int(l) + 4
+	}
+	return allOPT, nil
 }
 
 func (rr *DNSResourceRecord) decodeRData(data []byte, offset int, buffer *[]byte) error {
@@ -879,6 +928,12 @@ func (rr *DNSResourceRecord) decodeRData(data []byte, offset int, buffer *[]byte
 			return err
 		}
 		rr.SRV.Name = name
+	case DNSTypeOPT:
+		allOPT, err := decodeOPTs(data, offset)
+		if err != nil {
+			return err
+		}
+		rr.OPT = allOPT
 	}
 	return nil
 }
@@ -902,6 +957,16 @@ type DNSSRV struct {
 type DNSMX struct {
 	Preference uint16
 	Name       []byte
+}
+
+// DNSOPT is a DNS Option, see RFC6891, section 6.1.2
+type DNSOPT struct {
+	Code uint16
+	Data []byte
+}
+
+func (opt DNSOPT) String() string {
+	return fmt.Sprintf("{Code: %d, Data: %x}", opt.Code, opt.Data)
 }
 
 var (
