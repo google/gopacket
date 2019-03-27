@@ -226,7 +226,7 @@ func testResourceEqual(t *testing.T, i int, name string, exp, got DNSResourceRec
 			t.Errorf("expected %s[%d].OPT[%d].Code = %v, got %v", name, i, j, exp.OPT[j].Code, got.OPT[j].Code)
 		}
 		if !bytes.Equal(exp.OPT[j].Data, got.OPT[j].Data) {
-			t.Errorf("expected %s[%d].OPT[%d].Data = %v, got %v", name, i, j, exp.TXTs[j], got.TXTs[j])
+			t.Errorf("expected %s[%d].OPT[%d].Data = %v, got %v", name, i, j, exp.OPT[j].Data, got.OPT[j].Data)
 		}
 	}
 }
