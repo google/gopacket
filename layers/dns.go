@@ -964,20 +964,20 @@ type DNSOptionCode uint16
 
 // DNSOptionCode known values. See IANA
 const (
-	DNSOptionCodeNSID              DNSOptionCode = 3
-	DNSOptionCodeDAU               DNSOptionCode = 5
-	DNSOptionCodeDHU               DNSOptionCode = 6
-	DNSOptionCodeN3U               DNSOptionCode = 7
-	DNSOptionCodeEDNSClientSubneet DNSOptionCode = 8
-	DNSOptionCodeEDNSExpire        DNSOptionCode = 9
-	DNSOptionCodeCookie            DNSOptionCode = 10
-	DNSOptionCodeEDNSKeepAlive     DNSOptionCode = 11
-	DNSOptionCodePadding           DNSOptionCode = 12
-	DNSOptionCodeChain             DNSOptionCode = 13
-	DNSOptionCodeEDNSKeyTag        DNSOptionCode = 14
-	DNSOptionCodeEDNSClientTag     DNSOptionCode = 16
-	DNSOptionCodeEDNSServerTag     DNSOptionCode = 17
-	DNSOptionCodeDeviceID          DNSOptionCode = 26946
+	DNSOptionCodeNSID             DNSOptionCode = 3
+	DNSOptionCodeDAU              DNSOptionCode = 5
+	DNSOptionCodeDHU              DNSOptionCode = 6
+	DNSOptionCodeN3U              DNSOptionCode = 7
+	DNSOptionCodeEDNSClientSubnet DNSOptionCode = 8
+	DNSOptionCodeEDNSExpire       DNSOptionCode = 9
+	DNSOptionCodeCookie           DNSOptionCode = 10
+	DNSOptionCodeEDNSKeepAlive    DNSOptionCode = 11
+	DNSOptionCodePadding          DNSOptionCode = 12
+	DNSOptionCodeChain            DNSOptionCode = 13
+	DNSOptionCodeEDNSKeyTag       DNSOptionCode = 14
+	DNSOptionCodeEDNSClientTag    DNSOptionCode = 16
+	DNSOptionCodeEDNSServerTag    DNSOptionCode = 17
+	DNSOptionCodeDeviceID         DNSOptionCode = 26946
 )
 
 // DNSOPT is a DNS Option, see RFC6891, section 6.1.2
