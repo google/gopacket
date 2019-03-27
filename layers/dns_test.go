@@ -109,7 +109,7 @@ func TestParseDNSTypeOPT(t *testing.T) {
 		t.Errorf("Parsed %d OPTs, expected 1", len(optAll))
 	}
 
-	if additionals[0].OPT[0].Code != 0x6942 {
+	if additionals[0].OPT[0].Code != DNSOptionCodeDeviceID {
 		t.Error("Failed to parse the OPT Code")
 	}
 	if string(additionals[0].OPT[0].Data[:7]) != "OpenDNS" {
@@ -356,7 +356,7 @@ func TestDNSEncodeQueryWithOPT(t *testing.T) {
 			Class: 4096,
 			OPT: []DNSOPT{
 				DNSOPT{
-					Code: 0x6942,
+					Code: DNSOptionCodeDeviceID,
 					Data: []byte("OpenDNS"),
 				},
 			},

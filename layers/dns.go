@@ -782,7 +782,7 @@ func (rr *DNSResourceRecord) encode(data []byte, offset int, opts gopacket.Seria
 	case DNSTypeOPT:
 		noff2 := noff + 10
 		for _, opt := range rr.OPT {
-			binary.BigEndian.PutUint16(data[noff2:], opt.Code)
+			binary.BigEndian.PutUint16(data[noff2:], uint16(opt.Code))
 			binary.BigEndian.PutUint16(data[noff2+2:], uint16(len(opt.Data)))
 			copy(data[noff2+4:], opt.Data)
 			noff2 += 4 + len(opt.Data)
@@ -856,7 +856,7 @@ func decodeOPTs(data []byte, offset int) ([]DNSOPT, error) {
 
 	for i := offset; i < end; {
 		opt := DNSOPT{}
-		opt.Code = binary.BigEndian.Uint16(data[offset : offset+2])
+		opt.Code = DNSOptionCode(binary.BigEndian.Uint16(data[offset : offset+2]))
 		l := binary.BigEndian.Uint16(data[offset+2 : offset+4])
 		opt.Data = data[offset+4 : offset+4+int(l)]
 		allOPT = append(allOPT, opt)
@@ -959,9 +959,30 @@ type DNSMX struct {
 	Name       []byte
 }
 
+// DNSOptionCode represents the code of a DNS Option, see RFC6891, section 6.1.2
+type DNSOptionCode uint16
+
+// DNSOptionCode known values. See IANA
+const (
+	DNSOptionCodeNSID              DNSOptionCode = 3
+	DNSOptionCodeDAU               DNSOptionCode = 5
+	DNSOptionCodeDHU               DNSOptionCode = 6
+	DNSOptionCodeN3U               DNSOptionCode = 7
+	DNSOptionCodeEDNSClientSubneet DNSOptionCode = 8
+	DNSOptionCodeEDNSExpire        DNSOptionCode = 9
+	DNSOptionCodeCookie            DNSOptionCode = 10
+	DNSOptionCodeEDNSKeepAlive     DNSOptionCode = 11
+	DNSOptionCodePadding           DNSOptionCode = 12
+	DNSOptionCodeChain             DNSOptionCode = 13
+	DNSOptionCodeEDNSKeyTag        DNSOptionCode = 14
+	DNSOptionCodeEDNSClientTag     DNSOptionCode = 16
+	DNSOptionCodeEDNSServerTag     DNSOptionCode = 17
+	DNSOptionCodeDeviceID          DNSOptionCode = 26946
+)
+
 // DNSOPT is a DNS Option, see RFC6891, section 6.1.2
 type DNSOPT struct {
-	Code uint16
+	Code DNSOptionCode
 	Data []byte
 }
 
