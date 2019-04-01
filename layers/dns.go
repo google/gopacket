@@ -858,6 +858,9 @@ func decodeOPTs(data []byte, offset int) ([]DNSOPT, error) {
 		opt := DNSOPT{}
 		opt.Code = DNSOptionCode(binary.BigEndian.Uint16(data[offset : offset+2]))
 		l := binary.BigEndian.Uint16(data[offset+2 : offset+4])
+		if offset+4+int(l) > end {
+			return allOPT, fmt.Errorf("Malformed DNSOPT record. The length (%d) field implies a packet larger than the one received", l)
+		}
 		opt.Data = data[offset+4 : offset+4+int(l)]
 		allOPT = append(allOPT, opt)
 		i += int(l) + 4
