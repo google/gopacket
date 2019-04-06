@@ -804,6 +804,13 @@ func (rr *DNSResourceRecord) encode(data []byte, offset int, opts gopacket.Seria
 
 func (rr *DNSResourceRecord) String() string {
 
+	if rr.Type == DNSTypeOPT {
+		opts := make([]string, len(rr.OPT))
+		for i, opt := range rr.OPT {
+			opts[i] = opt.String()
+		}
+		return "OPT " + strings.Join(opts, ",")
+	}
 	if rr.Class == DNSClassIN {
 		switch rr.Type {
 		case DNSTypeA, DNSTypeAAAA:
@@ -816,13 +823,6 @@ func (rr *DNSResourceRecord) String() string {
 			return "PTR " + string(rr.PTR)
 		case DNSTypeTXT:
 			return "TXT " + string(rr.TXT)
-		case DNSTypeOPT:
-			var sb strings.Builder
-			sb.WriteString("OPT ")
-			for _, opt := range rr.OPT {
-				sb.WriteString(opt.String())
-			}
-			return sb.String()
 		}
 	}
 
