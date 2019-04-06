@@ -965,6 +965,41 @@ type DNSMX struct {
 // DNSOptionCode represents the code of a DNS Option, see RFC6891, section 6.1.2
 type DNSOptionCode uint16
 
+func (doc DNSOptionCode) String() string {
+	switch doc {
+	default:
+		return "Unknown"
+	case DNSOptionCodeNSID:
+		return "NSID"
+	case DNSOptionCodeDAU:
+		return "DAU"
+	case DNSOptionCodeDHU:
+		return "DHU"
+	case DNSOptionCodeN3U:
+		return "N3U"
+	case DNSOptionCodeEDNSClientSubnet:
+		return "EDNSClientSubnet"
+	case DNSOptionCodeEDNSExpire:
+		return "EDNSExpire"
+	case DNSOptionCodeCookie:
+		return "Cookie"
+	case DNSOptionCodeEDNSKeepAlive:
+		return "EDNSKeepAlive"
+	case DNSOptionCodePadding:
+		return "CodePadding"
+	case DNSOptionCodeChain:
+		return "CodeChain"
+	case DNSOptionCodeEDNSKeyTag:
+		return "CodeEDNSKeyTag"
+	case DNSOptionCodeEDNSClientTag:
+		return "EDNSClientTag"
+	case DNSOptionCodeEDNSServerTag:
+		return "EDNSServerTag"
+	case DNSOptionCodeDeviceID:
+		return "DeviceID"
+	}
+}
+
 // DNSOptionCode known values. See IANA
 const (
 	DNSOptionCodeNSID             DNSOptionCode = 3
@@ -990,7 +1025,7 @@ type DNSOPT struct {
 }
 
 func (opt DNSOPT) String() string {
-	return fmt.Sprintf("{Code: %d, Data: %x}", opt.Code, opt.Data)
+	return fmt.Sprintf("%s=%x", opt.Code, opt.Data)
 }
 
 var (
