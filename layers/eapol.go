@@ -161,6 +161,7 @@ func (ek *EAPOLKey) LayerType() gopacket.LayerType {
 	return LayerTypeEAPOLKey
 }
 
+// CanDecode returns the set of layer types that this DecodingLayer can decode.
 func (ek *EAPOLKey) CanDecode() gopacket.LayerType {
 	return LayerTypeEAPOLKey
 }
