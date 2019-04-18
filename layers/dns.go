@@ -740,6 +740,7 @@ func encodeName(name []byte, data []byte, offset int) int {
 func (rr *DNSResourceRecord) encode(data []byte, offset int, opts gopacket.SerializeOptions) (int, error) {
 
 	noff := encodeName(rr.Name, data, offset)
+	nSz := noff - offset
 
 	binary.BigEndian.PutUint16(data[noff:], uint16(rr.Type))
 	binary.BigEndian.PutUint16(data[noff+2:], uint16(rr.Class))
@@ -799,7 +800,7 @@ func (rr *DNSResourceRecord) encode(data []byte, offset int, opts gopacket.Seria
 		rr.DataLength = uint16(dSz)
 	}
 
-	return len(rr.Name) + 1 + 11 + dSz, nil
+	return nSz + 10 + dSz, nil
 }
 
 func (rr *DNSResourceRecord) String() string {
