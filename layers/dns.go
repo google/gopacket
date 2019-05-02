@@ -609,7 +609,7 @@ loop:
 		}
 	}
 	if len(*buffer) <= start {
-		return nil, 0, errDNSNameHasNoData
+		return (*buffer)[start:], index + 1, nil
 	}
 	return (*buffer)[start+1:], index + 1, nil
 }
