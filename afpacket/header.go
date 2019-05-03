@@ -12,6 +12,8 @@ import (
 	"reflect"
 	"time"
 	"unsafe"
+
+	"golang.org/x/sys/unix"
 )
 
 // #include <linux/if_packet.h>
@@ -52,7 +54,7 @@ type header interface {
 	next() bool
 }
 
-const tpacketAlignment = uint(C.TPACKET_ALIGNMENT)
+const tpacketAlignment = uint(unix.TPACKET_ALIGNMENT)
 
 func tpAlign(x int) int {
 	return int((uint(x) + tpacketAlignment - 1) &^ (tpacketAlignment - 1))
@@ -147,7 +149,7 @@ func initV3Wrapper(block unsafe.Pointer) (w v3wrapper) {
 }
 
 func (w *v3wrapper) getVLAN() int {
-	if w.packet.tp_status&C.TP_STATUS_VLAN_VALID != 0 {
+	if w.packet.tp_status&unix.TP_STATUS_VLAN_VALID != 0 {
 		hv1 := (*C.struct_tpacket_hdr_variant1)(unsafe.Pointer(&w.packet.anon0[0]))
 		return int(hv1.tp_vlan_tci & 0xfff)
 	}
