@@ -450,7 +450,7 @@ func (h *TPacket) getTPacketHeader() header {
 
 func (h *TPacket) pollForFirstPacket(hdr header) error {
 	tm := int(h.opts.pollTimeout / time.Millisecond)
-	for hdr.getStatus()&C.TP_STATUS_USER == 0 {
+	for hdr.getStatus()&unix.TP_STATUS_USER == 0 {
 		pollset := [1]unix.PollFd{
 			{
 				Fd:     int32(h.fd),
