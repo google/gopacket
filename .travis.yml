@@ -1,11 +1,5 @@
 language: go
 go:
- - 1.5.x
- - 1.6.x
- - 1.7.x
- - 1.8.x
- - 1.9.x
- - 1.10.x
  - 1.11.x
  - 1.12.x
  - master
@@ -15,7 +9,11 @@ addons:
     packages:
       libpcap-dev
 
-install: ./.travis.install.sh
+# use modules except for older versions (see below)
+install: true
+
+env:
+  - GO111MODULE=on
 
 script: ./.travis.script.sh
 
@@ -26,6 +24,18 @@ matrix:
 
 jobs:
   include:
+    - go: 1.5.x
+      install: ./.travis.install.sh
+    - go: 1.6.x
+      install: ./.travis.install.sh
+    - go: 1.7.x
+      install: ./.travis.install.sh
+    - go: 1.8.x
+      install: ./.travis.install.sh
+    - go: 1.9.x
+      install: ./.travis.install.sh
+    - go: 1.10.x
+      install: ./.travis.install.sh
     - os: osx
       go: 1.x
     - os: windows
