@@ -92,10 +92,10 @@ func (h *EthernetHandle) readOne() (ci gopacket.CaptureInfo, vlan int, haveVlan 
 			gotAux = true
 		case hdr.Level == unix.SOL_SOCKET && hdr.Type == unix.SO_TIMESTAMPNS && len(oob) >= timensLen:
 			tstamp := (*unix.Timespec)(unsafe.Pointer(&oob[hdrLen]))
-			ci.Timestamp = time.Unix(tstamp.Sec, tstamp.Nsec)
+			ci.Timestamp = time.Unix(int64(tstamp.Sec), int64(tstamp.Nsec))
 		case hdr.Level == unix.SOL_SOCKET && hdr.Type == unix.SO_TIMESTAMP && len(oob) >= timeLen:
 			tstamp := (*unix.Timeval)(unsafe.Pointer(&oob[hdrLen]))
-			ci.Timestamp = time.Unix(tstamp.Sec, tstamp.Usec*1000)
+			ci.Timestamp = time.Unix(int64(tstamp.Sec), int64(tstamp.Usec)*1000)
 		}
 		oob = oob[unix.CmsgSpace(int(hdr.Len))-hdrLen:]
 	}
