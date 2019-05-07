@@ -576,10 +576,8 @@ var testMalformedRootQuery = []byte{
 
 func TestMalformedRootQuery(t *testing.T) {
 	p := gopacket.NewPacket(testMalformedRootQuery, LinkTypeEthernet, testDecodeOptions)
-	if errLayer := p.ErrorLayer(); errLayer == nil {
-		t.Error("No error layer on invalid DNS name")
-	} else if err := errLayer.Error(); !strings.Contains(err.Error(), "no dns data found") {
-		t.Errorf("unexpected error message: %v", err)
+	if err := p.ErrorLayer(); err != nil {
+		t.Error("Error layer on invalid DNS name:", err)
 	}
 }
 
