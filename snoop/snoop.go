@@ -45,7 +45,7 @@ type snoopHeader struct {
 // Reader wraps an underlying io.Reader to read packet data in SNOOP
 // format.  See https://tools.ietf.org/html/rfc1761
 // for information on the file format.
-//
+
 // We currenty read v2 file format and convert microsecond to nanoseconds
 // byte order in big-endian encoding.
 type Reader struct {
