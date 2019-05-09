@@ -12,6 +12,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"net"
 	"os"
 	"reflect"
 	"runtime/debug"
@@ -809,27 +810,37 @@ func (p *PacketSource) NextPacket() (Packet, error) {
 }
 
 // packetsToChannel reads in all packets from the packet source and sends them
-// to the given channel. This routine terminates when an io.EOF, syscall.EBADF,
-// or ErrFileClosing error is returned, or if over 100 calls to NextPacket()
-// in a row return an error response. The use of a string match to handle the
-// internal/poll.ErrFileClosing is not great, but this is how it is done:
-//    https://github.com/golang/go/issues/29828
+// to the given channel. This routine terminates when a non-temporary error
+// is returned by NextPacket().
 func (p *PacketSource) packetsToChannel() {
 	defer close(p.c)
-	ecnt := 0
-
 	for {
 		packet, err := p.NextPacket()
 		if err == nil {
 			p.c <- packet
-			ecnt = 0
 			continue
 		}
 
-		ecnt++
-		if ecnt > 100 || err == io.EOF || err == syscall.EBADF || strings.Contains(err.Error(), "use of closed file") {
+		// Immediately retry for temporary network errors
+		if nerr, ok := err.(net.Error); ok && nerr.Temporary() {
+			continue
+		}
+
+		// Immediately retry for EAGAIN
+		if err == syscall.EAGAIN {
+			continue
+		}
+
+		// Immediately break for known unrecoverable errors
+		if err == io.EOF || err == io.ErrUnexpectedEOF ||
+			err == io.ErrNoProgress || err == io.ErrClosedPipe || err == io.ErrShortBuffer ||
+			err == syscall.EBADF || err == syscall.EBADFD ||
+			strings.Contains(err.Error(), "use of closed file") {
 			break
 		}
+
+		// Sleep briefly and try again
+		time.Sleep(time.Millisecond * time.Duration(5))
 	}
 }
 
