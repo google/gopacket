@@ -724,6 +724,8 @@ func testFlush(t *testing.T, s []testSequence, delay time.Duration, flushInterva
 	a.MaxBufferedPagesPerConnection = 10
 	port := layers.TCPPort(0)
 
+	simTime := time.Unix(0, 0)
+
 	for i, test := range s {
 		fact.reassembly = []Reassembly{}
 		if testDebug {
@@ -737,9 +739,10 @@ func testFlush(t *testing.T, s []testSequence, delay time.Duration, flushInterva
 		if port != test.in.SrcPort {
 			flow = flow.Reverse()
 		}
-		a.Assemble(flow, &test.in)
-		time.Sleep(delay)
-		a.FlushCloseOlderThan(time.Now().Add(-1 * flushInterval))
+		ctx := assemblerSimpleContext(gopacket.CaptureInfo{Timestamp: simTime})
+		a.AssembleWithContext(flow, &test.in, &ctx)
+		simTime = simTime.Add(delay)
+		a.FlushCloseOlderThan(simTime.Add(-1 * flushInterval))
 
 		final := []Reassembly{}
 		if len(test.want) > 0 {

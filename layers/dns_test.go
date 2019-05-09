@@ -499,7 +499,7 @@ func TestDNSMalformedPacket2(t *testing.T) {
 	}
 }
 
-// testMalformedRootQuery is the packet:
+// testBlankNameRootQuery is the packet:
 //   08:31:18.143065 IP 10.77.0.26.53 > 10.1.0.233.65071: 59508- 0/13/3 (508)
 //   	0x0000:  0055 22af c637 0022 55ac deac 0800 4500  .U"..7."U.....E.
 //   	0x0010:  0218 76b2 4000 7211 7ad2 0a4d 001a 0a01  ..v.@.r.z..M....
@@ -536,7 +536,7 @@ func TestDNSMalformedPacket2(t *testing.T) {
 //   	0x0200:  0004 ca0c 1b21 c058 0001 0001 0000 0e10  .....!.X........
 //   	0x0210:  0004 c629 0004 c078 0001 0001 0000 0e10  ...)...x........
 //   	0x0220:  0004 c024 9411                           ...$..
-var testMalformedRootQuery = []byte{
+var testBlankNameRootQuery = []byte{
 	0x00, 0x55, 0x22, 0xaf, 0xc6, 0x37, 0x00, 0x22, 0x55, 0xac, 0xde, 0xac, 0x08, 0x00, 0x45, 0x00,
 	0x02, 0x18, 0x76, 0xb2, 0x40, 0x00, 0x72, 0x11, 0x7a, 0xd2, 0x0a, 0x4d, 0x00, 0x1a, 0x0a, 0x01,
 	0x00, 0xe9, 0x00, 0x35, 0xfe, 0x2f, 0x02, 0x04, 0xb8, 0xf5, 0xe8, 0x74, 0x81, 0x00, 0x00, 0x01,
@@ -574,12 +574,10 @@ var testMalformedRootQuery = []byte{
 	0x00, 0x04, 0xc0, 0x24, 0x94, 0x11,
 }
 
-func TestMalformedRootQuery(t *testing.T) {
-	p := gopacket.NewPacket(testMalformedRootQuery, LinkTypeEthernet, testDecodeOptions)
-	if errLayer := p.ErrorLayer(); errLayer == nil {
-		t.Error("No error layer on invalid DNS name")
-	} else if err := errLayer.Error(); !strings.Contains(err.Error(), "no dns data found") {
-		t.Errorf("unexpected error message: %v", err)
+func TestBlankNameRootQuery(t *testing.T) {
+	p := gopacket.NewPacket(testBlankNameRootQuery, LinkTypeEthernet, testDecodeOptions)
+	if err := p.ErrorLayer(); err != nil {
+		t.Error("Error layer on blank DNS name field:", err)
 	}
 }
 
