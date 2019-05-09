@@ -834,7 +834,7 @@ func (p *PacketSource) packetsToChannel() {
 		// Immediately break for known unrecoverable errors
 		if err == io.EOF || err == io.ErrUnexpectedEOF ||
 			err == io.ErrNoProgress || err == io.ErrClosedPipe || err == io.ErrShortBuffer ||
-			err == syscall.EBADF || err == syscall.EBADFD ||
+			err == syscall.EBADF ||
 			strings.Contains(err.Error(), "use of closed file") {
 			break
 		}
