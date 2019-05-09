@@ -636,9 +636,10 @@ func (q *DNSQuestion) decode(data []byte, offset int, df gopacket.DecodeFeedback
 
 func (q *DNSQuestion) encode(data []byte, offset int) int {
 	noff := encodeName(q.Name, data, offset)
+	nSz := noff - offset
 	binary.BigEndian.PutUint16(data[noff:], uint16(q.Type))
 	binary.BigEndian.PutUint16(data[noff+2:], uint16(q.Class))
-	return len(q.Name) + 6
+	return nSz + 4
 }
 
 //  DNSResourceRecord
