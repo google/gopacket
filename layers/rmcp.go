@@ -62,19 +62,6 @@ var (
 	}
 )
 
-// decodeRMCP decodes the byte slice into an RMCP type, and sets the application
-// layer to it.
-func decodeRMCP(data []byte, p gopacket.PacketBuilder) error {
-	rmcp := &RMCP{}
-	err := rmcp.DecodeFromBytes(data, p)
-	p.AddLayer(rmcp)
-	p.SetApplicationLayer(rmcp)
-	if err != nil {
-		return err
-	}
-	return p.NextDecoder(rmcp.NextLayerType())
-}
-
 // RMCP describes the format of an RMCP header, which forms a UDP payload. See
 // section 3.2.2.2.
 type RMCP struct {
@@ -154,4 +141,17 @@ func (r *RMCP) SerializeTo(b gopacket.SerializeBuffer, opts gopacket.SerializeOp
 	bytes[2] = r.Sequence
 	bytes[3] = bool2uint8(r.Ack)<<7 | uint8(r.Class) // thanks, BFD layer
 	return nil
+}
+
+// decodeRMCP decodes the byte slice into an RMCP type, and sets the application
+// layer to it.
+func decodeRMCP(data []byte, p gopacket.PacketBuilder) error {
+	rmcp := &RMCP{}
+	err := rmcp.DecodeFromBytes(data, p)
+	p.AddLayer(rmcp)
+	p.SetApplicationLayer(rmcp)
+	if err != nil {
+		return err
+	}
+	return p.NextDecoder(rmcp.NextLayerType())
 }
