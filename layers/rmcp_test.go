@@ -13,7 +13,7 @@ import (
 	"github.com/google/gopacket"
 )
 
-func TestDecodeFromBytes(t *testing.T) {
+func RMCPTestDecodeFromBytes(t *testing.T) {
 	b, err := hex.DecodeString("0600ff06")
 	if err != nil {
 		t.Fatalf("Failed to decode RMCP message")
@@ -49,7 +49,7 @@ func serializeRMCP(rmcp *RMCP) ([]byte, error) {
 	return sb.Bytes(), err
 }
 
-func TestSerializeTo(t *testing.T) {
+func RMCPTestSerializeTo(t *testing.T) {
 	table := []struct {
 		layer *RMCP
 		want  []byte
