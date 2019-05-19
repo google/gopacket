@@ -67,21 +67,21 @@ var (
 type RMCP struct {
 	BaseLayer
 
-	// Version identifies the version of the RMCP header.  0x06 indicates RMCP
+	// Version identifies the version of the RMCP header. 0x06 indicates RMCP
 	// v1.0; lower values are legacy, higher values are reserved.
 	Version uint8
 
-	// Sequence is the sequence number assicated with the message.  Note that
+	// Sequence is the sequence number assicated with the message. Note that
 	// this rolls over to 0 after 254, not 255. Seq num 255 indicates the
 	// receiver must not send an ACK.
 	Sequence uint8
 
-	// Ack indicates whether this packet is an acknowledgement. If if it is, the
+	// Ack indicates whether this packet is an acknowledgement. If it is, the
 	// payload will be empty.
 	Ack bool
 
 	// Class idicates the structure of the payload. There are only 2^4 valid
-	// values, however there is no uint4 data type. N.B.  the Ack bit has been
+	// values, however there is no uint4 data type. N.B. the Ack bit has been
 	// split off into another field. The most significant 4 bits of this field
 	// will always be 0.
 	Class RMCPClass
