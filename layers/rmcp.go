@@ -89,7 +89,7 @@ type RMCP struct {
 
 // LayerType returns LayerTypeRMCP. It partially satisfies Layer and
 // SerializableLayer.
-func (r *RMCP) LayerType() gopacket.LayerType {
+func (*RMCP) LayerType() gopacket.LayerType {
 	return LayerTypeRMCP
 }
 
