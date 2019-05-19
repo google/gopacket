@@ -132,6 +132,11 @@ func (r *RMCP) Payload() []byte {
 // SerializeTo writes the serialized fom of this layer into the SerializeBuffer,
 // partially satisfying SerializableLayer.
 func (r *RMCP) SerializeTo(b gopacket.SerializeBuffer, opts gopacket.SerializeOptions) error {
+	// The IPMI v1.5 spec contains a pad byte for frame sizes of certain lengths
+	// to work around issues in LAN chips. This is no longer necessary as of
+	// IPMI v2.0 (renamed to "legacy pad") so we do not attempt to add it. The
+	// same approach is taken by FreeIPMI:
+	// http://git.savannah.gnu.org/cgit/freeipmi.git/tree/libfreeipmi/interface/ipmi-lan-interface.c?id=b5ffcd38317daf42074458879f4c55ba6804a595#n836
 	bytes, err := b.PrependBytes(4)
 	if err != nil {
 		return err
