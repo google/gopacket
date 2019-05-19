@@ -57,8 +57,9 @@ const (
 
 var (
 	rmcpClassLayerTypes = [16]gopacket.LayerType{
-		// RMCPClassASF and RMCPClassIPMI are to implement; OEM layer type (8)
-		// is deliberately not implemented, so we return LayerTypePayload
+		RMCPClassASF: LayerTypeASF,
+		// RMCPClassIPMI is to implement; RMCPClassOEM is deliberately not
+		// implemented, so we return LayerTypePayload
 	}
 )
 
