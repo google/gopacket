@@ -137,7 +137,7 @@ func (r *RMCP) SerializeTo(b gopacket.SerializeBuffer, opts gopacket.SerializeOp
 		return err
 	}
 	bytes[0] = r.Version
-	// 1 byte reserved, 0x00
+	bytes[1] = 0x00
 	bytes[2] = r.Sequence
 	bytes[3] = bool2uint8(r.Ack)<<7 | uint8(r.Class) // thanks, BFD layer
 	return nil
