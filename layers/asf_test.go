@@ -29,11 +29,11 @@ func ASFTestDecodeFromBytes(t *testing.T) {
 	if !bytes.Equal(asf.BaseLayer.Contents, b) {
 		t.Errorf("contents is %v, want %v", asf.BaseLayer.Contents, b)
 	}
-	if asf.Enterprise != ASFEnterprise {
-		t.Errorf("enterprise is %v, want %v", asf.Enterprise, ASFEnterprise)
+	if asf.Enterprise != ASFRMCPEnterprise {
+		t.Errorf("enterprise is %v, want %v", asf.Enterprise, ASFRMCPEnterprise)
 	}
-	if asf.Type != ASFTypePresencePong {
-		t.Errorf("type is %v, want %v", asf.Type, ASFTypePresencePong)
+	if asf.Type != ASFDataIdentifierPresencePong.Type {
+		t.Errorf("type is %v, want %v", asf.Type, ASFDataIdentifierPresencePong)
 	}
 	if asf.Tag != 0 {
 		t.Errorf("tag is %v, want 0", asf.Tag)
@@ -56,16 +56,14 @@ func ASFTestSerializeTo(t *testing.T) {
 	}{
 		{
 			&ASF{
-				Enterprise: ASFEnterprise,
-				Type:       ASFTypePresencePing,
+				ASFDataIdentifier: ASFDataIdentifierPresencePing,
 			},
 			[]byte{0, 0, 0x11, 0xbe, 0x80, 0, 0, 0},
 		},
 		{
 			&ASF{
-				Enterprise: ASFEnterprise,
-				Type:       ASFTypePresencePong,
-				Length:     0x10,
+				ASFDataIdentifier: ASFDataIdentifierPresencePong,
+				Length:            0x10,
 			},
 			[]byte{0, 0, 0x11, 0xbe, 0x40, 0, 0, 0x10},
 		},

@@ -29,8 +29,8 @@ func ASFPresencePongTestDecodeFromBytes(t *testing.T) {
 	if !bytes.Equal(pp.BaseLayer.Contents, b) {
 		t.Errorf("contents is %v, want %v", pp.BaseLayer.Contents, b)
 	}
-	if pp.Enterprise != ASFEnterprise {
-		t.Errorf("want enterprise %v, got %v", ASFEnterprise, pp.Enterprise)
+	if pp.Enterprise != ASFRMCPEnterprise {
+		t.Errorf("want enterprise %v, got %v", ASFRMCPEnterprise, pp.Enterprise)
 	}
 	if !bytes.Equal(pp.OEM[:], make([]byte, 4)) {
 		t.Errorf("want null OEM, got %v", pp.OEM[:])
@@ -62,7 +62,7 @@ func ASFPresencePongTestSerializeTo(t *testing.T) {
 	}{
 		{
 			&ASFPresencePong{
-				Enterprise: ASFEnterprise,
+				Enterprise: ASFRMCPEnterprise,
 				IPMI:       true,
 				ASFv1:      true,
 			},
