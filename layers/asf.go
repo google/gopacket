@@ -15,6 +15,12 @@ import (
 	"github.com/google/gopacket"
 )
 
+const (
+	// ASFEnterprise is the IANA-assigned Enterprise Number of the ASF-RMCP
+	// organisation.
+	ASFRMCPEnterprise uint32 = 4542
+)
+
 // ASFDataIdentifier encapsulates fields used to uniquely identify the format of
 // the data block.
 //
@@ -79,12 +85,6 @@ var (
 	asfDataLayerTypes = map[ASFDataIdentifier]gopacket.LayerType{
 		ASFDataIdentifierPresencePong: LayerTypeASFPresencePong,
 	}
-)
-
-const (
-	// ASFEnterprise is the IANA-assigned Enterprise Number of the ASF-RMCP
-	// organisation.
-	ASFRMCPEnterprise uint32 = 4542
 )
 
 // ASF defines ASF's generic RMCP message Data block format. See section
