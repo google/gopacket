@@ -16,7 +16,7 @@ import (
 )
 
 const (
-	// ASFEnterprise is the IANA-assigned Enterprise Number of the ASF-RMCP
+	// ASFRMCPEnterprise is the IANA-assigned Enterprise Number of the ASF-RMCP
 	// organisation.
 	ASFRMCPEnterprise uint32 = 4542
 )
@@ -63,7 +63,7 @@ func RegisterASFLayerType(a ASFDataIdentifier, l gopacket.LayerType) {
 var (
 	// ASFDataIdentifierPresencePong is the message type of the response to a
 	// Presence Ping message. It indicates the sender is ASF-RMCP-aware.
-	ASFDataIdentifierPresencePong ASFDataIdentifier = ASFDataIdentifier{
+	ASFDataIdentifierPresencePong = ASFDataIdentifier{
 		Enterprise: ASFRMCPEnterprise,
 		Type:       0x40,
 	}
@@ -76,7 +76,7 @@ var (
 	//
 	// Systems implementing IPMI must respond to this ping to conform to the
 	// spec, so it is a good substitute for an ICMP ping.
-	ASFDataIdentifierPresencePing ASFDataIdentifier = ASFDataIdentifier{
+	ASFDataIdentifierPresencePing = ASFDataIdentifier{
 		Enterprise: ASFRMCPEnterprise,
 		Type:       0x80,
 	}
