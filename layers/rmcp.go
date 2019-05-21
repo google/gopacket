@@ -63,6 +63,13 @@ var (
 	}
 )
 
+// RegisterRMCPLayerType allows specifying that the payload of a RMCP packet of
+// a certain class should processed by the provided layer type. This overrides
+// any existing registrations, including defaults.
+func RegisterRMCPLayerType(c RMCPClass, l gopacket.LayerType) {
+	rmcpClassLayerTypes[c] = l
+}
+
 // RMCP describes the format of an RMCP header, which forms a UDP payload. See
 // section 3.2.2.2.
 type RMCP struct {
