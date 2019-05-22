@@ -49,6 +49,52 @@ func ASFPresencePongTestDecodeFromBytes(t *testing.T) {
 	}
 }
 
+func ASFPresencePongTestSupportsDCMI(t *testing.T) {
+	table := []struct {
+		layer *ASFPresencePong
+		want  bool
+	}{
+		{
+			&ASFPresencePong{
+				Enterprise: ASFRMCPEnterprise,
+				IPMI:       true,
+				ASFv1:      true,
+			},
+			false,
+		},
+		{
+			&ASFPresencePong{
+				Enterprise: ASFDCMIEnterprise,
+				IPMI:       false,
+				ASFv1:      true,
+			},
+			false,
+		},
+		{
+			&ASFPresencePong{
+				Enterprise: ASFDCMIEnterprise,
+				IPMI:       true,
+				ASFv1:      false,
+			},
+			false,
+		},
+		{
+			&ASFPresencePong{
+				Enterprise: ASFDCMIEnterprise,
+				IPMI:       true,
+				ASFv1:      true,
+			},
+			true,
+		},
+	}
+	for _, test := range table {
+		got := test.layer.SupportsDCMI()
+		if got != test.want {
+			t.Errorf("%v SupportsDCMI() = %v, want %v", test.layer, got, test.want)
+		}
+	}
+}
+
 func serializeASFPresencePong(pp *ASFPresencePong) ([]byte, error) {
 	sb := gopacket.NewSerializeBuffer()
 	err := pp.SerializeTo(sb, gopacket.SerializeOptions{})

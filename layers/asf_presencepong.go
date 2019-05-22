@@ -34,6 +34,12 @@ type (
 )
 
 const (
+	// ASFDCMIEnterprise is the IANA-assigned Enterprise Number of the Data
+	// Center Manageability Interface Forum. The Presence Pong response's
+	// Enterprise field being set to this value indicates support for DCMI. The
+	// DCMI spec regards the OEM field as reserved, so these should be null.
+	ASFDCMIEnterprise uint32 = 36465
+
 	// ASFPresencePongEntityIPMI ANDs with Presence Pong's supported entities
 	// field if the managed system supports IPMI.
 	ASFPresencePongEntityIPMI ASFEntity = 1 << 7
@@ -97,6 +103,12 @@ type ASFPresencePong struct {
 	DASH bool
 
 	// 6 bytes reserved after the entities and interactions fields, set to 0s.
+}
+
+// SupportsDCMI returns whether the Presence Pong message indicates support for
+// the Data Center Management Interface, which is an extension of IPMI v2.0.
+func (a *ASFPresencePong) SupportsDCMI() bool {
+	return a.Enterprise == ASFDCMIEnterprise && a.IPMI && a.ASFv1
 }
 
 // LayerType returns LayerTypeASFPresencePong. It partially satisfies Layer and
