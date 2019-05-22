@@ -16,8 +16,7 @@ import (
 )
 
 const (
-	// ASFRMCPEnterprise is the IANA-assigned Enterprise Number of the ASF-RMCP
-	// organisation.
+	// ASFRMCPEnterprise is the IANA-assigned Enterprise Number of the ASF-RMCP.
 	ASFRMCPEnterprise uint32 = 4542
 )
 
@@ -93,9 +92,10 @@ type ASF struct {
 	BaseLayer
 	ASFDataIdentifier
 
-	// Tag is the message tag, used to match request/response pairs. The tag of
-	// a response is set to that of the message it is responding to. If a
-	// message is not of the request/response type, this is set to 255.
+	// Tag is used to match request/response pairs. The tag of a response is set
+	// to that of the message it is responding to. If a message is
+	// unidirectional, i.e. not part of a request/response pair, this is set to
+	// 255.
 	Tag uint8
 
 	// 1 byte reserved, set to 0x00.
