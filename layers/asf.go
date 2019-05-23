@@ -144,6 +144,7 @@ func (a *ASF) NextLayerType() gopacket.LayerType {
 // SerializeTo writes the serialized fom of this layer into the SerializeBuffer,
 // partially satisfying SerializableLayer.
 func (a *ASF) SerializeTo(b gopacket.SerializeBuffer, opts gopacket.SerializeOptions) error {
+	payload := b.Bytes()
 	bytes, err := b.PrependBytes(8)
 	if err != nil {
 		return err
@@ -152,6 +153,9 @@ func (a *ASF) SerializeTo(b gopacket.SerializeBuffer, opts gopacket.SerializeOpt
 	bytes[4] = uint8(a.Type)
 	bytes[5] = a.Tag
 	bytes[6] = 0x00
+	if opts.FixLengths {
+		a.Length = uint8(len(payload))
+	}
 	bytes[7] = a.Length
 	return nil
 }

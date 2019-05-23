@@ -45,7 +45,9 @@ func ASFTestDecodeFromBytes(t *testing.T) {
 
 func serializeASF(asf *ASF) ([]byte, error) {
 	sb := gopacket.NewSerializeBuffer()
-	err := asf.SerializeTo(sb, gopacket.SerializeOptions{})
+	err := asf.SerializeTo(sb, gopacket.SerializeOptions{
+		FixLengths: true,
+	})
 	return sb.Bytes(), err
 }
 
@@ -63,7 +65,7 @@ func ASFTestSerializeTo(t *testing.T) {
 		{
 			&ASF{
 				ASFDataIdentifier: ASFDataIdentifierPresencePong,
-				Length:            0x10,
+				// length calculated automatically
 			},
 			[]byte{0, 0, 0x11, 0xbe, 0x40, 0, 0, 0x10},
 		},
