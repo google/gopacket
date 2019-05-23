@@ -153,7 +153,7 @@ func (a *ASFPresencePong) NextLayerType() gopacket.LayerType {
 
 // SerializeTo writes the serialized fom of this layer into the SerializeBuffer,
 // partially satisfying SerializableLayer.
-func (a *ASFPresencePong) SerializeTo(b gopacket.SerializeBuffer, opts gopacket.SerializeOptions) error {
+func (a *ASFPresencePong) SerializeTo(b gopacket.SerializeBuffer, _ gopacket.SerializeOptions) error {
 	bytes, err := b.PrependBytes(16)
 	if err != nil {
 		return err
