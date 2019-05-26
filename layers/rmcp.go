@@ -57,10 +57,18 @@ const (
 
 var (
 	rmcpClassLayerTypes = [16]gopacket.LayerType{
-		// RMCPClassASF and RMCPClassIPMI are to implement; OEM layer type (8)
-		// is deliberately not implemented, so we return LayerTypePayload
+		RMCPClassASF: LayerTypeASF,
+		// RMCPClassIPMI is to implement; RMCPClassOEM is deliberately not
+		// implemented, so we return LayerTypePayload
 	}
 )
+
+// RegisterRMCPLayerType allows specifying that the payload of a RMCP packet of
+// a certain class should processed by the provided layer type. This overrides
+// any existing registrations, including defaults.
+func RegisterRMCPLayerType(c RMCPClass, l gopacket.LayerType) {
+	rmcpClassLayerTypes[c] = l
+}
 
 // RMCP describes the format of an RMCP header, which forms a UDP payload. See
 // section 3.2.2.2.
@@ -131,7 +139,7 @@ func (r *RMCP) Payload() []byte {
 
 // SerializeTo writes the serialized fom of this layer into the SerializeBuffer,
 // partially satisfying SerializableLayer.
-func (r *RMCP) SerializeTo(b gopacket.SerializeBuffer, opts gopacket.SerializeOptions) error {
+func (r *RMCP) SerializeTo(b gopacket.SerializeBuffer, _ gopacket.SerializeOptions) error {
 	// The IPMI v1.5 spec contains a pad byte for frame sizes of certain lengths
 	// to work around issues in LAN chips. This is no longer necessary as of
 	// IPMI v2.0 (renamed to "legacy pad") so we do not attempt to add it. The
