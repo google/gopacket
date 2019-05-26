@@ -160,11 +160,24 @@ func (a *ASFPresencePong) SerializeTo(b gopacket.SerializeBuffer, _ gopacket.Ser
 	}
 
 	binary.BigEndian.PutUint32(bytes[:4], a.Enterprise)
+
 	copy(bytes[4:8], a.OEM[:])
-	bytes[8] = bool2uint8(a.IPMI)&uint8(ASFPresencePongEntityIPMI) |
-		bool2uint8(a.ASFv1)&uint8(ASFPresencePongEntityASFv1)
-	bytes[9] = bool2uint8(a.SecurityExtensions)&uint8(ASFPresencePongInteractionSecurityExtensions) |
-		bool2uint8(a.DASH)&uint8(ASFPresencePongInteractionDASH)
+
+	bytes[8] = 0
+	if a.IPMI {
+		bytes[8] |= uint8(ASFPresencePongEntityIPMI)
+	}
+	if a.ASFv1 {
+		bytes[8] |= uint8(ASFPresencePongEntityASFv1)
+	}
+
+	bytes[9] = 0
+	if a.SecurityExtensions {
+		bytes[9] |= uint8(ASFPresencePongInteractionSecurityExtensions)
+	}
+	if a.DASH {
+		bytes[9] |= uint8(ASFPresencePongInteractionDASH)
+	}
 
 	// zero-out remaining 6 bytes
 	for i := 10; i < len(bytes); i++ {

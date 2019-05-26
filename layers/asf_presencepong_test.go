@@ -13,7 +13,7 @@ import (
 	"github.com/google/gopacket"
 )
 
-func ASFPresencePongTestDecodeFromBytes(t *testing.T) {
+func TestASFPresencePongDecodeFromBytes(t *testing.T) {
 	b, err := hex.DecodeString("000011be000000008100000000000000")
 	if err != nil {
 		t.Fatalf("Failed to decode ASF Presence Pong message")
@@ -49,7 +49,7 @@ func ASFPresencePongTestDecodeFromBytes(t *testing.T) {
 	}
 }
 
-func ASFPresencePongTestSupportsDCMI(t *testing.T) {
+func TestASFPresencePongSupportsDCMI(t *testing.T) {
 	table := []struct {
 		layer *ASFPresencePong
 		want  bool
@@ -101,7 +101,7 @@ func serializeASFPresencePong(pp *ASFPresencePong) ([]byte, error) {
 	return sb.Bytes(), err
 }
 
-func ASFPresencePongTestSerializeTo(t *testing.T) {
+func TestASFPresencePongSerializeTo(t *testing.T) {
 	table := []struct {
 		layer *ASFPresencePong
 		want  []byte
@@ -122,7 +122,7 @@ func ASFPresencePongTestSerializeTo(t *testing.T) {
 				SecurityExtensions: true,
 				DASH:               true,
 			},
-			[]byte{0, 0, 0x4, 0xd2, 1, 2, 3, 4, 0x01, 0x9, 0, 0, 0, 0, 0, 0},
+			[]byte{0, 0, 0x4, 0xd2, 1, 2, 3, 4, 0x01, 0xa0, 0, 0, 0, 0, 0, 0},
 		},
 	}
 	for _, test := range table {

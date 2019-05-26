@@ -13,8 +13,8 @@ import (
 	"github.com/google/gopacket"
 )
 
-func ASFTestDecodeFromBytes(t *testing.T) {
-	b, err := hex.DecodeString("000011be4000100000000000000000")
+func TestASFDecodeFromBytes(t *testing.T) {
+	b, err := hex.DecodeString("000011be4000001000000000000000")
 	if err != nil {
 		t.Fatalf("Failed to decode ASF message")
 	}
@@ -23,11 +23,11 @@ func ASFTestDecodeFromBytes(t *testing.T) {
 	if err := asf.DecodeFromBytes(b, gopacket.NilDecodeFeedback); err != nil {
 		t.Fatalf("Unexpected error: %v", err)
 	}
-	if !bytes.Equal(asf.BaseLayer.Payload, []byte{}) {
-		t.Errorf("payload is %v, want %v", asf.BaseLayer.Payload, b)
+	if !bytes.Equal(asf.BaseLayer.Contents, b[:8]) {
+		t.Errorf("contents is %v, want %v", asf.BaseLayer.Contents, b[:8])
 	}
-	if !bytes.Equal(asf.BaseLayer.Contents, b) {
-		t.Errorf("contents is %v, want %v", asf.BaseLayer.Contents, b)
+	if !bytes.Equal(asf.BaseLayer.Payload, b[8:]) {
+		t.Errorf("payload is %v, want %v", asf.BaseLayer.Payload, b[8:])
 	}
 	if asf.Enterprise != ASFRMCPEnterprise {
 		t.Errorf("enterprise is %v, want %v", asf.Enterprise, ASFRMCPEnterprise)
@@ -51,7 +51,7 @@ func serializeASF(asf *ASF) ([]byte, error) {
 	return sb.Bytes(), err
 }
 
-func ASFTestSerializeTo(t *testing.T) {
+func TestASFSerializeTo(t *testing.T) {
 	table := []struct {
 		layer *ASF
 		want  []byte
@@ -65,9 +65,11 @@ func ASFTestSerializeTo(t *testing.T) {
 		{
 			&ASF{
 				ASFDataIdentifier: ASFDataIdentifierPresencePong,
-				// length calculated automatically
+				// ensures length is being overridden - should be encoded to 0
+				// as there is no payload
+				Length: 1,
 			},
-			[]byte{0, 0, 0x11, 0xbe, 0x40, 0, 0, 0x10},
+			[]byte{0, 0, 0x11, 0xbe, 0x40, 0, 0, 0},
 		},
 	}
 	for _, test := range table {
