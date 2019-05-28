@@ -1292,6 +1292,7 @@ func (a *Assembler) flushClose(conn *connection, half *halfconnection, t time.Ti
 		a.skipFlush(conn, half)
 		if half.closed {
 			closed = true
+			return flushed, closed
 		}
 	}
 	// Close the connection only if both halfs of the connection last seen before tc.
