@@ -39,15 +39,18 @@ type DecodingLayer interface {
 	LayerPayload() []byte
 }
 
+const maxDecodingLayerType = 256
+
 // DecodingLayerParser parses a given set of layer types.  See DecodeLayers for
 // more information on how DecodingLayerParser should be used.
 type DecodingLayerParser struct {
 	// DecodingLayerParserOptions is the set of options available to the
 	// user to define the parser's behavior.
 	DecodingLayerParserOptions
-	first    LayerType
-	decoders map[LayerType]DecodingLayer
-	df       DecodeFeedback
+	first       LayerType
+	decoders    []DecodingLayer
+	decodersMap map[LayerType]DecodingLayer
+	df          DecodeFeedback
 	// Truncated is set when a decode layer detects that the packet has been
 	// truncated.
 	Truncated bool
@@ -58,6 +61,16 @@ type DecodingLayerParser struct {
 // encountered, they'll be parsed.
 func (l *DecodingLayerParser) AddDecodingLayer(d DecodingLayer) {
 	for _, typ := range d.CanDecode().LayerTypes() {
+		if typ >= maxDecodingLayerType {
+			// fallback to map
+			l.decodersMap[typ] = d
+			continue
+		}
+
+		if extra := int64(typ) - int64(len(l.decoders)) + 1; extra > 0 {
+			l.decoders = append(l.decoders, make([]DecodingLayer, extra)...)
+		}
+
 		l.decoders[typ] = d
 	}
 }
@@ -67,6 +80,20 @@ func (l *DecodingLayerParser) AddDecodingLayer(d DecodingLayer) {
 // DecodeLayers.
 func (l *DecodingLayerParser) SetTruncated() {
 	l.Truncated = true
+}
+
+func (l *DecodingLayerParser) lookupDecodingLayer(typ LayerType) (DecodingLayer, bool) {
+	if typ >= maxDecodingLayerType {
+		// fallback to map
+		d, ok := l.decodersMap[typ]
+		return d, ok
+	}
+
+	if int64(typ) >= int64(len(l.decoders)) {
+		return nil, false
+	}
+
+	return l.decoders[typ], l.decoders[typ] != nil
 }
 
 // NewDecodingLayerParser creates a new DecodingLayerParser and adds in all
@@ -79,8 +106,8 @@ func (l *DecodingLayerParser) SetTruncated() {
 // decoding will stop.
 func NewDecodingLayerParser(first LayerType, decoders ...DecodingLayer) *DecodingLayerParser {
 	dlp := &DecodingLayerParser{
-		decoders: make(map[LayerType]DecodingLayer),
-		first:    first,
+		decodersMap: make(map[LayerType]DecodingLayer),
+		first:       first,
 	}
 	dlp.df = dlp // Cast this once to the interface
 	for _, d := range decoders {
@@ -156,7 +183,7 @@ func (l *DecodingLayerParser) DecodeLayers(data []byte, decoded *[]LayerType) (e
 	typ := l.first
 	*decoded = (*decoded)[:0] // Truncated decoded layers.
 	for len(data) > 0 {
-		decoder, ok := l.decoders[typ]
+		decoder, ok := l.lookupDecodingLayer(typ)
 		if !ok {
 			if l.IgnoreUnsupported {
 				return nil
