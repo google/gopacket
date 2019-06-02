@@ -205,6 +205,69 @@ func BenchmarkDecodingLayerParserHandlePanic(b *testing.B) {
 	}
 }
 
+func benchmarkDecodingLayerParser(b *testing.B, dlc gopacket.DecodingLayerContainer, ignorePanic bool) {
+	decoded := make([]gopacket.LayerType, 0, 20)
+	dlc = dlc.Put(&Ethernet{})
+	dlc = dlc.Put(&IPv4{})
+	dlc = dlc.Put(&TCP{})
+	dlc = dlc.Put(&gopacket.Payload{})
+	dlp := gopacket.NewDecodingLayerParser(LayerTypeEthernet)
+	dlp.SetDecodingLayerContainer(dlc)
+	dlp.IgnorePanic = ignorePanic
+	for i := 0; i < b.N; i++ {
+		dlp.DecodeLayers(testSimpleTCPPacket, &decoded)
+	}
+}
+
+func BenchmarkDecodingLayerParserSparseIgnorePanic(b *testing.B) {
+	benchmarkDecodingLayerParser(b, gopacket.DecodingLayerSparse(nil), true)
+}
+
+func BenchmarkDecodingLayerParserSparseHandlePanic(b *testing.B) {
+	benchmarkDecodingLayerParser(b, gopacket.DecodingLayerSparse(nil), false)
+}
+
+func BenchmarkDecodingLayerParserArrayIgnorePanic(b *testing.B) {
+	benchmarkDecodingLayerParser(b, gopacket.DecodingLayerArray(nil), true)
+}
+
+func BenchmarkDecodingLayerParserArrayHandlePanic(b *testing.B) {
+	benchmarkDecodingLayerParser(b, gopacket.DecodingLayerArray(nil), false)
+}
+
+func BenchmarkDecodingLayerParserMapIgnorePanic(b *testing.B) {
+	benchmarkDecodingLayerParser(b, gopacket.DecodingLayerMap(nil), true)
+}
+
+func BenchmarkDecodingLayerParserMapHandlePanic(b *testing.B) {
+	benchmarkDecodingLayerParser(b, gopacket.DecodingLayerMap(nil), false)
+}
+
+func benchmarkDecodingLayerContainer(b *testing.B, dlc gopacket.DecodingLayerContainer) {
+	decoded := make([]gopacket.LayerType, 0, 20)
+	dlc = dlc.Put(&Ethernet{})
+	dlc = dlc.Put(&IPv4{})
+	dlc = dlc.Put(&TCP{})
+	dlc = dlc.Put(&gopacket.Payload{})
+	df := gopacket.NewDecodingLayerParser(LayerTypeEthernet)
+	decoder := dlc.LayersDecoder(LayerTypeEthernet, df)
+	for i := 0; i < b.N; i++ {
+		decoder(testSimpleTCPPacket, &decoded)
+	}
+}
+
+func BenchmarkDecodingLayerArray(b *testing.B) {
+	benchmarkDecodingLayerContainer(b, gopacket.DecodingLayerArray(nil))
+}
+
+func BenchmarkDecodingLayerMap(b *testing.B) {
+	benchmarkDecodingLayerContainer(b, gopacket.DecodingLayerMap(nil))
+}
+
+func BenchmarkDecodingLayerSparse(b *testing.B) {
+	benchmarkDecodingLayerContainer(b, gopacket.DecodingLayerSparse(nil))
+}
+
 func BenchmarkAlloc(b *testing.B) {
 	for i := 0; i < b.N; i++ {
 		_ = &TCP{}
@@ -977,6 +1040,40 @@ func TestDecodingLayerParserFullTCPPacket(t *testing.T) {
 	if len(decoded) != 4 {
 		t.Error("Expected 4 layers parsed, instead got ", len(decoded))
 	}
+}
+
+func testDecodingLayerContainer(t *testing.T, dlc gopacket.DecodingLayerContainer) {
+	dlc = dlc.Put(&Ethernet{})
+	dlc = dlc.Put(&IPv4{})
+	dlc = dlc.Put(&TCP{})
+	dlc = dlc.Put(&gopacket.Payload{})
+	decoded := make([]gopacket.LayerType, 1)
+
+	// just as a DecodeFeedback
+	df := gopacket.NewDecodingLayerParser(LayerTypeEthernet)
+	decoder := dlc.LayersDecoder(LayerTypeEthernet, df)
+	typ, err := decoder(testSimpleTCPPacket, &decoded)
+	if err != nil {
+		t.Error("Error from decoder: ", err)
+	}
+	if typ != gopacket.LayerTypeZero {
+		t.Error("Unsupported layer type", typ)
+	}
+	if len(decoded) != 4 {
+		t.Error("Expected 4 layers parsed, instead got ", len(decoded))
+	}
+}
+
+func TestDecodingLayerMap(t *testing.T) {
+	testDecodingLayerContainer(t, gopacket.DecodingLayerMap(nil))
+}
+
+func TestDecodingLayerSparse(t *testing.T) {
+	testDecodingLayerContainer(t, gopacket.DecodingLayerSparse(nil))
+}
+
+func TestDecodingLayerArray(t *testing.T) {
+	testDecodingLayerContainer(t, gopacket.DecodingLayerArray(nil))
 }
 
 // testICMP is the packet:
