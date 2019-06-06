@@ -1,4 +1,4 @@
-// Copyright - Copyleft 2019 Ripx80 All rights reserved.
+// Copyright 2019 The GoPacket Authors. All rights reserved.
 //
 // Use of this source code is governed by a BSD-style license
 // that can be found in the LICENSE file in the root of the source
@@ -14,7 +14,7 @@ import (
 	"os"
 
 	"github.com/google/gopacket"
-	"github.com/google/gopacket/snoop"
+	"github.com/google/gopacket/pcapgo"
 )
 
 func main() {
@@ -25,7 +25,7 @@ func main() {
 		return
 	}
 	defer f.Close()
-	handle, err := snoop.NewReader(f)
+	handle, err := pcapgo.NewSnoopReader(f)
 	if err != nil {
 		log.Fatal(err)
 		return

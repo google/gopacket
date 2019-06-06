@@ -1,11 +1,11 @@
-// Copyright - Copyleft 2019 Ripx80, All rights reserved.
-
+// Copyright 2019 The GoPacket Authors. All rights reserved.
+//
 // Use of this source code is governed by a BSD-style license
 // that can be found in the LICENSE file in the root of the source
 // tree.
 
 // Package snoop implements the snoop file format for gopacket
-package snoop
+package pcapgo
 
 import (
 	"encoding/binary"
@@ -18,7 +18,7 @@ import (
 	"github.com/google/gopacket/layers"
 )
 
-const snoopMagic uint64 = 0x706f6f6e73 //000000 //8 byte in big endian
+const snoopMagic uint64 = 0x736e6f6f70000000 //8 byte in big endian
 const snoopVersion uint32 = 2
 const defaultBufLen uint32 = 150
 const maxCaptureLen int = 4096
@@ -30,25 +30,18 @@ const unkownLinkType = "Unknown Link Type"
 const originalLenExceeded = "Capture length exceeds original packet length"
 const captureLenExceeded = "Capture length exceeds max capture length"
 
-// LinkTypes maps from snoop to gopacket layers
-type LinkTypes struct {
-	Code uint8
-	layers.LinkType
-}
-
 type snoopHeader struct {
-	Magic    uint64
 	Version  uint32
 	linkType uint32
 }
 
-// Reader wraps an underlying io.Reader to read packet data in SNOOP
+// SnoopReader wraps an underlying io.SnoopReader to read packet data in SNOOP
 // format.  See https://tools.ietf.org/html/rfc1761
 // for information on the file format.
 
 // We currenty read v2 file format and convert microsecond to nanoseconds
 // byte order in big-endian encoding.
-type Reader struct {
+type SnoopReader struct {
 	r      io.Reader
 	header snoopHeader
 	//reuseable
@@ -77,7 +70,7 @@ var (
 )
 
 // LinkType return the mapped gopacket LinkType
-func (r *Reader) LinkType() (*layers.LinkType, error) {
+func (r *SnoopReader) LinkType() (*layers.LinkType, error) {
 	if _, ok := layerTypes[r.header.linkType]; ok {
 		lt := layerTypes[r.header.linkType]
 		return &lt, nil
@@ -86,12 +79,12 @@ func (r *Reader) LinkType() (*layers.LinkType, error) {
 
 }
 
-// NewReader returns a new reader object, for reading packet data from
-// the given reader. The reader must be open and header data is
+// NewSnoopReader returns a new SnoopReader object, for reading packet data from
+// the given SnoopReader. The SnoopReader must be open and header data is
 // read from it at this point.
 // If the file format is not supported an error is returned
-func NewReader(r io.Reader) (*Reader, error) {
-	ret := Reader{r: r}
+func NewSnoopReader(r io.Reader) (*SnoopReader, error) {
+	ret := SnoopReader{r: r}
 
 	if err := ret.readHeader(); err != nil {
 		return nil, err
@@ -99,7 +92,7 @@ func NewReader(r io.Reader) (*Reader, error) {
 	return &ret, nil
 }
 
-func (r *Reader) readHeader() error {
+func (r *SnoopReader) readHeader() error {
 	buf := make([]byte, 16)
 
 	if n, err := io.ReadFull(r.r, buf); err != nil {
@@ -108,7 +101,7 @@ func (r *Reader) readHeader() error {
 		return errors.New("Not enough data for read")
 	}
 
-	if magic := binary.LittleEndian.Uint64(buf[0:8]); magic != snoopMagic {
+	if magic := binary.BigEndian.Uint64(buf[0:8]); magic != snoopMagic {
 		return fmt.Errorf("%s: %x", unknownMagic, magic)
 	}
 
@@ -122,7 +115,7 @@ func (r *Reader) readHeader() error {
 	return nil
 }
 
-func (r *Reader) readPacketHeader() (ci gopacket.CaptureInfo, err error) {
+func (r *SnoopReader) readPacketHeader() (ci gopacket.CaptureInfo, err error) {
 
 	if _, err = io.ReadFull(r.r, r.buf[:]); err != nil {
 		return
@@ -152,7 +145,7 @@ func (r *Reader) readPacketHeader() (ci gopacket.CaptureInfo, err error) {
 }
 
 // ReadPacketData reads next packet data.
-func (r *Reader) ReadPacketData() (data []byte, ci gopacket.CaptureInfo, err error) {
+func (r *SnoopReader) ReadPacketData() (data []byte, ci gopacket.CaptureInfo, err error) {
 	if ci, err = r.readPacketHeader(); err != nil {
 		return
 	}
@@ -162,12 +155,12 @@ func (r *Reader) ReadPacketData() (data []byte, ci gopacket.CaptureInfo, err err
 
 }
 
-// ZeroCopyReadPacketData reads next packet data. The data buffer is owned by the Reader,
+// ZeroCopyReadPacketData reads next packet data. The data buffer is owned by the SnoopReader,
 // and each call to ZeroCopyReadPacketData invalidates data returned by the previous one.
 //
-// It is not true zero copy, as data is still copied from the underlying reader. However,
+// It is not true zero copy, as data is still copied from the underlying SnoopReader. However,
 // this method avoids allocating heap memory for every packet.
-func (r *Reader) ZeroCopyReadPacketData() (data []byte, ci gopacket.CaptureInfo, err error) {
+func (r *SnoopReader) ZeroCopyReadPacketData() (data []byte, ci gopacket.CaptureInfo, err error) {
 	if ci, err = r.readPacketHeader(); err != nil {
 		return
 	}
