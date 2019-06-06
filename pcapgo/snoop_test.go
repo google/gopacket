@@ -35,21 +35,18 @@ func OpenHandlePack() (buf []byte, handle *SnoopReader, err error) {
 }
 
 func equalError(t *testing.T, err error, eq error) {
-	t.Helper()
 	if err.Error() != eq.Error() {
 		t.Error(err)
 	}
 }
 
 func equalNil(t *testing.T, err error) {
-	t.Helper()
 	if err != nil {
 		t.Error(err)
 	}
 }
 
 func equal(t *testing.T, expected, actual interface{}) {
-	t.Helper()
 	if !reflect.DeepEqual(expected, actual) {
 		t.Error(fmt.Errorf("Not equal: \nexpected: %s\nactual  : %s", expected, actual))
 	}
