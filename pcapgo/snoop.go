@@ -4,7 +4,6 @@
 // that can be found in the LICENSE file in the root of the source
 // tree.
 
-// Package snoop implements the snoop file format for gopacket
 package pcapgo
 
 import (
@@ -38,7 +37,6 @@ type snoopHeader struct {
 // SnoopReader wraps an underlying io.SnoopReader to read packet data in SNOOP
 // format.  See https://tools.ietf.org/html/rfc1761
 // for information on the file format.
-
 // We currenty read v2 file format and convert microsecond to nanoseconds
 // byte order in big-endian encoding.
 type SnoopReader struct {
