@@ -44,11 +44,12 @@ func newPageCache() *pageCache {
 
 // grow exponentially increases the size of our page cache as much as necessary.
 func (c *pageCache) grow() {
-	pages := make([]page, c.pcSize)
-	c.size += c.pcSize
-	for i := range pages {
-		c.free = append(c.free, &pages[i])
+	pages := make([]*page, 0, c.pcSize)
+	for i := 0; i < c.pcSize; i++ {
+		pages = append(pages, &page{})
 	}
+	c.size += c.pcSize
+	c.free = append(c.free, pages...)
 	if *memLog {
 		log.Println("PageCache: created", c.pcSize, "new pages, size:", c.size, "cap:", cap(c.free), "len:", len(c.free))
 	}
