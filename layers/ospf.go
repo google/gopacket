@@ -38,6 +38,7 @@ const (
 	ASExternalLSAtypeV2     = 0x5
 	ASExternalLSAtype       = 0x4005
 	NSSALSAtype             = 0x2007
+	NSSALSAtypeV2           = 0x7
 	LinkLSAtype             = 0x0008
 	IntraAreaPrefixLSAtype  = 0x2009
 )
@@ -294,6 +295,8 @@ func extractLSAInformation(lstype, lsalength uint16, data []byte) (interface{}, 
 			Links:   links,
 			Routers: routers,
 		}
+	case NSSALSAtypeV2:
+		fallthrough
 	case ASExternalLSAtypeV2:
 		content = ASExternalLSAV2{
 			NetworkMask:       binary.BigEndian.Uint32(data[20:24]),

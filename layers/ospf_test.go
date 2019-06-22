@@ -601,6 +601,97 @@ func BenchmarkDecodePacketPacket8(b *testing.B) {
 	}
 }
 
+// testPacketOSPF2LSUpdateLSA7 is the packet:
+// 00:00:00.337386 IP 172.24.27.84 > ospf-dsig.mcast.net: OSPFv2, LS-Update, length 100
+//	0x0000:  0100 5e00 0006 001a 1e02 81a8 8100 017f
+//	0x0010:  0800 45c0 0088 0000 4000 0159 d0ea ac18
+//	0x0020:  1b54 e000 0006 0204 0054 ac18 1b54 0000
+//	0x0030:  000c 0000 0000 0000 0000 0000 0000 0000
+//	0x0040:  0002 0001 0807 0ac8 4f60 ac18 1b54 8000
+//	0x0050:  03a6 4d08 0024 ffff ffe0 8000 0100 ac18
+//	0x0060:  1b54 0000 0000 0001 0807 0a80 9300 ac18
+//	0x0070:  1b54 8000 03a6 43d6 0024 ffff ff80 8000
+//	0x0080:  0100 ac18 1b54 0000 0000
+var testPacketOSPF2LSUpdateLSA7 = []byte{
+	0x01, 0x00, 0x5e, 0x00, 0x00, 0x06, 0x00, 0x1a, 0x1e, 0x02, 0x81, 0xa8, 0x81, 0x00, 0x01, 0x7f,
+	0x08, 0x00, 0x45, 0xc0, 0x00, 0x88, 0x00, 0x00, 0x40, 0x00, 0x01, 0x59, 0xd0, 0xea, 0xac, 0x18,
+	0x1b, 0x54, 0xe0, 0x00, 0x00, 0x06, 0x02, 0x04, 0x00, 0x54, 0xac, 0x18, 0x1b, 0x54, 0x00, 0x00,
+	0x00, 0x0c, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+	0x00, 0x02, 0x00, 0x01, 0x08, 0x07, 0x0a, 0xc8, 0x4f, 0x60, 0xac, 0x18, 0x1b, 0x54, 0x80, 0x00,
+	0x03, 0xa6, 0x4d, 0x08, 0x00, 0x24, 0xff, 0xff, 0xff, 0xe0, 0x80, 0x00, 0x01, 0x00, 0xac, 0x18,
+	0x1b, 0x54, 0x00, 0x00, 0x00, 0x00, 0x00, 0x01, 0x08, 0x07, 0x0a, 0x80, 0x93, 0x00, 0xac, 0x18,
+	0x1b, 0x54, 0x80, 0x00, 0x03, 0xa6, 0x43, 0xd6, 0x00, 0x24, 0xff, 0xff, 0xff, 0x80, 0x80, 0x00,
+	0x01, 0x00, 0xac, 0x18, 0x1b, 0x54, 0x00, 0x00, 0x00, 0x00,
+}
+
+func TestPacketOSPF2LSUpdateLSA7(t *testing.T) {
+	p := gopacket.NewPacket(testPacketOSPF2LSUpdateLSA7, LinkTypeEthernet, gopacket.Default)
+	if p.ErrorLayer() != nil {
+		t.Error("Failed to decode packet:", p.ErrorLayer().Error())
+	}
+	checkLayers(p, []gopacket.LayerType{LayerTypeEthernet, LayerTypeDot1Q, LayerTypeIPv4, LayerTypeOSPF}, t)
+	if got, ok := p.Layer(LayerTypeOSPF).(*OSPFv2); ok {
+		want := &OSPFv2{
+			OSPF: OSPF{
+				Version:      2,
+				Type:         OSPFLinkStateUpdate,
+				PacketLength: 84,
+				RouterID:     0xac181b54,
+				AreaID:       12,
+				Checksum:     0x0,
+				Content: LSUpdate{
+					NumOfLSAs: 2,
+					LSAs: []LSA{
+						LSA{
+							LSAheader: LSAheader{
+								LSAge:       0x1,
+								LSType:      0x7,
+								LinkStateID: 0x0ac84f60,
+								AdvRouter:   0xac181b54,
+								LSSeqNumber: 0x800003a6,
+								LSChecksum:  0x4d08,
+								Length:      0x24,
+								LSOptions:   0x08,
+							},
+							Content: ASExternalLSAV2{
+								NetworkMask:       0xffffffe0,
+								ExternalBit:       0x80,
+								Metric:            0x0100,
+								ForwardingAddress: 0xac181b54,
+								ExternalRouteTag:  0x0,
+							},
+						},
+						LSA{
+							LSAheader: LSAheader{
+								LSAge:       0x1,
+								LSType:      0x7,
+								LinkStateID: 0x0a809300,
+								AdvRouter:   0xac181b54,
+								LSSeqNumber: 0x800003a6,
+								LSChecksum:  0x43d6,
+								Length:      0x24,
+								LSOptions:   0x08,
+							},
+							Content: ASExternalLSAV2{
+								NetworkMask:       0xffffff80,
+								ExternalBit:       0x80,
+								Metric:            0x0100,
+								ForwardingAddress: 0xac181b54,
+								ExternalRouteTag:  0x0,
+							},
+						},
+					},
+				},
+			},
+		}
+		if !reflect.DeepEqual(got, want) {
+			t.Errorf("OSPF packet processing failed:\ngot  :\n%#v\n\nwant :\n%#v\n\n", got, want)
+		}
+	} else {
+		t.Error("No OSPF layer type found in packet")
+	}
+}
+
 // testPacketOSPF3LSUpdate is the packet:
 //   14:43:51.681554 IP6 fe80::1 > fe80::2: OSPFv3, LS-Update, length 288
 //   	0x0000:  c201 1ffa 0001 c200 1ffa 0001 86dd 6e00  ..............n.
