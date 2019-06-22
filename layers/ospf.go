@@ -129,6 +129,12 @@ type NetworkLSA struct {
 	AttachedRouter []uint32
 }
 
+// NetworkLSAV2 is the struct from RFC 2328  A.4.3.
+type NetworkLSAV2 struct {
+	NetworkMask    uint32
+	AttachedRouter []uint32
+}
+
 // RouterV2 extends RouterLSAV2
 type RouterV2 struct {
 	Type     uint8
@@ -301,6 +307,16 @@ func extractLSAInformation(lstype, lsalength uint16, data []byte) (interface{}, 
 			Metric:            binary.BigEndian.Uint32(data[24:28]) & 0x00FFFFFF,
 			ForwardingAddress: binary.BigEndian.Uint32(data[28:32]),
 			ExternalRouteTag:  binary.BigEndian.Uint32(data[32:36]),
+		}
+	case NetworkLSAtypeV2:
+		var routers []uint32
+		var j uint32
+		for j = 24; j < uint32(lsalength); j += 4 {
+			routers = append(routers, binary.BigEndian.Uint32(data[j:j+4]))
+		}
+		content = NetworkLSAV2{
+			NetworkMask:    binary.BigEndian.Uint32(data[20:24]),
+			AttachedRouter: routers,
 		}
 	case RouterLSAtype:
 		var routers []Router
