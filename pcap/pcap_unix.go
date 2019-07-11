@@ -348,7 +348,7 @@ func (b *BPF) pcapOfflineFilter(ci gopacket.CaptureInfo, data []byte) bool {
 	hdr.caplen = C.bpf_u_int32(len(data)) // Trust actual length over ci.Length.
 	hdr.len = C.bpf_u_int32(ci.Length)
 	dataptr := (*C.u_char)(unsafe.Pointer(&data[0]))
-	return C.pcap_offline_filter_escaping((*C.struct_bpf_program)(&b.bpf),
+	return C.pcap_offline_filter_escaping((*C.struct_bpf_program)(&b.bpf.bpf),
 		C.uintptr_t(uintptr(unsafe.Pointer(hdr))),
 		C.uintptr_t(uintptr(unsafe.Pointer(dataptr)))) != 0
 }

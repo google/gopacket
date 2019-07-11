@@ -132,6 +132,7 @@ func TestBPF(t *testing.T) {
 		{"tcp[tcpflags] & (tcp-syn|tcp-ack) == (tcp-syn|tcp-ack)", false, true},
 		{"tcp[tcpflags] & (tcp-syn|tcp-ack) == tcp-ack", false, true},
 		{"udp", false, false},
+		{string([]byte("udp")), false, false}, // test for #664
 	} {
 		data, ci, err := handle.ReadPacketData()
 		if err != nil {

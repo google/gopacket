@@ -432,7 +432,7 @@ func (b *BPF) pcapOfflineFilter(ci gopacket.CaptureInfo, data []byte) bool {
 	hdr.Ts.Usec = int32(ci.Timestamp.Nanosecond() / 1000)
 	hdr.Caplen = uint32(len(data)) // Trust actual length over ci.Length.
 	hdr.Len = uint32(ci.Length)
-	e, _, _ := syscall.Syscall(pcapOfflineFilterPtr, 3, uintptr(unsafe.Pointer(&b.bpf)), uintptr(unsafe.Pointer(&hdr)), uintptr(unsafe.Pointer(&data[0])))
+	e, _, _ := syscall.Syscall(pcapOfflineFilterPtr, 3, uintptr(unsafe.Pointer(&b.bpf.bpf)), uintptr(unsafe.Pointer(&hdr)), uintptr(unsafe.Pointer(&data[0])))
 	return e != 0
 }
 
