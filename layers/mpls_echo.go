@@ -17,62 +17,74 @@ import (
 // This file implements a layer that enables Label Switched Path (LSP) Ping/Traceroute operations to be conducted
 // inside Multiprotocol Label Switching (MPLS) networks for data plane failure detection and localization, per RFC8029.
 
-// The version number is to be incremented whenever a change is made that affects the ability of an implementation to
-// correctly parse or process an MPLS echo request/reply.
+// MPLSEchoVersion is used to express the MPLS Echo protocol version being used. The version is to be incremented whenever
+// a change is made that affects the ability of an implementation to correctly parse or process an MPLS echo request/reply.
 type MPLSEchoVersion uint16
 
 const (
+	// MPLSEchoVersion1 is the first version of the MPLS Echo protocol.
 	MPLSEchoVersion1 MPLSEchoVersion = iota + 1
 )
 
-// Bitmask type that represents an MPLS echo request/reply's global flags.
+// MPLSEchoGlobalFlags is a bitmask type that represents an MPLS echo request/reply's global flags.
 type MPLSEchoGlobalFlags uint16
 
 const (
+	// MPLSEchoFlagValidateFECStack tweaks the FEC stack validation behavior.
 	// Flag is 1 if the sender wants the receiver to perform FEC Stack validation;
 	// if flag is 0, the choice is left to the receiver.
 	MPLSEchoFlagValidateFECStack MPLSEchoGlobalFlags = 1 << iota // 1
 
+	// MPLSEchoFlagRespondOnlyIfTTLExpired tweaks the "TTL expired" scenario behavior.
 	// Can only be set in echo request packets.  If set to 1 in an incoming echo request and the TTL of the incoming
 	// MPLS label is greater than 1, the receiving node MUST drop the oacket and MUST NOT send back an echo reply.
 	MPLSEchoFlagRespondOnlyIfTTLExpired // 2
 
+	// MPLSEchoFlagValidateReversePath acts as an opt-in for reverse-path FECs.
 	// If this flag is set in the echo request, the Responder SHOULD return reverse-path FEC information (see RFC6426).
 	MPLSEchoFlagValidateReversePath // 4
 )
 
-// Define bitmask operations.
-func SetMPLSEchoGlobalFlag(b, flag MPLSEchoGlobalFlags) MPLSEchoGlobalFlags   { return b | flag }
-func ClearMPLSEchoGlobalFlag(b, flag MPLSEchoGlobalFlags) MPLSEchoGlobalFlags { return b &^ flag }
-func HasMPLSEchoGlobalFlag(b, flag MPLSEchoGlobalFlags) bool                  { return b&flag != 0 }
+// SetMPLSEchoGlobalFlag returns an MPLSEchoGlobalFlag bitmask with the given flag enabled.
+func SetMPLSEchoGlobalFlag(b, flag MPLSEchoGlobalFlags) MPLSEchoGlobalFlags { return b | flag }
 
-// Specifies the MPLS echo message type (request/reply/...).
+// ClearMPLSEchoGlobalFlag returns an MPLSEchoGlobalFlag bitmask with the given flag disabled.
+func ClearMPLSEchoGlobalFlag(b, flag MPLSEchoGlobalFlags) MPLSEchoGlobalFlags { return b &^ flag }
+
+// HasMPLSEchoGlobalFlag returns TRUE if the given flag is enabled in the bitmask.
+func HasMPLSEchoGlobalFlag(b, flag MPLSEchoGlobalFlags) bool { return b&flag != 0 }
+
+// MPLSEchoMessageType specifies the MPLS echo message type (request/reply/...).
 type MPLSEchoMessageType uint8
 
 const (
+	// MPLSEchoRequest is the "message type" value for MPLS Echo request packets.
 	MPLSEchoRequest MPLSEchoMessageType = iota + 1
+
+	// MPLSEchoReply is the "message type" value for MPLS Echo reply packets.
 	MPLSEchoReply
 )
 
-// Specifies the desired receiver-side behavior.
+// MPLSEchoReplyMode specifies the desired receiver-side behavior.
 type MPLSEchoReplyMode uint8
 
 const (
-	// For one-way connectivity tests.
+	// MPLSEchoModeDoNotReply is used for one-way connectivity tests.
 	MPLSEchoModeDoNotReply MPLSEchoReplyMode = iota + 1
 
-	// Reply with an IPv4/IPv6 UDP packet (i.e., mainstream scenario).
+	// MPLSEchoModeReplyViaUDP asks for replies to use an IPv4/IPv6 UDP packet (i.e., mainstream scenario).
 	MPLSEchoModeReplyViaUDP
 
-	// To be used when the normal IP return path is deemed unreliable.
-	// Requires that all intermediate routers know how to forward MPLS echo replies.
+	// MPLSEchoModeReplyViaUDPWithRouterAlert is to be used when the normal IP return path is deemed unreliable.
+	// It requires that all intermediate routers know how to forward MPLS echo replies.
 	MPLSEchoModeReplyViaUDPWithRouterAlert
 
-	// Applications that support an IP control channel between its control entities may use this mode
-	// to ensure that replies use that same channel.
+	// MPLSEchoModeReplyViaAppLevelChannel is to be used by applications that support an IP control channel between
+	// its control entities to ensure that replies use that same channel.
 	MPLSEchoModeReplyViaAppLevelChannel
 )
 
+// MPLSReplyReturnCode represents an MPLS Echo operation's result, as perceived by the receiver.
 // The Return Code is set to zero by the sender of an echo request. The receiver of said echo request can set it to
 // one of the values listed below in the corresponding echo reply that it generates.
 type MPLSReplyReturnCode uint8
@@ -132,7 +144,8 @@ const (
 	MPLSEchoReturnCodeLabelSwitchedWithFECChange
 )
 
-// TLVs (Type-Length-Value tuples) may be nested within other TLVs, in which case the nested TLVs are called sub-TLVs.
+// MPLSEchoTLV represents a Type-Length-Value (TLV) tuple contained within an MPLS Echo request/reply packet.
+// TLVs may be nested within other TLVs, in which case the nested TLVs are called sub-TLVs.
 // TLVs and sub-TLVs have independent types, but both MUST be 4-octet aligned in their encoded form.
 type MPLSEchoTLV struct {
 	Type uint16
@@ -152,7 +165,7 @@ const (
 	MPLSEchoSubTLVTypeTargetFECStackLDPPrefixIPv6 uint16 = 2
 )
 
-// Interface for encoding/decoding a TLV value.
+// MPLSEchoValue is the interface that concrete TLV value types need to implement.
 type MPLSEchoValue interface {
 	// Returns value's TLV representation.
 	EncodeAsTLV() (*MPLSEchoTLV, error)
@@ -161,17 +174,19 @@ type MPLSEchoValue interface {
 	DecodeFromTLV(tlv *MPLSEchoTLV) error
 }
 
-// Represents an LDP IPv4/IPv6 Prefix FEC. Implements the MPLSEchoValue interface.
+// LDPPrefixFECValue represents an LDP IPv4/IPv6 Prefix FEC. It implements the MPLSEchoValue interface.
 type LDPPrefixFECValue struct {
 	Prefix       net.IP
 	PrefixLength uint8
 }
 
-// This TLV value defines a stack of FECs, the first FEC element corresponding to the top of the label stack, etc.
+// TargetFECStackValue is a TLV value type that defines a stack of FECs, the first FEC element corresponding
+// to the top of the label stack, etc. It implements the MPLSEchoValue interface.
 type TargetFECStackValue struct {
 	FECs []MPLSEchoValue
 }
 
+// MPLSEcho is the MPLS Echo packet payload.
 // An MPLS echo request/reply is a (possibly labeled) IPv4 or IPv6 UDP packet, where
 // the packet's payload has the format of the MPLSEcho struct below (refer to RFC8029, Section 3).
 //
@@ -225,7 +240,7 @@ func roundUpToNearestMultiple(numToRound uint, multiple uint) uint {
 	return ((numToRound + multiple - 1) / multiple) * multiple
 }
 
-// Target format (from RFC8029, Section 3):
+// EncodeAsBytes encodes an MPLSEchoTLV with the format below (from RFC8029, Section 3):
 // 0                   1                   2                   3
 // 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1
 // +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
@@ -258,6 +273,7 @@ func (p *MPLSEchoTLV) EncodeAsBytes() ([]byte, error) {
 	return tlvByteRepresentation, nil
 }
 
+// DecodeFromBytes decodes the provided []byte contents and populates the MPLSEchoTLV's fields with that data.
 // On success, the first return value contains the total number of bytes decoded.
 func (p *MPLSEchoTLV) DecodeFromBytes(data []byte) (int, error) {
 	totalByteCount := len(data)
@@ -284,6 +300,7 @@ func (p *MPLSEchoTLV) DecodeFromBytes(data []byte) (int, error) {
 	return tlvByteCountWithPadding, nil
 }
 
+// EncodeAsTLV encodes an LDPPrefixFECValue in TLV format.
 func (p *LDPPrefixFECValue) EncodeAsTLV() (*MPLSEchoTLV, error) {
 	prefixType := MPLSEchoSubTLVTypeTargetFECStackLDPPrefixIPv4 // Assume IPv4
 	prefixByteRepresentation := p.Prefix.To4()
@@ -301,6 +318,7 @@ func (p *LDPPrefixFECValue) EncodeAsTLV() (*MPLSEchoTLV, error) {
 	}, nil
 }
 
+// DecodeFromTLV decodes a given TLV and populates the LDPPrefixFECValue's fields with that data.
 func (p *LDPPrefixFECValue) DecodeFromTLV(tlv *MPLSEchoTLV) error {
 	valueByteCount := len(tlv.Value)
 	if tlv.Type == MPLSEchoSubTLVTypeTargetFECStackLDPPrefixIPv4 && valueByteCount == 5 {
@@ -319,6 +337,7 @@ func (p *LDPPrefixFECValue) DecodeFromTLV(tlv *MPLSEchoTLV) error {
 	return nil
 }
 
+// EncodeAsTLV encodes an TargetFECStackValue in TLV format.
 func (s *TargetFECStackValue) EncodeAsTLV() (*MPLSEchoTLV, error) {
 	var byteRepresentation []byte
 	for _, currentFEC := range s.FECs {
@@ -341,6 +360,7 @@ func (s *TargetFECStackValue) EncodeAsTLV() (*MPLSEchoTLV, error) {
 	}, nil
 }
 
+// DecodeFromTLV decodes a given TLV and populates the TargetFECStackValue's fields with that data.
 func (s *TargetFECStackValue) DecodeFromTLV(tlv *MPLSEchoTLV) error {
 	if tlv.Type != MPLSEchoTLVTypeTargetFECStack {
 		return fmt.Errorf(
@@ -388,6 +408,7 @@ func (s *TargetFECStackValue) DecodeFromTLV(tlv *MPLSEchoTLV) error {
 	return nil
 }
 
+// LayerType returns gopacket.LayerTypeMPLSEcho.
 func (m *MPLSEcho) LayerType() gopacket.LayerType {
 	return LayerTypeMPLSEcho
 }
