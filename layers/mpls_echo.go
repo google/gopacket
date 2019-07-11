@@ -337,7 +337,7 @@ func (p *LDPPrefixFECValue) DecodeFromTLV(tlv *MPLSEchoTLV) error {
 	return nil
 }
 
-// EncodeAsTLV encodes an TargetFECStackValue in TLV format.
+// EncodeAsTLV encodes a TargetFECStackValue in TLV format.
 func (s *TargetFECStackValue) EncodeAsTLV() (*MPLSEchoTLV, error) {
 	var byteRepresentation []byte
 	for _, currentFEC := range s.FECs {
