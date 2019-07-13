@@ -295,6 +295,16 @@ func extractLSAInformation(lstype, lsalength uint16, data []byte) (interface{}, 
 	switch lstype {
 	case RouterLSAtypeV2:
 		var routers []RouterV2
+		var j uint32
+		for j = 24; j < uint32(lsalength); j += 12 {
+			router := RouterV2{
+				LinkID:   binary.BigEndian.Uint32(data[j : j+4]),
+				LinkData: binary.BigEndian.Uint32(data[j+4 : j+8]),
+				Type:     uint8(data[j+8]),
+				Metric:   binary.BigEndian.Uint16(data[j+10 : j+12]),
+			}
+			routers = append(routers, router)
+		}
 		links := binary.BigEndian.Uint16(data[22:24])
 		content = RouterLSAV2{
 			Flags:   data[20],

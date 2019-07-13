@@ -468,6 +468,20 @@ func TestPacketOSPF2LSUpdate(t *testing.T) {
 							Content: RouterLSAV2{
 								Flags: 0x2,
 								Links: 0x2,
+								Routers: []RouterV2{
+									RouterV2{
+										LinkID:   0xc0a8aa00,
+										LinkData: 0xffffff00,
+										Type:     0x03,
+										Metric:   0x0a,
+									},
+									RouterV2{
+										LinkID:   0xc0a8aa00,
+										LinkData: 0xffffff00,
+										Type:     0x03,
+										Metric:   0x0a,
+									},
+								},
 							},
 						},
 						LSA{
@@ -656,6 +670,14 @@ func TestPacketOSPF2LSUpdateLSA2(t *testing.T) {
 							Content: RouterLSAV2{
 								Flags: 0x0,
 								Links: 0x1,
+								Routers: []RouterV2{
+									RouterV2{
+										LinkID:   0xac181b56,
+										LinkData: 0xac181b56,
+										Type:     0x02,
+										Metric:   0x01,
+									},
+								},
 							},
 						},
 						LSA{
