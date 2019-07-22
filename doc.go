@@ -208,7 +208,7 @@ based on endpoint criteria:
    }
  }
  // Find all packets coming from UDP port 1000 to UDP port 500
- interestingFlow := gopacket.NewFlow(layers.NewUDPPortEndpoint(1000), layers.NewUDPPortEndpoint(500))
+ interestingFlow := gopacket.FlowFromEndpoints(layers.NewUDPPortEndpoint(1000), layers.NewUDPPortEndpoint(500))
  if t := packet.NetworkLayer(); t != nil && t.TransportFlow() == interestingFlow {
    fmt.Println("Found that UDP flow I was looking for!")
  }
