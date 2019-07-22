@@ -23,7 +23,7 @@ import (
 // For those that care, we currently write v2.4 files with nanosecond
 // or microsecond timestamp resolution and little-endian encoding.
 type Writer struct {
-	w io.Writer
+	w        io.Writer
 	tsScaler int
 	// Moving this into the struct seems to save an allocation for each call to writePacketHeader
 	buf [16]byte
@@ -76,8 +76,8 @@ func NewWriter(w io.Writer) *Writer {
 }
 
 // WriteFileHeader writes a file header out to the writer.
-// This must be called exactly once per output.  set usenanos to 
-// true to write out nanosecond precision timestamps, false to 
+// This must be called exactly once per output.  set usenanos to
+// true to write out nanosecond precision timestamps, false to
 // microsecond precision timestamps
 func (w *Writer) WriteFileHeader(snaplen uint32, linktype layers.LinkType) error {
 	var buf [24]byte
