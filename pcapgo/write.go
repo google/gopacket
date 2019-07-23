@@ -76,9 +76,7 @@ func NewWriter(w io.Writer) *Writer {
 }
 
 // WriteFileHeader writes a file header out to the writer.
-// This must be called exactly once per output.  set usenanos to
-// true to write out nanosecond precision timestamps, false to
-// microsecond precision timestamps
+// This must be called exactly once per output.
 func (w *Writer) WriteFileHeader(snaplen uint32, linktype layers.LinkType) error {
 	var buf [24]byte
 	if w.tsScaler == nanosPerMicro {
