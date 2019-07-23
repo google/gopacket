@@ -45,7 +45,7 @@ const versionMinor = 4
 //  w.WritePacket(gopacket.CaptureInfo{...}, data1)
 //  f.Close()
 //  // Append to existing file (must have same snaplen and linktype)
-//  f2, _ := os.OpenFile("/tmp/file.pcap", os.O_APPEND, 0700)
+//  f2, _ := os.OpenFile("/tmp/fileNano.pcap", os.O_APPEND, 0700)
 //  w2 := pcapgo.NewWriter(f2)
 //  // no need for file header, it's already written.
 //  w2.WritePacket(gopacket.CaptureInfo{...}, data2)
