@@ -13,6 +13,74 @@ import (
 	"github.com/google/gopacket"
 )
 
+func checkOSPFv3(desc string, t *testing.T, packetBytes []byte, pExpectedOSPF *OSPFv3, baseLayers []gopacket.LayerType) {
+	// Analyse the packet bytes, yielding a new packet object p.
+	p := gopacket.NewPacket(packetBytes, LinkTypeEthernet, gopacket.Default)
+	if p.ErrorLayer() != nil {
+		t.Errorf("Failed to decode packet %s: %v", desc, p.ErrorLayer().Error())
+	}
+
+	checkLayers(p, baseLayers, t)
+
+	// Select the Application (OSPF) layer.
+	pResultOSPF, ok := p.ApplicationLayer().(*OSPFv3)
+	if !ok {
+		t.Error("No OSPF layer type found in packet in " + desc + ".")
+	}
+
+	// Compare the generated OSPF object with the expected OSPF object.
+	if !reflect.DeepEqual(pResultOSPF, pExpectedOSPF) {
+		t.Errorf("OSPF packet processing failed for packet "+desc+
+			":\ngot  :\n%#v\n\nwant :\n%#v\n\n", pResultOSPF, pExpectedOSPF)
+	}
+	buf := gopacket.NewSerializeBuffer()
+	opts := gopacket.SerializeOptions{}
+	err := pResultOSPF.SerializeTo(buf, opts)
+	if err != nil {
+		t.Error(err)
+	}
+	if !reflect.DeepEqual(pResultOSPF.BaseLayer.Contents, buf.Bytes()) {
+		t.Errorf("OSPF packet serialization failed for packet "+desc+
+			":\ngot  :\n%x\n\nwant :\n%x\n\n", buf.Bytes(), packetBytes)
+	}
+}
+
+func checkOSPFv2(desc string, t *testing.T, packetBytes []byte, pExpectedOSPF *OSPFv2, baseLayers []gopacket.LayerType) {
+	// Analyse the packet bytes, yielding a new packet object p.
+	p := gopacket.NewPacket(packetBytes, LinkTypeEthernet, gopacket.Default)
+	if p.ErrorLayer() != nil {
+		t.Errorf("Failed to decode packet %s: %v", desc, p.ErrorLayer().Error())
+	}
+
+	checkLayers(p, baseLayers, t)
+
+	// Select the Application (OSPF) layer.
+	pResultOSPF, ok := p.Layer(LayerTypeOSPF).(*OSPFv2)
+	// pResultOSPF, ok := p.ApplicationLayer().(*OSPFv2)
+	if !ok {
+		t.Error("No OSPF layer type found in packet in " + desc + ".")
+	}
+
+	// Compare the generated OSPF object with the expected OSPF object.
+	if !reflect.DeepEqual(pResultOSPF, pExpectedOSPF) {
+		t.Errorf("OSPF packet processing failed for packet "+desc+
+			":\ngot  :\n%#v\n\nwant :\n%#v\n\n", pResultOSPF, pExpectedOSPF)
+	}
+
+	// ospfv2 is not yet support serialize
+
+	// buf := gopacket.NewSerializeBuffer()
+	// opts := gopacket.SerializeOptions{}
+	// err := pResultOSPF.SerializeTo(buf, opts)
+	// if err != nil {
+	// 	t.Error(err)
+	// }
+	// if !reflect.DeepEqual(pResultOSPF.BaseLayer.Contents, buf.Bytes()) {
+	// 	t.Errorf("OSPF packet serialization failed for packet "+desc+
+	// 		":\ngot  :\n%x\n\nwant :\n%x\n\n", buf.Bytes(), packetBytes)
+	// }
+}
+
 // testPacketOSPF2Hello is the packet:
 // 13:19:20.008765 IP 192.168.170.8 > 224.0.0.5: OSPFv2, Hello, length 44
 //	0x0000:  0100 5e00 0005 00e0 18b1 0cad 0800 45c0  ..^...........E.
@@ -29,44 +97,36 @@ var testPacketOSPF2Hello = []byte{
 }
 
 func TestPacketOSPF2Hello(t *testing.T) {
-	p := gopacket.NewPacket(testPacketOSPF2Hello, LinkTypeEthernet, gopacket.Default)
-	if p.ErrorLayer() != nil {
-		t.Error("Failed to decode packet:", p.ErrorLayer().Error())
-	}
-	checkLayers(p, []gopacket.LayerType{LayerTypeEthernet, LayerTypeIPv4, LayerTypeOSPF}, t)
-
-	ospf := p.Layer(LayerTypeOSPF).(*OSPFv2)
-	if ospf.Version != 2 {
-		t.Fatal("Invalid OSPF version")
-	}
-	if got, ok := p.Layer(LayerTypeOSPF).(*OSPFv2); ok {
-		want := &OSPFv2{
-			OSPF: OSPF{
-				Version:      2,
-				Type:         OSPFHello,
-				PacketLength: 44,
-				RouterID:     0xc0a8aa08,
-				AreaID:       1,
-				Checksum:     0x273b,
-				Content: HelloPkgV2{
-					NetworkMask: 0xffffff00,
-					HelloPkg: HelloPkg{
-						RtrPriority:              0x1,
-						Options:                  0x2,
-						HelloInterval:            0xa,
-						RouterDeadInterval:       0x28,
-						DesignatedRouterID:       0xc0a8aa08,
-						BackupDesignatedRouterID: 0x0,
-					},
+	want := &OSPFv2{
+		BaseLayer: BaseLayer{
+			Contents: []byte{
+				0x02, 0x01, 0x00, 0x2c, 0xc0, 0xa8, 0xaa, 0x08, 0x00, 0x00, 0x00, 0x01, 0x27, 0x3b,
+				0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xff, 0xff, 0xff, 0x00, 0x00, 0x0a,
+				0x02, 0x01, 0x00, 0x00, 0x00, 0x28, 0xc0, 0xa8, 0xaa, 0x08, 0x00, 0x00, 0x00, 0x00,
+			},
+			Payload: nil,
+		},
+		OSPF: OSPF{
+			Version:      2,
+			Type:         OSPFHello,
+			PacketLength: 44,
+			RouterID:     0xc0a8aa08,
+			AreaID:       1,
+			Checksum:     0x273b,
+			Content: HelloPkgV2{
+				NetworkMask: 0xffffff00,
+				HelloPkg: HelloPkg{
+					RtrPriority:              0x1,
+					Options:                  0x2,
+					HelloInterval:            0xa,
+					RouterDeadInterval:       0x28,
+					DesignatedRouterID:       0xc0a8aa08,
+					BackupDesignatedRouterID: 0x0,
 				},
 			},
-		}
-		if !reflect.DeepEqual(got, want) {
-			t.Errorf("OSPF packet processing failed:\ngot  :\n%#v\n\nwant :\n%#v\n\n", got, want)
-		}
-	} else {
-		t.Error("No OSPF layer type found in packet")
+		},
 	}
+	checkOSPFv2("TestPacketOSPF2Hello", t, testPacketOSPF2Hello, want, []gopacket.LayerType{LayerTypeEthernet, LayerTypeIPv4, LayerTypeOSPF})
 }
 func BenchmarkDecodePacketPacket5(b *testing.B) {
 	for i := 0; i < b.N; i++ {
@@ -92,45 +152,39 @@ var testPacketOSPF3Hello = []byte{
 }
 
 func TestPacketOSPF3Hello(t *testing.T) {
-	p := gopacket.NewPacket(testPacketOSPF3Hello, LinkTypeEthernet, gopacket.Default)
-	if p.ErrorLayer() != nil {
-		t.Error("Failed to decode packet:", p.ErrorLayer().Error())
-	}
-	checkLayers(p, []gopacket.LayerType{LayerTypeEthernet, LayerTypeIPv6, LayerTypeOSPF}, t)
-
-	ospf := p.Layer(LayerTypeOSPF).(*OSPFv3)
-	if ospf.Version != 3 {
-		t.Fatal("Invalid OSPF version")
-	}
-	if got, ok := p.Layer(LayerTypeOSPF).(*OSPFv3); ok {
-		want := &OSPFv3{
-			OSPF: OSPF{
-				Version:      3,
-				Type:         OSPFHello,
-				PacketLength: 36,
-				RouterID:     0x1010101,
-				AreaID:       1,
-				Checksum:     0xfb86,
-				Content: HelloPkg{
-					InterfaceID:              5,
-					RtrPriority:              1,
-					Options:                  0x000013,
-					HelloInterval:            10,
-					RouterDeadInterval:       40,
-					DesignatedRouterID:       0,
-					BackupDesignatedRouterID: 0,
-				},
+	want := &OSPFv3{
+		BaseLayer: BaseLayer{
+			Contents: []byte{
+				0x03, 0x01, 0x00, 0x24, 0x01, 0x01, 0x01, 0x01, 0x00, 0x00,
+				0x00, 0x01, 0xfb, 0x86, 0x00, 0x00, 0x00, 0x00, 0x00, 0x05, 0x01, 0x00, 0x00, 0x13, 0x00, 0x0a,
+				0x00, 0x28, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
 			},
-			Instance: 0,
-			Reserved: 0,
-		}
-		if !reflect.DeepEqual(got, want) {
-			t.Errorf("OSPF packet processing failed:\ngot  :\n%#v\n\nwant :\n%#v\n\n", got, want)
-		}
-	} else {
-		t.Error("No OSPF layer type found in packet")
+			Payload: nil,
+		},
+		OSPF: OSPF{
+			Version:      3,
+			Type:         OSPFHello,
+			PacketLength: 36,
+			RouterID:     0x1010101,
+			AreaID:       1,
+			Checksum:     0xfb86,
+			Content: HelloPkg{
+				InterfaceID:              5,
+				RtrPriority:              1,
+				Options:                  0x000013,
+				HelloInterval:            10,
+				RouterDeadInterval:       40,
+				DesignatedRouterID:       0,
+				BackupDesignatedRouterID: 0,
+			},
+		},
+		Instance: 0,
+		Reserved: 0,
 	}
+
+	checkOSPFv3("TestPacketOSPF3Hello", t, testPacketOSPF3Hello, want, []gopacket.LayerType{LayerTypeEthernet, LayerTypeIPv6, LayerTypeOSPF})
 }
+
 func BenchmarkDecodePacketPacket0(b *testing.B) {
 	for i := 0; i < b.N; i++ {
 		gopacket.NewPacket(testPacketOSPF3Hello, LinkTypeEthernet, gopacket.NoCopy)
@@ -153,34 +207,31 @@ var testPacketOSPF2DBDesc = []byte{
 }
 
 func TestPacketOSPF2DBDesc(t *testing.T) {
-	p := gopacket.NewPacket(testPacketOSPF2DBDesc, LinkTypeEthernet, gopacket.Default)
-	if p.ErrorLayer() != nil {
-		t.Error("Failed to decode packet:", p.ErrorLayer().Error())
-	}
-	checkLayers(p, []gopacket.LayerType{LayerTypeEthernet, LayerTypeIPv4, LayerTypeOSPF}, t)
-	if got, ok := p.Layer(LayerTypeOSPF).(*OSPFv2); ok {
-		want := &OSPFv2{
-			OSPF: OSPF{
-				Version:      2,
-				Type:         OSPFDatabaseDescription,
-				PacketLength: 32,
-				RouterID:     0xc0a8aa08,
-				AreaID:       1,
-				Checksum:     0xa052,
-				Content: DbDescPkg{
-					Options:      0x02,
-					InterfaceMTU: 1500,
-					Flags:        0x7,
-					DDSeqNumber:  1098361214,
-				},
+	want := &OSPFv2{
+		BaseLayer: BaseLayer{
+			Contents: []byte{
+				0x02, 0x02, 0x00, 0x20, 0xc0, 0xa8, 0xaa, 0x08, 0x00, 0x00, 0x00, 0x01, 0xa0, 0x52,
+				0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x05, 0xdc, 0x02, 0x07, 0x41, 0x77,
+				0xa9, 0x7e,
 			},
-		}
-		if !reflect.DeepEqual(got, want) {
-			t.Errorf("OSPF packet processing failed:\ngot  :\n%#v\n\nwant :\n%#v\n\n", got, want)
-		}
-	} else {
-		t.Error("No OSPF layer type found in packet")
+			Payload: nil,
+		},
+		OSPF: OSPF{
+			Version:      2,
+			Type:         OSPFDatabaseDescription,
+			PacketLength: 32,
+			RouterID:     0xc0a8aa08,
+			AreaID:       1,
+			Checksum:     0xa052,
+			Content: DbDescPkg{
+				Options:      0x02,
+				InterfaceMTU: 1500,
+				Flags:        0x7,
+				DDSeqNumber:  1098361214,
+			},
+		},
 	}
+	checkOSPFv2("TestPacketOSPF2DBDesc", t, testPacketOSPF2DBDesc, want, []gopacket.LayerType{LayerTypeEthernet, LayerTypeIPv4, LayerTypeOSPF})
 }
 func BenchmarkDecodePacketPacket6(b *testing.B) {
 	for i := 0; i < b.N; i++ {
@@ -206,36 +257,33 @@ var testPacketOSPF3DBDesc = []byte{
 }
 
 func TestPacketOSPF3DBDesc(t *testing.T) {
-	p := gopacket.NewPacket(testPacketOSPF3DBDesc, LinkTypeEthernet, gopacket.Default)
-	if p.ErrorLayer() != nil {
-		t.Error("Failed to decode packet:", p.ErrorLayer().Error())
-	}
-	checkLayers(p, []gopacket.LayerType{LayerTypeEthernet, LayerTypeIPv6, LayerTypeOSPF}, t)
-	if got, ok := p.Layer(LayerTypeOSPF).(*OSPFv3); ok {
-		want := &OSPFv3{
-			OSPF: OSPF{
-				Version:      3,
-				Type:         OSPFDatabaseDescription,
-				PacketLength: 28,
-				RouterID:     0x2020202,
-				AreaID:       1,
-				Checksum:     0xd826,
-				Content: DbDescPkg{
-					Options:      0x000013,
-					InterfaceMTU: 1500,
-					Flags:        0x7,
-					DDSeqNumber:  7494,
-				},
+	want := &OSPFv3{
+		BaseLayer: BaseLayer{
+			Contents: []byte{
+				0x03, 0x02, 0x00, 0x1c, 0x02, 0x02, 0x02, 0x02, 0x00, 0x00,
+				0x00, 0x01, 0xd8, 0x26, 0x00, 0x00, 0x00, 0x00, 0x00, 0x13, 0x05, 0xdc, 0x00, 0x07, 0x00, 0x00,
+				0x1d, 0x46,
 			},
-			Instance: 0,
-			Reserved: 0,
-		}
-		if !reflect.DeepEqual(got, want) {
-			t.Errorf("OSPF packet processing failed:\ngot  :\n%#v\n\nwant :\n%#v\n\n", got, want)
-		}
-	} else {
-		t.Error("No OSPF layer type found in packet")
+			Payload: nil,
+		},
+		OSPF: OSPF{
+			Version:      3,
+			Type:         OSPFDatabaseDescription,
+			PacketLength: 28,
+			RouterID:     0x2020202,
+			AreaID:       1,
+			Checksum:     0xd826,
+			Content: DbDescPkg{
+				Options:      0x000013,
+				InterfaceMTU: 1500,
+				Flags:        0x7,
+				DDSeqNumber:  7494,
+			},
+		},
+		Instance: 0,
+		Reserved: 0,
 	}
+	checkOSPFv3("TestPacketOSPF3DBDesc", t, testPacketOSPF3DBDesc, want, []gopacket.LayerType{LayerTypeEthernet, LayerTypeIPv6, LayerTypeOSPF})
 }
 func BenchmarkDecodePacketPacket1(b *testing.B) {
 	for i := 0; i < b.N; i++ {
@@ -259,35 +307,32 @@ var testPacketOSPF2LSRequest = []byte{
 }
 
 func TestPacketOSPF2LSRequest(t *testing.T) {
-	p := gopacket.NewPacket(testPacketOSPF2LSRequest, LinkTypeEthernet, gopacket.Default)
-	if p.ErrorLayer() != nil {
-		t.Error("Failed to decode packet:", p.ErrorLayer().Error())
-	}
-	checkLayers(p, []gopacket.LayerType{LayerTypeEthernet, LayerTypeIPv4, LayerTypeOSPF}, t)
-	if got, ok := p.Layer(LayerTypeOSPF).(*OSPFv2); ok {
-		want := &OSPFv2{
-			OSPF: OSPF{
-				Version:      2,
-				Type:         OSPFLinkStateRequest,
-				PacketLength: 36,
-				RouterID:     0xc0a8aa03,
-				AreaID:       1,
-				Checksum:     0xbdc7,
-				Content: []LSReq{
-					LSReq{
-						LSType:    0x1,
-						LSID:      0xc0a8aa08,
-						AdvRouter: 0xc0a8aa08,
-					},
+	want := &OSPFv2{
+		BaseLayer: BaseLayer{
+			Contents: []byte{
+				0x02, 0x03, 0x00, 0x24, 0xc0, 0xa8, 0xaa, 0x03, 0x00, 0x00, 0x00, 0x01, 0xbd, 0xc7,
+				0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x01, 0xc0, 0xa8,
+				0xaa, 0x08, 0xc0, 0xa8, 0xaa, 0x08,
+			},
+			Payload: nil,
+		},
+		OSPF: OSPF{
+			Version:      2,
+			Type:         OSPFLinkStateRequest,
+			PacketLength: 36,
+			RouterID:     0xc0a8aa03,
+			AreaID:       1,
+			Checksum:     0xbdc7,
+			Content: []LSReq{
+				LSReq{
+					LSType:    0x1,
+					LSID:      0xc0a8aa08,
+					AdvRouter: 0xc0a8aa08,
 				},
 			},
-		}
-		if !reflect.DeepEqual(got, want) {
-			t.Errorf("OSPF packet processing failed:\ngot  :\n%#v\n\nwant :\n%#v\n\n", got, want)
-		}
-	} else {
-		t.Error("No OSPF layer type found in packet")
+		},
 	}
+	checkOSPFv2("TestPacketOSPF2LSRequest", t, testPacketOSPF2LSRequest, want, []gopacket.LayerType{LayerTypeEthernet, LayerTypeIPv4, LayerTypeOSPF})
 }
 func BenchmarkDecodePacketPacket7(b *testing.B) {
 	for i := 0; i < b.N; i++ {
@@ -321,67 +366,68 @@ var testPacketOSPF3LSRequest = []byte{
 }
 
 func TestPacketOSPF3LSRequest(t *testing.T) {
-	p := gopacket.NewPacket(testPacketOSPF3LSRequest, LinkTypeEthernet, gopacket.Default)
-	if p.ErrorLayer() != nil {
-		t.Error("Failed to decode packet:", p.ErrorLayer().Error())
-	}
-	checkLayers(p, []gopacket.LayerType{LayerTypeEthernet, LayerTypeIPv6, LayerTypeOSPF}, t)
-	if got, ok := p.Layer(LayerTypeOSPF).(*OSPFv3); ok {
-		want := &OSPFv3{
-			OSPF: OSPF{
-				Version:      3,
-				Type:         OSPFLinkStateRequest,
-				PacketLength: 100,
-				RouterID:     0x2020202,
-				AreaID:       1,
-				Checksum:     0x2c9a,
-				Content: []LSReq{
-					LSReq{
-						LSType:    0x2001,
-						LSID:      0x00000000,
-						AdvRouter: 0x01010101,
-					},
-					LSReq{
-						LSType:    0x2003,
-						LSID:      0x00000003,
-						AdvRouter: 0x01010101,
-					},
-					LSReq{
-						LSType:    0x2003,
-						LSID:      0x00000002,
-						AdvRouter: 0x01010101,
-					},
-					LSReq{
-						LSType:    0x2003,
-						LSID:      0x00000001,
-						AdvRouter: 0x01010101,
-					},
-					LSReq{
-						LSType:    0x2003,
-						LSID:      0x00000000,
-						AdvRouter: 0x01010101,
-					},
-					LSReq{
-						LSType:    0x0008,
-						LSID:      0x00000005,
-						AdvRouter: 0x01010101,
-					},
-					LSReq{
-						LSType:    0x2009,
-						LSID:      0x00000000,
-						AdvRouter: 0x01010101,
-					},
+	want := &OSPFv3{
+		BaseLayer: BaseLayer{
+			Contents: []byte{
+				0x03, 0x03, 0x00, 0x64, 0x02, 0x02, 0x02, 0x02, 0x00, 0x00,
+				0x00, 0x01, 0x2c, 0x9a, 0x00, 0x00, 0x00, 0x00, 0x20, 0x01, 0x00, 0x00, 0x00, 0x00, 0x01, 0x01,
+				0x01, 0x01, 0x00, 0x00, 0x20, 0x03, 0x00, 0x00, 0x00, 0x03, 0x01, 0x01, 0x01, 0x01, 0x00, 0x00,
+				0x20, 0x03, 0x00, 0x00, 0x00, 0x02, 0x01, 0x01, 0x01, 0x01, 0x00, 0x00, 0x20, 0x03, 0x00, 0x00,
+				0x00, 0x01, 0x01, 0x01, 0x01, 0x01, 0x00, 0x00, 0x20, 0x03, 0x00, 0x00, 0x00, 0x00, 0x01, 0x01,
+				0x01, 0x01, 0x00, 0x00, 0x00, 0x08, 0x00, 0x00, 0x00, 0x05, 0x01, 0x01, 0x01, 0x01, 0x00, 0x00,
+				0x20, 0x09, 0x00, 0x00, 0x00, 0x00, 0x01, 0x01, 0x01, 0x01,
+			},
+			Payload: nil,
+		},
+		OSPF: OSPF{
+			Version:      3,
+			Type:         OSPFLinkStateRequest,
+			PacketLength: 100,
+			RouterID:     0x2020202,
+			AreaID:       1,
+			Checksum:     0x2c9a,
+			Content: []LSReq{
+				LSReq{
+					LSType:    0x2001,
+					LSID:      0x00000000,
+					AdvRouter: 0x01010101,
+				},
+				LSReq{
+					LSType:    0x2003,
+					LSID:      0x00000003,
+					AdvRouter: 0x01010101,
+				},
+				LSReq{
+					LSType:    0x2003,
+					LSID:      0x00000002,
+					AdvRouter: 0x01010101,
+				},
+				LSReq{
+					LSType:    0x2003,
+					LSID:      0x00000001,
+					AdvRouter: 0x01010101,
+				},
+				LSReq{
+					LSType:    0x2003,
+					LSID:      0x00000000,
+					AdvRouter: 0x01010101,
+				},
+				LSReq{
+					LSType:    0x0008,
+					LSID:      0x00000005,
+					AdvRouter: 0x01010101,
+				},
+				LSReq{
+					LSType:    0x2009,
+					LSID:      0x00000000,
+					AdvRouter: 0x01010101,
 				},
 			},
-			Instance: 0,
-			Reserved: 0,
-		}
-		if !reflect.DeepEqual(got, want) {
-			t.Errorf("OSPF packet processing failed:\ngot  :\n%#v\n\nwant :\n%#v\n\n", got, want)
-		}
-	} else {
-		t.Error("No OSPF layer type found in packet")
+		},
+		Instance: 0,
+		Reserved: 0,
 	}
+	checkOSPFv3("TestPacketOSPF3LSRequest", t, testPacketOSPF3LSRequest, want, []gopacket.LayerType{LayerTypeEthernet, LayerTypeIPv6, LayerTypeOSPF})
 }
 func BenchmarkDecodePacketPacket2(b *testing.B) {
 	for i := 0; i < b.N; i++ {
@@ -437,177 +483,190 @@ var testPacketOSPF2LSUpdate = []byte{
 }
 
 func TestPacketOSPF2LSUpdate(t *testing.T) {
-	p := gopacket.NewPacket(testPacketOSPF2LSUpdate, LinkTypeEthernet, gopacket.Default)
-	if p.ErrorLayer() != nil {
-		t.Error("Failed to decode packet:", p.ErrorLayer().Error())
-	}
-	checkLayers(p, []gopacket.LayerType{LayerTypeEthernet, LayerTypeIPv4, LayerTypeOSPF}, t)
-	if got, ok := p.Layer(LayerTypeOSPF).(*OSPFv2); ok {
-		want := &OSPFv2{
-			OSPF: OSPF{
-				Version:      2,
-				Type:         OSPFLinkStateUpdate,
-				PacketLength: 292,
-				RouterID:     0xc0a8aa03,
-				AreaID:       1,
-				Checksum:     0x366b,
-				Content: LSUpdate{
-					NumOfLSAs: 7,
-					LSAs: []LSA{
-						LSA{
-							LSAheader: LSAheader{
-								LSAge:       0x2,
-								LSType:      0x1,
-								LinkStateID: 0xc0a8aa03,
-								AdvRouter:   0xc0a8aa03,
-								LSSeqNumber: 0x80000001,
-								LSChecksum:  0x3a9c,
-								Length:      0x30,
-								LSOptions:   0x2,
-							},
-							Content: RouterLSAV2{
-								Flags: 0x2,
-								Links: 0x2,
-								Routers: []RouterV2{
-									RouterV2{
-										LinkID:   0xc0a8aa00,
-										LinkData: 0xffffff00,
-										Type:     0x03,
-										Metric:   0x0a,
-									},
-									RouterV2{
-										LinkID:   0xc0a8aa00,
-										LinkData: 0xffffff00,
-										Type:     0x03,
-										Metric:   0x0a,
-									},
+	want := &OSPFv2{
+		BaseLayer: BaseLayer{
+			Contents: []byte{
+				0x02, 0x04, 0x01, 0x24, 0xc0, 0xa8, 0xaa, 0x03, 0x00, 0x00, 0x00, 0x01, 0x36, 0x6b,
+				0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x07, 0x00, 0x02,
+				0x02, 0x01, 0xc0, 0xa8, 0xaa, 0x03, 0xc0, 0xa8, 0xaa, 0x03, 0x80, 0x00, 0x00, 0x01, 0x3a, 0x9c,
+				0x00, 0x30, 0x02, 0x00, 0x00, 0x02, 0xc0, 0xa8, 0xaa, 0x00, 0xff, 0xff, 0xff, 0x00, 0x03, 0x00,
+				0x00, 0x0a, 0xc0, 0xa8, 0xaa, 0x00, 0xff, 0xff, 0xff, 0x00, 0x03, 0x00, 0x00, 0x0a, 0x00, 0x03,
+				0x02, 0x05, 0x50, 0xd4, 0x10, 0x00, 0xc0, 0xa8, 0xaa, 0x02, 0x80, 0x00, 0x00, 0x01, 0x2a, 0x49,
+				0x00, 0x24, 0xff, 0xff, 0xff, 0xff, 0x80, 0x00, 0x00, 0x14, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+				0x00, 0x00, 0x00, 0x03, 0x02, 0x05, 0x94, 0x79, 0xab, 0x00, 0xc0, 0xa8, 0xaa, 0x02, 0x80, 0x00,
+				0x00, 0x01, 0x34, 0xa5, 0x00, 0x24, 0xff, 0xff, 0xff, 0x00, 0x80, 0x00, 0x00, 0x14, 0xc0, 0xa8,
+				0xaa, 0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x03, 0x02, 0x05, 0xc0, 0x82, 0x78, 0x00, 0xc0, 0xa8,
+				0xaa, 0x02, 0x80, 0x00, 0x00, 0x01, 0xd3, 0x19, 0x00, 0x24, 0xff, 0xff, 0xff, 0x00, 0x80, 0x00,
+				0x00, 0x14, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x03, 0x02, 0x05, 0xc0, 0xa8,
+				0x00, 0x00, 0xc0, 0xa8, 0xaa, 0x02, 0x80, 0x00, 0x00, 0x01, 0x37, 0x08, 0x00, 0x24, 0xff, 0xff,
+				0xff, 0x00, 0x80, 0x00, 0x00, 0x14, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x03,
+				0x02, 0x05, 0xc0, 0xa8, 0x01, 0x00, 0xc0, 0xa8, 0xaa, 0x02, 0x80, 0x00, 0x00, 0x01, 0x2c, 0x12,
+				0x00, 0x24, 0xff, 0xff, 0xff, 0x00, 0x80, 0x00, 0x00, 0x14, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+				0x00, 0x00, 0x00, 0x03, 0x02, 0x05, 0xc0, 0xa8, 0xac, 0x00, 0xc0, 0xa8, 0xaa, 0x02, 0x80, 0x00,
+				0x00, 0x01, 0x33, 0x41, 0x00, 0x24, 0xff, 0xff, 0xff, 0x00, 0x80, 0x00, 0x00, 0x14, 0xc0, 0xa8,
+				0xaa, 0x0a, 0x00, 0x00, 0x00, 0x00,
+			},
+			Payload: nil,
+		},
+		OSPF: OSPF{
+			Version:      2,
+			Type:         OSPFLinkStateUpdate,
+			PacketLength: 292,
+			RouterID:     0xc0a8aa03,
+			AreaID:       1,
+			Checksum:     0x366b,
+			Content: LSUpdate{
+				NumOfLSAs: 7,
+				LSAs: []LSA{
+					LSA{
+						LSAheader: LSAheader{
+							LSAge:       0x2,
+							LSType:      0x1,
+							LinkStateID: 0xc0a8aa03,
+							AdvRouter:   0xc0a8aa03,
+							LSSeqNumber: 0x80000001,
+							LSChecksum:  0x3a9c,
+							Length:      0x30,
+							LSOptions:   0x2,
+						},
+						Content: RouterLSAV2{
+							Flags: 0x2,
+							Links: 0x2,
+							Routers: []RouterV2{
+								RouterV2{
+									LinkID:   0xc0a8aa00,
+									LinkData: 0xffffff00,
+									Type:     0x03,
+									Metric:   0x0a,
+								},
+								RouterV2{
+									LinkID:   0xc0a8aa00,
+									LinkData: 0xffffff00,
+									Type:     0x03,
+									Metric:   0x0a,
 								},
 							},
 						},
-						LSA{
-							LSAheader: LSAheader{
-								LSAge:       0x3,
-								LSType:      0x5,
-								LinkStateID: 0x50d41000,
-								AdvRouter:   0xc0a8aa02,
-								LSSeqNumber: 0x80000001,
-								LSChecksum:  0x2a49,
-								Length:      0x24,
-								LSOptions:   0x2,
-							},
-							Content: ASExternalLSAV2{
-								NetworkMask:       0xffffffff,
-								ExternalBit:       0x80,
-								Metric:            0x14,
-								ForwardingAddress: 0x0,
-								ExternalRouteTag:  0x0,
-							},
+					},
+					LSA{
+						LSAheader: LSAheader{
+							LSAge:       0x3,
+							LSType:      0x5,
+							LinkStateID: 0x50d41000,
+							AdvRouter:   0xc0a8aa02,
+							LSSeqNumber: 0x80000001,
+							LSChecksum:  0x2a49,
+							Length:      0x24,
+							LSOptions:   0x2,
 						},
-						LSA{
-							LSAheader: LSAheader{
-								LSAge:       0x3,
-								LSType:      0x5,
-								LinkStateID: 0x9479ab00,
-								AdvRouter:   0xc0a8aa02,
-								LSSeqNumber: 0x80000001,
-								LSChecksum:  0x34a5,
-								Length:      0x24,
-								LSOptions:   0x2,
-							},
-							Content: ASExternalLSAV2{
-								NetworkMask:       0xffffff00,
-								ExternalBit:       0x80,
-								Metric:            0x14,
-								ForwardingAddress: 0xc0a8aa01,
-								ExternalRouteTag:  0x0,
-							},
+						Content: ASExternalLSAV2{
+							NetworkMask:       0xffffffff,
+							ExternalBit:       0x80,
+							Metric:            0x14,
+							ForwardingAddress: 0x0,
+							ExternalRouteTag:  0x0,
 						},
-						LSA{
-							LSAheader: LSAheader{
-								LSAge:       0x3,
-								LSType:      0x5,
-								LinkStateID: 0xc0827800,
-								AdvRouter:   0xc0a8aa02,
-								LSSeqNumber: 0x80000001,
-								LSChecksum:  0xd319,
-								Length:      0x24,
-								LSOptions:   0x2,
-							},
-							Content: ASExternalLSAV2{
-								NetworkMask:       0xffffff00,
-								ExternalBit:       0x80,
-								Metric:            0x14,
-								ForwardingAddress: 0x0,
-								ExternalRouteTag:  0x0,
-							},
+					},
+					LSA{
+						LSAheader: LSAheader{
+							LSAge:       0x3,
+							LSType:      0x5,
+							LinkStateID: 0x9479ab00,
+							AdvRouter:   0xc0a8aa02,
+							LSSeqNumber: 0x80000001,
+							LSChecksum:  0x34a5,
+							Length:      0x24,
+							LSOptions:   0x2,
 						},
-						LSA{
-							LSAheader: LSAheader{
-								LSAge:       0x3,
-								LSType:      0x5,
-								LinkStateID: 0xc0a80000,
-								AdvRouter:   0xc0a8aa02,
-								LSSeqNumber: 0x80000001,
-								LSChecksum:  0x3708,
-								Length:      0x24,
-								LSOptions:   0x2,
-							},
-							Content: ASExternalLSAV2{
-								NetworkMask:       0xffffff00,
-								ExternalBit:       0x80,
-								Metric:            0x14,
-								ForwardingAddress: 0x0,
-								ExternalRouteTag:  0x0,
-							},
+						Content: ASExternalLSAV2{
+							NetworkMask:       0xffffff00,
+							ExternalBit:       0x80,
+							Metric:            0x14,
+							ForwardingAddress: 0xc0a8aa01,
+							ExternalRouteTag:  0x0,
 						},
-						LSA{
-							LSAheader: LSAheader{
-								LSAge:       0x3,
-								LSType:      0x5,
-								LinkStateID: 0xc0a80100,
-								AdvRouter:   0xc0a8aa02,
-								LSSeqNumber: 0x80000001,
-								LSChecksum:  0x2c12,
-								Length:      0x24,
-								LSOptions:   0x2,
-							},
-							Content: ASExternalLSAV2{
-								NetworkMask:       0xffffff00,
-								ExternalBit:       0x80,
-								Metric:            0x14,
-								ForwardingAddress: 0x0,
-								ExternalRouteTag:  0x0,
-							},
+					},
+					LSA{
+						LSAheader: LSAheader{
+							LSAge:       0x3,
+							LSType:      0x5,
+							LinkStateID: 0xc0827800,
+							AdvRouter:   0xc0a8aa02,
+							LSSeqNumber: 0x80000001,
+							LSChecksum:  0xd319,
+							Length:      0x24,
+							LSOptions:   0x2,
 						},
-						LSA{
-							LSAheader: LSAheader{
-								LSAge:       0x3,
-								LSType:      0x5,
-								LinkStateID: 0xc0a8ac00,
-								AdvRouter:   0xc0a8aa02,
-								LSSeqNumber: 0x80000001,
-								LSChecksum:  0x3341,
-								Length:      0x24,
-								LSOptions:   0x2,
-							},
-							Content: ASExternalLSAV2{
-								NetworkMask:       0xffffff00,
-								ExternalBit:       0x80,
-								Metric:            0x14,
-								ForwardingAddress: 0xc0a8aa0a,
-								ExternalRouteTag:  0x0,
-							},
+						Content: ASExternalLSAV2{
+							NetworkMask:       0xffffff00,
+							ExternalBit:       0x80,
+							Metric:            0x14,
+							ForwardingAddress: 0x0,
+							ExternalRouteTag:  0x0,
+						},
+					},
+					LSA{
+						LSAheader: LSAheader{
+							LSAge:       0x3,
+							LSType:      0x5,
+							LinkStateID: 0xc0a80000,
+							AdvRouter:   0xc0a8aa02,
+							LSSeqNumber: 0x80000001,
+							LSChecksum:  0x3708,
+							Length:      0x24,
+							LSOptions:   0x2,
+						},
+						Content: ASExternalLSAV2{
+							NetworkMask:       0xffffff00,
+							ExternalBit:       0x80,
+							Metric:            0x14,
+							ForwardingAddress: 0x0,
+							ExternalRouteTag:  0x0,
+						},
+					},
+					LSA{
+						LSAheader: LSAheader{
+							LSAge:       0x3,
+							LSType:      0x5,
+							LinkStateID: 0xc0a80100,
+							AdvRouter:   0xc0a8aa02,
+							LSSeqNumber: 0x80000001,
+							LSChecksum:  0x2c12,
+							Length:      0x24,
+							LSOptions:   0x2,
+						},
+						Content: ASExternalLSAV2{
+							NetworkMask:       0xffffff00,
+							ExternalBit:       0x80,
+							Metric:            0x14,
+							ForwardingAddress: 0x0,
+							ExternalRouteTag:  0x0,
+						},
+					},
+					LSA{
+						LSAheader: LSAheader{
+							LSAge:       0x3,
+							LSType:      0x5,
+							LinkStateID: 0xc0a8ac00,
+							AdvRouter:   0xc0a8aa02,
+							LSSeqNumber: 0x80000001,
+							LSChecksum:  0x3341,
+							Length:      0x24,
+							LSOptions:   0x2,
+						},
+						Content: ASExternalLSAV2{
+							NetworkMask:       0xffffff00,
+							ExternalBit:       0x80,
+							Metric:            0x14,
+							ForwardingAddress: 0xc0a8aa0a,
+							ExternalRouteTag:  0x0,
 						},
 					},
 				},
 			},
-		}
-		if !reflect.DeepEqual(got, want) {
-			t.Errorf("OSPF packet processing failed:\ngot  :\n%#v\n\nwant :\n%#v\n\n", got, want)
-		}
-	} else {
-		t.Error("No OSPF layer type found in packet")
+		},
 	}
+	checkOSPFv2("TestPacketOSPF2LSUpdate", t, testPacketOSPF2LSUpdate, want, []gopacket.LayerType{LayerTypeEthernet, LayerTypeIPv4, LayerTypeOSPF})
 }
 func BenchmarkDecodePacketPacket8(b *testing.B) {
 	for i := 0; i < b.N; i++ {
@@ -639,78 +698,78 @@ var testPacketOSPF2LSUpdateLSA2 = []byte{
 }
 
 func TestPacketOSPF2LSUpdateLSA2(t *testing.T) {
-	p := gopacket.NewPacket(testPacketOSPF2LSUpdateLSA2, LinkTypeEthernet, gopacket.Default)
-	if p.ErrorLayer() != nil {
-		t.Error("Failed to decode packet:", p.ErrorLayer().Error())
-	}
-	checkLayers(p, []gopacket.LayerType{LayerTypeEthernet, LayerTypeDot1Q, LayerTypeIPv4, LayerTypeOSPF}, t)
-	if got, ok := p.Layer(LayerTypeOSPF).(*OSPFv2); ok {
-		want := &OSPFv2{
-			OSPF: OSPF{
-				Version:      2,
-				Type:         OSPFLinkStateUpdate,
-				PacketLength: 88,
-				RouterID:     0xac180446,
-				AreaID:       12,
-				Checksum:     0x0000,
-				Content: LSUpdate{
-					NumOfLSAs: 2,
-					LSAs: []LSA{
-						LSA{
-							LSAheader: LSAheader{
-								LSAge:       0x1,
-								LSType:      0x1,
-								LinkStateID: 0xac180446,
-								AdvRouter:   0xac180446,
-								LSSeqNumber: 0x8000041a,
-								LSChecksum:  0x6025,
-								Length:      0x24,
-								LSOptions:   0x28,
-							},
-							Content: RouterLSAV2{
-								Flags: 0x0,
-								Links: 0x1,
-								Routers: []RouterV2{
-									RouterV2{
-										LinkID:   0xac181b56,
-										LinkData: 0xac181b56,
-										Type:     0x02,
-										Metric:   0x01,
-									},
+	want := &OSPFv2{
+		BaseLayer: BaseLayer{
+			Contents: []byte{0x02, 0x04, 0x00, 0x58, 0xac, 0x18, 0x04, 0x46, 0x00, 0x00,
+				0x00, 0x0c, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+				0x00, 0x02, 0x00, 0x01, 0x28, 0x01, 0xac, 0x18, 0x04, 0x46, 0xac, 0x18, 0x04, 0x46, 0x80, 0x00,
+				0x04, 0x1a, 0x60, 0x25, 0x00, 0x24, 0x00, 0x00, 0x00, 0x01, 0xac, 0x18, 0x1b, 0x56, 0xac, 0x18,
+				0x1b, 0x56, 0x02, 0x00, 0x00, 0x01, 0x00, 0x01, 0x28, 0x02, 0xac, 0x18, 0x1b, 0x56, 0xac, 0x18,
+				0x04, 0x46, 0x80, 0x00, 0x04, 0x1f, 0x39, 0x0e, 0x00, 0x28, 0xff, 0xff, 0xff, 0xf8, 0xac, 0x18,
+				0x04, 0x46, 0xac, 0x18, 0x04, 0x45, 0xac, 0x18, 0x1b, 0x53, 0xac, 0x18, 0x1b, 0x54,
+			},
+			Payload: nil,
+		},
+		OSPF: OSPF{
+			Version:      2,
+			Type:         OSPFLinkStateUpdate,
+			PacketLength: 88,
+			RouterID:     0xac180446,
+			AreaID:       12,
+			Checksum:     0x0000,
+			Content: LSUpdate{
+				NumOfLSAs: 2,
+				LSAs: []LSA{
+					LSA{
+						LSAheader: LSAheader{
+							LSAge:       0x1,
+							LSType:      0x1,
+							LinkStateID: 0xac180446,
+							AdvRouter:   0xac180446,
+							LSSeqNumber: 0x8000041a,
+							LSChecksum:  0x6025,
+							Length:      0x24,
+							LSOptions:   0x28,
+						},
+						Content: RouterLSAV2{
+							Flags: 0x0,
+							Links: 0x1,
+							Routers: []RouterV2{
+								RouterV2{
+									LinkID:   0xac181b56,
+									LinkData: 0xac181b56,
+									Type:     0x02,
+									Metric:   0x01,
 								},
 							},
 						},
-						LSA{
-							LSAheader: LSAheader{
-								LSAge:       0x1,
-								LSType:      0x2,
-								LinkStateID: 0xac181b56,
-								AdvRouter:   0xac180446,
-								LSSeqNumber: 0x8000041f,
-								LSChecksum:  0x390e,
-								Length:      0x28,
-								LSOptions:   0x28,
-							},
-							Content: NetworkLSAV2{
-								NetworkMask: 0xfffffff8,
-								AttachedRouter: []uint32{
-									0xac180446,
-									0xac180445,
-									0xac181b53,
-									0xac181b54,
-								},
+					},
+					LSA{
+						LSAheader: LSAheader{
+							LSAge:       0x1,
+							LSType:      0x2,
+							LinkStateID: 0xac181b56,
+							AdvRouter:   0xac180446,
+							LSSeqNumber: 0x8000041f,
+							LSChecksum:  0x390e,
+							Length:      0x28,
+							LSOptions:   0x28,
+						},
+						Content: NetworkLSAV2{
+							NetworkMask: 0xfffffff8,
+							AttachedRouter: []uint32{
+								0xac180446,
+								0xac180445,
+								0xac181b53,
+								0xac181b54,
 							},
 						},
 					},
 				},
 			},
-		}
-		if !reflect.DeepEqual(got, want) {
-			t.Errorf("OSPF packet processing failed:\ngot  :\n%#v\n\nwant :\n%#v\n\n", got, want)
-		}
-	} else {
-		t.Error("No OSPF layer type found in packet")
+		},
 	}
+	checkOSPFv2("TestPacketOSPF2LSUpdateLSA2", t, testPacketOSPF2LSUpdateLSA2, want, []gopacket.LayerType{LayerTypeEthernet, LayerTypeDot1Q, LayerTypeIPv4, LayerTypeOSPF})
 }
 
 // testPacketOSPF2LSUpdateLSA7 is the packet:
@@ -737,71 +796,72 @@ var testPacketOSPF2LSUpdateLSA7 = []byte{
 }
 
 func TestPacketOSPF2LSUpdateLSA7(t *testing.T) {
-	p := gopacket.NewPacket(testPacketOSPF2LSUpdateLSA7, LinkTypeEthernet, gopacket.Default)
-	if p.ErrorLayer() != nil {
-		t.Error("Failed to decode packet:", p.ErrorLayer().Error())
-	}
-	checkLayers(p, []gopacket.LayerType{LayerTypeEthernet, LayerTypeDot1Q, LayerTypeIPv4, LayerTypeOSPF}, t)
-	if got, ok := p.Layer(LayerTypeOSPF).(*OSPFv2); ok {
-		want := &OSPFv2{
-			OSPF: OSPF{
-				Version:      2,
-				Type:         OSPFLinkStateUpdate,
-				PacketLength: 84,
-				RouterID:     0xac181b54,
-				AreaID:       12,
-				Checksum:     0x0,
-				Content: LSUpdate{
-					NumOfLSAs: 2,
-					LSAs: []LSA{
-						LSA{
-							LSAheader: LSAheader{
-								LSAge:       0x1,
-								LSType:      0x7,
-								LinkStateID: 0x0ac84f60,
-								AdvRouter:   0xac181b54,
-								LSSeqNumber: 0x800003a6,
-								LSChecksum:  0x4d08,
-								Length:      0x24,
-								LSOptions:   0x08,
-							},
-							Content: ASExternalLSAV2{
-								NetworkMask:       0xffffffe0,
-								ExternalBit:       0x80,
-								Metric:            0x0100,
-								ForwardingAddress: 0xac181b54,
-								ExternalRouteTag:  0x0,
-							},
+	want := &OSPFv2{
+		BaseLayer: BaseLayer{
+			Contents: []byte{
+				0x02, 0x04, 0x00, 0x54, 0xac, 0x18, 0x1b, 0x54, 0x00, 0x00,
+				0x00, 0x0c, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+				0x00, 0x02, 0x00, 0x01, 0x08, 0x07, 0x0a, 0xc8, 0x4f, 0x60, 0xac, 0x18, 0x1b, 0x54, 0x80, 0x00,
+				0x03, 0xa6, 0x4d, 0x08, 0x00, 0x24, 0xff, 0xff, 0xff, 0xe0, 0x80, 0x00, 0x01, 0x00, 0xac, 0x18,
+				0x1b, 0x54, 0x00, 0x00, 0x00, 0x00, 0x00, 0x01, 0x08, 0x07, 0x0a, 0x80, 0x93, 0x00, 0xac, 0x18,
+				0x1b, 0x54, 0x80, 0x00, 0x03, 0xa6, 0x43, 0xd6, 0x00, 0x24, 0xff, 0xff, 0xff, 0x80, 0x80, 0x00,
+				0x01, 0x00, 0xac, 0x18, 0x1b, 0x54, 0x00, 0x00, 0x00, 0x00,
+			},
+			Payload: nil,
+		},
+		OSPF: OSPF{
+			Version:      2,
+			Type:         OSPFLinkStateUpdate,
+			PacketLength: 84,
+			RouterID:     0xac181b54,
+			AreaID:       12,
+			Checksum:     0x0,
+			Content: LSUpdate{
+				NumOfLSAs: 2,
+				LSAs: []LSA{
+					LSA{
+						LSAheader: LSAheader{
+							LSAge:       0x1,
+							LSType:      0x7,
+							LinkStateID: 0x0ac84f60,
+							AdvRouter:   0xac181b54,
+							LSSeqNumber: 0x800003a6,
+							LSChecksum:  0x4d08,
+							Length:      0x24,
+							LSOptions:   0x08,
 						},
-						LSA{
-							LSAheader: LSAheader{
-								LSAge:       0x1,
-								LSType:      0x7,
-								LinkStateID: 0x0a809300,
-								AdvRouter:   0xac181b54,
-								LSSeqNumber: 0x800003a6,
-								LSChecksum:  0x43d6,
-								Length:      0x24,
-								LSOptions:   0x08,
-							},
-							Content: ASExternalLSAV2{
-								NetworkMask:       0xffffff80,
-								ExternalBit:       0x80,
-								Metric:            0x0100,
-								ForwardingAddress: 0xac181b54,
-								ExternalRouteTag:  0x0,
-							},
+						Content: ASExternalLSAV2{
+							NetworkMask:       0xffffffe0,
+							ExternalBit:       0x80,
+							Metric:            0x0100,
+							ForwardingAddress: 0xac181b54,
+							ExternalRouteTag:  0x0,
+						},
+					},
+					LSA{
+						LSAheader: LSAheader{
+							LSAge:       0x1,
+							LSType:      0x7,
+							LinkStateID: 0x0a809300,
+							AdvRouter:   0xac181b54,
+							LSSeqNumber: 0x800003a6,
+							LSChecksum:  0x43d6,
+							Length:      0x24,
+							LSOptions:   0x08,
+						},
+						Content: ASExternalLSAV2{
+							NetworkMask:       0xffffff80,
+							ExternalBit:       0x80,
+							Metric:            0x0100,
+							ForwardingAddress: 0xac181b54,
+							ExternalRouteTag:  0x0,
 						},
 					},
 				},
 			},
-		}
-		if !reflect.DeepEqual(got, want) {
-			t.Errorf("OSPF packet processing failed:\ngot  :\n%#v\n\nwant :\n%#v\n\n", got, want)
-		}
-	} else {
-		t.Error("No OSPF layer type found in packet")
+		},
 	}
+	checkOSPFv2("TestPacketOSPF2LSUpdateLSA7", t, testPacketOSPF2LSUpdateLSA7, want, []gopacket.LayerType{LayerTypeEthernet, LayerTypeDot1Q, LayerTypeIPv4, LayerTypeOSPF})
 }
 
 // testPacketOSPF3LSUpdate is the packet:
@@ -854,166 +914,179 @@ var testPacketOSPF3LSUpdate = []byte{
 }
 
 func TestPacketOSPF3LSUpdate(t *testing.T) {
-	p := gopacket.NewPacket(testPacketOSPF3LSUpdate, LinkTypeEthernet, gopacket.Default)
-	if p.ErrorLayer() != nil {
-		t.Error("Failed to decode packet:", p.ErrorLayer().Error())
-	}
-	checkLayers(p, []gopacket.LayerType{LayerTypeEthernet, LayerTypeIPv6, LayerTypeOSPF}, t)
-	if got, ok := p.Layer(LayerTypeOSPF).(*OSPFv3); ok {
-		want := &OSPFv3{
-			OSPF: OSPF{
-				Version:      3,
-				Type:         OSPFLinkStateUpdate,
-				PacketLength: 288,
-				RouterID:     0x1010101,
-				AreaID:       1,
-				Checksum:     0xe556,
-				Content: LSUpdate{
-					NumOfLSAs: 7,
-					LSAs: []LSA{
-						LSA{
-							LSAheader: LSAheader{
-								LSAge:       40,
-								LSType:      0x2001,
-								LinkStateID: 0x00000000,
-								AdvRouter:   0x01010101,
-								LSSeqNumber: 0x80000002,
-								LSChecksum:  0xd13a,
-								Length:      24,
-							},
-							Content: RouterLSA{
-								Flags:   0x1,
-								Options: 0x33,
-							},
+	want := &OSPFv3{
+		BaseLayer: BaseLayer{
+			Contents: []byte{
+				0x03, 0x04, 0x01, 0x20, 0x01, 0x01, 0x01, 0x01, 0x00, 0x00,
+				0x00, 0x01, 0xe5, 0x56, 0x00, 0x00, 0x00, 0x00, 0x00, 0x07, 0x00, 0x28, 0x20, 0x01, 0x00, 0x00,
+				0x00, 0x00, 0x01, 0x01, 0x01, 0x01, 0x80, 0x00, 0x00, 0x02, 0xd1, 0x3a, 0x00, 0x18, 0x01, 0x00,
+				0x00, 0x33, 0x00, 0x29, 0x20, 0x03, 0x00, 0x00, 0x00, 0x03, 0x01, 0x01, 0x01, 0x01, 0x80, 0x00,
+				0x00, 0x01, 0x62, 0x59, 0x00, 0x24, 0x00, 0x00, 0x00, 0x4a, 0x40, 0x00, 0x00, 0x00, 0x20, 0x01,
+				0x0d, 0xb8, 0x00, 0x00, 0x00, 0x03, 0x00, 0x29, 0x20, 0x03, 0x00, 0x00, 0x00, 0x02, 0x01, 0x01,
+				0x01, 0x01, 0x80, 0x00, 0x00, 0x01, 0xba, 0xf6, 0x00, 0x24, 0x00, 0x00, 0x00, 0x54, 0x40, 0x00,
+				0x00, 0x00, 0x20, 0x01, 0x0d, 0xb8, 0x00, 0x00, 0x00, 0x04, 0x00, 0x29, 0x20, 0x03, 0x00, 0x00,
+				0x00, 0x01, 0x01, 0x01, 0x01, 0x01, 0x80, 0x00, 0x00, 0x01, 0xeb, 0xa0, 0x00, 0x24, 0x00, 0x00,
+				0x00, 0x4a, 0x40, 0x00, 0x00, 0x00, 0x20, 0x01, 0x0d, 0xb8, 0x00, 0x00, 0x00, 0x34, 0x00, 0x29,
+				0x20, 0x03, 0x00, 0x00, 0x00, 0x00, 0x01, 0x01, 0x01, 0x01, 0x80, 0x00, 0x00, 0x01, 0x0e, 0xbd,
+				0x00, 0x24, 0x00, 0x00, 0x00, 0x40, 0x40, 0x00, 0x00, 0x00, 0x20, 0x01, 0x0d, 0xb8, 0x00, 0x00,
+				0x00, 0x00, 0x00, 0x23, 0x00, 0x08, 0x00, 0x00, 0x00, 0x05, 0x01, 0x01, 0x01, 0x01, 0x80, 0x00,
+				0x00, 0x02, 0x3d, 0x08, 0x00, 0x38, 0x01, 0x00, 0x00, 0x33, 0xfe, 0x80, 0x00, 0x00, 0x00, 0x00,
+				0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x01, 0x40, 0x00,
+				0x00, 0x00, 0x20, 0x01, 0x0d, 0xb8, 0x00, 0x00, 0x00, 0x12, 0x00, 0x23, 0x20, 0x09, 0x00, 0x00,
+				0x00, 0x00, 0x01, 0x01, 0x01, 0x01, 0x80, 0x00, 0x00, 0x01, 0xe8, 0xd2, 0x00, 0x2c, 0x00, 0x01,
+				0x20, 0x01, 0x00, 0x00, 0x00, 0x00, 0x01, 0x01, 0x01, 0x01, 0x40, 0x00, 0x00, 0x0a, 0x20, 0x01,
+				0x0d, 0xb8, 0x00, 0x00, 0x00, 0x12,
+			},
+			Payload: nil,
+		},
+		OSPF: OSPF{
+			Version:      3,
+			Type:         OSPFLinkStateUpdate,
+			PacketLength: 288,
+			RouterID:     0x1010101,
+			AreaID:       1,
+			Checksum:     0xe556,
+			Content: LSUpdate{
+				NumOfLSAs: 7,
+				LSAs: []LSA{
+					LSA{
+						LSAheader: LSAheader{
+							LSAge:       40,
+							LSType:      0x2001,
+							LinkStateID: 0x00000000,
+							AdvRouter:   0x01010101,
+							LSSeqNumber: 0x80000002,
+							LSChecksum:  0xd13a,
+							Length:      24,
 						},
-						LSA{
-							LSAheader: LSAheader{
-								LSAge:       41,
-								LSType:      0x2003,
-								LinkStateID: 0x00000003,
-								AdvRouter:   0x01010101,
-								LSSeqNumber: 0x80000001,
-								LSChecksum:  0x6259,
-								Length:      36,
-							},
-							Content: InterAreaPrefixLSA{
-								Metric:        74,
-								PrefixLength:  64,
-								PrefixOptions: 0,
-								AddressPrefix: []byte{0x20, 0x01, 0x0d, 0xb8, 0x00, 0x00, 0x00, 0x03},
-							},
+						Content: RouterLSA{
+							Flags:   0x1,
+							Options: 0x33,
 						},
-						LSA{
-							LSAheader: LSAheader{
-								LSAge:       41,
-								LSType:      0x2003,
-								LinkStateID: 0x00000002,
-								AdvRouter:   0x01010101,
-								LSSeqNumber: 0x80000001,
-								LSChecksum:  0xbaf6,
-								Length:      36,
-							},
-							Content: InterAreaPrefixLSA{
-								Metric:        84,
-								PrefixLength:  64,
-								PrefixOptions: 0,
-								AddressPrefix: []byte{0x20, 0x1, 0xd, 0xb8, 0x0, 0x0, 0x0, 0x4},
-							},
+					},
+					LSA{
+						LSAheader: LSAheader{
+							LSAge:       41,
+							LSType:      0x2003,
+							LinkStateID: 0x00000003,
+							AdvRouter:   0x01010101,
+							LSSeqNumber: 0x80000001,
+							LSChecksum:  0x6259,
+							Length:      36,
 						},
-						LSA{
-							LSAheader: LSAheader{
-								LSAge:       41,
-								LSType:      0x2003,
-								LinkStateID: 0x00000001,
-								AdvRouter:   0x01010101,
-								LSSeqNumber: 0x80000001,
-								LSChecksum:  0xeba0,
-								Length:      36,
-							},
-							Content: InterAreaPrefixLSA{
-								Metric:        74,
-								PrefixLength:  64,
-								PrefixOptions: 0,
-								AddressPrefix: []byte{0x20, 0x1, 0xd, 0xb8, 0x0, 0x0, 0x0, 0x34},
-							},
+						Content: InterAreaPrefixLSA{
+							Metric:        74,
+							PrefixLength:  64,
+							PrefixOptions: 0,
+							AddressPrefix: []byte{0x20, 0x01, 0x0d, 0xb8, 0x00, 0x00, 0x00, 0x03},
 						},
-						LSA{
-							LSAheader: LSAheader{
-								LSAge:       41,
-								LSType:      0x2003,
-								LinkStateID: 0x00000000,
-								AdvRouter:   0x01010101,
-								LSSeqNumber: 0x80000001,
-								LSChecksum:  0xebd,
-								Length:      36,
-							},
-							Content: InterAreaPrefixLSA{
-								Metric:        64,
-								PrefixLength:  64,
-								PrefixOptions: 0,
-								AddressPrefix: []byte{0x20, 0x1, 0xd, 0xb8, 0x0, 0x0, 0x0, 0x0},
-							},
+					},
+					LSA{
+						LSAheader: LSAheader{
+							LSAge:       41,
+							LSType:      0x2003,
+							LinkStateID: 0x00000002,
+							AdvRouter:   0x01010101,
+							LSSeqNumber: 0x80000001,
+							LSChecksum:  0xbaf6,
+							Length:      36,
 						},
-						LSA{
-							LSAheader: LSAheader{
-								LSAge:       35,
-								LSType:      0x8,
-								LinkStateID: 0x00000005,
-								AdvRouter:   0x01010101,
-								LSSeqNumber: 0x80000002,
-								LSChecksum:  0x3d08,
-								Length:      56,
-							},
-							Content: LinkLSA{
-								RtrPriority:      1,
-								Options:          0x33,
-								LinkLocalAddress: []byte{0xfe, 0x80, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x01},
-								NumOfPrefixes:    1,
-								Prefixes: []Prefix{
-									Prefix{
-										PrefixLength:  64,
-										PrefixOptions: 0,
-										AddressPrefix: []byte{0x20, 0x01, 0x0d, 0xb8, 0x00, 0x00, 0x00, 0x12},
-									},
+						Content: InterAreaPrefixLSA{
+							Metric:        84,
+							PrefixLength:  64,
+							PrefixOptions: 0,
+							AddressPrefix: []byte{0x20, 0x1, 0xd, 0xb8, 0x0, 0x0, 0x0, 0x4},
+						},
+					},
+					LSA{
+						LSAheader: LSAheader{
+							LSAge:       41,
+							LSType:      0x2003,
+							LinkStateID: 0x00000001,
+							AdvRouter:   0x01010101,
+							LSSeqNumber: 0x80000001,
+							LSChecksum:  0xeba0,
+							Length:      36,
+						},
+						Content: InterAreaPrefixLSA{
+							Metric:        74,
+							PrefixLength:  64,
+							PrefixOptions: 0,
+							AddressPrefix: []byte{0x20, 0x1, 0xd, 0xb8, 0x0, 0x0, 0x0, 0x34},
+						},
+					},
+					LSA{
+						LSAheader: LSAheader{
+							LSAge:       41,
+							LSType:      0x2003,
+							LinkStateID: 0x00000000,
+							AdvRouter:   0x01010101,
+							LSSeqNumber: 0x80000001,
+							LSChecksum:  0xebd,
+							Length:      36,
+						},
+						Content: InterAreaPrefixLSA{
+							Metric:        64,
+							PrefixLength:  64,
+							PrefixOptions: 0,
+							AddressPrefix: []byte{0x20, 0x1, 0xd, 0xb8, 0x0, 0x0, 0x0, 0x0},
+						},
+					},
+					LSA{
+						LSAheader: LSAheader{
+							LSAge:       35,
+							LSType:      0x8,
+							LinkStateID: 0x00000005,
+							AdvRouter:   0x01010101,
+							LSSeqNumber: 0x80000002,
+							LSChecksum:  0x3d08,
+							Length:      56,
+						},
+						Content: LinkLSA{
+							RtrPriority:      1,
+							Options:          0x33,
+							LinkLocalAddress: []byte{0xfe, 0x80, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x01},
+							NumOfPrefixes:    1,
+							Prefixes: []Prefix{
+								Prefix{
+									PrefixLength:  64,
+									PrefixOptions: 0,
+									AddressPrefix: []byte{0x20, 0x01, 0x0d, 0xb8, 0x00, 0x00, 0x00, 0x12},
 								},
 							},
 						},
-						LSA{
-							LSAheader: LSAheader{
-								LSAge:       35,
-								LSType:      0x2009,
-								LinkStateID: 0x00000000,
-								AdvRouter:   0x01010101,
-								LSSeqNumber: 0x80000001,
-								LSChecksum:  0xe8d2,
-								Length:      44,
-							},
-							Content: IntraAreaPrefixLSA{
-								NumOfPrefixes: 1,
-								RefLSType:     0x2001,
-								RefAdvRouter:  0x01010101,
-								Prefixes: []Prefix{
-									Prefix{
-										PrefixLength:  64,
-										PrefixOptions: 0,
-										Metric:        10,
-										AddressPrefix: []byte{0x20, 0x1, 0xd, 0xb8, 0x0, 0x0, 0x0, 0x12},
-									},
+					},
+					LSA{
+						LSAheader: LSAheader{
+							LSAge:       35,
+							LSType:      0x2009,
+							LinkStateID: 0x00000000,
+							AdvRouter:   0x01010101,
+							LSSeqNumber: 0x80000001,
+							LSChecksum:  0xe8d2,
+							Length:      44,
+						},
+						Content: IntraAreaPrefixLSA{
+							NumOfPrefixes: 1,
+							RefLSType:     0x2001,
+							RefAdvRouter:  0x01010101,
+							Prefixes: []Prefix{
+								Prefix{
+									PrefixLength:  64,
+									PrefixOptions: 0,
+									Metric:        10,
+									AddressPrefix: []byte{0x20, 0x1, 0xd, 0xb8, 0x0, 0x0, 0x0, 0x12},
 								},
 							},
 						},
 					},
 				},
 			},
-			Instance: 0,
-			Reserved: 0,
-		}
-		if !reflect.DeepEqual(got, want) {
-			t.Errorf("OSPF packet processing failed:\ngot  :\n%#v\n\nwant :\n%#v\n\n", got, want)
-		}
-	} else {
-		t.Error("No OSPF layer type found in packet")
+		},
+		Instance: 0,
+		Reserved: 0,
 	}
+	checkOSPFv3("TestPacketOSPF3LSUpdate", t, testPacketOSPF3LSUpdate, want, []gopacket.LayerType{LayerTypeEthernet, LayerTypeIPv6, LayerTypeOSPF})
 }
 func BenchmarkDecodePacketPacket3(b *testing.B) {
 	for i := 0; i < b.N; i++ {
@@ -1037,40 +1110,37 @@ var testPacketOSPF2LSAck = []byte{
 }
 
 func TestPacketOSPF2LSAck(t *testing.T) {
-	p := gopacket.NewPacket(testPacketOSPF2LSAck, LinkTypeEthernet, gopacket.Default)
-	if p.ErrorLayer() != nil {
-		t.Error("Failed to decode packet:", p.ErrorLayer().Error())
-	}
-	checkLayers(p, []gopacket.LayerType{LayerTypeEthernet, LayerTypeIPv4, LayerTypeOSPF}, t)
-	if got, ok := p.Layer(LayerTypeOSPF).(*OSPFv2); ok {
-		want := &OSPFv2{
-			OSPF: OSPF{
-				Version:      2,
-				Type:         OSPFLinkStateAcknowledgment,
-				PacketLength: 44,
-				RouterID:     0xc0a8aa08,
-				AreaID:       1,
-				Checksum:     0xe2f4,
-				Content: []LSAheader{
-					LSAheader{
-						LSAge:       0xe10,
-						LSType:      0x1,
-						LinkStateID: 0xc0a8aa02,
-						AdvRouter:   0xc0a8aa02,
-						LSSeqNumber: 0x80000001,
-						LSChecksum:  0x4a8e,
-						Length:      0x30,
-						LSOptions:   0x2,
-					},
+	want := &OSPFv2{
+		BaseLayer: BaseLayer{
+			Contents: []byte{
+				0x02, 0x05, 0x00, 0x2c, 0xc0, 0xa8, 0xaa, 0x08, 0x00, 0x00, 0x00, 0x01, 0xe2, 0xf4,
+				0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x0e, 0x10, 0x02, 0x01, 0xc0, 0xa8,
+				0xaa, 0x02, 0xc0, 0xa8, 0xaa, 0x02, 0x80, 0x00, 0x00, 0x01, 0x4a, 0x8e, 0x00, 0x30,
+			},
+			Payload: nil,
+		},
+		OSPF: OSPF{
+			Version:      2,
+			Type:         OSPFLinkStateAcknowledgment,
+			PacketLength: 44,
+			RouterID:     0xc0a8aa08,
+			AreaID:       1,
+			Checksum:     0xe2f4,
+			Content: []LSAheader{
+				LSAheader{
+					LSAge:       0xe10,
+					LSType:      0x1,
+					LinkStateID: 0xc0a8aa02,
+					AdvRouter:   0xc0a8aa02,
+					LSSeqNumber: 0x80000001,
+					LSChecksum:  0x4a8e,
+					Length:      0x30,
+					LSOptions:   0x2,
 				},
 			},
-		}
-		if !reflect.DeepEqual(got, want) {
-			t.Errorf("OSPF packet processing failed:\ngot  :\n%#v\n\nwant :\n%#v\n\n", got, want)
-		}
-	} else {
-		t.Error("No OSPF layer type found in packet")
+		},
 	}
+	checkOSPFv2("TestPacketOSPF2LSAck", t, testPacketOSPF2LSAck, want, []gopacket.LayerType{LayerTypeEthernet, LayerTypeIPv4, LayerTypeOSPF})
 }
 func BenchmarkDecodePacketPacket9(b *testing.B) {
 	for i := 0; i < b.N; i++ {
@@ -1108,86 +1178,89 @@ var testPacketOSPF3LSAck = []byte{
 }
 
 func TestPacketOSPF3LSAck(t *testing.T) {
-	p := gopacket.NewPacket(testPacketOSPF3LSAck, LinkTypeEthernet, gopacket.Default)
-	if p.ErrorLayer() != nil {
-		t.Error("Failed to decode packet:", p.ErrorLayer().Error())
-	}
-	checkLayers(p, []gopacket.LayerType{LayerTypeEthernet, LayerTypeIPv6, LayerTypeOSPF}, t)
-	if got, ok := p.Layer(LayerTypeOSPF).(*OSPFv3); ok {
-		want := &OSPFv3{
-			OSPF: OSPF{
-				Version:      3,
-				Type:         OSPFLinkStateAcknowledgment,
-				PacketLength: 136,
-				RouterID:     0x1010101,
-				AreaID:       1,
-				Checksum:     0x9d2c,
-				Content: []LSAheader{
-					LSAheader{
-						LSAge:       5,
-						LSType:      0x2001,
-						LinkStateID: 0x00000000,
-						AdvRouter:   0x02020202,
-						LSSeqNumber: 0x80000002,
-						LSChecksum:  0xb354,
-						Length:      24,
-					},
-					LSAheader{
-						LSAge:       6,
-						LSType:      0x2003,
-						LinkStateID: 0x00000003,
-						AdvRouter:   0x02020202,
-						LSSeqNumber: 0x80000001,
-						LSChecksum:  0x4473,
-						Length:      36,
-					},
-					LSAheader{
-						LSAge:       6,
-						LSType:      0x2003,
-						LinkStateID: 0x00000002,
-						AdvRouter:   0x02020202,
-						LSSeqNumber: 0x80000001,
-						LSChecksum:  0x9c11,
-						Length:      36,
-					},
-					LSAheader{
-						LSAge:       6,
-						LSType:      0x2003,
-						LinkStateID: 0x00000001,
-						AdvRouter:   0x02020202,
-						LSSeqNumber: 0x80000001,
-						LSChecksum:  0xcdba,
-						Length:      36,
-					},
-					LSAheader{
-						LSAge:       6,
-						LSType:      0x2003,
-						LinkStateID: 0x00000000,
-						AdvRouter:   0x02020202,
-						LSSeqNumber: 0x80000001,
-						LSChecksum:  0xefd7,
-						Length:      36,
-					},
-					LSAheader{
-						LSAge:       5,
-						LSType:      0x0008,
-						LinkStateID: 0x00000005,
-						AdvRouter:   0x02020202,
-						LSSeqNumber: 0x80000001,
-						LSChecksum:  0x5433,
-						Length:      44,
-					},
+	want := &OSPFv3{
+		BaseLayer: BaseLayer{
+			Contents: []byte{
+				0x03, 0x05, 0x00, 0x88, 0x01, 0x01, 0x01, 0x01, 0x00, 0x00,
+				0x00, 0x01, 0x9d, 0x2c, 0x00, 0x00, 0x00, 0x05, 0x20, 0x01, 0x00, 0x00, 0x00, 0x00, 0x02, 0x02,
+				0x02, 0x02, 0x80, 0x00, 0x00, 0x02, 0xb3, 0x54, 0x00, 0x18, 0x00, 0x06, 0x20, 0x03, 0x00, 0x00,
+				0x00, 0x03, 0x02, 0x02, 0x02, 0x02, 0x80, 0x00, 0x00, 0x01, 0x44, 0x73, 0x00, 0x24, 0x00, 0x06,
+				0x20, 0x03, 0x00, 0x00, 0x00, 0x02, 0x02, 0x02, 0x02, 0x02, 0x80, 0x00, 0x00, 0x01, 0x9c, 0x11,
+				0x00, 0x24, 0x00, 0x06, 0x20, 0x03, 0x00, 0x00, 0x00, 0x01, 0x02, 0x02, 0x02, 0x02, 0x80, 0x00,
+				0x00, 0x01, 0xcd, 0xba, 0x00, 0x24, 0x00, 0x06, 0x20, 0x03, 0x00, 0x00, 0x00, 0x00, 0x02, 0x02,
+				0x02, 0x02, 0x80, 0x00, 0x00, 0x01, 0xef, 0xd7, 0x00, 0x24, 0x00, 0x05, 0x00, 0x08, 0x00, 0x00,
+				0x00, 0x05, 0x02, 0x02, 0x02, 0x02, 0x80, 0x00, 0x00, 0x01, 0x54, 0x33, 0x00, 0x2c,
+			},
+			Payload: nil,
+		},
+		OSPF: OSPF{
+			Version:      3,
+			Type:         OSPFLinkStateAcknowledgment,
+			PacketLength: 136,
+			RouterID:     0x1010101,
+			AreaID:       1,
+			Checksum:     0x9d2c,
+			Content: []LSAheader{
+				LSAheader{
+					LSAge:       5,
+					LSType:      0x2001,
+					LinkStateID: 0x00000000,
+					AdvRouter:   0x02020202,
+					LSSeqNumber: 0x80000002,
+					LSChecksum:  0xb354,
+					Length:      24,
+				},
+				LSAheader{
+					LSAge:       6,
+					LSType:      0x2003,
+					LinkStateID: 0x00000003,
+					AdvRouter:   0x02020202,
+					LSSeqNumber: 0x80000001,
+					LSChecksum:  0x4473,
+					Length:      36,
+				},
+				LSAheader{
+					LSAge:       6,
+					LSType:      0x2003,
+					LinkStateID: 0x00000002,
+					AdvRouter:   0x02020202,
+					LSSeqNumber: 0x80000001,
+					LSChecksum:  0x9c11,
+					Length:      36,
+				},
+				LSAheader{
+					LSAge:       6,
+					LSType:      0x2003,
+					LinkStateID: 0x00000001,
+					AdvRouter:   0x02020202,
+					LSSeqNumber: 0x80000001,
+					LSChecksum:  0xcdba,
+					Length:      36,
+				},
+				LSAheader{
+					LSAge:       6,
+					LSType:      0x2003,
+					LinkStateID: 0x00000000,
+					AdvRouter:   0x02020202,
+					LSSeqNumber: 0x80000001,
+					LSChecksum:  0xefd7,
+					Length:      36,
+				},
+				LSAheader{
+					LSAge:       5,
+					LSType:      0x0008,
+					LinkStateID: 0x00000005,
+					AdvRouter:   0x02020202,
+					LSSeqNumber: 0x80000001,
+					LSChecksum:  0x5433,
+					Length:      44,
 				},
 			},
-			Instance: 0,
-			Reserved: 0,
-		}
-		if !reflect.DeepEqual(got, want) {
-			t.Errorf("OSPF packet processing failed:\ngot  :\n%#v\n\nwant :\n%#v\n\n", got, want)
-		}
-	} else {
-		t.Error("No OSPF layer type found in packet")
+		},
+		Instance: 0,
+		Reserved: 0,
 	}
+	checkOSPFv3("TestPacketOSPF3LSAck", t, testPacketOSPF3LSAck, want, []gopacket.LayerType{LayerTypeEthernet, LayerTypeIPv6, LayerTypeOSPF})
 }
 
 var testPacketOSPFInvalidLSA = []byte{

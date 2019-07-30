@@ -9,6 +9,7 @@ package layers
 import (
 	"encoding/binary"
 	"fmt"
+	"reflect"
 
 	"github.com/google/gopacket"
 )
@@ -442,6 +443,188 @@ func extractLSAInformation(lstype, lsalength uint16, data []byte) (interface{}, 
 	return content, nil
 }
 
+func getArchivedLSAInformationSize(lsa LSA) (int, error) {
+	switch lsa.LSType {
+	case RouterLSAtypeV2:
+		if _, ok := lsa.Content.(RouterLSAV2); ok {
+			// return 20 + 3 + len(content.Routers)*7, nil
+			return 20, nil
+		}
+		return 0, fmt.Errorf("Invalid Content: want RouterLSAV2, got %s", reflect.TypeOf(lsa.Content))
+	case NSSALSAtypeV2:
+		fallthrough
+	case ASExternalLSAtypeV2:
+		if _, ok := lsa.Content.(ASExternalLSAV2); ok {
+			// return 20 + 16, nil
+			return 20, nil
+		}
+		return 0, fmt.Errorf("Invalid Content: want ASExternalLSAV2, got %s", reflect.TypeOf(lsa.Content))
+	case NetworkLSAtypeV2:
+		if _, ok := lsa.Content.(NetworkLSAV2); ok {
+			// return 20 + 4 + len(content.AttachedRouter)*4, nil
+			return 20, nil
+		}
+		return 0, fmt.Errorf("Invalid Content: want NetworkLSAV2, got %s", reflect.TypeOf(lsa.Content))
+	case RouterLSAtype:
+		if content, ok := lsa.Content.(RouterLSA); ok {
+			return 20 + 4 + len(content.Routers)*16, nil
+		}
+		return 0, fmt.Errorf("Invalid Content: want RouterLSA, got %s", reflect.TypeOf(lsa.Content))
+	case NetworkLSAtype:
+		if _, ok := lsa.Content.(NetworkLSA); ok {
+			// return 20 + 4 + len(content.AttachedRouter)*4, nil
+			return 20, nil
+		}
+		return 0, fmt.Errorf("Invalid Content: want NetworkLSA, got %s", reflect.TypeOf(lsa.Content))
+	case InterAreaPrefixLSAtype:
+		if content, ok := lsa.Content.(InterAreaPrefixLSA); ok {
+			return 20 + 8 + len(content.AddressPrefix), nil
+		}
+		return 0, fmt.Errorf("Invalid Content: want InterAreaPrefixLSA, got %s", reflect.TypeOf(lsa.Content))
+	case InterAreaRouterLSAtype:
+		if _, ok := lsa.Content.(InterAreaRouterLSA); ok {
+			// return 20 + 12, nil
+			return 20, nil
+		}
+		return 0, fmt.Errorf("Invalid Content: want InterAreaRouterLSA, got %s", reflect.TypeOf(lsa.Content))
+	case ASExternalLSAtype:
+		fallthrough
+	case NSSALSAtype:
+		if _, ok := lsa.Content.(ASExternalLSA); ok {
+			// return 20 + 8 + len(content.AddressPrefix) + 16, nil
+			return 20, nil
+		}
+		return 0, fmt.Errorf("Invalid Content: want ASExternalLSA, got %s", reflect.TypeOf(lsa.Content))
+	case LinkLSAtype:
+		if content, ok := lsa.Content.(LinkLSA); ok {
+			size := 20 + 24
+			for _, prefix := range content.Prefixes {
+				size += 4 + int(prefix.PrefixLength)/8
+			}
+			return size, nil
+		}
+		return 0, fmt.Errorf("Invalid Content: want LinkLSA, got %s", reflect.TypeOf(lsa.Content))
+	case IntraAreaPrefixLSAtype:
+		if content, ok := lsa.Content.(IntraAreaPrefixLSA); ok {
+			size := 20 + 12
+			for _, prefix := range content.Prefixes {
+				size += 4 + int(prefix.PrefixLength)/8
+			}
+			return size, nil
+		}
+		return 0, fmt.Errorf("Invalid Content: want IntraAreaPrefixLSA, got %s", reflect.TypeOf(lsa.Content))
+	default:
+		return 0, fmt.Errorf("Unknown LSA Type")
+	}
+}
+
+func archiveLSAInformation(lstype uint16, lsa LSA, lsalength int, data []byte, offset int) error {
+	binary.BigEndian.PutUint16(data[offset:offset+2], lsa.LSAge)
+	binary.BigEndian.PutUint16(data[offset+2:offset+4], lsa.LSType)
+	binary.BigEndian.PutUint32(data[offset+4:offset+8], lsa.LinkStateID)
+	binary.BigEndian.PutUint32(data[offset+8:offset+12], lsa.AdvRouter)
+	binary.BigEndian.PutUint32(data[offset+12:offset+16], lsa.LSSeqNumber)
+	binary.BigEndian.PutUint16(data[offset+16:offset+18], lsa.LSChecksum)
+	binary.BigEndian.PutUint16(data[offset+18:offset+20], lsa.Length)
+	offset += 20
+	switch lstype {
+	case RouterLSAtypeV2:
+		if _, ok := lsa.Content.(RouterLSAV2); ok {
+			return nil
+		}
+		return fmt.Errorf("Invalid Content: want RouterLSAV2, got %s", reflect.TypeOf(lsa))
+	case NSSALSAtypeV2:
+		fallthrough
+	case ASExternalLSAtypeV2:
+		if _, ok := lsa.Content.(ASExternalLSAV2); ok {
+			return nil
+		}
+		return fmt.Errorf("Invalid Content: want ASExternalLSAV2, got %s", reflect.TypeOf(lsa))
+	case NetworkLSAtypeV2:
+		if _, ok := lsa.Content.(NetworkLSAV2); ok {
+			return nil
+		}
+		return fmt.Errorf("Invalid Content: want NetworkLSAV2, got %s", reflect.TypeOf(lsa))
+	case RouterLSAtype:
+		if lsa, ok := lsa.Content.(RouterLSA); ok {
+			data[offset] = lsa.Flags
+			binary.BigEndian.PutUint32(data[offset+1:offset+5], lsa.Options<<8)
+			offset += 4
+			for _, router := range lsa.Routers {
+				data[offset] = router.Type
+				binary.BigEndian.PutUint16(data[offset+2:offset+4], router.Metric)
+				binary.BigEndian.PutUint32(data[offset+4:offset+8], router.InterfaceID)
+				binary.BigEndian.PutUint32(data[offset+8:offset+12], router.NeighborInterfaceID)
+				binary.BigEndian.PutUint32(data[offset+12:offset+16], router.NeighborRouterID)
+				offset += 16
+			}
+			return nil
+		}
+		return fmt.Errorf("Invalid Content: want RouterLSA, got %s", reflect.TypeOf(lsa))
+	case NetworkLSAtype:
+		if _, ok := lsa.Content.(NetworkLSA); ok {
+			return nil
+		}
+		return fmt.Errorf("Invalid Content: want NetworkLSA, got %s", reflect.TypeOf(lsa))
+	case InterAreaPrefixLSAtype:
+		if lsa, ok := lsa.Content.(InterAreaPrefixLSA); ok {
+			binary.BigEndian.PutUint32(data[offset+1:offset+5], lsa.Metric<<8)
+			data[offset+4] = lsa.PrefixLength
+			data[offset+5] = lsa.PrefixOptions
+			copy(data[offset+8:offset+8+len(lsa.AddressPrefix)], lsa.AddressPrefix)
+			return nil
+		}
+		return fmt.Errorf("Invalid Content: want InterAreaPrefixLSA, got %s", reflect.TypeOf(lsa))
+	case InterAreaRouterLSAtype:
+		if _, ok := lsa.Content.(InterAreaRouterLSA); ok {
+			return nil
+		}
+		return fmt.Errorf("Invalid Content: want InterAreaRouterLSA, got %s", reflect.TypeOf(lsa))
+	case ASExternalLSAtype:
+		fallthrough
+	case NSSALSAtype:
+		if _, ok := lsa.Content.(ASExternalLSA); ok {
+			return nil
+		}
+		return fmt.Errorf("Invalid Content: want ASExternalLSA, got %s", reflect.TypeOf(lsa))
+	case LinkLSAtype:
+		if lsa, ok := lsa.Content.(LinkLSA); ok {
+			data[offset] = lsa.RtrPriority
+			binary.BigEndian.PutUint32(data[offset+1:offset+5], lsa.Options<<8)
+			copy(data[offset+4:offset+20], lsa.LinkLocalAddress)
+			binary.BigEndian.PutUint32(data[offset+20:offset+24], lsa.NumOfPrefixes)
+			offset += 24
+			for _, prefix := range lsa.Prefixes {
+				data[offset] = prefix.PrefixLength
+				data[offset+1] = prefix.PrefixOptions
+				copy(data[offset+4:offset+4+int(prefix.PrefixLength)/8], prefix.AddressPrefix)
+				offset += 4 + int(prefix.PrefixLength)/8
+			}
+			return nil
+		}
+		return fmt.Errorf("Invalid Content: want LinkLSA, got %s", reflect.TypeOf(lsa))
+	case IntraAreaPrefixLSAtype:
+		if lsa, ok := lsa.Content.(IntraAreaPrefixLSA); ok {
+			binary.BigEndian.PutUint16(data[offset:offset+2], lsa.NumOfPrefixes)
+			binary.BigEndian.PutUint16(data[offset+2:offset+4], lsa.RefLSType)
+			binary.BigEndian.PutUint32(data[offset+4:offset+8], lsa.RefLinkStateID)
+			binary.BigEndian.PutUint32(data[offset+8:offset+12], lsa.RefAdvRouter)
+			offset += 12
+			for _, prefix := range lsa.Prefixes {
+				data[offset] = prefix.PrefixLength
+				data[offset+1] = prefix.PrefixOptions
+				binary.BigEndian.PutUint16(data[offset+2:offset+4], prefix.Metric)
+				copy(data[offset+4:offset+4+int(prefix.PrefixLength)/8], prefix.AddressPrefix)
+				offset += 4 + int(prefix.PrefixLength)/8
+			}
+			return nil
+		}
+		return fmt.Errorf("Invalid Content: want IntraAreaPrefixLSA, got %s", reflect.TypeOf(lsa))
+	default:
+		return fmt.Errorf("Unknown LSA Type")
+	}
+}
+
 // getLSAs parses the LSA information from the packet for OSPFv3
 func getLSAs(num uint32, data []byte) ([]LSA, error) {
 	var lsas []LSA
@@ -479,6 +662,8 @@ func (ospf *OSPFv2) DecodeFromBytes(data []byte, df gopacket.DecodeFeedback) err
 	if len(data) < 24 {
 		return fmt.Errorf("Packet too smal for OSPF Version 2")
 	}
+
+	ospf.BaseLayer = BaseLayer{Contents: data[:len(data)]}
 
 	ospf.Version = uint8(data[0])
 	ospf.Type = OSPFType(data[1])
@@ -577,6 +762,8 @@ func (ospf *OSPFv3) DecodeFromBytes(data []byte, df gopacket.DecodeFeedback) err
 		return fmt.Errorf("Packet too smal for OSPF Version 3")
 	}
 
+	ospf.BaseLayer = BaseLayer{Contents: data[:len(data)]}
+
 	ospf.Version = uint8(data[0])
 	ospf.Type = OSPFType(data[1])
 	ospf.PacketLength = binary.BigEndian.Uint16(data[2:4])
@@ -666,6 +853,202 @@ func (ospf *OSPFv3) DecodeFromBytes(data []byte, df gopacket.DecodeFeedback) err
 	return nil
 }
 
+// SerializeTo writes the serialized form of this layer into the
+// SerializationBuffer, implementing gopacket.SerializableLayer.
+// See the docs for gopacket.SerializableLayer for more info.
+func (ospf *OSPFv2) SerializeTo(b gopacket.SerializeBuffer, opts gopacket.SerializeOptions) error {
+	return nil
+}
+
+func (ospf *OSPFv3) SerializeTo(b gopacket.SerializeBuffer, opts gopacket.SerializeOptions) error {
+	size := 16
+	switch ospf.Type {
+	case OSPFHello:
+		if lsa, ok := ospf.Content.(HelloPkg); ok {
+			size += 20 + len(lsa.NeighborID)*4
+			bytes, err := b.PrependBytes(size)
+			if err != nil {
+				return err
+			}
+			if opts.FixLengths {
+				ospf.PacketLength = uint16(size)
+			}
+			bytes[0] = 0x03
+			bytes[1] = uint8(OSPFHello)
+			binary.BigEndian.PutUint16(bytes[2:4], uint16(size))
+			binary.BigEndian.PutUint32(bytes[4:8], ospf.RouterID)
+			binary.BigEndian.PutUint32(bytes[8:12], ospf.AreaID)
+			if opts.ComputeChecksums {
+				// TODO:
+			} else {
+				binary.BigEndian.PutUint16(bytes[12:14], ospf.Checksum)
+			}
+
+			binary.BigEndian.PutUint32(bytes[16:20], lsa.InterfaceID)
+			bytes[20] = lsa.RtrPriority
+			binary.BigEndian.PutUint32(bytes[21:25], lsa.Options<<8)
+			binary.BigEndian.PutUint16(bytes[24:26], lsa.HelloInterval)
+			binary.BigEndian.PutUint16(bytes[26:28], uint16(lsa.RouterDeadInterval))
+			binary.BigEndian.PutUint32(bytes[28:32], lsa.DesignatedRouterID)
+			binary.BigEndian.PutUint32(bytes[32:36], lsa.BackupDesignatedRouterID)
+			for i := 0; i < len(lsa.NeighborID); i++ {
+				binary.BigEndian.PutUint32(bytes[36+i*4:40+i*4], lsa.NeighborID[0])
+			}
+			return nil
+		}
+		return fmt.Errorf("Invalid Content")
+	case OSPFDatabaseDescription:
+		if lsa, ok := ospf.Content.(DbDescPkg); ok {
+			size += 12 + len(lsa.LSAinfo)*20
+			bytes, err := b.PrependBytes(size)
+			if err != nil {
+				return err
+			}
+			if opts.FixLengths {
+				ospf.PacketLength = uint16(size)
+			}
+			bytes[0] = 0x03
+			bytes[1] = uint8(OSPFDatabaseDescription)
+			binary.BigEndian.PutUint16(bytes[2:4], uint16(size))
+			binary.BigEndian.PutUint32(bytes[4:8], ospf.RouterID)
+			binary.BigEndian.PutUint32(bytes[8:12], ospf.AreaID)
+			if opts.ComputeChecksums {
+				// TODO:
+			} else {
+				binary.BigEndian.PutUint16(bytes[12:14], ospf.Checksum)
+			}
+
+			binary.BigEndian.PutUint32(bytes[17:21], lsa.Options<<8)
+			binary.BigEndian.PutUint16(bytes[20:22], lsa.InterfaceMTU)
+			binary.BigEndian.PutUint16(bytes[22:24], lsa.Flags)
+			binary.BigEndian.PutUint32(bytes[24:28], lsa.DDSeqNumber)
+
+			for i, lsaHeader := range lsa.LSAinfo {
+				o := i * 20
+				binary.BigEndian.PutUint16(bytes[o:o+2], lsaHeader.LSAge)
+				binary.BigEndian.PutUint16(bytes[o+2:o+4], lsaHeader.LSType)
+				binary.BigEndian.PutUint32(bytes[o+4:o+8], lsaHeader.LinkStateID)
+				binary.BigEndian.PutUint32(bytes[o+8:o+12], lsaHeader.AdvRouter)
+				binary.BigEndian.PutUint32(bytes[o+12:o+16], lsaHeader.LSSeqNumber)
+				binary.BigEndian.PutUint16(bytes[o+16:o+18], lsaHeader.LSChecksum)
+				binary.BigEndian.PutUint16(bytes[o+18:o+20], lsaHeader.LSType)
+			}
+			return nil
+		}
+		return fmt.Errorf("Invalid Content")
+	case OSPFLinkStateRequest:
+		if lsas, ok := ospf.Content.([]LSReq); ok {
+			size += len(lsas) * 12
+			bytes, err := b.PrependBytes(size)
+			if err != nil {
+				return err
+			}
+			if opts.FixLengths {
+				ospf.PacketLength = uint16(size)
+			}
+			bytes[0] = 0x03
+			bytes[1] = uint8(OSPFLinkStateRequest)
+			binary.BigEndian.PutUint16(bytes[2:4], uint16(size))
+			binary.BigEndian.PutUint32(bytes[4:8], ospf.RouterID)
+			binary.BigEndian.PutUint32(bytes[8:12], ospf.AreaID)
+			if opts.ComputeChecksums {
+				// TODO:
+			} else {
+				binary.BigEndian.PutUint16(bytes[12:14], uint16(ospf.Checksum))
+			}
+
+			for i, lsReq := range lsas {
+				o := i*12 + 16
+				binary.BigEndian.PutUint16(bytes[o+2:o+4], lsReq.LSType)
+				binary.BigEndian.PutUint32(bytes[o+4:o+8], lsReq.LSID)
+				binary.BigEndian.PutUint32(bytes[o+8:o+12], lsReq.AdvRouter)
+			}
+			return nil
+		}
+		return fmt.Errorf("Invalid Content")
+	case OSPFLinkStateUpdate:
+		if lsUpdate, ok := ospf.Content.(LSUpdate); ok {
+			size += 4
+			for _, lsa := range lsUpdate.LSAs {
+				lsaSize, err := getArchivedLSAInformationSize(lsa)
+				if err != nil {
+					return err
+				}
+				size += lsaSize
+			}
+			bytes, err := b.PrependBytes(size)
+			if err != nil {
+				return err
+			}
+			if opts.FixLengths {
+				ospf.PacketLength = uint16(size)
+			}
+			bytes[0] = 0x03
+			bytes[1] = uint8(OSPFLinkStateUpdate)
+			binary.BigEndian.PutUint16(bytes[2:4], uint16(size))
+			binary.BigEndian.PutUint32(bytes[4:8], ospf.RouterID)
+			binary.BigEndian.PutUint32(bytes[8:12], ospf.AreaID)
+			if opts.ComputeChecksums {
+				// TODO:
+			} else {
+				binary.BigEndian.PutUint16(bytes[12:14], ospf.Checksum)
+			}
+			binary.BigEndian.PutUint32(bytes[16:20], uint32(len(lsUpdate.LSAs)))
+
+			offset := 20
+			for _, lsa := range lsUpdate.LSAs {
+				lsaSize, err := getArchivedLSAInformationSize(lsa)
+				if err != nil {
+					return err
+				}
+				err = archiveLSAInformation(lsa.LSType, lsa, lsaSize, bytes, offset)
+				if err != nil {
+					return err
+				}
+				offset += lsaSize
+			}
+			return nil
+		}
+		return fmt.Errorf("Invalid Content")
+	case OSPFLinkStateAcknowledgment:
+		if lsas, ok := ospf.Content.([]LSAheader); ok {
+			size += len(lsas) * 20
+			bytes, err := b.PrependBytes(size)
+			if err != nil {
+				return err
+			}
+			if opts.FixLengths {
+				ospf.PacketLength = uint16(size)
+			}
+			bytes[0] = 0x03
+			bytes[1] = uint8(OSPFLinkStateAcknowledgment)
+			binary.BigEndian.PutUint16(bytes[2:4], uint16(size))
+			binary.BigEndian.PutUint32(bytes[4:8], ospf.RouterID)
+			binary.BigEndian.PutUint32(bytes[8:12], ospf.AreaID)
+			if opts.ComputeChecksums {
+				// TODO:
+			} else {
+				binary.BigEndian.PutUint16(bytes[12:14], uint16(ospf.Checksum))
+			}
+
+			for i, lsaHeader := range lsas {
+				o := i*20 + 16
+				binary.BigEndian.PutUint16(bytes[o:o+2], lsaHeader.LSAge)
+				binary.BigEndian.PutUint16(bytes[o+2:o+4], lsaHeader.LSType)
+				binary.BigEndian.PutUint32(bytes[o+4:o+8], lsaHeader.LinkStateID)
+				binary.BigEndian.PutUint32(bytes[o+8:o+12], lsaHeader.AdvRouter)
+				binary.BigEndian.PutUint32(bytes[o+12:o+16], lsaHeader.LSSeqNumber)
+				binary.BigEndian.PutUint16(bytes[o+16:o+18], lsaHeader.LSChecksum)
+				binary.BigEndian.PutUint16(bytes[o+18:o+20], lsaHeader.Length)
+			}
+			return nil
+		}
+		return fmt.Errorf("Invalid Content")
+	default:
+		return fmt.Errorf("Unknown OSPFType: %d", ospf.Type)
+	}
+}
+
 // LayerType returns LayerTypeOSPF
 func (ospf *OSPFv2) LayerType() gopacket.LayerType {
 	return LayerTypeOSPF
@@ -690,6 +1073,14 @@ func (ospf *OSPFv3) CanDecode() gopacket.LayerClass {
 	return LayerTypeOSPF
 }
 
+func (ospf *OSPFv2) Payload() []byte {
+	return nil
+}
+
+func (ospf *OSPFv3) Payload() []byte {
+	return nil
+}
+
 func decodeOSPF(data []byte, p gopacket.PacketBuilder) error {
 	if len(data) < 14 {
 		return fmt.Errorf("Packet too smal for OSPF")
@@ -697,11 +1088,23 @@ func decodeOSPF(data []byte, p gopacket.PacketBuilder) error {
 
 	switch uint8(data[0]) {
 	case 2:
-		ospf := &OSPFv2{}
-		return decodingLayerDecoder(ospf, data, p)
+		o := &OSPFv2{}
+		err := o.DecodeFromBytes(data, p)
+		if err != nil {
+			return err
+		}
+		p.AddLayer(o)
+		p.SetApplicationLayer(o)
+		return nil
 	case 3:
-		ospf := &OSPFv3{}
-		return decodingLayerDecoder(ospf, data, p)
+		o := &OSPFv3{}
+		err := o.DecodeFromBytes(data, p)
+		if err != nil {
+			return err
+		}
+		p.AddLayer(o)
+		p.SetApplicationLayer(o)
+		return nil
 	default:
 	}
 
