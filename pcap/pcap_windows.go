@@ -19,6 +19,7 @@ import (
 
 	"github.com/google/gopacket"
 	"github.com/google/gopacket/layers"
+	"golang.org/x/sys/windows"
 )
 
 var pcapLoaded = false
@@ -66,7 +67,7 @@ func initLoadedDllPath(kernel32 syscall.Handle) {
 }
 
 func mustLoad(fun string) uintptr {
-	addr, err := syscall.GetProcAddress(wpcapHandle, fun)
+	addr, err := windows.GetProcAddress(wpcapHandle, fun)
 	if err != nil {
 		panic(fmt.Sprintf("Couldn't load function %s from %s", fun, loadedDllPath))
 	}
@@ -74,7 +75,7 @@ func mustLoad(fun string) uintptr {
 }
 
 func mightLoad(fun string) uintptr {
-	addr, err := syscall.GetProcAddress(wpcapHandle, fun)
+	addr, err := windows.GetProcAddress(wpcapHandle, fun)
 	if err != nil {
 		return 0
 	}
@@ -101,7 +102,7 @@ func bytePtrToString(r uintptr) string {
 	return byteSliceToString(bval[:])
 }
 
-var wpcapHandle syscall.Handle
+var wpcapHandle windows.Handle
 var msvcrtHandle syscall.Handle
 var (
 	callocPtr,
@@ -171,9 +172,21 @@ func LoadWinPCAP() error {
 
 	initDllPath(kernel32)
 
-	wpcapHandle, err = syscall.LoadLibrary("wpcap.dll")
-	if err != nil {
-		return fmt.Errorf("couldn't load wpcap.dll")
+	if haveSearch, _ := syscall.GetProcAddress(kernel32, "AddDllDirectory"); haveSearch != 0 {
+		// if AddDllDirectory is present, we can use LOAD_LIBRARY_* stuff with LoadLibraryEx to avoid wpcap.dll hijacking
+		// see: https://msdn.microsoft.com/en-us/library/ff919712%28VS.85%29.aspx
+		const LOAD_LIBRARY_SEARCH_USER_DIRS = 0x00000400
+		const LOAD_LIBRARY_SEARCH_SYSTEM32 = 0x00000800
+		wpcapHandle, err = windows.LoadLibraryEx("wpcap.dll", 0, LOAD_LIBRARY_SEARCH_USER_DIRS|LOAD_LIBRARY_SEARCH_SYSTEM32)
+		if err != nil {
+			return fmt.Errorf("couldn't load wpcap.dll")
+		}
+	} else {
+		// otherwise fall back to load it with the unsafe search cause by SetDllDirectory
+		wpcapHandle, err = windows.LoadLibrary("wpcap.dll")
+		if err != nil {
+			return fmt.Errorf("couldn't load wpcap.dll")
+		}
 	}
 	initLoadedDllPath(kernel32)
 	msvcrtHandle, err = syscall.LoadLibrary("msvcrt.dll")
