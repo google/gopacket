@@ -129,21 +129,30 @@ func (r *router) route(routes routeSlice, input net.HardwareAddr, src, dst net.I
 			}
 		}
 	}
+
+	var defaultRoute *rtInfo
 	for _, rt := range routes {
 		if rt.InputIface != 0 && rt.InputIface != inputIndex {
+			continue
+		}
+		// default route will have both rt.Src and rt.Dst equal to nil
+		if rt.Src == nil && rt.Dst == nil {
+			defaultRoute = rt
 			continue
 		}
 		if rt.Src != nil && !rt.Src.Contains(src) {
 			continue
 		}
-		if rt.Dst != nil {
-			if !rt.Dst.Contains(dst) {
-				continue
-			}
-			return int(rt.OutputIface), rt.Gateway, rt.PrefSrc, nil
+		if rt.Dst != nil && !rt.Dst.Contains(dst) {
+			continue
 		}
-
+		return int(rt.OutputIface), rt.Gateway, rt.PrefSrc, nil
 	}
+
+	if defaultRoute != nil {
+		return int(defaultRoute.OutputIface), defaultRoute.Gateway, defaultRoute.PrefSrc, nil
+	}
+
 	err = fmt.Errorf("no route found for %v", dst)
 	return
 }
