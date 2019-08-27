@@ -10,6 +10,7 @@ package layers
 import (
 	"encoding/binary"
 	"errors"
+	"fmt"
 
 	"github.com/google/gopacket"
 )
@@ -39,6 +40,10 @@ func (arp *ARP) LayerType() gopacket.LayerType { return LayerTypeARP }
 
 // DecodeFromBytes decodes the given bytes into this layer.
 func (arp *ARP) DecodeFromBytes(data []byte, df gopacket.DecodeFeedback) error {
+	if len(data) < 8 || len(data) < int(8 + 2*data[4] + 2*data[5]) {
+		df.SetTruncated()
+		return fmt.Errorf("ARP length %d too short", len(data))
+	}
 	arp.AddrType = LinkType(binary.BigEndian.Uint16(data[0:2]))
 	arp.Protocol = EthernetType(binary.BigEndian.Uint16(data[2:4]))
 	arp.HwAddressSize = data[4]
