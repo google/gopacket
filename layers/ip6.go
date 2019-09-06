@@ -543,9 +543,9 @@ type IPv6Routing struct {
 	// This segment is supposed to be zero according to RFC2460, the second set of
 	// 4 bytes in the extension.
 	Reserved []byte
-	// SourceRoutingIPs is the set of IPv6 addresses requested for source routing,
-	// set only if RoutingType == 0.
-	SourceRoutingIPs []net.IP
+	// RoutingIPs is the set of IPv6 addresses requested for source/segment routing,
+	// set only if RoutingType == 0 || RoutingType == 4.
+	RoutingIPs []net.IP
 }
 
 // LayerType returns LayerTypeIPv6Routing.
@@ -568,7 +568,14 @@ func decodeIPv6Routing(data []byte, p gopacket.PacketBuilder) error {
 			return fmt.Errorf("Invalid IPv6 source routing, length of type 0 packet %d", i.ActualLength)
 		}
 		for d := i.Contents[8:]; len(d) >= 16; d = d[16:] {
-			i.SourceRoutingIPs = append(i.SourceRoutingIPs, net.IP(d[:16]))
+			i.RoutingIPs = append(i.RoutingIPs, net.IP(d[:16]))
+		}
+	case 4:
+		if (i.ActualLength-8)%16 != 0 {
+			return fmt.Errorf("Invalid IPv6 segment routing, length of type 4 packet %d", i.ActualLength)
+		}
+		for d := i.Contents[8:]; len(d) >= 16; d = d[16:] {
+			i.RoutingIPs = append(i.RoutingIPs, net.IP(d[:16]))
 		}
 	default:
 		return fmt.Errorf("Unknown IPv6 routing header type %d", i.RoutingType)
