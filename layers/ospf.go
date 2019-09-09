@@ -251,6 +251,7 @@ type OSPFv3 struct {
 	OSPF
 	Instance uint8
 	Reserved uint8
+	tcpipchecksum
 }
 
 // getLSAsv2 parses the LSA information from the packet for OSPFv2
@@ -878,11 +879,6 @@ func (ospf *OSPFv3) SerializeTo(b gopacket.SerializeBuffer, opts gopacket.Serial
 			binary.BigEndian.PutUint16(bytes[2:4], uint16(size))
 			binary.BigEndian.PutUint32(bytes[4:8], ospf.RouterID)
 			binary.BigEndian.PutUint32(bytes[8:12], ospf.AreaID)
-			if opts.ComputeChecksums {
-				// TODO:
-			} else {
-				binary.BigEndian.PutUint16(bytes[12:14], ospf.Checksum)
-			}
 
 			binary.BigEndian.PutUint32(bytes[16:20], lsa.InterfaceID)
 			bytes[20] = lsa.RtrPriority
@@ -893,6 +889,20 @@ func (ospf *OSPFv3) SerializeTo(b gopacket.SerializeBuffer, opts gopacket.Serial
 			binary.BigEndian.PutUint32(bytes[32:36], lsa.BackupDesignatedRouterID)
 			for i := 0; i < len(lsa.NeighborID); i++ {
 				binary.BigEndian.PutUint32(bytes[36+i*4:40+i*4], lsa.NeighborID[0])
+			}
+			if opts.ComputeChecksums {
+				if opts.ComputeChecksums {
+					bytes[12] = 0
+					bytes[13] = 0
+					csum, err := ospf.computeChecksum(b.Bytes(), IPProtocolOSPF)
+					if err != nil {
+						return err
+					}
+					ospf.Checksum = csum
+				}
+				binary.BigEndian.PutUint16(bytes[12:14], ospf.Checksum)
+			} else {
+				binary.BigEndian.PutUint16(bytes[12:14], ospf.Checksum)
 			}
 			return nil
 		}
@@ -912,11 +922,6 @@ func (ospf *OSPFv3) SerializeTo(b gopacket.SerializeBuffer, opts gopacket.Serial
 			binary.BigEndian.PutUint16(bytes[2:4], uint16(size))
 			binary.BigEndian.PutUint32(bytes[4:8], ospf.RouterID)
 			binary.BigEndian.PutUint32(bytes[8:12], ospf.AreaID)
-			if opts.ComputeChecksums {
-				// TODO:
-			} else {
-				binary.BigEndian.PutUint16(bytes[12:14], ospf.Checksum)
-			}
 
 			binary.BigEndian.PutUint32(bytes[17:21], lsa.Options<<8)
 			binary.BigEndian.PutUint16(bytes[20:22], lsa.InterfaceMTU)
@@ -932,6 +937,20 @@ func (ospf *OSPFv3) SerializeTo(b gopacket.SerializeBuffer, opts gopacket.Serial
 				binary.BigEndian.PutUint32(bytes[o+12:o+16], lsaHeader.LSSeqNumber)
 				binary.BigEndian.PutUint16(bytes[o+16:o+18], lsaHeader.LSChecksum)
 				binary.BigEndian.PutUint16(bytes[o+18:o+20], lsaHeader.LSType)
+			}
+			if opts.ComputeChecksums {
+				if opts.ComputeChecksums {
+					bytes[12] = 0
+					bytes[13] = 0
+					csum, err := ospf.computeChecksum(b.Bytes(), IPProtocolOSPF)
+					if err != nil {
+						return err
+					}
+					ospf.Checksum = csum
+				}
+				binary.BigEndian.PutUint16(bytes[12:14], ospf.Checksum)
+			} else {
+				binary.BigEndian.PutUint16(bytes[12:14], ospf.Checksum)
 			}
 			return nil
 		}
@@ -951,17 +970,26 @@ func (ospf *OSPFv3) SerializeTo(b gopacket.SerializeBuffer, opts gopacket.Serial
 			binary.BigEndian.PutUint16(bytes[2:4], uint16(size))
 			binary.BigEndian.PutUint32(bytes[4:8], ospf.RouterID)
 			binary.BigEndian.PutUint32(bytes[8:12], ospf.AreaID)
-			if opts.ComputeChecksums {
-				// TODO:
-			} else {
-				binary.BigEndian.PutUint16(bytes[12:14], uint16(ospf.Checksum))
-			}
 
 			for i, lsReq := range lsas {
 				o := i*12 + 16
 				binary.BigEndian.PutUint16(bytes[o+2:o+4], lsReq.LSType)
 				binary.BigEndian.PutUint32(bytes[o+4:o+8], lsReq.LSID)
 				binary.BigEndian.PutUint32(bytes[o+8:o+12], lsReq.AdvRouter)
+			}
+			if opts.ComputeChecksums {
+				if opts.ComputeChecksums {
+					bytes[12] = 0
+					bytes[13] = 0
+					csum, err := ospf.computeChecksum(b.Bytes(), IPProtocolOSPF)
+					if err != nil {
+						return err
+					}
+					ospf.Checksum = csum
+				}
+				binary.BigEndian.PutUint16(bytes[12:14], ospf.Checksum)
+			} else {
+				binary.BigEndian.PutUint16(bytes[12:14], ospf.Checksum)
 			}
 			return nil
 		}
@@ -988,11 +1016,6 @@ func (ospf *OSPFv3) SerializeTo(b gopacket.SerializeBuffer, opts gopacket.Serial
 			binary.BigEndian.PutUint16(bytes[2:4], uint16(size))
 			binary.BigEndian.PutUint32(bytes[4:8], ospf.RouterID)
 			binary.BigEndian.PutUint32(bytes[8:12], ospf.AreaID)
-			if opts.ComputeChecksums {
-				// TODO:
-			} else {
-				binary.BigEndian.PutUint16(bytes[12:14], ospf.Checksum)
-			}
 			binary.BigEndian.PutUint32(bytes[16:20], uint32(len(lsUpdate.LSAs)))
 
 			offset := 20
@@ -1006,6 +1029,20 @@ func (ospf *OSPFv3) SerializeTo(b gopacket.SerializeBuffer, opts gopacket.Serial
 					return err
 				}
 				offset += lsaSize
+			}
+			if opts.ComputeChecksums {
+				if opts.ComputeChecksums {
+					bytes[12] = 0
+					bytes[13] = 0
+					csum, err := ospf.computeChecksum(b.Bytes(), IPProtocolOSPF)
+					if err != nil {
+						return err
+					}
+					ospf.Checksum = csum
+				}
+				binary.BigEndian.PutUint16(bytes[12:14], ospf.Checksum)
+			} else {
+				binary.BigEndian.PutUint16(bytes[12:14], ospf.Checksum)
 			}
 			return nil
 		}
@@ -1025,11 +1062,6 @@ func (ospf *OSPFv3) SerializeTo(b gopacket.SerializeBuffer, opts gopacket.Serial
 			binary.BigEndian.PutUint16(bytes[2:4], uint16(size))
 			binary.BigEndian.PutUint32(bytes[4:8], ospf.RouterID)
 			binary.BigEndian.PutUint32(bytes[8:12], ospf.AreaID)
-			if opts.ComputeChecksums {
-				// TODO:
-			} else {
-				binary.BigEndian.PutUint16(bytes[12:14], uint16(ospf.Checksum))
-			}
 
 			for i, lsaHeader := range lsas {
 				o := i*20 + 16
@@ -1040,6 +1072,20 @@ func (ospf *OSPFv3) SerializeTo(b gopacket.SerializeBuffer, opts gopacket.Serial
 				binary.BigEndian.PutUint32(bytes[o+12:o+16], lsaHeader.LSSeqNumber)
 				binary.BigEndian.PutUint16(bytes[o+16:o+18], lsaHeader.LSChecksum)
 				binary.BigEndian.PutUint16(bytes[o+18:o+20], lsaHeader.Length)
+			}
+			if opts.ComputeChecksums {
+				if opts.ComputeChecksums {
+					bytes[12] = 0
+					bytes[13] = 0
+					csum, err := ospf.computeChecksum(b.Bytes(), IPProtocolOSPF)
+					if err != nil {
+						return err
+					}
+					ospf.Checksum = csum
+				}
+				binary.BigEndian.PutUint16(bytes[12:14], ospf.Checksum)
+			} else {
+				binary.BigEndian.PutUint16(bytes[12:14], ospf.Checksum)
 			}
 			return nil
 		}

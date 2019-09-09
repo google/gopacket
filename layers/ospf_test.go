@@ -33,8 +33,11 @@ func checkOSPFv3(desc string, t *testing.T, packetBytes []byte, pExpectedOSPF *O
 		t.Errorf("OSPF packet processing failed for packet "+desc+
 			":\ngot  :\n%#v\n\nwant :\n%#v\n\n", pResultOSPF, pExpectedOSPF)
 	}
+	pResultOSPF.SetNetworkLayerForChecksum(p.NetworkLayer())
 	buf := gopacket.NewSerializeBuffer()
-	opts := gopacket.SerializeOptions{}
+	opts := gopacket.SerializeOptions{
+		ComputeChecksums: true,
+	}
 	err := pResultOSPF.SerializeTo(buf, opts)
 	if err != nil {
 		t.Error(err)
