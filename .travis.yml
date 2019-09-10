@@ -40,8 +40,8 @@ jobs:
       go: 1.x
     - os: windows
       go: 1.x
-      # winpcap does not work on travis ci - so install nmap to get libpcap
-      before_install: choco install nmap
+      # winpcap does not work on travis ci - so install wireshark to get libpcap
+      before_install: choco install wireshark
     - stage: style
       name: "fmt/vet/lint"
       go: 1.x
