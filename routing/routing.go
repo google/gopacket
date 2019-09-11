@@ -133,6 +133,10 @@ func (r *router) route(routes routeSlice, input net.HardwareAddr, src, dst net.I
 		if rt.InputIface != 0 && rt.InputIface != inputIndex {
 			continue
 		}
+		// default route will have both rt.Src and rt.Dst equal to nil
+		if rt.Src == nil && rt.Dst == nil {
+			continue
+		}
 		if rt.Src != nil && !rt.Src.Contains(src) {
 			continue
 		}
