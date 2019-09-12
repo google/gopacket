@@ -40,8 +40,8 @@ jobs:
       go: 1.x
     - os: windows
       go: 1.x
-      # winpcap does not work on travis ci - so install nmap to get libpcap
-      before_install: choco install nmap
+      # winpcap does not work on travis ci - so install npcap (package is unlisted -> version)
+      before_install: choco install npcap --version 0.86
     - stage: style
       name: "fmt/vet/lint"
       go: 1.x
