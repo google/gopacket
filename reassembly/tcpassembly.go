@@ -594,7 +594,7 @@ func NewAssembler(pool *StreamPool) *Assembler {
 // Dump returns a short string describing the page usage of the Assembler
 func (a *Assembler) Dump() string {
 	s := ""
-	s += fmt.Sprintf("pageCache: used: %d, size: %d, free: %d", a.pc.used, a.pc.size, len(a.pc.free))
+	s += fmt.Sprintf("pageCache: used: %d:", a.pc.used)
 	return s
 }
 
