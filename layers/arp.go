@@ -40,7 +40,7 @@ func (arp *ARP) LayerType() gopacket.LayerType { return LayerTypeARP }
 
 // DecodeFromBytes decodes the given bytes into this layer.
 func (arp *ARP) DecodeFromBytes(data []byte, df gopacket.DecodeFeedback) error {
-	if len(data) < 8 || len(data) < int(8 + 2*data[4] + 2*data[5]) {
+	if len(data) < 8 {
 		df.SetTruncated()
 		return fmt.Errorf("ARP length %d too short", len(data))
 	}
@@ -49,12 +49,16 @@ func (arp *ARP) DecodeFromBytes(data []byte, df gopacket.DecodeFeedback) error {
 	arp.HwAddressSize = data[4]
 	arp.ProtAddressSize = data[5]
 	arp.Operation = binary.BigEndian.Uint16(data[6:8])
+	arpLength := 8 + 2*arp.HwAddressSize + 2*arp.ProtAddressSize
+	if len(data) < int(arpLength) {
+		df.SetTruncated()
+		return fmt.Errorf("ARP length %d too short, %d expected", len(data), arpLength)
+	}
 	arp.SourceHwAddress = data[8 : 8+arp.HwAddressSize]
 	arp.SourceProtAddress = data[8+arp.HwAddressSize : 8+arp.HwAddressSize+arp.ProtAddressSize]
 	arp.DstHwAddress = data[8+arp.HwAddressSize+arp.ProtAddressSize : 8+2*arp.HwAddressSize+arp.ProtAddressSize]
 	arp.DstProtAddress = data[8+2*arp.HwAddressSize+arp.ProtAddressSize : 8+2*arp.HwAddressSize+2*arp.ProtAddressSize]
 
-	arpLength := 8 + 2*arp.HwAddressSize + 2*arp.ProtAddressSize
 	arp.Contents = data[:arpLength]
 	arp.Payload = data[arpLength:]
 	return nil
