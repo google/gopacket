@@ -130,6 +130,8 @@ const (
 	LinkTypeLinuxIRDA      LinkType = 144
 	LinkTypeLinuxLAPD      LinkType = 177
 	LinkTypeLinuxUSB       LinkType = 220
+	LinkTypeFC2            LinkType = 224
+	LinkTypeFC2Framed      LinkType = 225
 	LinkTypeIPv4           LinkType = 228
 	LinkTypeIPv6           LinkType = 229
 )
