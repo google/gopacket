@@ -547,6 +547,9 @@ func (r *NgReader) ReadPacketData() (data []byte, ci gopacket.CaptureInfo, err e
 // ZeroCopyReadPacketData returns the next packet available from this data source.
 // If WantMixedLinkType is true, ci.AncillaryData[0] contains the link type.
 // Warning: Like data, ci.AncillaryData is also reused and overwritten on the next call to ZeroCopyReadPacketData.
+//
+// It is not true zero copy, as data is still copied from the underlying reader. However,
+// this method avoids allocating heap memory for every packet.
 func (r *NgReader) ZeroCopyReadPacketData() (data []byte, ci gopacket.CaptureInfo, err error) {
 	if err = r.readPacketHeader(); err != nil {
 		return
@@ -592,4 +595,12 @@ func (r *NgReader) Interface(i int) (NgInterface, error) {
 // NInterfaces returns the current number of interfaces.
 func (r *NgReader) NInterfaces() int {
 	return len(r.ifaces)
+}
+
+// Resolution returns the timestamp resolution of acquired timestamps before scaling to NanosecondTimestampResolution.
+func (r *NgReader) Resolution() gopacket.TimestampResolution {
+	if r.options.WantMixedLinkType {
+		return gopacket.TimestampResolution{}
+	}
+	return r.ifaces[0].Resolution()
 }

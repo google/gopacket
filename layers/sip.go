@@ -189,6 +189,9 @@ type SIP struct {
 	Method  SIPMethod
 	Headers map[string][]string
 
+	// Request
+	RequestURI string
+
 	// Response
 	IsResponse     bool
 	ResponseCode   int
@@ -228,6 +231,16 @@ func (s *SIP) LayerType() gopacket.LayerType {
 // Payload returns the base layer payload
 func (s *SIP) Payload() []byte {
 	return s.BaseLayer.Payload
+}
+
+// CanDecode returns the set of layer types that this DecodingLayer can decode
+func (s *SIP) CanDecode() gopacket.LayerClass {
+	return LayerTypeSIP
+}
+
+// NextLayerType returns the layer type contained by this DecodingLayer
+func (s *SIP) NextLayerType() gopacket.LayerType {
+	return gopacket.LayerTypePayload
 }
 
 // DecodeFromBytes decodes the slice into the SIP struct.
@@ -340,6 +353,8 @@ func (s *SIP) ParseFirstLine(firstLine []byte) error {
 		if err != nil {
 			return err
 		}
+
+		s.RequestURI = splits[1]
 
 		// Validate SIP Version
 		s.Version, err = GetSIPVersion(splits[2])

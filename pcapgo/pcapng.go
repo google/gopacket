@@ -11,6 +11,7 @@ import (
 	"math"
 	"time"
 
+	"github.com/google/gopacket"
 	"github.com/google/gopacket/layers"
 )
 
@@ -105,6 +106,17 @@ func (r NgResolution) Exponent() uint8 {
 	return uint8(r) & 0x7f
 }
 
+// ToTimestampResolution converts an NgResolution to a gopaket.TimestampResolution
+func (r NgResolution) ToTimestampResolution() (ret gopacket.TimestampResolution) {
+	if r.Binary() {
+		ret.Base = 2
+	} else {
+		ret.Base = 10
+	}
+	ret.Exponent = -int(r.Exponent())
+	return
+}
+
 // NgNoValue64 is a placeholder for an empty numeric 64 bit value.
 const NgNoValue64 = math.MaxUint64
 
@@ -155,6 +167,11 @@ type NgInterface struct {
 	secondMask uint64
 	scaleUp    uint64
 	scaleDown  uint64
+}
+
+// Resolution returns the timestamp resolution of acquired timestamps before scaling to NanosecondTimestampResolution.
+func (i NgInterface) Resolution() gopacket.TimestampResolution {
+	return i.TimestampResolution.ToTimestampResolution()
 }
 
 // NgSectionInfo contains additional information of a pcapng section

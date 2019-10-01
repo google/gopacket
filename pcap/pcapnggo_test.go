@@ -25,7 +25,7 @@ func TestPCAPGoNgWrite(t *testing.T) {
 	}
 	data := []byte{0xab, 0xcd, 0xef, 0x01, 0x02, 0x03, 0x04}
 	ci := gopacket.CaptureInfo{
-		Timestamp:     time.Unix(12345667, 1234567000),
+		Timestamp:     time.Unix(12345667, 1234567123),
 		Length:        700,
 		CaptureLength: len(data),
 	}

@@ -201,3 +201,41 @@ func TestPacketBufferReuse(t *testing.T) {
 		t.Errorf("buf mismatch:\nwant: %+v\ngot:  %+v", want, data2)
 	}
 }
+
+func TestPacketZeroCopy(t *testing.T) {
+	test := []byte{
+		0xd4, 0xc3, 0xb2, 0xa1, 0x02, 0x00, 0x04, 0x00, // magic, maj, min
+		0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, // tz, sigfigs
+		0xff, 0xff, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, // snaplen, linkType
+		0x5A, 0xCC, 0x1A, 0x54, 0x01, 0x00, 0x00, 0x00, // sec, usec
+		0x04, 0x00, 0x00, 0x00, 0x08, 0x00, 0x00, 0x00, // cap len, full len
+		0x01, 0x02, 0x03, 0x04, // data
+		0x5A, 0xCC, 0x1A, 0x54, 0x01, 0x00, 0x00, 0x00, // sec, usec
+		0x04, 0x00, 0x00, 0x00, 0x08, 0x00, 0x00, 0x00, // cap len, full len
+		0x05, 0x06, 0x07, 0x08, // data
+	}
+
+	buf := bytes.NewBuffer(test)
+	r, err := NewReader(buf)
+
+	data1, _, err := r.ZeroCopyReadPacketData()
+	if err != nil {
+		t.Error(err)
+		t.FailNow()
+	}
+	if want := []byte{1, 2, 3, 4}; !bytes.Equal(data1, want) {
+		t.Errorf("buf mismatch:\nwant: %+v\ngot:  %+v", want, data1)
+	}
+	data2, _, err := r.ZeroCopyReadPacketData()
+	if err != nil {
+		t.Error(err)
+		t.FailNow()
+	}
+	if want := []byte{5, 6, 7, 8}; !bytes.Equal(data2, want) {
+		t.Errorf("buf mismatch:\nwant: %+v\ngot:  %+v", want, data2)
+	}
+
+	if &data1[0] != &data2[0] {
+		t.Error("different buffers returned by subsequent ZeroCopyReadPacketData calls")
+	}
+}

@@ -945,15 +945,13 @@ func (a *Assembler) overlapExisting(half *halfconnection, start, end Sequence, b
 		half.overlapPackets++
 		half.overlapBytes += diff
 	}
-	start = start.Add(diff)
 	s += diff
 	if s >= e {
 		// Completely included in sent
 		s = e
 	}
 	bytes = bytes[s:]
-	e -= diff
-	return bytes, start
+	return bytes, half.nextSeq
 }
 
 // Prepare send or queue
@@ -1294,6 +1292,7 @@ func (a *Assembler) flushClose(conn *connection, half *halfconnection, t time.Ti
 		a.skipFlush(conn, half)
 		if half.closed {
 			closed = true
+			return flushed, closed
 		}
 	}
 	// Close the connection only if both halfs of the connection last seen before tc.

@@ -22,6 +22,9 @@ useful, including:
 Also, if you're looking to dive right into code, see the examples subdirectory
 for numerous simple binaries built using gopacket libraries.
 
+Minimum go version required is 1.5 except for pcapgo/EthernetHandle, afpacket,
+and bsdbpf which need at least 1.7 due to x/sys/unix dependencies.
+
 Basic Usage
 
 gopacket takes in packet data as a []byte and decodes it into a packet with
@@ -205,7 +208,7 @@ based on endpoint criteria:
    }
  }
  // Find all packets coming from UDP port 1000 to UDP port 500
- interestingFlow := gopacket.NewFlow(layers.NewUDPPortEndpoint(1000), layers.NewUDPPortEndpoint(500))
+ interestingFlow := gopacket.FlowFromEndpoints(layers.NewUDPPortEndpoint(1000), layers.NewUDPPortEndpoint(500))
  if t := packet.NetworkLayer(); t != nil && t.TransportFlow() == interestingFlow {
    fmt.Println("Found that UDP flow I was looking for!")
  }
@@ -288,7 +291,10 @@ the packet's information.  A quick example:
    parser := gopacket.NewDecodingLayerParser(layers.LayerTypeEthernet, &eth, &ip4, &ip6, &tcp)
    decoded := []gopacket.LayerType{}
    for packetData := range somehowGetPacketData() {
-     err := parser.DecodeLayers(packetData, &decoded)
+     if err := parser.DecodeLayers(packetData, &decoded); err != nil {
+       fmt.Fprintf(os.Stderr, "Could not decode layers: %v\n", err)
+       continue
+     }
      for _, layerType := range decoded {
        switch layerType {
          case layers.LayerTypeIPv6:
@@ -314,6 +320,67 @@ implementing the DecodingLayer interface are usable.  Also, it's possible to
 create DecodingLayers that are not themselves Layers... see
 layers.IPv6ExtensionSkipper for an example of this.
 
+Faster And Customized Decoding with DecodingLayerContainer
+
+By default, DecodingLayerParser uses native map to store and search for a layer
+to decode. Though being versatile, in some cases this solution may be not so
+optimal. For example, if you have only few layers faster operations may be
+provided by sparse array indexing or linear array scan.
+
+To accomodate these scenarios, DecodingLayerContainer interface is introduced
+along with its implementations: DecodingLayerSparse, DecodingLayerArray and
+DecodingLayerMap. You can specify a container implementation to
+DecodingLayerParser with SetDecodingLayerContainer method. Example:
+
+ dlp := gopacket.NewDecodingLayerParser(LayerTypeEthernet)
+ dlp.SetDecodingLayerContainer(gopacket.DecodingLayerSparse(nil))
+ var eth layers.Ethernet
+ dlp.AddDecodingLayer(&eth)
+ // ... add layers and use DecodingLayerParser as usual...
+
+To skip one level of indirection (though sacrificing some capabilities) you may
+also use DecodingLayerContainer as a decoding tool as it is. In this case you have to
+handle unknown layer types and layer panics by yourself. Example:
+
+ func main() {
+   var eth layers.Ethernet
+   var ip4 layers.IPv4
+   var ip6 layers.IPv6
+   var tcp layers.TCP
+   dlc := gopacket.DecodingLayerContainer(gopacket.DecodingLayerArray(nil))
+   dlc = dlc.Put(&eth)
+   dlc = dlc.Put(&ip4)
+   dlc = dlc.Put(&ip6)
+   dlc = dlc.Put(&tcp)
+   // you may specify some meaningful DecodeFeedback
+   decoder := dlc.LayersDecoder(LayerTypeEthernet, gopacket.NilDecodeFeedback)
+   decoded := make([]gopacket.LayerType, 0, 20)
+   for packetData := range somehowGetPacketData() {
+     lt, err := decoder(packetData, &decoded)
+     if err != nil {
+       fmt.Fprintf(os.Stderr, "Could not decode layers: %v\n", err)
+       continue
+     }
+     if lt != gopacket.LayerTypeZero {
+       fmt.Fprintf(os.Stderr, "unknown layer type: %v\n", lt)
+       continue
+     }
+     for _, layerType := range decoded {
+       // examine decoded layertypes just as already shown above
+     }
+   }
+ }
+
+DecodingLayerSparse is the fastest but most effective when LayerType values
+that layers in use can decode are not large because otherwise that would lead
+to bigger memory footprint. DecodingLayerArray is very compact and primarily
+usable if the number of decoding layers is not big (up to ~10-15, but please do
+your own benchmarks). DecodingLayerMap is the most versatile one and used by
+DecodingLayerParser by default. Please refer to tests and benchmarks in layers
+subpackage to further examine usage examples and performance measurements.
+
+You may also choose to implement your own DecodingLayerContainer if you want to
+make use of your own internal packet decoding logic.
 
 Creating Packet Data
 

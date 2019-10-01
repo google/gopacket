@@ -12,6 +12,8 @@ import (
 	"reflect"
 	"time"
 	"unsafe"
+
+	"golang.org/x/sys/unix"
 )
 
 // #include <linux/if_packet.h>
@@ -51,6 +53,8 @@ type header interface {
 	// packets (in which case clearStatus should be called).
 	next() bool
 }
+
+const tpacketAlignment = uint(unix.TPACKET_ALIGNMENT)
 
 func tpAlign(x int) int {
 	return int((uint(x) + tpacketAlignment - 1) &^ (tpacketAlignment - 1))
@@ -145,8 +149,8 @@ func initV3Wrapper(block unsafe.Pointer) (w v3wrapper) {
 }
 
 func (w *v3wrapper) getVLAN() int {
-	if w.packet.tp_status&C.TP_STATUS_VLAN_VALID != 0 {
-		hv1 := (*_Ctype_struct_tpacket_hdr_variant1)(unsafe.Pointer(&w.packet.anon0[0]))
+	if w.packet.tp_status&unix.TP_STATUS_VLAN_VALID != 0 {
+		hv1 := (*C.struct_tpacket_hdr_variant1)(unsafe.Pointer(&w.packet.anon0[0]))
 		return int(hv1.tp_vlan_tci & 0xfff)
 	}
 	return -1
@@ -184,7 +188,7 @@ func (w *v3wrapper) next() bool {
 	if w.packet.tp_next_offset != 0 {
 		next += uintptr(w.packet.tp_next_offset)
 	} else {
-		next += uintptr(tpacketAlign(int(w.packet.tp_snaplen) + int(w.packet.tp_mac)))
+		next += uintptr(tpAlign(int(w.packet.tp_snaplen) + int(w.packet.tp_mac)))
 	}
 	w.packet = (*C.struct_tpacket3_hdr)(unsafe.Pointer(next))
 	return true

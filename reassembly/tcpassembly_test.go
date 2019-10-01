@@ -724,6 +724,8 @@ func testFlush(t *testing.T, s []testSequence, delay time.Duration, flushInterva
 	a.MaxBufferedPagesPerConnection = 10
 	port := layers.TCPPort(0)
 
+	simTime := time.Unix(0, 0)
+
 	for i, test := range s {
 		fact.reassembly = []Reassembly{}
 		if testDebug {
@@ -737,9 +739,10 @@ func testFlush(t *testing.T, s []testSequence, delay time.Duration, flushInterva
 		if port != test.in.SrcPort {
 			flow = flow.Reverse()
 		}
-		a.Assemble(flow, &test.in)
-		time.Sleep(delay)
-		a.FlushCloseOlderThan(time.Now().Add(-1 * flushInterval))
+		ctx := assemblerSimpleContext(gopacket.CaptureInfo{Timestamp: simTime})
+		a.AssembleWithContext(flow, &test.in, &ctx)
+		simTime = simTime.Add(delay)
+		a.FlushCloseOlderThan(simTime.Add(-1 * flushInterval))
 
 		final := []Reassembly{}
 		if len(test.want) > 0 {
@@ -868,6 +871,51 @@ func TestFlush(t *testing.T) {
 			},
 			delay:          time.Millisecond * 50,
 			flushOlderThan: time.Millisecond * 99,
+		},
+		// a late RST packet
+		{
+			seq: []testSequence{
+				{
+					in: layers.TCP{
+						SrcPort:   1,
+						DstPort:   2,
+						Seq:       1005,
+						BaseLayer: layers.BaseLayer{Payload: []byte{5, 6, 7}},
+					},
+					// gets queued
+					want: []Reassembly{},
+				},
+				{
+					in: layers.TCP{
+						SrcPort:   1,
+						DstPort:   2,
+						RST:       true,
+						Seq:       1001,
+						BaseLayer: layers.BaseLayer{Payload: []byte{1, 2, 3}},
+					},
+					// gets queued just before the first packet
+					// and should close its half-connection (RST) during next flush
+					want: []Reassembly{},
+				},
+				{
+					// triggers flush/close
+					in: layers.TCP{
+						SrcPort:   1,
+						DstPort:   2,
+						Seq:       1010,
+						BaseLayer: layers.BaseLayer{Payload: []byte{10, 11, 12}},
+					},
+					want: []Reassembly{
+						Reassembly{
+							Skip:  -1,
+							End:   true,
+							Bytes: []byte{1, 2, 3},
+						},
+					},
+				},
+			},
+			delay:          time.Millisecond * 40,
+			flushOlderThan: time.Millisecond * 50,
 		},
 	} {
 		testFlush(t, test.seq, test.delay, test.flushOlderThan)
