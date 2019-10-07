@@ -52,25 +52,26 @@ type DNSType uint16
 
 // DNSType known values.
 const (
-	DNSTypeA     DNSType = 1  // a host address
-	DNSTypeNS    DNSType = 2  // an authoritative name server
-	DNSTypeMD    DNSType = 3  // a mail destination (Obsolete - use MX)
-	DNSTypeMF    DNSType = 4  // a mail forwarder (Obsolete - use MX)
-	DNSTypeCNAME DNSType = 5  // the canonical name for an alias
-	DNSTypeSOA   DNSType = 6  // marks the start of a zone of authority
-	DNSTypeMB    DNSType = 7  // a mailbox domain name (EXPERIMENTAL)
-	DNSTypeMG    DNSType = 8  // a mail group member (EXPERIMENTAL)
-	DNSTypeMR    DNSType = 9  // a mail rename domain name (EXPERIMENTAL)
-	DNSTypeNULL  DNSType = 10 // a null RR (EXPERIMENTAL)
-	DNSTypeWKS   DNSType = 11 // a well known service description
-	DNSTypePTR   DNSType = 12 // a domain name pointer
-	DNSTypeHINFO DNSType = 13 // host information
-	DNSTypeMINFO DNSType = 14 // mailbox or mail list information
-	DNSTypeMX    DNSType = 15 // mail exchange
-	DNSTypeTXT   DNSType = 16 // text strings
-	DNSTypeAAAA  DNSType = 28 // a IPv6 host address [RFC3596]
-	DNSTypeSRV   DNSType = 33 // server discovery [RFC2782] [RFC6195]
-	DNSTypeOPT   DNSType = 41 // OPT Pseudo-RR [RFC6891]
+	DNSTypeA     DNSType = 1   // a host address
+	DNSTypeNS    DNSType = 2   // an authoritative name server
+	DNSTypeMD    DNSType = 3   // a mail destination (Obsolete - use MX)
+	DNSTypeMF    DNSType = 4   // a mail forwarder (Obsolete - use MX)
+	DNSTypeCNAME DNSType = 5   // the canonical name for an alias
+	DNSTypeSOA   DNSType = 6   // marks the start of a zone of authority
+	DNSTypeMB    DNSType = 7   // a mailbox domain name (EXPERIMENTAL)
+	DNSTypeMG    DNSType = 8   // a mail group member (EXPERIMENTAL)
+	DNSTypeMR    DNSType = 9   // a mail rename domain name (EXPERIMENTAL)
+	DNSTypeNULL  DNSType = 10  // a null RR (EXPERIMENTAL)
+	DNSTypeWKS   DNSType = 11  // a well known service description
+	DNSTypePTR   DNSType = 12  // a domain name pointer
+	DNSTypeHINFO DNSType = 13  // host information
+	DNSTypeMINFO DNSType = 14  // mailbox or mail list information
+	DNSTypeMX    DNSType = 15  // mail exchange
+	DNSTypeTXT   DNSType = 16  // text strings
+	DNSTypeAAAA  DNSType = 28  // a IPv6 host address [RFC3596]
+	DNSTypeSRV   DNSType = 33  // server discovery [RFC2782] [RFC6195]
+	DNSTypeOPT   DNSType = 41  // OPT Pseudo-RR [RFC6891]
+	DNSTypeURI   DNSType = 256 // URI RR [RFC7553]
 )
 
 func (dt DNSType) String() string {
@@ -115,6 +116,8 @@ func (dt DNSType) String() string {
 		return "SRV"
 	case DNSTypeOPT:
 		return "OPT"
+	case DNSTypeURI:
+		return "URI"
 	}
 }
 
@@ -427,6 +430,8 @@ func recSize(rr *DNSResourceRecord) int {
 		return l
 	case DNSTypeSRV:
 		return 6 + len(rr.SRV.Name) + 2
+	case DNSTypeURI:
+		return 4 + len(rr.URI.Target)
 	case DNSTypeOPT:
 		l := len(rr.OPT) * 4
 		for _, opt := range rr.OPT {
@@ -684,6 +689,7 @@ type DNSResourceRecord struct {
 	SRV            DNSSRV
 	MX             DNSMX
 	OPT            []DNSOPT // See RFC 6891, section 6.1.2
+	URI            DNSURI
 
 	// Undecoded TXT for backward compatibility
 	TXT []byte
@@ -781,6 +787,10 @@ func (rr *DNSResourceRecord) encode(data []byte, offset int, opts gopacket.Seria
 		binary.BigEndian.PutUint16(data[noff+12:], rr.SRV.Weight)
 		binary.BigEndian.PutUint16(data[noff+14:], rr.SRV.Port)
 		encodeName(rr.SRV.Name, data, noff+16)
+	case DNSTypeURI:
+		binary.BigEndian.PutUint16(data[noff+10:], rr.URI.Priority)
+		binary.BigEndian.PutUint16(data[noff+12:], rr.URI.Weight)
+		copy(data[noff+14:], rr.URI.Target)
 	case DNSTypeOPT:
 		noff2 := noff + 10
 		for _, opt := range rr.OPT {
@@ -812,6 +822,9 @@ func (rr *DNSResourceRecord) String() string {
 			opts[i] = opt.String()
 		}
 		return "OPT " + strings.Join(opts, ",")
+	}
+	if rr.Type == DNSTypeURI {
+		return fmt.Sprintf("URI %d %d %s", rr.URI.Priority, rr.URI.Weight, string(rr.URI.Target))
 	}
 	if rr.Class == DNSClassIN {
 		switch rr.Type {
@@ -924,6 +937,10 @@ func (rr *DNSResourceRecord) decodeRData(data []byte, offset int, buffer *[]byte
 			return err
 		}
 		rr.MX.Name = name
+	case DNSTypeURI:
+		rr.URI.Priority = binary.BigEndian.Uint16(data[offset : offset+2])
+		rr.URI.Weight = binary.BigEndian.Uint16(data[offset+2 : offset+4])
+		rr.URI.Target = rr.Data[4:]
 	case DNSTypeSRV:
 		rr.SRV.Priority = binary.BigEndian.Uint16(data[offset : offset+2])
 		rr.SRV.Weight = binary.BigEndian.Uint16(data[offset+2 : offset+4])
@@ -962,6 +979,12 @@ type DNSSRV struct {
 type DNSMX struct {
 	Preference uint16
 	Name       []byte
+}
+
+// DNSURI is a URI record, defining a target (URI) of a server/service
+type DNSURI struct {
+	Priority, Weight uint16
+	Target           []byte
 }
 
 // DNSOptionCode represents the code of a DNS Option, see RFC6891, section 6.1.2

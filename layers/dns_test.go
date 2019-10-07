@@ -78,6 +78,47 @@ func TestParseDNSTypeTXT(t *testing.T) {
 	}
 }
 
+var testParseDNSTypeURI = []byte{
+	0x02, 0x00, 0x00, 0x00, // PF_INET
+	0x45, 0x00, 0x00, 0x6f, 0x3e, 0x65, 0x00, 0x00, 0x40, 0x11, 0x3e, 0x17, 0x7f, 0x00, 0x00, 0x01,
+	0x7f, 0x00, 0x00, 0x01, 0x00, 0x35, 0xe7, 0xd3, 0x00, 0x5b, 0xfe, 0x6e, 0xaf, 0x2d, 0x85, 0x80,
+	0x00, 0x01, 0x00, 0x01, 0x00, 0x00, 0x00, 0x01, 0x05, 0x5f, 0x68, 0x74, 0x74, 0x70, 0x03, 0x64,
+	0x6e, 0x73, 0x04, 0x74, 0x65, 0x73, 0x74, 0x00, 0x01, 0x00, 0x00, 0x01, 0xc0, 0x0c, 0x01, 0x00,
+	0x00, 0x01, 0x00, 0x00, 0x2a, 0x30, 0x00, 0x1c, 0x00, 0x0a, 0x00, 0x05, 0x68, 0x74, 0x74, 0x70,
+	0x3a, 0x2f, 0x2f, 0x77, 0x77, 0x77, 0x2e, 0x64, 0x6e, 0x73, 0x2e, 0x74, 0x65, 0x73, 0x74, 0x3a,
+	0x38, 0x30, 0x30, 0x30, 0x00, 0x00, 0x29, 0x10, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+}
+var testParseDNSTypeURITarget = "http://www.dns.test:8000"
+var testParseDNSTypeURIPriority = uint16(10)
+var testParseDNSTypeURIWeight = uint16(5)
+
+func TestParseDNSTypeURI(t *testing.T) {
+	p := gopacket.NewPacket(testParseDNSTypeURI, LinkTypeNull, testDecodeOptions)
+	if p.ErrorLayer() != nil {
+		t.Error("Failed to decode packet:", p.ErrorLayer().Error())
+	}
+	checkLayers(p, []gopacket.LayerType{LayerTypeLoopback, LayerTypeIPv4, LayerTypeUDP, LayerTypeDNS}, t)
+	answers := p.Layer(LayerTypeDNS).(*DNS).Answers
+	if len(answers) != 1 {
+		t.Error("Failed to parse 1 DNS answer")
+	}
+	if len(answers[0].URI.Target) < 1 {
+		t.Error("Failed to parse 1 URI record")
+	}
+	target := string(answers[0].URI.Target)
+	if target != testParseDNSTypeURITarget {
+		t.Errorf("Incorrect URI target value, expected %q, got %q", testParseDNSTypeURITarget, target)
+	}
+	priority := answers[0].URI.Priority
+	if priority != testParseDNSTypeURIPriority {
+		t.Errorf("Incorrect URI priority value, expected %q, got %q", testParseDNSTypeURIPriority, priority)
+	}
+	weight := answers[0].URI.Weight
+	if weight != testParseDNSTypeURIWeight {
+		t.Errorf("Incorrect URI weight value, expected %q, got %q", testParseDNSTypeURIWeight, weight)
+	}
+}
+
 var testParseDNSTypeOPT = []byte{
 	0x00, 0x90, 0x0b, 0x12, 0x91, 0xc1, 0x00, 0x1c, 0xc0, 0x93, 0x33, 0xfb, 0x08, 0x00, 0x45, 0x00,
 	0x00, 0x5A, 0xce, 0x58, 0x00, 0x00, 0x40, 0x11, 0x67, 0xe2, 0xac, 0x10, 0x01, 0xc7, 0x4b, 0x4b,
@@ -214,6 +255,16 @@ func testResourceEqual(t *testing.T, i int, name string, exp, got DNSResourceRec
 	}
 	if exp.MX.Preference != got.MX.Preference {
 		t.Errorf("expected %s[%d].MX.Preference = %v, got %v", name, i, exp.MX.Preference, got.MX.Preference)
+	}
+	// URI
+	if !bytes.Equal(exp.URI.Target, got.URI.Target) {
+		t.Errorf("expected %s[%d].URI.Target = %v, got %v", name, i, exp.URI.Target, got.URI.Target)
+	}
+	if exp.URI.Weight != got.URI.Weight {
+		t.Errorf("expected %s[%d].URI.Weight = %v, got %v", name, i, exp.URI.Weight, got.URI.Weight)
+	}
+	if exp.URI.Priority != got.URI.Priority {
+		t.Errorf("expected %s[%d].URI.Priority = %v, got %v", name, i, exp.URI.Priority, got.URI.Priority)
 	}
 
 	// OPT
@@ -403,6 +454,19 @@ func TestDNSEncodeResponse(t *testing.T) {
 			Class: DNSClassIN,
 			TTL:   1024,
 			IP:    net.IP([]byte{1, 2, 3, 4}),
+		})
+
+	dns.Answers = append(dns.Answers,
+		DNSResourceRecord{
+			Name:  []byte("example1.com"),
+			Type:  DNSTypeURI,
+			Class: DNSClassIN,
+			TTL:   1024,
+			URI: DNSURI{
+				Target:   []byte("http://www.example2.com/"),
+				Priority: 10240,
+				Weight:   1,
+			},
 		})
 
 	dns.Answers = append(dns.Answers,
