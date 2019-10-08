@@ -56,6 +56,7 @@ const (
 	EthernetTypeMPLSUnicast                 EthernetType = 0x8847
 	EthernetTypeMPLSMulticast               EthernetType = 0x8848
 	EthernetTypeEAPOL                       EthernetType = 0x888e
+	EthernetTypeProfinet                    EthernetType = 0x8892
 	EthernetTypeQinQ                        EthernetType = 0x88a8
 	EthernetTypeLinkLayerDiscovery          EthernetType = 0x88cc
 	EthernetTypeEthernetCTP                 EthernetType = 0x9000
