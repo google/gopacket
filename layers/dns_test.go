@@ -78,6 +78,84 @@ func TestParseDNSTypeTXT(t *testing.T) {
 	}
 }
 
+var testParseDNSBadVers = []byte{
+	0x02, 0x00, 0x00, 0x00, // PF_INET
+	0x45, 0x00, 0x00, 0x38, 0xa5, 0xa0, 0x40, 0x00, 0x38, 0x11, 0x00, 0xbd, 0xc0, 0x05, 0x05, 0xf1,
+	0xac, 0x1e, 0x2a, 0x43, 0x00, 0x35, 0xfd, 0x78, 0x00, 0x24, 0x40, 0xc1, 0x8f, 0xb3, 0x81, 0x00,
+	0x00, 0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x10, 0x00, 0x01, 0x00, 0x00, 0x29,
+	0x02, 0x00, 0x01, 0x00, 0x00, 0x00, 0x00, 0x00,
+}
+var testParseDNSBadVersResponseCode = DNSResponseCodeBadVers
+
+func TestParseDNSBadVers(t *testing.T) {
+	p := gopacket.NewPacket(testParseDNSBadVers, LinkTypeNull, testDecodeOptions)
+	if p.ErrorLayer() != nil {
+		t.Error("Failed to decode packet:", p.ErrorLayer().Error())
+	}
+	checkLayers(p, []gopacket.LayerType{LayerTypeLoopback, LayerTypeIPv4, LayerTypeUDP, LayerTypeDNS}, t)
+	questions := p.Layer(LayerTypeDNS).(*DNS).Questions
+	if len(questions) != 1 {
+		t.Error("Failed to parse 1 DNS question")
+	}
+	answers := p.Layer(LayerTypeDNS).(*DNS).Answers
+	if len(answers) != 0 {
+		t.Error("Failed to parse 0 DNS answer")
+	}
+	additionals := p.Layer(LayerTypeDNS).(*DNS).Additionals
+	if len(additionals) != 1 {
+		t.Error("Failed to parse 1 DNS additional")
+	}
+
+	optAll := additionals[0].OPT
+	if len(optAll) != 0 {
+		t.Errorf("Parsed %d OPTs, expected 0", len(optAll))
+	}
+	responseCode := p.Layer(LayerTypeDNS).(*DNS).ResponseCode
+	if responseCode != testParseDNSBadVersResponseCode {
+		t.Errorf("Incorrect extended response code, expected %q, got %q", testParseDNSBadVersResponseCode, responseCode)
+	}
+}
+
+var testParseDNSBadCookie = []byte{
+	0x02, 0x00, 0x00, 0x00, // PF_INET
+	0x45, 0x00, 0x00, 0x54, 0xfe, 0xaa, 0x00, 0x00, 0x40, 0x11, 0x00, 0x00, 0x7f, 0x00, 0x00, 0x01,
+	0x7f, 0x00, 0x00, 0x01, 0x00, 0x35, 0xd6, 0xaa, 0x00, 0x40, 0xfe, 0x53, 0xf6, 0xab, 0x81, 0x87,
+	0x00, 0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x06, 0x00, 0x01, 0x00, 0x00, 0x29,
+	0x10, 0x00, 0x01, 0x00, 0x00, 0x00, 0x00, 0x1c, 0x00, 0x0a, 0x00, 0x18, 0x36, 0xbf, 0x11, 0x1f,
+	0xef, 0x2e, 0x01, 0x09, 0x7d, 0x8f, 0xfe, 0x06, 0x5c, 0x63, 0x6f, 0xfb, 0x14, 0x2d, 0x76, 0x74,
+	0x94, 0x40, 0x7a, 0x73,
+}
+var testParseDNSBadCookieResponseCode = DNSResponseCodeBadCookie
+
+func TestParseDNSBadCookie(t *testing.T) {
+	p := gopacket.NewPacket(testParseDNSBadCookie, LinkTypeNull, testDecodeOptions)
+	if p.ErrorLayer() != nil {
+		t.Error("Failed to decode packet:", p.ErrorLayer().Error())
+	}
+	checkLayers(p, []gopacket.LayerType{LayerTypeLoopback, LayerTypeIPv4, LayerTypeUDP, LayerTypeDNS}, t)
+	questions := p.Layer(LayerTypeDNS).(*DNS).Questions
+	if len(questions) != 1 {
+		t.Error("Failed to parse 1 DNS question")
+	}
+	answers := p.Layer(LayerTypeDNS).(*DNS).Answers
+	if len(answers) != 0 {
+		t.Error("Failed to parse 0 DNS answer")
+	}
+	additionals := p.Layer(LayerTypeDNS).(*DNS).Additionals
+	if len(additionals) != 1 {
+		t.Error("Failed to parse 1 DNS additional")
+	}
+
+	optAll := additionals[0].OPT
+	if len(optAll) != 1 {
+		t.Errorf("Parsed %d OPTs, expected 1", len(optAll))
+	}
+	responseCode := p.Layer(LayerTypeDNS).(*DNS).ResponseCode
+	if responseCode != testParseDNSBadCookieResponseCode {
+		t.Errorf("Incorrect extended response code, expected %q, got %q", testParseDNSBadCookieResponseCode, responseCode)
+	}
+}
+
 var testParseDNSTypeURI = []byte{
 	0x02, 0x00, 0x00, 0x00, // PF_INET
 	0x45, 0x00, 0x00, 0x6f, 0x3e, 0x65, 0x00, 0x00, 0x40, 0x11, 0x3e, 0x17, 0x7f, 0x00, 0x00, 0x01,
