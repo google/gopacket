@@ -3,7 +3,6 @@ package layers
 import (
 	"encoding/binary"
 	"errors"
-	"fmt"
 	"log"
 
 	"github.com/google/gopacket"
@@ -143,21 +142,7 @@ func (p *Profinet) SerializeTo(b gopacket.SerializeBuffer, opts gopacket.Seriali
 		return err
 	}
 	binary.BigEndian.PutUint16(bytes, uint16(p.FrameID))
-	// if opts.FixLengths {
-	// 	u.Length = uint16(len(payload)) + 2
-	// }
-	// binary.BigEndian.PutUint16(bytes[4:], u.Length)
-	// if opts.ComputeChecksums {
-	// 	// zero out checksum bytes
-	// 	bytes[6] = 0
-	// 	bytes[7] = 0
-	// 	csum, err := u.computeChecksum(b.Bytes(), IPProtocolUDP)
-	// 	if err != nil {
-	// 		return err
-	// 	}
-	// 	u.Checksum = csum
-	// }
-	// binary.BigEndian.PutUint16(bytes[6:], u.Checksum)
+
 	return nil
 }
 
@@ -192,13 +177,10 @@ func (p *ProfinetDCP) SerializeTo(b gopacket.SerializeBuffer, opts gopacket.Seri
 		}
 
 		blocksLen = blocksLen + 4 + blockLen
-		// fmt.Printf("%d\t%d\n", blockLen, blocksLen)
 	}
 	if opts.FixLengths {
 		p.BlockLength = uint16(blocksLen)
 	}
-
-	// fmt.Println("final: ", blocksLen)
 
 	bytes, err := b.PrependBytes(10 + blocksLen)
 	if err != nil {
@@ -274,22 +256,22 @@ func decodeProfinet(data []byte, p gopacket.PacketBuilder) error {
 	p.AddLayer(d)
 
 	if d.FrameID >= PNFrameIDTimeSynchronization && d.FrameID < PNFrameIDRTClass3 {
-		fmt.Println("This is a Profinet Time Synchronization packet")
+		// fmt.Println("This is a Profinet Time Synchronization packet")
 	} else if d.FrameID >= PNFrameIDRTClass3 && d.FrameID < PNFrameIDRTClass2 {
-		fmt.Println("This is a Profinet RT Class 3 packet")
+		// fmt.Println("This is a Profinet RT Class 3 packet")
 		return p.NextDecoder(LayerTypeProfinetRT)
 	} else if d.FrameID >= PNFrameIDRTClass2 && d.FrameID < PNFrameIDRTClass1 {
-		fmt.Println("This is a Profinet RT Class 2 packet")
+		// fmt.Println("This is a Profinet RT Class 2 packet")
 		return p.NextDecoder(LayerTypeProfinetRT)
 	} else if d.FrameID >= PNFrameIDRTClass1 && d.FrameID < PNFrameIDAcyclicHigh {
-		fmt.Println("This is a Profinet RT Class 1 packet")
+		// fmt.Println("This is a Profinet RT Class 1 packet")
 		return p.NextDecoder(LayerTypeProfinetRT)
 	} else if d.FrameID >= PNFrameIDAcyclicHigh && d.FrameID < PNFrameIDReserved {
-		fmt.Println("This is a Profinet Acyclic High packet")
+		// fmt.Println("This is a Profinet Acyclic High packet")
 	} else if d.FrameID >= PNFrameIDReserved && d.FrameID < PNFrameIDAcyclicLow {
-		fmt.Println("This is a Profinet Reserved packet")
+		// fmt.Println("This is a Profinet Reserved packet")
 	} else if d.FrameID >= PNFrameIDAcyclicLow && d.FrameID < PNFrameIDDCPGetOrSet {
-		fmt.Println("This is a Profinet Acyclic Low packet")
+		// fmt.Println("This is a Profinet Acyclic Low packet")
 	} else if d.FrameID >= PNFrameIDDCPGetOrSet && d.FrameID <= PNFrameIDDCPIdentifyResponse {
 		// fmt.Println("This is a Profinet DCP packet")
 		return p.NextDecoder(LayerTypeProfinetDCP)
@@ -311,9 +293,6 @@ func decodeProfinetDCP(data []byte, p gopacket.PacketBuilder) error {
 	d.Xid = binary.BigEndian.Uint32(data[2:6])
 	d.ResponseDelay = binary.BigEndian.Uint16(data[6:8])
 	d.BlockLength = binary.BigEndian.Uint16(data[8:10])
-
-	// log.Println("BlockLength: ", d.BlockLength)
-	// log.Println("Data Length: ", len(data[10:]))
 
 	// decode first block
 	dcpBlock := &ProfinetDCPBlock{}
