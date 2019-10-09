@@ -179,6 +179,7 @@ const (
 	pcapErrorDenied          = C.PCAP_ERROR_PERM_DENIED
 	pcapErrorNotUp           = C.PCAP_ERROR_IFACE_NOT_UP
 	pcapWarning              = C.PCAP_WARNING
+	pcapError                = C.PCAP_ERROR
 	pcapDIN                  = C.PCAP_D_IN
 	pcapDOUT                 = C.PCAP_D_OUT
 	pcapDINOUT               = C.PCAP_D_INOUT
