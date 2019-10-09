@@ -271,6 +271,7 @@ const (
 	aeDenied       = activateError(pcapErrorDenied)
 	aeNotUp        = activateError(pcapErrorNotUp)
 	aeWarning      = activateError(pcapWarning)
+	aeError        = activateError(pcapError)
 )
 
 func (a activateError) Error() string {
@@ -289,6 +290,8 @@ func (a activateError) Error() string {
 		return "Interface Not Up"
 	case aeWarning:
 		return fmt.Sprintf("Warning: %v", activateErrMsg.Error())
+	case aeError:
+		return fmt.Sprintf("Error: %v", activateErrMsg.Error())
 	default:
 		return fmt.Sprintf("unknown activated error: %d", a)
 	}
@@ -763,7 +766,7 @@ func (p *InactiveHandle) Activate() (*Handle, error) {
 	pcapSetTstampPrecision(p.cptr, pcapTstampPrecisionNano)
 	handle, err := p.pcapActivate()
 	if err != aeNoError {
-		if err == aeWarning {
+		if err == aeWarning || err == aeError {
 			activateErrMsg = p.Error()
 		}
 		return nil, err
