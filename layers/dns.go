@@ -375,9 +375,7 @@ func (d *DNS) DecodeFromBytes(data []byte, df gopacket.DecodeFeedback) error {
 		}
 		// extract extended RCODE from OPT RRs, RFC 6891 section 6.1.3
 		if d.Additionals[i].Type == DNSTypeOPT {
-			ttldata := make([]byte, 4)
-			binary.BigEndian.PutUint32(ttldata[:], d.Additionals[i].TTL)
-			d.ResponseCode = DNSResponseCode(uint8(d.ResponseCode) | uint8(ttldata[0])<<4)
+			d.ResponseCode = DNSResponseCode(uint8(d.ResponseCode) | uint8(d.Additionals[i].TTL>>20&0xF0))
 		}
 	}
 
