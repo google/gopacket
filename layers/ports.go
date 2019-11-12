@@ -71,6 +71,7 @@ var tcpPortLayerType = [65536]gopacket.LayerType{
 	994:  LayerTypeTLS,       // ircs
 	995:  LayerTypeTLS,       // pop3s
 	5061: LayerTypeTLS,       // ips
+	3868: LayerTypeDiameter,  // diameter
 }
 
 // RegisterTCPPortLayerType creates a new mapping between a TCPPort
