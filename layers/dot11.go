@@ -1827,6 +1827,11 @@ func decodeDot11MgmtProbeReq(data []byte, p gopacket.PacketBuilder) error {
 
 func (m *Dot11MgmtProbeReq) LayerType() gopacket.LayerType  { return LayerTypeDot11MgmtProbeReq }
 func (m *Dot11MgmtProbeReq) CanDecode() gopacket.LayerClass { return LayerTypeDot11MgmtProbeReq }
+func (m *Dot11MgmtProbeReq) DecodeFromBytes(data []byte, df gopacket.DecodeFeedback) error {
+	m.Payload = data
+	return m.Dot11Mgmt.DecodeFromBytes(data, df)
+}
+
 func (m *Dot11MgmtProbeReq) NextLayerType() gopacket.LayerType {
 	return LayerTypeDot11InformationElement
 }
