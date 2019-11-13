@@ -1828,6 +1828,12 @@ func decodeDot11MgmtProbeReq(data []byte, p gopacket.PacketBuilder) error {
 func (m *Dot11MgmtProbeReq) LayerType() gopacket.LayerType  { return LayerTypeDot11MgmtProbeReq }
 func (m *Dot11MgmtProbeReq) CanDecode() gopacket.LayerClass { return LayerTypeDot11MgmtProbeReq }
 func (m *Dot11MgmtProbeReq) DecodeFromBytes(data []byte, df gopacket.DecodeFeedback) error {
+	if len(data) < 12 {
+		df.SetTruncated()
+
+		return fmt.Errorf("Dot11MgmtProbeResp length %v too short, %v required", len(data), 12)
+	}
+
 	m.Payload = data
 	return m.Dot11Mgmt.DecodeFromBytes(data, df)
 }
