@@ -66,8 +66,8 @@ func (r routeSlice) Swap(i, j int) {
 }
 
 type router struct {
-	ifaces []net.Interface
-	addrs  []ipAddrs
+	ifaces map[int]*net.Interface
+	addrs  map[int]ipAddrs
 	v4, v6 routeSlice
 }
 
@@ -103,10 +103,8 @@ func (r *router) RouteWithSrc(input net.HardwareAddr, src, dst net.IP) (iface *n
 		return
 	}
 
-	// Interfaces are 1-indexed, but we store them in a 0-indexed array.
-	ifaceIndex--
+	iface = r.ifaces[ifaceIndex]
 
-	iface = &r.ifaces[ifaceIndex]
 	if preferredSrc == nil {
 		switch {
 		case dst.To4() != nil:
@@ -123,8 +121,7 @@ func (r *router) route(routes routeSlice, input net.HardwareAddr, src, dst net.I
 	if input != nil {
 		for i, iface := range r.ifaces {
 			if bytes.Equal(input, iface.HardwareAddr) {
-				// Convert from zero- to one-indexed.
-				inputIndex = uint32(i + 1)
+				inputIndex = uint32(i)
 				break
 			}
 		}
@@ -150,7 +147,10 @@ func (r *router) route(routes routeSlice, input net.HardwareAddr, src, dst net.I
 // long-running programs to call New() regularly to take into account any
 // changes to the routing table which have occurred since the last New() call.
 func New() (Router, error) {
-	rtr := &router{}
+	rtr := &router{
+		ifaces: make(map[int]*net.Interface),
+		addrs:  make(map[int]ipAddrs),
+	}
 	tab, err := syscall.NetlinkRIB(syscall.RTM_GETROUTE, syscall.AF_UNSPEC)
 	if err != nil {
 		return nil, err
@@ -211,11 +211,8 @@ loop:
 	if err != nil {
 		return nil, err
 	}
-	for i, iface := range ifaces {
-		if i != iface.Index-1 {
-			return nil, fmt.Errorf("out of order iface %d = %v", i, iface)
-		}
-		rtr.ifaces = append(rtr.ifaces, iface)
+	for _, iface := range ifaces {
+		rtr.ifaces[iface.Index] = &iface
 		var addrs ipAddrs
 		ifaceAddrs, err := iface.Addrs()
 		if err != nil {
@@ -235,7 +232,7 @@ loop:
 				}
 			}
 		}
-		rtr.addrs = append(rtr.addrs, addrs)
+		rtr.addrs[iface.Index] = addrs
 	}
 	return rtr, nil
 }
