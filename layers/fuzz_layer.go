@@ -1,8 +1,7 @@
-// Copyright 2019 Catena cyber All rights reserved.
+// Copyright 2019 The GoPacket Authors. All rights reserved.
 //
-// Use of this source code is governed by a BSD-style license
-// that can be found in the LICENSE file in the root of the source
-// tree.
+// Use of this source code is governed by a BSD-style license that can be found
+// in the LICENSE file in the root of the source tree.
 
 package layers
 
@@ -12,19 +11,24 @@ import (
 	"github.com/google/gopacket"
 )
 
-var fuzzOpts = gopacket.DecodeOptions{
-	Lazy:                     false,
-	NoCopy:                   true,
-	SkipDecodeRecovery:       true,
-	DecodeStreamsAsDatagrams: true,
-}
-
+// FuzzLayer is a fuzz target for the layers package of gopacket
+// A fuzz target is a function processing a binary blob (byte slice)
+// The process here is to interpret this data as a packet, and print the layers contents.
+// The decoding options and the starting layer are encoded in the first bytes.
+// The function returns 1 if this is a valid packet (no error layer)
 func FuzzLayer(data []byte) int {
-	if len(data) < 2 {
-		return 1
+	if len(data) < 3 {
+		return 0
 	}
+	// use the first two bytes to choose the top level layer
 	startLayer := binary.BigEndian.Uint16(data[:2])
-	p := gopacket.NewPacket(data[2:], gopacket.LayerType(startLayer), fuzzOpts)
+	var fuzzOpts = gopacket.DecodeOptions{
+		Lazy:                     data[2]&0x1 != 0,
+		NoCopy:                   data[2]&0x2 != 0,
+		SkipDecodeRecovery:       data[2]&0x4 != 0,
+		DecodeStreamsAsDatagrams: data[2]&0x8 != 0,
+	}
+	p := gopacket.NewPacket(data[3:], gopacket.LayerType(startLayer), fuzzOpts)
 	for _, l := range p.Layers() {
 		gopacket.LayerString(l)
 	}
