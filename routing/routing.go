@@ -212,9 +212,6 @@ loop:
 		return nil, err
 	}
 	for i, iface := range ifaces {
-		if i != iface.Index-1 {
-			return nil, fmt.Errorf("out of order iface %d = %v", i, iface)
-		}
 		rtr.ifaces = append(rtr.ifaces, iface)
 		var addrs ipAddrs
 		ifaceAddrs, err := iface.Addrs()
