@@ -211,7 +211,7 @@ loop:
 	if err != nil {
 		return nil, err
 	}
-	for i, iface := range ifaces {
+	for _, iface := range ifaces {
 		rtr.ifaces = append(rtr.ifaces, iface)
 		var addrs ipAddrs
 		ifaceAddrs, err := iface.Addrs()
