@@ -46,7 +46,7 @@ func (vx *VXLAN) CanDecode() gopacket.LayerClass {
 
 // NextLayerType retuns the next layer we should see after vxlan
 func (vx *VXLAN) NextLayerType() gopacket.LayerType {
-	return LayerTypeEther
+	return LayerTypeEthernet
 }
 
 // DecodeFromBytes takes a byte buffer and decodes
