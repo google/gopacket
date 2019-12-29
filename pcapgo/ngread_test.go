@@ -18,7 +18,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/google/gopacket"
+	"github.com/charles-d-burton/gopacket"
 	"github.com/google/gopacket/layers"
 )
 

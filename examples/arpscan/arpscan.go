@@ -20,7 +20,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/google/gopacket"
+	"github.com/charles-d-burton/gopacket"
 	"github.com/google/gopacket/layers"
 	"github.com/google/gopacket/pcap"
 )

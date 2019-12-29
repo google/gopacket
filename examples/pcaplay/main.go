@@ -17,7 +17,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/google/gopacket"
+	"github.com/charles-d-burton/gopacket"
 	"github.com/google/gopacket/examples/util"
 	"github.com/google/gopacket/pcap"
 )

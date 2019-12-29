@@ -22,7 +22,7 @@ import (
 	"encoding/hex"
 	"flag"
 	"fmt"
-	"github.com/google/gopacket"
+	"github.com/charles-d-burton/gopacket"
 	"github.com/google/gopacket/layers"
 	"github.com/google/gopacket/pcap"
 	"github.com/google/gopacket/tcpassembly"

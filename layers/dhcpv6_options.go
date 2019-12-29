@@ -11,7 +11,7 @@ import (
 	"encoding/binary"
 	"errors"
 	"fmt"
-	"github.com/google/gopacket"
+	"github.com/charles-d-burton/gopacket"
 )
 
 // DHCPv6Opt represents a DHCP option or parameter from RFC-3315

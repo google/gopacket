@@ -13,7 +13,7 @@ import (
 	"log"
 	"os"
 
-	"github.com/google/gopacket"
+	"github.com/charles-d-burton/gopacket"
 	"github.com/google/gopacket/pcapgo"
 )
 

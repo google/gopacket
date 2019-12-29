@@ -14,7 +14,7 @@ import (
 	"net"
 	"time"
 
-	"github.com/google/gopacket"
+	"github.com/charles-d-burton/gopacket"
 )
 
 // MLDv1Message represents the common structure of all MLDv1 messages
