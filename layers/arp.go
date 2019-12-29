@@ -12,8 +12,7 @@ import (
 	"errors"
 	"fmt"
 
-	"github.com/charles-d-burton/gopacket"
-)
+	"github.com/charles-d-burton/gopacket")
 
 // Potential values for ARP.Operation.
 const (
