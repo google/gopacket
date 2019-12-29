@@ -6,9 +6,7 @@
 
 package layers
 
-import (
-	"github.com/charles-d-burton/gopacket"
-)
+import "github.com/charles-d-burton/gopacket"
 
 // BaseLayer is a convenience struct which implements the LayerData and
 // LayerPayload functions of the Layer interface.
