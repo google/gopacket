@@ -12,6 +12,10 @@ import (
 	"testing"
 )
 
+var (
+	opts = gopacket.DecodeOptions{DecodeStreamsAsDatagrams: true}
+)
+
 func init() {
 	opts.DecodeStreamsAsDatagrams = true
 }
