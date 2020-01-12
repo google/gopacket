@@ -11,7 +11,7 @@ import (
 	"encoding/binary"
 	"errors"
 	"fmt"
-	"github.com/google/gopacket"
+	"github.com/dreadl0ck/gopacket"
 	"net"
 )
 

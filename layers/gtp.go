@@ -10,7 +10,7 @@ package layers
 import (
 	"encoding/binary"
 	"fmt"
-	"github.com/google/gopacket"
+	"github.com/dreadl0ck/gopacket"
 )
 
 const gtpMinimumSizeInBytes int = 8

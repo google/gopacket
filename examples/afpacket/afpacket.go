@@ -16,13 +16,13 @@ import (
 	"runtime/pprof"
 	"time"
 
-	"github.com/google/gopacket"
-	"github.com/google/gopacket/afpacket"
-	"github.com/google/gopacket/layers"
-	"github.com/google/gopacket/pcap"
+	"github.com/dreadl0ck/gopacket"
+	"github.com/dreadl0ck/gopacket/afpacket"
+	"github.com/dreadl0ck/gopacket/layers"
+	"github.com/dreadl0ck/gopacket/pcap"
 	"golang.org/x/net/bpf"
 
-	_ "github.com/google/gopacket/layers"
+	_ "github.com/dreadl0ck/gopacket/layers"
 )
 
 var (

@@ -7,7 +7,7 @@
 package layers
 
 import (
-	"github.com/google/gopacket"
+	"github.com/dreadl0ck/gopacket"
 )
 
 // BaseLayer is a convenience struct which implements the LayerData and
