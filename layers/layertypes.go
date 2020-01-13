@@ -10,6 +10,8 @@ import (
 	"github.com/dreadl0ck/gopacket"
 )
 
+var opts = gopacket.Default
+
 var (
 	LayerTypeARP                          = gopacket.RegisterLayerType(10, gopacket.LayerTypeMetadata{Name: "ARP", Decoder: gopacket.DecodeFunc(decodeARP)})
 	LayerTypeCiscoDiscovery               = gopacket.RegisterLayerType(11, gopacket.LayerTypeMetadata{Name: "CiscoDiscovery", Decoder: gopacket.DecodeFunc(decodeCiscoDiscovery)})
