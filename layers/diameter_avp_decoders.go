@@ -16,7 +16,6 @@ type avpDecoder interface {
 
 type diameterOctetString struct {
 	decodedData string
-	padding     uint32
 }
 
 type diameterInteger32 struct {
@@ -47,7 +46,18 @@ type diameterIPAddress struct {
 	decodedData string
 }
 
-func (d diameterIPAddress) getDecodedData() string   { return d.decodedData }
+type diameterEnumerated struct { // vendor code?
+	attributeCode uint32
+	decodedData   uint32
+}
+
+
+func (d diameterIPAddress) getDecodedData() string   {
+	if len(d.decodedData)==4 {
+		return fmt.Sprintf("%d.%d.%d.%d", d.decodedData[0], d.decodedData[1], d.decodedData[2], d.decodedData[3])
+	} // TODO ipv6
+	return d.decodedData
+}
 func (d diameterOctetString) getDecodedData() string { return d.decodedData }
 func (d diameterInteger32) getDecodedData() string   { return strconv.Itoa(int(d.decodedData)) }
 func (d diameterInteger64) getDecodedData() string   { return strconv.Itoa(int(d.decodedData)) }
@@ -60,6 +70,10 @@ func (d diameterUnsigned32) getDecodedData() string {
 func (d diameterUnsigned64) getDecodedData() string {
 	return strconv.FormatUint(uint64(d.decodedData), 10)
 }
+func (d diameterEnumerated) getDecodedData() string {
+	return avpAttributeEnumerations[d.attributeCode][d.decodedData]
+}
+
 
 func (d *diameterOctetString) decode(data []byte) error {
 	dataLen := len(data)
@@ -154,7 +168,18 @@ func (d *diameterIPAddress) decode(data []byte) error {
 	return nil
 }
 
-func getAVPFormatDecoder(avpFormat string) avpDecoder {
+func (d *diameterEnumerated) decode(data []byte) error {
+
+	if len(data) != 4 {
+		return errors.New("not enough data to decode Enumerated (Unsigned Interger32)")
+	}
+
+	d.decodedData = binary.BigEndian.Uint32(data)
+
+	return nil
+}
+
+func getAVPFormatDecoder(avpFormat string, attributeCode uint32) avpDecoder {
 	switch avpFormat {
 	case "OctetString":
 		return &diameterOctetString{}
@@ -180,8 +205,18 @@ func getAVPFormatDecoder(avpFormat string) avpDecoder {
 		return &diameterUnsigned32{}
 	case "VendorId":
 		return &diameterUnsigned64{}
+	case "Enumerated":
+		// parse value as Unsigned32, map value per attributeCode
+		return &diameterEnumerated{attributeCode: attributeCode}
+	case "Time":
+		// RFC6733 specifies Time as octetstring, but with length of 4 and uint32 defined as having network
+		// byte order (big endian), it is equivalent to uint32. TODO: ntp extension for times > year 2036
+		return &diameterUnsigned32{}
+	case "Grouped":
+		return &diameterOctetString{}
 	default:
 		// TODO: add other AVP Formats covered in RFC 6733
+		// IPFilterRule, DiameterURI
 		return nil
 	}
 }
