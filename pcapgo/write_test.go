@@ -14,6 +14,20 @@ import (
 	"github.com/google/gopacket"
 )
 
+func TestWriteHeaderNanos(t *testing.T) {
+	var buf bytes.Buffer
+	w := NewWriterNanos(&buf)
+	w.WriteFileHeader(0x1234, 0x56)
+	want := []byte{
+		0x4d, 0x3c, 0xb2, 0xa1, 0x02, 0x00, 0x04, 0x00,
+		0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+		0x34, 0x12, 0x00, 0x00, 0x56, 0x00, 0x00, 0x00,
+	}
+	if got := buf.Bytes(); !bytes.Equal(got, want) {
+		t.Errorf("buf mismatch:\nwant: %+v\ngot:  %+v", want, got)
+	}
+}
+
 func TestWriteHeader(t *testing.T) {
 	var buf bytes.Buffer
 	w := NewWriter(&buf)
