@@ -66,7 +66,7 @@ func (r routeSlice) Swap(i, j int) {
 }
 
 type router struct {
-	ifaces map[int]net.Interface
+	ifaces map[int]*net.Interface
 	addrs  map[int]ipAddrs
 	v4, v6 routeSlice
 }
@@ -103,11 +103,7 @@ func (r *router) RouteWithSrc(input net.HardwareAddr, src, dst net.IP) (iface *n
 		return
 	}
 
-	routeIface := r.ifaces[ifaceIndex]
-	// Copy the returned iface to return
-	ifaceHWAddr := make([]byte, len(routeIface.HardwareAddr))
-	copy(ifaceHWAddr, routeIface.HardwareAddr)
-	iface = &net.Interface{Index: routeIface.Index, MTU: routeIface.MTU, Name: routeIface.Name, HardwareAddr: ifaceHWAddr, Flags: routeIface.Flags}
+	iface = r.ifaces[ifaceIndex]
 
 	if preferredSrc == nil {
 		switch {
@@ -125,7 +121,6 @@ func (r *router) route(routes routeSlice, input net.HardwareAddr, src, dst net.I
 	if input != nil {
 		for i, iface := range r.ifaces {
 			if bytes.Equal(input, iface.HardwareAddr) {
-				// Convert from zero- to one-indexed.
 				inputIndex = uint32(i)
 				break
 			}
@@ -152,7 +147,7 @@ func (r *router) route(routes routeSlice, input net.HardwareAddr, src, dst net.I
 // long-running programs to call New() regularly to take into account any
 // changes to the routing table which have occurred since the last New() call.
 func New() (Router, error) {
-	rtr := &router{ifaces: make(map[int]net.Interface), addrs: make(map[int]ipAddrs)}
+	rtr := &router{ifaces: make(map[int]*net.Interface), addrs: make(map[int]ipAddrs)}
 	tab, err := syscall.NetlinkRIB(syscall.RTM_GETROUTE, syscall.AF_UNSPEC)
 	if err != nil {
 		return nil, err
@@ -214,7 +209,8 @@ loop:
 		return nil, err
 	}
 	for _, iface := range ifaces {
-		rtr.ifaces[iface.Index] = iface
+		currentIface := iface
+		rtr.ifaces[iface.Index] = &currentIface
 		var addrs ipAddrs
 		ifaceAddrs, err := iface.Addrs()
 		if err != nil {
