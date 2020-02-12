@@ -40,7 +40,17 @@ type AVP struct {
 	// Used to decode the specific format of the AVP
 	decoder avpDecoder
 
-	Grouped	[]*AVP
+	Grouped []*AVP
+}
+
+func (a *AVP) IsVendorSpecific() bool {
+	return a.Flags&128 != 0
+}
+func (a *AVP) IsMandatory() bool {
+	return a.Flags&64 != 0
+}
+func (a *AVP) IsProtected() bool {
+	return a.Flags&32 != 0
 }
 
 func (a *AVP) setVendor(data []byte) {
@@ -156,6 +166,19 @@ func (d *Diameter) Payload() []byte {
 	return nil
 }
 
+func (d *Diameter) IsRequest() bool {
+	return d.Flags&128 != 0
+}
+func (d *Diameter) IsAnswer() bool {
+	return !d.IsRequest()
+}
+func (d *Diameter) IsProxyable() bool {
+	return d.Flags&64 != 0
+}
+func (d *Diameter) IsError() bool {
+	return d.Flags&32 != 0
+}
+
 func decodeAVP(data []byte) (*AVP, error) {
 	avp := new(AVP)
 	avp.Flags = data[4]
@@ -178,7 +201,7 @@ func decodeAVP(data []byte) (*AVP, error) {
 	avp.setPadding()
 
 	// if group, iterate through
-	if avp.AttributeFormat=="Grouped" {
+	if avp.AttributeFormat == "Grouped" {
 		avp.Grouped = make([]*AVP, 0)
 		data = avp.Value
 		i := 0

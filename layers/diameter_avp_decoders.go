@@ -7,6 +7,7 @@ import (
 	"math"
 	"net"
 	"strconv"
+	"time"
 )
 
 type avpDecoder interface {
@@ -51,9 +52,12 @@ type diameterEnumerated struct { // vendor code?
 	decodedData   uint32
 }
 
+type diameterTime struct {
+	decodedData time.Time
+}
 
-func (d diameterIPAddress) getDecodedData() string   {
-	if len(d.decodedData)==4 {
+func (d diameterIPAddress) getDecodedData() string {
+	if len(d.decodedData) == 4 {
 		return fmt.Sprintf("%d.%d.%d.%d", d.decodedData[0], d.decodedData[1], d.decodedData[2], d.decodedData[3])
 	} // TODO ipv6
 	return d.decodedData
@@ -73,7 +77,9 @@ func (d diameterUnsigned64) getDecodedData() string {
 func (d diameterEnumerated) getDecodedData() string {
 	return avpAttributeEnumerations[d.attributeCode][d.decodedData]
 }
-
+func (d diameterTime) getDecodedData() string {
+	return d.decodedData.String()
+}
 
 func (d *diameterOctetString) decode(data []byte) error {
 	dataLen := len(data)
@@ -90,7 +96,7 @@ func (d *diameterOctetString) decode(data []byte) error {
 func (d *diameterUnsigned32) decode(data []byte) error {
 
 	if len(data) != 4 {
-		return errors.New("not enough data to decode Unsigned Interger32")
+		return errors.New("not enough data to decode Unsigned Integer32")
 	}
 
 	d.decodedData = binary.BigEndian.Uint32(data)
@@ -101,7 +107,7 @@ func (d *diameterUnsigned32) decode(data []byte) error {
 func (d *diameterUnsigned64) decode(data []byte) error {
 
 	if len(data) != 8 {
-		return errors.New("not enough data to decode Unsigned Interger64")
+		return errors.New("not enough data to decode Unsigned Integer64")
 	}
 
 	d.decodedData = binary.BigEndian.Uint64(data)
@@ -112,7 +118,7 @@ func (d *diameterUnsigned64) decode(data []byte) error {
 func (d *diameterInteger32) decode(data []byte) error {
 
 	if len(data) != 4 {
-		return errors.New("not enough data to decode Unsigned Interger32")
+		return errors.New("not enough data to decode Unsigned Integer32")
 	}
 
 	d.decodedData = int32(binary.BigEndian.Uint32(data))
@@ -123,7 +129,7 @@ func (d *diameterInteger32) decode(data []byte) error {
 func (d *diameterInteger64) decode(data []byte) error {
 
 	if len(data) != 8 {
-		return errors.New("not enough data to decode Unsigned Interger64")
+		return errors.New("not enough data to decode Unsigned Integer64")
 	}
 
 	d.decodedData = int64(binary.BigEndian.Uint64(data))
@@ -134,7 +140,7 @@ func (d *diameterInteger64) decode(data []byte) error {
 func (d *diameterFloat32) decode(data []byte) error {
 
 	if len(data) != 4 {
-		return errors.New("not enough data to decode Unsigned Interger32")
+		return errors.New("not enough data to decode Unsigned Integer32")
 	}
 
 	d.decodedData = math.Float32frombits(binary.BigEndian.Uint32(data))
@@ -145,7 +151,7 @@ func (d *diameterFloat32) decode(data []byte) error {
 func (d *diameterFloat64) decode(data []byte) error {
 
 	if len(data) != 8 {
-		return errors.New("not enough data to decode Unsigned Interger64")
+		return errors.New("not enough data to decode Unsigned Integer64")
 	}
 
 	d.decodedData = math.Float64frombits(binary.BigEndian.Uint64(data))
@@ -158,7 +164,7 @@ func (d *diameterIPAddress) decode(data []byte) error {
 	var ip net.IP
 	// IPv4 is 4 bytes, IPv6 is 16 bytes. add 2 bytes each which is the chunk representing the type of the address (first two bits of data)
 	if len(data) != 6 && len(data) != 18 {
-		return errors.New("not enough data to decode Unsigned Interger64")
+		return errors.New("not enough data to decode Unsigned Integer64")
 	}
 
 	// byte 0 and 1 will representing the type of the address which is either v4 or v6 in the IP addresses case
@@ -171,10 +177,30 @@ func (d *diameterIPAddress) decode(data []byte) error {
 func (d *diameterEnumerated) decode(data []byte) error {
 
 	if len(data) != 4 {
-		return errors.New("not enough data to decode Enumerated (Unsigned Interger32)")
+		return errors.New("not enough data to decode Enumerated (Unsigned Integer32)")
 	}
 
 	d.decodedData = binary.BigEndian.Uint32(data)
+
+	return nil
+}
+
+func (d *diameterTime) decode(data []byte) error {
+
+	// RFC6733 specifies Time as octetstring, but with length of 4 and uint32 defined as having network
+	// byte order (big endian), it is equivalent to uint32.
+	if len(data) != 4 {
+		return errors.New("not enough data to decode Time")
+	}
+	ntp_timestamp := binary.BigEndian.Uint32(data)
+	unix_timestamp := int64(ntp_timestamp) - 2208988800
+
+	// if we see a date < year 2000, then we've overflowed into the next NTP era
+	if ntp_timestamp < 3174737699 {
+		unix_timestamp += int64(^uint32(0)) + 1
+	}
+
+	d.decodedData = time.Unix(unix_timestamp, 0)
 
 	return nil
 }
@@ -209,9 +235,7 @@ func getAVPFormatDecoder(avpFormat string, attributeCode uint32) avpDecoder {
 		// parse value as Unsigned32, map value per attributeCode
 		return &diameterEnumerated{attributeCode: attributeCode}
 	case "Time":
-		// RFC6733 specifies Time as octetstring, but with length of 4 and uint32 defined as having network
-		// byte order (big endian), it is equivalent to uint32. TODO: ntp extension for times > year 2036
-		return &diameterUnsigned32{}
+		return &diameterTime{}
 	case "Grouped":
 		return &diameterOctetString{}
 	default:
