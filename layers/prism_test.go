@@ -11,7 +11,7 @@ import (
 	"reflect"
 	"testing"
 
-	"github.com/dreadl0ck/gopacket"
+	"github.com/google/gopacket"
 )
 
 // Generator: python layers/test_creator.py --layerType=LayerTypePrismHeader --linkType=LinkTypePrismHeader --name=Prism%s ~/tmp/dump.pcap

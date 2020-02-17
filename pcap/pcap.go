@@ -22,8 +22,8 @@ import (
 	"time"
 	"unsafe"
 
-	"github.com/dreadl0ck/gopacket"
-	"github.com/dreadl0ck/gopacket/layers"
+	"github.com/google/gopacket"
+	"github.com/google/gopacket/layers"
 )
 
 // ErrNotActive is returned if handle is not activated

@@ -10,10 +10,11 @@ package layers
 
 import (
 	"crypto/rand"
-	"github.com/dreadl0ck/gopacket"
 	"io"
 	"reflect"
 	"testing"
+
+	"github.com/google/gopacket"
 )
 
 //******************************************************************************

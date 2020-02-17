@@ -8,10 +8,11 @@
 package layers
 
 import (
-	"github.com/dreadl0ck/gopacket"
 	"net"
 	"reflect"
 	"testing"
+
+	"github.com/google/gopacket"
 )
 
 // testPacketICMPv6 is the packet:

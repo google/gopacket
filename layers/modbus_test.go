@@ -8,9 +8,10 @@ package layers
 
 import (
 	"fmt"
-	"github.com/dreadl0ck/gopacket"
 	"reflect"
 	"testing"
+
+	"github.com/google/gopacket"
 )
 
 func init() {

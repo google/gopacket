@@ -46,8 +46,9 @@ package tcpreader
 
 import (
 	"errors"
-	"github.com/dreadl0ck/gopacket/tcpassembly"
 	"io"
+
+	"github.com/google/gopacket/tcpassembly"
 )
 
 var discardBuffer = make([]byte, 4096)

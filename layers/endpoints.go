@@ -8,9 +8,10 @@ package layers
 
 import (
 	"encoding/binary"
-	"github.com/dreadl0ck/gopacket"
 	"net"
 	"strconv"
+
+	"github.com/google/gopacket"
 )
 
 var (

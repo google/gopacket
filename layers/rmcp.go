@@ -11,7 +11,7 @@ package layers
 import (
 	"fmt"
 
-	"github.com/dreadl0ck/gopacket"
+	"github.com/google/gopacket"
 )
 
 // RMCPClass is the class of a RMCP layer's payload, e.g. ASF or IPMI. This is a

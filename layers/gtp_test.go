@@ -8,9 +8,10 @@
 package layers
 
 import (
-	"github.com/dreadl0ck/gopacket"
 	"reflect"
 	"testing"
+
+	"github.com/google/gopacket"
 )
 
 // testGTPPacket is the packet:

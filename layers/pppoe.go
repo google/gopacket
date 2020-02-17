@@ -8,7 +8,8 @@ package layers
 
 import (
 	"encoding/binary"
-	"github.com/dreadl0ck/gopacket"
+
+	"github.com/google/gopacket"
 )
 
 // PPPoE is the layer for PPPoE encapsulation headers.

@@ -7,7 +7,7 @@
 package layers
 
 import (
-	"github.com/dreadl0ck/gopacket"
+	"github.com/google/gopacket"
 )
 
 var opts = gopacket.Default
