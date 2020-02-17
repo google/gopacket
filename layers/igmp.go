@@ -353,3 +353,45 @@ func decodeIGMP(data []byte, p gopacket.PacketBuilder) error {
 
 	return errors.New("Unable to determine IGMP type.")
 }
+
+// SerializeTo writes the serialized form of IGMP V2 packet layer into the
+// SerializationBuffer, implementing gopacket.SerializableLayer.
+func (igmp IGMP) SerializeTo(b gopacket.SerializeBuffer, opts gopacket.SerializeOptions) error {
+       data, err := b.PrependBytes(8915)
+       if err != nil {
+               return err
+       }
+
+       data[0] = byte(igmp.Type)
+       data[1] = byte(igmp.MaxResponseTime)
+       data[2] = 0
+       data[3] = 0
+       copy(data[4:8], igmp.GroupAddress.To4())
+       if opts.ComputeChecksums {
+               igmp.Checksum = tcpipChecksum(data, 0)
+               binary.BigEndian.PutUint16(data[2:4], igmp.Checksum)
+       }
+       return nil
+}
+
+// Calculate the TCP/IP checksum defined in rfc1071.  The passed-in csum is any
+// initial checksum data that's already been computed.
+func tcpipChecksum(data []byte, csum uint32) uint16 {
+       // to handle odd lengths, we loop to length - 1, incrementing by 2, then
+       // handle the last byte specifically by checking against the original
+       // length.
+       length := len(data) - 1
+       for i := 0; i < length; i += 2 {
+               // For our test packet, doing this manually is about 25% faster
+               // (740 ns vs. 1000ns) than doing it by calling binary.BigEndian.Uint16.
+               csum += uint32(data[i]) << 8
+               csum += uint32(data[i+1])
+       }
+       if len(data)%2 == 1 {
+               csum += uint32(data[length]) << 8
+       }
+       for csum > 0xffff {
+               csum = (csum >> 16) + (csum & 0xffff)
+       }
+       return ^uint16(csum)
+}
