@@ -357,11 +357,11 @@ func decodeIGMP(data []byte, p gopacket.PacketBuilder) error {
 // SerializeTo writes the serialized form of IGMP V2 and V3 packet layer into the
 // SerializationBuffer, implementing gopacket.SerializableLayer.
 func (igmp IGMP) SerializeTo(b gopacket.SerializeBuffer, opts gopacket.SerializeOptions) error {
-       data, err := b.PrependBytes(8915)
-       if err != nil {
-               return err
-       }
        if igmp.Version == 2 {
+	        data, err := b.PrependBytes(8)
+                if err != nil {
+                        return err
+                }
                 data[0] = byte(igmp.Type)
                 data[1] = byte(igmp.MaxResponseTime)
                 data[2] = 0
@@ -372,6 +372,14 @@ func (igmp IGMP) SerializeTo(b gopacket.SerializeBuffer, opts gopacket.Serialize
                         binary.BigEndian.PutUint16(data[2:4], igmp.Checksum)
                 }
        } else if igmp.Version ==3{
+	        size := 8;
+                for grp := 0; grp < int(igmp.NumberOfGroupRecords); grp++ {
+                        size = size + 8 + int(igmp.GroupRecords[grp].NumberOfSources) * 4
+                }
+                data, err := b.PrependBytes(size)
+                if err != nil {
+                        return err
+                }
                 data[0] = byte(igmp.Type)
                 data[1] = 0
                 data[2] = 0
