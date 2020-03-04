@@ -8,8 +8,10 @@
 package layers
 
 import (
-	"github.com/google/gopacket"
+	"reflect"
 	"testing"
+
+	"github.com/google/gopacket"
 )
 
 // testPacketICMPv6RouterAdvertisement is the packet:
@@ -99,4 +101,20 @@ func TestPacketICMPv6EchoRequest(t *testing.T) {
 		t.Error("Failed to decode packet:", p.ErrorLayer().Error())
 	}
 	checkLayers(p, []gopacket.LayerType{LayerTypeEthernet, LayerTypeIPv6, LayerTypeICMPv6, LayerTypeICMPv6Echo}, t)
+	checkSerialization(p, t)
+	if got, ok := p.Layer(LayerTypeICMPv6Echo).(*ICMPv6Echo); ok {
+		want := &ICMPv6Echo{
+			BaseLayer: BaseLayer{
+				Contents: []uint8{0x1b, 0xf9, 0x0, 0x1},
+				Payload:  []uint8{0xa5, 0x61, 0x57, 0x5e, 0x0, 0x0, 0x0, 0x0, 0x1d, 0x9f, 0x7, 0x0, 0x0, 0x0, 0x0, 0x0, 0x47, 0x6f, 0x47, 0x6f, 0x47, 0x6f, 0x47, 0x6f, 0x47, 0x6f, 0x47, 0x6f, 0x47, 0x6f, 0x47, 0x6f, 0x47, 0x6f, 0x47, 0x6f, 0x47, 0x6f, 0x47, 0x6f, 0x47, 0x6f, 0x47, 0x6f, 0x47, 0x6f, 0x47, 0x6f, 0x47, 0x6f, 0x47, 0x6f, 0x47, 0x6f, 0x47, 0x6f},
+			},
+			Identifier: 7161,
+			SeqNumber:  1,
+		}
+		if !reflect.DeepEqual(got, want) {
+			t.Errorf("ICMPv6Echo packet processing failed:\ngot  :\n%#v\n\nwant :\n%#v\n\n", got, want)
+		}
+	} else {
+		t.Error("No ICMPv6Echo layer type found in packet")
+	}
 }
