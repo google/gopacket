@@ -8,11 +8,10 @@ package layers
 
 import (
 	"bytes"
+	"github.com/google/gopacket"
 	"net"
 	"reflect"
 	"testing"
-
-	"github.com/google/gopacket"
 )
 
 func TestSerializeIPv6HeaderTLVOptions(t *testing.T) {
