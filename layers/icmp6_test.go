@@ -8,10 +8,11 @@
 package layers
 
 import (
-	"github.com/google/gopacket"
 	"net"
 	"reflect"
 	"testing"
+
+	"github.com/google/gopacket"
 )
 
 // testPacketICMPv6 is the packet:
@@ -56,6 +57,7 @@ func TestPacketICMPv6(t *testing.T) {
 			HopLimit:     255,
 			SrcIP:        net.IP{0x26, 0x20, 0x0, 0x0, 0x10, 0x5, 0x0, 0x0, 0x26, 0xbe, 0x5, 0xff, 0xfe, 0x27, 0xb, 0x17},
 			DstIP:        net.IP{0xfe, 0x80, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x2, 0x1f, 0xca, 0xff, 0xfe, 0xb3, 0x76, 0x40},
+			hbh:          &IPv6HopByHop{},
 		}
 		if !reflect.DeepEqual(got, want) {
 			t.Errorf("IPv6 packet processing failed:\ngot  :\n%#v\n\nwant :\n%#v\n\n", got, want)

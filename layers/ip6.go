@@ -39,7 +39,7 @@ type IPv6 struct {
 	DstIP        net.IP
 	HopByHop     *IPv6HopByHop
 	// hbh will be pointed to by HopByHop if that layer exists.
-	hbh IPv6HopByHop
+	hbh *IPv6HopByHop
 }
 
 // LayerType returns LayerTypeIPv6
@@ -233,6 +233,7 @@ func (ipv6 *IPv6) DecodeFromBytes(data []byte, df gopacket.DecodeFeedback) error
 	ipv6.DstIP = data[24:40]
 	ipv6.HopByHop = nil
 	ipv6.BaseLayer = BaseLayer{data[:40], data[40:]}
+	ipv6.hbh = &IPv6HopByHop{}
 
 	// We treat a HopByHop IPv6 option as part of the IPv6 packet, since its
 	// options are crucial for understanding what's actually happening per packet.
@@ -241,7 +242,7 @@ func (ipv6 *IPv6) DecodeFromBytes(data []byte, df gopacket.DecodeFeedback) error
 		if err != nil {
 			return err
 		}
-		ipv6.HopByHop = &ipv6.hbh
+		ipv6.HopByHop = ipv6.hbh
 		pEnd, jumbo, err := getIPv6HopByHopJumboLength(ipv6.HopByHop)
 		if err != nil {
 			return err
