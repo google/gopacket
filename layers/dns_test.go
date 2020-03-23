@@ -358,6 +358,36 @@ func testResourceEqual(t *testing.T, i int, name string, exp, got DNSResourceRec
 			t.Errorf("expected %s[%d].OPT[%d].Data = %v, got %v", name, i, j, exp.OPT[j].Data, got.OPT[j].Data)
 		}
 	}
+
+	// NAPTR
+	if exp.NAPTR.Order != got.NAPTR.Order {
+		t.Errorf("expected %s[%d].NAPTR.Order = %v, got %v", name, i, exp.NAPTR.Order, got.NAPTR.Order)
+	}
+	if exp.NAPTR.Preference != got.NAPTR.Preference {
+		t.Errorf("expected %s[%d].NAPTR.Preference = %v, got %v", name, i, exp.NAPTR.Preference, got.NAPTR.Preference)
+	}
+
+	for j, v := range exp.NAPTR.Flags {
+		if !bytes.Equal(v, got.NAPTR.Flags[j]) {
+			t.Errorf("expected %s[%d].NAPTR.Flags = %v, got %v", name, i, exp.NAPTR.Flags, got.NAPTR.Flags)
+		}
+	}
+
+	for j, v := range exp.NAPTR.Services {
+		if !bytes.Equal(v, got.NAPTR.Services[j]) {
+			t.Errorf("expected %s[%d].NAPTR.Services = %v, got %v", name, i, exp.NAPTR.Services, got.NAPTR.Services)
+		}
+	}
+
+	for j, v := range exp.NAPTR.Regexp {
+		if !bytes.Equal(v, got.NAPTR.Regexp[j]) {
+			t.Errorf("expected %s[%d].NAPTR.Regexp = %v, got %v", name, i, exp.NAPTR.Regexp, got.NAPTR.Regexp)
+		}
+	}
+
+	if !bytes.Equal(exp.NAPTR.Replacement, got.NAPTR.Replacement) {
+		t.Errorf("expected %s[%d].NAPTR.Replacement = %v, got %v", name, i, exp.NAPTR.Replacement, got.NAPTR.Replacement)
+	}
 }
 
 func testDNSEqual(t *testing.T, exp, got *DNS) {
@@ -1126,5 +1156,83 @@ func TestDNSPacketWriteAnswer(t *testing.T) {
 	t.Log(gopacket.LayerString(dns2))
 	if want, got := 86, len(buf.Bytes()); want != got {
 		t.Fatalf("Encoded size, want %d got %d", want, got)
+	}
+}
+
+var testParseDNSTypeNAPTR = []byte{
+	0x00, 0x90, 0x0b, 0x12, 0x91, 0xc1, 0x00, 0x1c, 0xc0, 0x93, 0x33, 0xfb, 0x08, 0x00, 0x45, 0xe0,
+	0x00, 0xc7, 0x21, 0x14, 0x40, 0x00, 0xfb, 0x11, 0x3e, 0x78, 0xac, 0x10, 0x01, 0xc7, 0x4b, 0x4b,
+	0x4b, 0x4b, 0x00, 0x35, 0x4e, 0xf5, 0x00, 0xb3, 0x62, 0xf1, 0x3e, 0x55, 0x84, 0x00, 0x00, 0x01,
+	0x00, 0x01, 0x00, 0x00, 0x00, 0x00, 0x01, 0x35, 0x01, 0x35, 0x01, 0x35, 0x01, 0x35, 0x01, 0x35,
+	0x01, 0x35, 0x01, 0x35, 0x01, 0x35, 0x01, 0x35, 0x01, 0x35, 0x01, 0x35, 0x01, 0x35, 0x01, 0x35,
+	0x04, 0x65, 0x31, 0x36, 0x34, 0x04, 0x74, 0x74, 0x74, 0x74, 0x00, 0x00, 0x23, 0x00, 0x01, 0xc0,
+	0x0c, 0x00, 0x23, 0x00, 0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x6a, 0x00, 0x64, 0x00, 0x0a, 0x01,
+	0x75, 0x0c, 0x65, 0x32, 0x75, 0x2b, 0x70, 0x73, 0x74, 0x6e, 0x3a, 0x73, 0x69, 0x70, 0x55, 0x21,
+	0x5e, 0x2e, 0x2a, 0x24, 0x21, 0x73, 0x69, 0x70, 0x3a, 0x2b, 0x34, 0x34, 0x34, 0x34, 0x34, 0x34,
+	0x34, 0x34, 0x34, 0x34, 0x34, 0x34, 0x34, 0x3b, 0x6e, 0x6e, 0x6e, 0x6e, 0x3b, 0x6e, 0x6e, 0x3d,
+	0x2b, 0x35, 0x35, 0x35, 0x35, 0x35, 0x35, 0x35, 0x35, 0x35, 0x43, 0x30, 0x37, 0x37, 0x31, 0x35,
+	0x35, 0x35, 0x35, 0x35, 0x35, 0x35, 0x35, 0x35, 0x40, 0x74, 0x74, 0x74, 0x2e, 0x74, 0x74, 0x74,
+	0x74, 0x74, 0x74, 0x74, 0x74, 0x2e, 0x74, 0x74, 0x3b, 0x75, 0x73, 0x65, 0x72, 0x3d, 0x70, 0x68,
+	0x6f, 0x6e, 0x65, 0x21, 0x00,
+}
+
+func TestParseDNSTypeNAPTR(t *testing.T) {
+	p := gopacket.NewPacket(testParseDNSTypeNAPTR, LinkTypeEthernet, testDecodeOptions)
+
+	if p.ErrorLayer() != nil {
+		t.Error("Failed to decode packet:", p.ErrorLayer().Error())
+	}
+
+	checkLayers(p, []gopacket.LayerType{LayerTypeEthernet, LayerTypeIPv4, LayerTypeUDP, LayerTypeDNS}, t)
+
+	questions := p.Layer(LayerTypeDNS).(*DNS).Questions
+	if len(questions) != 1 {
+		t.Error("Failed to parse 1 DNS question")
+	}
+
+	answers := p.Layer(LayerTypeDNS).(*DNS).Answers
+	if len(answers) != 1 {
+		t.Error("Failed to parse 1 DNS answer")
+	}
+
+	dns := &DNS{ID: 1234, QR: false, OpCode: DNSOpCodeQuery, AA: true, RD: false, RA: false}
+
+	testQuestion := DNSQuestion{
+		Name:  []byte("5.5.5.5.5.5.5.5.5.5.5.5.5.e164.tttt"),
+		Type:  DNSTypeNAPTR,
+		Class: DNSClassIN,
+	}
+
+	testAnswer := DNSResourceRecord{
+		Name:       []byte("5.5.5.5.5.5.5.5.5.5.5.5.5.e164.tttt"),
+		Type:       DNSTypeNAPTR,
+		Class:      DNSClassIN,
+		TTL:        0,
+		DataLength: 106,
+		NAPTR: NAPTR{
+			Order:      100,
+			Preference: 10,
+			Flags:      [][]byte{[]byte("u")},
+			Services:   [][]byte{[]byte("e2u+pstn:sip")},
+			Regexp:     [][]byte{[]byte("!^.*$!sip:+4444444444444;nnnn;nn=+555555555C0771555555555@ttt.tttttttt.tt;user=phone!")},
+		},
+	}
+
+	dns.Questions = append(dns.Questions, testQuestion)
+	dns.Answers = append(dns.Answers, testAnswer)
+
+	testQuestionEqual(t, 0, testQuestion, dns.Questions[0])
+	testResourceEqual(t, 0, "Answers", testAnswer, dns.Answers[0])
+
+	recordSize := recSize(&answers[0])
+	if recordSize != int(testAnswer.DataLength) {
+		t.Errorf("NAPTR record could not be deccoded successfully, expected expected size %d got %d", testAnswer.DataLength, recSize(&answers[0]))
+	}
+
+	buf := gopacket.NewSerializeBuffer()
+	opts := gopacket.SerializeOptions{FixLengths: true}
+	err := gopacket.SerializeLayers(buf, opts, dns)
+	if err != nil {
+		t.Fatal(err)
 	}
 }
