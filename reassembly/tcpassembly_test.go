@@ -7,6 +7,7 @@
 package reassembly
 
 import (
+	"bytes"
 	"encoding/hex"
 	"fmt"
 	"net"
@@ -1861,5 +1862,67 @@ func TestFullyOrderedAndCompleteStreamDoesNotAlloc(t *testing.T) {
 	// +1 for first packet and +1 because AllocsPerRun seems to run fun N+1 times.
 	if tf.bytes != 10*2*(N+1+1) {
 		t.Error(tf.bytes, "bytes handled, expected", 10*2*(N+1+1))
+	}
+}
+
+type testCustomContext int
+
+func (c testCustomContext) GetCaptureInfo() gopacket.CaptureInfo {
+	// We're just abusing the InterfaceIndex to identify the context, no other
+	// meaning here.
+	return gopacket.CaptureInfo{InterfaceIndex: int(c)}
+}
+
+// Make sure reassemblyObject.CaptureInfo conforms to ScatterGather interface.
+func TestReassemblyObjectCaptureInfo(t *testing.T) {
+	// Add 20 bytes worth of data into a reassemblyObject.
+	all := []byteContainer{
+		&page{
+			bytes: bytes.Repeat([]byte("1"), 10),
+			ac:    testCustomContext(1203),
+		},
+		&livePacket{
+			bytes: bytes.Repeat([]byte("1"), 10),
+			ac:    testCustomContext(794598214),
+		},
+	}
+	ro := &reassemblyObject{all: all}
+
+	testCases := []struct {
+		offset   int
+		expected testCustomContext
+	}{
+		{
+			offset: -1,
+		},
+		{
+			offset:   0,
+			expected: testCustomContext(1203),
+		},
+		{
+			offset:   5,
+			expected: testCustomContext(1203),
+		},
+		{
+			offset:   10,
+			expected: testCustomContext(794598214),
+		},
+		{
+			offset:   19,
+			expected: testCustomContext(794598214),
+		},
+		{
+			offset: 20,
+		},
+		{
+			offset: 1000000,
+		},
+	}
+	for _, c := range testCases {
+		expected := c.expected.GetCaptureInfo()
+		ci := ro.CaptureInfo(c.offset)
+		if !reflect.DeepEqual(expected, ci) {
+			t.Errorf("test CaptureInfo(%d):\nwant: %v\n got: %v\n", c.offset, expected, ci)
+		}
 	}
 }
