@@ -214,17 +214,17 @@ func (h *TPacket) setUpRing() (err error) {
 	return nil
 }
 
-// Finalize closes the socket (if needed) and also unmaps the ring buffer.
-// This invalidates any previous zero-copy read data. May be called manually to
-// force immediate clean-up, but otherwise will be called automatically when
+// finalize closes the socket (if needed) and also unmaps the ring buffer.
+// This invalidates any previous zero-copy read data. Called if an in-progress
+// read detects the closure, but otherwise will be called automatically when
 // TPacket is garbage collected.
-func (h *TPacket) Finalize() {
+func (h *TPacket) finalize() {
 	runtime.SetFinalizer(h, nil)
 	h.Close()
 	if h.ring != nil {
 		unix.Munmap(h.ring)
+		h.ring = nil
 	}
-	h.ring = nil
 }
 
 // Close closes the socket and causes any pending reads to return an error.
@@ -236,7 +236,7 @@ func (h *TPacket) Close() {
 		unix.Close(h.fd)
 	}
 	// There may still be outstanding references to the ring buffer,
-	// so h.ring is not unmapped until Finalize().
+	// so h.ring is not unmapped until finalize().
 }
 
 // NewTPacket returns a new TPacket object for reading packets off the wire.
@@ -267,7 +267,7 @@ func NewTPacket(opts ...interface{}) (h *TPacket, err error) {
 	if err = h.InitSocketStats(); err != nil {
 		goto errlbl
 	}
-	runtime.SetFinalizer(h, (*TPacket).Finalize)
+	runtime.SetFinalizer(h, (*TPacket).finalize)
 	return h, nil
 errlbl:
 	h.Close()
@@ -296,9 +296,8 @@ func (h *TPacket) releaseCurrentPacket() error {
 // ZeroCopyReadPacketData reads the next packet off the wire, and returns its data.
 // The slice returned by ZeroCopyReadPacketData points to bytes owned by the
 // TPacket.  Each call to ZeroCopyReadPacketData invalidates any data previously
-// returned by ZeroCopyReadPacketData, as does calling Finalize.
-// Care must be taken not to keep pointers to old bytes when using
-// ZeroCopyReadPacketData... if you need to keep data past
+// returned by ZeroCopyReadPacketData.  Care must be taken not to keep pointers
+// to old bytes when using ZeroCopyReadPacketData... if you need to keep data past
 // the next time you call ZeroCopyReadPacketData, use ReadPacketData, which copies
 // the bytes into a new buffer for you.
 //  tp, _ := NewTPacket(...)
@@ -315,6 +314,10 @@ retry:
 		h.current = h.getTPacketHeader()
 		if err = h.pollForFirstPacket(h.current); err != nil {
 			h.headerNextNeeded = false
+			if h.fdClosed {
+				// Old data no longer valid, so OK to unmap the ring.
+				h.finalize()
+			}
 			h.mu.Unlock()
 			return
 		}
