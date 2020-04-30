@@ -103,6 +103,8 @@ type TPacket struct {
 	stats Stats
 	// fd is the C file descriptor.
 	fd int
+	// fdClosed indicates the fd has been closed.
+	fdClosed bool
 	// ring points to the memory space of the ring buffer shared by tpacket and the kernel.
 	ring []byte
 	// rawring is the unsafe pointer that we use to poll for packets
@@ -212,18 +214,29 @@ func (h *TPacket) setUpRing() (err error) {
 	return nil
 }
 
-// Close cleans up the TPacket.  It should not be used after the Close call.
-func (h *TPacket) Close() {
-	if h.fd == -1 {
-		return // already closed.
-	}
+// Finalize closes the socket (if needed) and also unmaps the ring buffer.
+// This invalidates any previous zero-copy read data. May be called manually to
+// force immediate clean-up, but otherwise will be called automatically when
+// TPacket is garbage collected.
+func (h *TPacket) Finalize() {
+	runtime.SetFinalizer(h, nil)
+	h.Close()
 	if h.ring != nil {
 		unix.Munmap(h.ring)
 	}
 	h.ring = nil
-	unix.Close(h.fd)
-	h.fd = -1
-	runtime.SetFinalizer(h, nil)
+}
+
+// Close closes the socket and causes any pending reads to return an error.
+// The TPacket should not be used after the Close call.
+// Close does not invalidate previously read data.
+func (h *TPacket) Close() {
+	if !h.fdClosed {
+		h.fdClosed = true
+		unix.Close(h.fd)
+	}
+	// There may still be outstanding references to the ring buffer,
+	// so h.ring is not unmapped until Finalize().
 }
 
 // NewTPacket returns a new TPacket object for reading packets off the wire.
@@ -254,7 +267,7 @@ func NewTPacket(opts ...interface{}) (h *TPacket, err error) {
 	if err = h.InitSocketStats(); err != nil {
 		goto errlbl
 	}
-	runtime.SetFinalizer(h, (*TPacket).Close)
+	runtime.SetFinalizer(h, (*TPacket).Finalize)
 	return h, nil
 errlbl:
 	h.Close()
@@ -283,8 +296,9 @@ func (h *TPacket) releaseCurrentPacket() error {
 // ZeroCopyReadPacketData reads the next packet off the wire, and returns its data.
 // The slice returned by ZeroCopyReadPacketData points to bytes owned by the
 // TPacket.  Each call to ZeroCopyReadPacketData invalidates any data previously
-// returned by ZeroCopyReadPacketData.  Care must be taken not to keep pointers
-// to old bytes when using ZeroCopyReadPacketData... if you need to keep data past
+// returned by ZeroCopyReadPacketData, as does calling Finalize.
+// Care must be taken not to keep pointers to old bytes when using
+// ZeroCopyReadPacketData... if you need to keep data past
 // the next time you call ZeroCopyReadPacketData, use ReadPacketData, which copies
 // the bytes into a new buffer for you.
 //  tp, _ := NewTPacket(...)
@@ -463,7 +477,7 @@ func (h *TPacket) pollForFirstPacket(hdr header) error {
 		}
 
 		atomic.AddInt64(&h.stats.Polls, 1)
-		if pollset[0].Revents&unix.POLLERR > 0 {
+		if pollset[0].Revents&(unix.POLLERR|unix.POLLHUP|unix.POLLNVAL) > 0 {
 			return ErrPoll
 		}
 		if err == syscall.EINTR {
