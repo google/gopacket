@@ -172,6 +172,9 @@ func (d *DHCPv4) DecodeFromBytes(data []byte, df gopacket.DecodeFeedback) error 
 			start += int(o.Length) + 2
 		}
 	}
+
+	d.Contents = data
+
 	return nil
 }
 
