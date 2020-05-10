@@ -27,6 +27,9 @@ type IPSecAH struct {
 func (i *IPSecAH) LayerType() gopacket.LayerType { return LayerTypeIPSecAH }
 
 func decodeIPSecAH(data []byte, p gopacket.PacketBuilder) error {
+	if len(data) < 12 {
+		return fmt.Errorf("Incomplete data")
+	}
 	i := &IPSecAH{
 		ipv6ExtensionBase: ipv6ExtensionBase{
 			NextHeader:   IPProtocol(data[0]),

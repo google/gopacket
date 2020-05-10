@@ -39,6 +39,9 @@ type PFLog struct {
 }
 
 func (pf *PFLog) DecodeFromBytes(data []byte, df gopacket.DecodeFeedback) error {
+	if len(data) < 61 {
+		return fmt.Errorf("Incomplete data")
+	}
 	pf.Length = data[0]
 	pf.Family = ProtocolFamily(data[1])
 	pf.Action = data[2]

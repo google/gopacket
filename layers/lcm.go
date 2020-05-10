@@ -116,6 +116,10 @@ func decodeLCM(data []byte, p gopacket.PacketBuilder) error {
 func (lcm *LCM) DecodeFromBytes(data []byte, df gopacket.DecodeFeedback) error {
 	offset := 0
 
+	if len(data) < 8 {
+		return fmt.Errorf("Incomplete data")
+	}
+
 	lcm.Magic = binary.BigEndian.Uint32(data[offset:4])
 	offset += 4
 
