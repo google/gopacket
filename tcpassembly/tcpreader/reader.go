@@ -18,13 +18,13 @@
 //
 //  // Create our StreamFactory
 //  type httpStreamFactory struct {}
-//  func (f *httpStreamFactory) New(a, b gopacket.Flow) {
-//  	r := tcpreader.NewReaderStream(false)
-//  	go printRequests(r)
+//  func (f *httpStreamFactory) New(a, b gopacket.Flow) tcpassembly.Stream {
+//  	r := tcpreader.NewReaderStream()
+//  	go printRequests(&r, a, b)
 //  	return &r
 //  }
-//  func printRequests(r io.Reader) {
-//    // Convert to bufio, since that's what ReadRequest wants.
+//  func printRequests(r io.Reader, a, b gopacket.Flow) {
+//  	// Convert to bufio, since that's what ReadRequest wants.
 //  	buf := bufio.NewReader(r)
 //  	for {
 //  		if req, err := http.ReadRequest(buf); err == io.EOF {
@@ -32,6 +32,7 @@
 //  		} else if err != nil {
 //  			log.Println("Error parsing HTTP requests:", err)
 //  		} else {
+//  			fmt.Println(a, b)
 //  			fmt.Println("HTTP REQUEST:", req)
 //  			fmt.Println("Body contains", tcpreader.DiscardBytesToEOF(req.Body), "bytes")
 //  		}
