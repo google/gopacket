@@ -469,11 +469,11 @@ func (s *SIP) GetHeader(headerName string) []string {
 	headerName = strings.ToLower(headerName)
 	h := make([]string, 0)
 	if _, ok := s.Headers[headerName]; ok {
-		if len(s.Headers[headerName]) > 0 {
-			return s.Headers[headerName]
-		} else if len(s.Headers[compactSipHeadersCorrespondance[headerName]]) > 0 {
-			return s.Headers[compactSipHeadersCorrespondance[headerName]]
-		}
+		return s.Headers[headerName]
+	}
+	compactHeader := compactSipHeadersCorrespondance[headerName]
+	if _, ok := s.Headers[compactHeader]; ok {
+		return s.Headers[compactHeader]
 	}
 	return h
 }
@@ -482,13 +482,9 @@ func (s *SIP) GetHeader(headerName string) []string {
 // the specified name. If the current SIP packet has multiple
 // headers with the same name, it returns the first.
 func (s *SIP) GetFirstHeader(headerName string) string {
-	headerName = strings.ToLower(headerName)
-	if _, ok := s.Headers[headerName]; ok {
-		if len(s.Headers[headerName]) > 0 {
-			return s.Headers[headerName][0]
-		} else if len(s.Headers[compactSipHeadersCorrespondance[headerName]]) > 0 {
-			return s.Headers[compactSipHeadersCorrespondance[headerName]][0]
-		}
+	headers := s.GetHeader(headerName)
+	if len(headers) > 0 {
+		return headers[0]
 	}
 	return ""
 }
