@@ -8,9 +8,10 @@ package layers
 
 import (
 	_ "fmt"
-	"github.com/google/gopacket"
 	"reflect"
 	"testing"
+
+	"github.com/google/gopacket"
 )
 
 // Generator python layers/test_creator.py --link_type USB --name USB dongle.pcap

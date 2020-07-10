@@ -220,7 +220,7 @@ func (ip *IPv4) DecodeFromBytes(data []byte, df gopacket.DecodeFeedback) error {
 	if ip.Length < 20 {
 		return fmt.Errorf("Invalid (too small) IP length (%d < 20)", ip.Length)
 	} else if ip.IHL < 5 {
-		return fmt.Errorf("Invalid (too small) IP header length (%d < 5)", ip.IHL)
+		return fmt.Errorf("Invalid (too small) IP header length (%d < 5), raw: %d, big endian: %d", ip.IHL, uint8(data[0]), uint8(data[0]) & 0xF0)
 	} else if int(ip.IHL*4) > int(ip.Length) {
 		return fmt.Errorf("Invalid IP header length > IP length (%d > %d)", ip.IHL, ip.Length)
 	}

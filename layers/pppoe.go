@@ -8,6 +8,7 @@ package layers
 
 import (
 	"encoding/binary"
+
 	"github.com/google/gopacket"
 )
 

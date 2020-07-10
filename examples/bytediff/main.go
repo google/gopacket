@@ -10,6 +10,7 @@ package main
 
 import (
 	"fmt"
+
 	"github.com/google/gopacket/bytediff"
 )
 

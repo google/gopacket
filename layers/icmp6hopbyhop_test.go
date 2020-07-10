@@ -8,8 +8,9 @@
 package layers
 
 import (
-	"github.com/google/gopacket"
 	"testing"
+
+	"github.com/google/gopacket"
 )
 
 var icmp6HopByHopData = []byte{

@@ -9,9 +9,10 @@
 package layers
 
 import (
-	"github.com/google/gopacket"
 	"reflect"
 	"testing"
+
+	"github.com/google/gopacket"
 )
 
 //******************************************************************************
