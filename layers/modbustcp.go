@@ -57,7 +57,7 @@ type ModbusTCP struct {
 	TransactionIdentifier uint16         // Identification of a MODBUS Request/Response transaction
 	ProtocolIdentifier    ModbusProtocol // It is used for intra-system multiplexing
 	Length                uint16         // Number of following bytes (includes 1 byte for UnitIdentifier + Modbus data length
-	UnitIdentifier        uint8          // Identification of a remote slave connected on a serial line or on other buses
+	UnitIdentifier        uint8          // Identification of a remote subordinate connected on a serial line or on other buses
 }
 
 //******************************************************************************
