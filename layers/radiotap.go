@@ -468,11 +468,13 @@ const (
 func (self RadioTapAMPDUStatusFlags) ReportZerolen() bool {
 	return self&RadioTapAMPDUStatusFlagsReportZerolen != 0
 }
-func (self RadioTapAMPDUStatusFlags) IsZerolen() bool     { return self&RadioTapAMPDUIsZerolen != 0 }
-func (self RadioTapAMPDUStatusFlags) LastKnown() bool     { return self&RadioTapAMPDULastKnown != 0 }
-func (self RadioTapAMPDUStatusFlags) IsLast() bool        { return self&RadioTapAMPDUIsLast != 0 }
-func (self RadioTapAMPDUStatusFlags) DelimCRCErr() bool   { return self&RadioTapAMPDUDelimCRCErr != 0 }
-func (self RadioTapAMPDUStatusFlags) DelimCRCKnown() bool { return self&RadioTapAMPDUDelimCRCKnown != 0 }
+func (self RadioTapAMPDUStatusFlags) IsZerolen() bool   { return self&RadioTapAMPDUIsZerolen != 0 }
+func (self RadioTapAMPDUStatusFlags) LastKnown() bool   { return self&RadioTapAMPDULastKnown != 0 }
+func (self RadioTapAMPDUStatusFlags) IsLast() bool      { return self&RadioTapAMPDUIsLast != 0 }
+func (self RadioTapAMPDUStatusFlags) DelimCRCErr() bool { return self&RadioTapAMPDUDelimCRCErr != 0 }
+func (self RadioTapAMPDUStatusFlags) DelimCRCKnown() bool {
+	return self&RadioTapAMPDUDelimCRCKnown != 0
+}
 
 type RadioTapVHT struct {
 	Known      RadioTapVHTKnown
