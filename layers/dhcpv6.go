@@ -8,7 +8,6 @@ package layers
 
 import (
 	"encoding/binary"
-	"errors"
 	"fmt"
 	"net"
 
@@ -269,7 +268,7 @@ type DHCPv6DUID struct {
 // DecodeFromBytes decodes the given bytes into a DHCPv6DUID
 func (d *DHCPv6DUID) DecodeFromBytes(data []byte) error {
 	if len(data) < 2 {
-		return errors.New("Not enough bytes to decode: " + string(len(data)))
+		return fmt.Errorf("Not enough bytes to decode: %d", len(data))
 	}
 
 	d.Type = DHCPv6DUIDType(binary.BigEndian.Uint16(data[:2]))
