@@ -108,10 +108,12 @@ func (t TCPOption) String() string {
 	}
 	switch t.OptionType {
 	case TCPOptionKindMSS:
-		return fmt.Sprintf("TCPOption(%s:%v%s)",
-			t.OptionType,
-			binary.BigEndian.Uint16(t.OptionData),
-			hd)
+		if len(t.OptionData) >= 2 {
+			return fmt.Sprintf("TCPOption(%s:%v%s)",
+				t.OptionType,
+				binary.BigEndian.Uint16(t.OptionData),
+				hd)
+		}
 
 	case TCPOptionKindTimestamps:
 		if len(t.OptionData) == 8 {
