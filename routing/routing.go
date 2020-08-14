@@ -100,6 +100,9 @@ func (r *router) RouteWithSrc(input net.HardwareAddr, src, dst net.IP) (iface *n
 		ifaceIndex, gateway, preferredSrc, err = r.route(r.v6, input, src, dst)
 	default:
 		err = errors.New("IP is not valid as IPv4 or IPv6")
+	}
+
+	if err != nil {
 		return
 	}
 
