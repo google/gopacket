@@ -8,6 +8,7 @@ package layers
 
 import (
 	"encoding/binary"
+	"errors"
 	"fmt"
 
 	"github.com/google/gopacket"
@@ -297,6 +298,9 @@ func extractLSAInformation(lstype, lsalength uint16, data []byte) (interface{}, 
 		var routers []RouterV2
 		var j uint32
 		for j = 24; j < uint32(lsalength); j += 12 {
+			if len(data) < int(j+12) {
+				return nil, errors.New("LSAtypeV2 too small")
+			}
 			router := RouterV2{
 				LinkID:   binary.BigEndian.Uint32(data[j : j+4]),
 				LinkData: binary.BigEndian.Uint32(data[j+4 : j+8]),
@@ -304,6 +308,9 @@ func extractLSAInformation(lstype, lsalength uint16, data []byte) (interface{}, 
 				Metric:   binary.BigEndian.Uint16(data[j+10 : j+12]),
 			}
 			routers = append(routers, router)
+		}
+		if len(data) < 24 {
+			return nil, errors.New("LSAtypeV2 too small")
 		}
 		links := binary.BigEndian.Uint16(data[22:24])
 		content = RouterLSAV2{
@@ -375,7 +382,6 @@ func extractLSAInformation(lstype, lsalength uint16, data []byte) (interface{}, 
 	case ASExternalLSAtype:
 		fallthrough
 	case NSSALSAtype:
-
 		flags := uint8(data[20])
 		prefixLen := uint8(data[24]) / 8
 		var forwardingAddress []byte
