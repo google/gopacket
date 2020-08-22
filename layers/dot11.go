@@ -1065,7 +1065,11 @@ func (m *Dot11) DecodeFromBytes(data []byte, df gopacket.DecodeFeedback) error {
 	}
 
 	if mainType == Dot11TypeData {
-		l := dataDecodeMap[m.Type]()
+		d := dataDecodeMap[m.Type]
+		if d == nil {
+			return fmt.Errorf("unsupported type: %v", m.Type)
+		}
+		l := d()
 		err := l.DecodeFromBytes(m.BaseLayer.Payload, df)
 		if err != nil {
 			return err
@@ -1465,6 +1469,10 @@ func (m *Dot11InformationElement) DecodeFromBytes(data []byte, df gopacket.Decod
 	if len(data) < offset+int(m.Length) {
 		df.SetTruncated()
 		return fmt.Errorf("Dot11InformationElement length %v too short, %v required", len(data), offset+int(m.Length))
+	}
+	if len(data) < offset+4 {
+		df.SetTruncated()
+		return fmt.Errorf("vendor extension size < %d", offset+int(m.Length))
 	}
 	if m.ID == 221 {
 		// Vendor extension

@@ -262,6 +262,9 @@ func (s *SIP) DecodeFromBytes(data []byte, df gopacket.DecodeFeedback) error {
 		line, err = buffer.ReadBytes(byte('\n'))
 		if err != nil {
 			if err == io.EOF {
+				if len(bytes.Trim(line, "\r\n")) > 0 {
+					df.SetTruncated()
+				}
 				break
 			} else {
 				return err

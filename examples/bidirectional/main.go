@@ -118,7 +118,7 @@ func (s *myStream) Reassembled(rs []tcpassembly.Reassembly) {
 		// Mark that we've received new packet data.
 		// We could just use time.Now, but by using r.Seen we handle the case
 		// where packets are being read from a file and could be very old.
-		if s.bidi.lastPacketSeen.After(r.Seen) {
+		if s.bidi.lastPacketSeen.Before(r.Seen) {
 			s.bidi.lastPacketSeen = r.Seen
 		}
 	}

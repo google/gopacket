@@ -720,7 +720,7 @@ func (rr *DNSResourceRecord) decode(data []byte, offset int, df gopacket.DecodeF
 	}
 	rr.Data = data[endq+10 : end]
 
-	if err = rr.decodeRData(data, endq+10, buffer); err != nil {
+	if err = rr.decodeRData(data[:end], endq+10, buffer); err != nil {
 		return 0, err
 	}
 
@@ -878,6 +878,9 @@ func decodeOPTs(data []byte, offset int) ([]DNSOPT, error) {
 
 	for i := offset; i < end; {
 		opt := DNSOPT{}
+		if len(data) < i+4 {
+			return allOPT, fmt.Errorf("Malformed DNSOPT record.  Length %d < %d", len(data), i+4)
+		}
 		opt.Code = DNSOptionCode(binary.BigEndian.Uint16(data[i : i+2]))
 		l := binary.BigEndian.Uint16(data[i+2 : i+4])
 		if i+4+int(l) > end {
@@ -931,6 +934,9 @@ func (rr *DNSResourceRecord) decodeRData(data []byte, offset int, buffer *[]byte
 		if err != nil {
 			return err
 		}
+		if len(data) < endq+20 {
+			return errors.New("SOA too small")
+		}
 		rr.SOA.RName = name
 		rr.SOA.Serial = binary.BigEndian.Uint32(data[endq : endq+4])
 		rr.SOA.Refresh = binary.BigEndian.Uint32(data[endq+4 : endq+8])
@@ -938,6 +944,9 @@ func (rr *DNSResourceRecord) decodeRData(data []byte, offset int, buffer *[]byte
 		rr.SOA.Expire = binary.BigEndian.Uint32(data[endq+12 : endq+16])
 		rr.SOA.Minimum = binary.BigEndian.Uint32(data[endq+16 : endq+20])
 	case DNSTypeMX:
+		if len(data) < offset+2 {
+			return errors.New("MX too small")
+		}
 		rr.MX.Preference = binary.BigEndian.Uint16(data[offset : offset+2])
 		name, _, err := decodeName(data, offset+2, buffer, 1)
 		if err != nil {
@@ -945,10 +954,16 @@ func (rr *DNSResourceRecord) decodeRData(data []byte, offset int, buffer *[]byte
 		}
 		rr.MX.Name = name
 	case DNSTypeURI:
+		if len(rr.Data) < 4 {
+			return errors.New("URI too small")
+		}
 		rr.URI.Priority = binary.BigEndian.Uint16(data[offset : offset+2])
 		rr.URI.Weight = binary.BigEndian.Uint16(data[offset+2 : offset+4])
 		rr.URI.Target = rr.Data[4:]
 	case DNSTypeSRV:
+		if len(data) < offset+6 {
+			return errors.New("SRV too small")
+		}
 		rr.SRV.Priority = binary.BigEndian.Uint16(data[offset : offset+2])
 		rr.SRV.Weight = binary.BigEndian.Uint16(data[offset+2 : offset+4])
 		rr.SRV.Port = binary.BigEndian.Uint16(data[offset+4 : offset+6])

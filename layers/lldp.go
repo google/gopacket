@@ -792,10 +792,18 @@ func decodeLinkLayerDiscovery(data []byte, p gopacket.PacketBuilder) error {
 	var vals []LinkLayerDiscoveryValue
 	vData := data[0:]
 	for len(vData) > 0 {
+		if len(vData) < 2 {
+			p.SetTruncated()
+			return errors.New("LLDP vdata < 2 bytes")
+		}
 		nbit := vData[0] & 0x01
 		t := LLDPTLVType(vData[0] >> 1)
 		val := LinkLayerDiscoveryValue{Type: t, Length: uint16(nbit)<<8 + uint16(vData[1])}
 		if val.Length > 0 {
+			if len(vData) < int(val.Length+2) {
+				p.SetTruncated()
+				return fmt.Errorf("LLDP VData < %d bytes", val.Length+2)
+			}
 			val.Value = vData[2 : val.Length+2]
 		}
 		vals = append(vals, val)
