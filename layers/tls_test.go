@@ -245,9 +245,9 @@ func TestParseTLSClientHello(t *testing.T) {
 	}
 }
 
-func testTLSClientHelloDecodeFromBytes(t *testing.T) {
+func TestTLSClientHelloDecodeFromBytes(t *testing.T) {
 	var got TLS
-	want := testClientKeyExchangeDecoded
+	want := *testClientKeyExchangeDecoded
 
 	if err := got.DecodeFromBytes(testClientKeyExchange, gopacket.NilDecodeFeedback); err != nil {
 		t.Errorf("TLS DecodeFromBytes first decode failed:\ngot:\n%#v\n\nwant:\n%#v\n\n", got, want)
@@ -300,6 +300,30 @@ func TestParseTLSAppData(t *testing.T) {
 	}
 }
 
+func TestSerializeTLSAppData(t *testing.T) {
+	buf := gopacket.NewSerializeBuffer()
+	opts := gopacket.SerializeOptions{FixLengths: true}
+	err := gopacket.SerializeLayers(buf, opts, testDoubleAppDataDecoded)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	p2 := gopacket.NewPacket(buf.Bytes(), LayerTypeTLS, testTLSDecodeOptions)
+	if p2.ErrorLayer() != nil {
+		t.Error("Failed to decode packet:", p2.ErrorLayer().Error())
+	}
+	checkLayers(p2, []gopacket.LayerType{LayerTypeTLS}, t)
+
+	if got, ok := p2.Layer(LayerTypeTLS).(*TLS); ok {
+		want := testDoubleAppDataDecoded
+		if !reflect.DeepEqual(got, want) {
+			t.Errorf("Reconstructed TLSAppData packet processing failed:\ngot:\n%#v\n\nwant:\n%#v\n\n", got, want)
+		}
+	} else {
+		t.Error("No TLS layer type found in reconstructed packet")
+	}
+}
+
 func TestParseTLSMalformed(t *testing.T) {
 	p := gopacket.NewPacket(testMalformed, LayerTypeTLS, testTLSDecodeOptions)
 	if p.ErrorLayer() == nil {
@@ -339,5 +363,29 @@ func TestParseTLSAlertEncrypted(t *testing.T) {
 		}
 	} else {
 		t.Error("No TLS layer type found in packet")
+	}
+}
+
+func TestSerializeTLSAlertEncrypted(t *testing.T) {
+	buf := gopacket.NewSerializeBuffer()
+	opts := gopacket.SerializeOptions{FixLengths: true}
+	err := gopacket.SerializeLayers(buf, opts, testAlertEncryptedDecoded)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	p2 := gopacket.NewPacket(buf.Bytes(), LayerTypeTLS, testTLSDecodeOptions)
+	if p2.ErrorLayer() != nil {
+		t.Error("Failed to decode packet:", p2.ErrorLayer().Error())
+	}
+	checkLayers(p2, []gopacket.LayerType{LayerTypeTLS}, t)
+
+	if got, ok := p2.Layer(LayerTypeTLS).(*TLS); ok {
+		want := testAlertEncryptedDecoded
+		if !reflect.DeepEqual(got, want) {
+			t.Errorf("Reconstructed TLSAlertEncrypted packet processing failed:\ngot:\n%#v\n\nwant:\n%#v\n\n", got, want)
+		}
+	} else {
+		t.Error("No TLS layer type found in reconstructed packet")
 	}
 }

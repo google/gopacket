@@ -512,6 +512,7 @@ func (i *IPv6HopByHop) DecodeFromBytes(data []byte, df gopacket.DecodeFeedback) 
 	if err != nil {
 		return err
 	}
+	i.Options = i.Options[:0]
 	offset := 2
 	for offset < i.ActualLength {
 		opt, err := decodeIPv6HeaderTLVOption(data[offset:], df)

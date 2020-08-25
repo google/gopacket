@@ -256,6 +256,7 @@ func (tcp *TCP) DecodeFromBytes(data []byte, df gopacket.DecodeFeedback) error {
 	} else {
 		tcp.Options = tcp.Options[:0]
 	}
+	tcp.Padding = tcp.Padding[:0]
 	if tcp.DataOffset < 5 {
 		return fmt.Errorf("Invalid TCP data offset %d < 5", tcp.DataOffset)
 	}
