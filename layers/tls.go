@@ -211,23 +211,33 @@ func (t *TLS) Payload() []byte {
 // SerializeTo writes the serialized form of this layer into the
 // SerializationBuffer, implementing gopacket.SerializableLayer.
 func (t *TLS) SerializeTo(b gopacket.SerializeBuffer, opts gopacket.SerializeOptions) error {
-	if !opts.FixLengths {
-		return errors.New("serialization of packets without fixing lengths has not been implemented yet")
-	}
 	totalLength := 0
-	for range t.ChangeCipherSpec {
+	for _, record := range t.ChangeCipherSpec {
+		if opts.FixLengths {
+			record.Length = 1
+		}
 		totalLength += 5 + 1 // length of header + record
 	}
 	for range t.Handshake {
 		totalLength += 5
+		// TODO
 	}
 	for _, record := range t.AppData {
+		if opts.FixLengths {
+			record.Length = uint16(len(record.Payload))
+		}
 		totalLength += 5 + len(record.Payload)
 	}
 	for _, record := range t.Alert {
 		if len(record.EncryptedMsg) == 0 {
+			if opts.FixLengths {
+				record.Length = 2
+			}
 			totalLength += 5 + 2
 		} else {
+			if opts.FixLengths {
+				record.Length = uint16(len(record.EncryptedMsg))
+			}
 			totalLength += 5 + len(record.EncryptedMsg)
 		}
 	}
