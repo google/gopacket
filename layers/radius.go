@@ -6,15 +6,23 @@
 package layers
 
 import (
-	"bytes"
 	"encoding/binary"
 	"fmt"
-	"io"
 
 	"github.com/google/gopacket"
 )
 
-const radiusMinimumRecordSizeInBytes int = 20
+const (
+	// RFC 2865 3.  Packet Format
+	// `The minimum length is 20 and maximum length is 4096.`
+	radiusMinimumRecordSizeInBytes int = 20
+	radiusMaximumRecordSizeInBytes int = 4096
+
+	// RFC 2865 5.  Attributes
+	// `The Length field is one octet, and indicates the length of this Attribute including the Type, Length and Value fields.`
+	// `The Value field is zero or more octets and contains information specific to the Attribute.`
+	radiusAttributesMinimumRecordSizeInBytes int = 2
+)
 
 // RADIUS represents a Remote Authentication Dial In User Service layer.
 type RADIUS struct {
@@ -377,6 +385,11 @@ func (radius *RADIUS) LayerType() gopacket.LayerType {
 
 // DecodeFromBytes decodes the given bytes into this layer.
 func (radius *RADIUS) DecodeFromBytes(data []byte, df gopacket.DecodeFeedback) error {
+	if len(data) > radiusMaximumRecordSizeInBytes {
+		df.SetTruncated()
+		return fmt.Errorf("RADIUS length %d too big", len(data))
+	}
+
 	if len(data) < radiusMinimumRecordSizeInBytes {
 		df.SetTruncated()
 		return fmt.Errorf("RADIUS length %d too short", len(data))
@@ -387,39 +400,69 @@ func (radius *RADIUS) DecodeFromBytes(data []byte, df gopacket.DecodeFeedback) e
 	radius.Code = RADIUSCode(data[0])
 	radius.Identifier = RADIUSIdentifier(data[1])
 	radius.Length = RADIUSLength(binary.BigEndian.Uint16(data[2:4]))
+
+	if int(radius.Length) > radiusMaximumRecordSizeInBytes {
+		df.SetTruncated()
+		return fmt.Errorf("RADIUS length %d too big", radius.Length)
+	}
+
+	if int(radius.Length) < radiusMinimumRecordSizeInBytes {
+		df.SetTruncated()
+		return fmt.Errorf("RADIUS length %d too short", radius.Length)
+	}
+
+	// RFC 2865 3.  Packet Format
+	// `If the packet is shorter than the Length field indicates, it MUST be silently discarded.`
+	if int(radius.Length) > len(data) {
+		df.SetTruncated()
+		return fmt.Errorf("RADIUS length %d too big", radius.Length)
+	}
+
+	// RFC 2865 3.  Packet Format
+	// `Octets outside the range of the Length field MUST be treated as padding and ignored on reception.`
+	if int(radius.Length) < len(data) {
+		df.SetTruncated()
+		data = data[:radius.Length]
+	}
+
 	copy(radius.Authenticator[:], data[4:20])
 
 	if len(data) == radiusMinimumRecordSizeInBytes {
 		return nil
 	}
 
-	reader := bytes.NewReader(data[20:])
-	header := make([]byte, 2)
-	value := make([]byte, 255)
+	pos := radiusMinimumRecordSizeInBytes
 	for {
-		header = header[:2]
-
-		if _, err := reader.Read(header); err == io.EOF {
+		if len(data) == pos {
 			break
-		} else if err != nil {
-			return fmt.Errorf("RADIUS unknown error: %s", err)
 		}
 
-		value = value[:header[1]-2]
-
-		if _, err := reader.Read(value); err == io.EOF {
-			break
-		} else if err != nil {
-			return fmt.Errorf("RADIUS unknown error: %s", err)
+		if len(data[pos:]) < radiusAttributesMinimumRecordSizeInBytes {
+			df.SetTruncated()
+			return fmt.Errorf("RADIUS attributes length %d too short", len(data[pos:]))
 		}
 
 		attr := RADIUSAttribute{}
-		attr.Type = RADIUSAttributeType(header[0])
-		attr.Length = RADIUSAttributeLength(header[1])
-		attr.Value = make([]byte, header[1]-2)
-		copy(attr.Value[:], value[:])
+		attr.Type = RADIUSAttributeType(data[pos])
+		attr.Length = RADIUSAttributeLength(data[pos+1])
 
-		radius.Attributes = append(radius.Attributes, attr)
+		if int(attr.Length) > len(data[pos:]) {
+			df.SetTruncated()
+			return fmt.Errorf("RADIUS attributes length %d too big", attr.Length)
+		}
+
+		if int(attr.Length) < radiusAttributesMinimumRecordSizeInBytes {
+			df.SetTruncated()
+			return fmt.Errorf("RADIUS attributes length %d too short", attr.Length)
+		}
+
+		if int(attr.Length) > radiusAttributesMinimumRecordSizeInBytes {
+			attr.Value = make([]byte, attr.Length-2)
+			copy(attr.Value[:], data[pos+2:pos+int(attr.Length)])
+			radius.Attributes = append(radius.Attributes, attr)
+		}
+
+		pos += int(attr.Length)
 	}
 
 	for _, v := range radius.Attributes {
