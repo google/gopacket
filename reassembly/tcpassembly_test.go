@@ -10,6 +10,7 @@ import (
 	"bytes"
 	"encoding/hex"
 	"fmt"
+	"math/rand"
 	"net"
 	"reflect"
 	"runtime"
@@ -955,6 +956,7 @@ type testKeepSequence struct {
 	keep    int
 	want    []byte
 	skipped int
+	flush   bool
 }
 
 func testKeep(t *testing.T, s []testKeepSequence) {
@@ -989,6 +991,10 @@ func testKeep(t *testing.T, s []testKeepSequence) {
 		}
 		if testDebug {
 			fmt.Printf("#### testKeep: #%d: bytes: %s\n", i, hex.EncodeToString(fact.bytes))
+		}
+
+		if test.flush {
+			a.FlushAll()
 		}
 	}
 }
@@ -1191,6 +1197,48 @@ func TestKeepWithFlush(t *testing.T) {
 			want:    []byte{8},
 		},
 	})
+}
+
+func TestKeepWithManualFlush(t *testing.T) {
+	makePayload := func(length int) []byte {
+		data := make([]byte, length)
+		rand.Read(data)
+		return data
+	}
+
+	testKeep(t, []testKeepSequence{
+		{
+			tcp: layers.TCP{
+				SrcPort:   1,
+				DstPort:   2,
+				Seq:       1001,
+				BaseLayer: layers.BaseLayer{Payload: makePayload(pageBytes - 1)},
+			},
+			want: []byte{},
+		},
+		{
+			tcp: layers.TCP{
+				SrcPort:   1,
+				DstPort:   2,
+				Seq:       1001,
+				BaseLayer: layers.BaseLayer{Payload: makePayload(pageBytes + 1)},
+			},
+			want: []byte{},
+		},
+		{
+			tcp: layers.TCP{
+				SrcPort:   1,
+				DstPort:   2,
+				Seq:       1000,
+				BaseLayer: layers.BaseLayer{Payload: []byte{1}},
+			},
+			keep:  3,
+			want:  []byte{},
+			flush: true,
+		},
+	})
+
+	t.Errorf("fake error")
 }
 
 /*
