@@ -1212,15 +1212,6 @@ func TestKeepWithManualFlush(t *testing.T) {
 				SrcPort:   1,
 				DstPort:   2,
 				Seq:       1001,
-				BaseLayer: layers.BaseLayer{Payload: makePayload(pageBytes - 1)},
-			},
-			want: []byte{},
-		},
-		{
-			tcp: layers.TCP{
-				SrcPort:   1,
-				DstPort:   2,
-				Seq:       1001,
 				BaseLayer: layers.BaseLayer{Payload: makePayload(pageBytes + 1)},
 			},
 			want: []byte{},
