@@ -1070,7 +1070,16 @@ func (a *Assembler) cleanSG(half *halfconnection, ac AssemblerContext) {
 	half.saved = nil
 	var saved *page
 	for _, r := range a.cacheSG.all[ndx:] {
+		preConvertLen := r.length()
 		first, last, nb := r.convertToPages(a.pc, skip, ac)
+
+		// Update skip count as we move from one container to the next.
+		if delta := preConvertLen - r.length(); delta > skip {
+			skip = 0
+		} else {
+			skip -= delta
+		}
+
 		if half.saved == nil {
 			half.saved = first
 		} else {
