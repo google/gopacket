@@ -156,6 +156,7 @@ func TestNotOverlapBuf(t *testing.T) {
 	overlap, _, err := handle.ReadPacketData()
 	equalNil(t, err)
 	overlap2, _, err := handle.ReadPacketData()
+	equalNil(t, err)
 	overlap[30] = 0xff
 	if overlap[30] == overlap2[30] {
 		t.Error(fmt.Errorf("Should not be: %x", overlap[30]))
