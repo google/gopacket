@@ -14,13 +14,6 @@ import (
 	"github.com/google/gopacket"
 )
 
-func min(a, b int) int {
-	if a < b {
-		return a
-	}
-	return b
-}
-
 func checkLayers(p gopacket.Packet, want []gopacket.LayerType, t *testing.T) {
 	layers := p.Layers()
 	t.Log("Checking packet layers, want", want)

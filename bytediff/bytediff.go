@@ -92,13 +92,6 @@ func longestCommonSubstring(strA, strB []byte) (indexA, indexB, length int) {
 	return
 }
 
-func intMax(a, b int) int {
-	if a > b {
-		return a
-	}
-	return b
-}
-
 // Difference represents a single part of the data being diffed, containing
 // information about both the original and new values.
 // From and To are the sets of bytes in the original and the new byte slice.
@@ -213,5 +206,5 @@ func (c *OutputFormat) String(diffs Differences) string {
 	}
 	fmt.Fprint(&buf, "\n")
 	fmt.Fprintf(&buf, "%s", c.finish)
-	return string(buf.Bytes())
+	return buf.String()
 }
