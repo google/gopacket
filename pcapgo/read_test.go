@@ -68,6 +68,9 @@ func TestPacket(t *testing.T) {
 
 	buf := bytes.NewBuffer(test)
 	r, err := NewReader(buf)
+	if err != nil {
+		t.Errorf("Failed to get new reader object: %v", err)
+	}
 
 	data, ci, err := r.ReadPacketData()
 	if err != nil {
@@ -99,6 +102,9 @@ func TestPacketNano(t *testing.T) {
 
 	buf := bytes.NewBuffer(test)
 	r, err := NewReader(buf)
+	if err != nil {
+		t.Errorf("Failed to get new reader object: %v", err)
+	}
 
 	data, ci, err := r.ReadPacketData()
 	if err != nil {
@@ -180,6 +186,9 @@ func TestPacketBufferReuse(t *testing.T) {
 
 	buf := bytes.NewBuffer(test)
 	r, err := NewReader(buf)
+	if err != nil {
+		t.Errorf("Failed to get new reader object: %v", err)
+	}
 
 	data1, _, err := r.ReadPacketData()
 	if err != nil {
@@ -217,6 +226,9 @@ func TestPacketZeroCopy(t *testing.T) {
 
 	buf := bytes.NewBuffer(test)
 	r, err := NewReader(buf)
+	if err != nil {
+		t.Errorf("Failed to get new reader object: %v", err)
+	}
 
 	data1, _, err := r.ZeroCopyReadPacketData()
 	if err != nil {
