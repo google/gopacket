@@ -890,10 +890,10 @@ func decodeLinkLayerDiscovery(data []byte, p gopacket.PacketBuilder) error {
 			info.MgmtAddress.InterfaceSubtype = LLDPInterfaceSubtype(v.Value[mlen+1])
 			info.MgmtAddress.InterfaceNumber = binary.BigEndian.Uint32(v.Value[mlen+2 : mlen+6])
 			olen := v.Value[mlen+6]
-			if err := checkLLDPTLVLen(v, int(mlen+6+olen)); err != nil {
+			if err := checkLLDPTLVLen(v, int(mlen+7+olen)); err != nil {
 				return err
 			}
-			info.MgmtAddress.OID = string(v.Value[mlen+9 : mlen+9+olen])
+			info.MgmtAddress.OID = string(v.Value[mlen+7 : mlen+7+olen])
 		case LLDPTLVOrgSpecific:
 			if err := checkLLDPTLVLen(v, 4); err != nil {
 				return err
