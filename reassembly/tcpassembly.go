@@ -833,7 +833,7 @@ func (a *Assembler) checkOverlap(half *halfconnection, queue bool, ac AssemblerC
 		} else
 
 		// end < cur.end && start > cur.start: replace bytes inside cur (6)
-		if diffEnd > 0 && diffStart < 0 {
+		if diffEnd >= 0 && diffStart <= 0 {
 			if *debugLog {
 				log.Printf("case 6\n")
 			}
