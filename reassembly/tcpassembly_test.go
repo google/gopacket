@@ -463,8 +463,8 @@ func TestBufferedOverlapCase6(t *testing.T) {
 			in: layers.TCP{
 				SrcPort:   1,
 				DstPort:   2,
-				Seq:       1010,
-				BaseLayer: layers.BaseLayer{Payload: []byte{10, 11, 12, 13, 14}},
+				Seq:       1007,
+				BaseLayer: layers.BaseLayer{Payload: []byte{7, 8, 9, 10, 11, 12, 13, 14}},
 			},
 			want: []Reassembly{},
 		},
