@@ -11,6 +11,7 @@ package layers
 import (
 	"encoding/binary"
 	"errors"
+
 	"github.com/google/gopacket"
 )
 
@@ -147,4 +148,9 @@ func (d *ModbusTCP) NextLayerType() gopacket.LayerType {
 // Payload returns Modbus Protocol Data Unit (PDU) composed by Function Code and Data, it is carried within ModbusTCP packets
 func (d *ModbusTCP) Payload() []byte {
 	return d.BaseLayer.Payload
+}
+
+// CanDecode returns the set of layer types that this DecodingLayer can decode
+func (s *ModbusTCP) CanDecode() gopacket.LayerClass {
+	return LayerTypeModbusTCP
 }
