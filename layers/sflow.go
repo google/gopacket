@@ -365,6 +365,9 @@ type SFlowFlowSample struct {
 	OutputInterface       uint32
 	RecordCount           uint32
 	Records               []SFlowRecord
+	UnknownRecords        []SFlowBaseFlowRecord
+
+	// TODO: skipped records and unsupported records should be recorded above
 }
 
 // Flow samples have the following structure. Note
@@ -448,9 +451,20 @@ func (fs SFlowFlowSample) GetType() SFlowSampleType {
 	return SFlowTypeFlowSample
 }
 
-func skipRecord(data *[]byte) {
+func skipRecord(data *[]byte) SFlowBaseFlowRecord {
+	sdf := SFlowFlowDataFormat(binary.BigEndian.Uint32((*data)[:4]))
+
 	recordLength := int(binary.BigEndian.Uint32((*data)[4:]))
 	*data = (*data)[(recordLength+((4-recordLength)%4))+8:]
+
+	id, f := sdf.decode()
+	rec := SFlowBaseFlowRecord{
+		EnterpriseID:   id,
+		Format:         f,
+		FlowDataLength: uint32(recordLength),
+	}
+
+	return rec
 }
 
 func decodeFlowSample(data *[]byte, expanded bool) (SFlowFlowSample, error) {
@@ -594,32 +608,31 @@ func decodeFlowSample(data *[]byte, expanded bool) (SFlowFlowSample, error) {
 				}
 			case SFlowTypeExtendedMlpsFlow:
 				// TODO
-				skipRecord(data)
-				return s, errors.New("skipping TypeExtendedMlpsFlow")
+				s.UnknownRecords = append(s.UnknownRecords, skipRecord(data))
 			case SFlowTypeExtendedNatFlow:
 				// TODO
-				skipRecord(data)
-				return s, errors.New("skipping TypeExtendedNatFlow")
+				s.UnknownRecords = append(s.UnknownRecords, skipRecord(data))
 			case SFlowTypeExtendedMlpsTunnelFlow:
 				// TODO
-				skipRecord(data)
-				return s, errors.New("skipping TypeExtendedMlpsTunnelFlow")
+				s.UnknownRecords = append(s.UnknownRecords, skipRecord(data))
 			case SFlowTypeExtendedMlpsVcFlow:
 				// TODO
-				skipRecord(data)
-				return s, errors.New("skipping TypeExtendedMlpsVcFlow")
+				s.UnknownRecords = append(s.UnknownRecords, skipRecord(data))
 			case SFlowTypeExtendedMlpsFecFlow:
 				// TODO
-				skipRecord(data)
-				return s, errors.New("skipping TypeExtendedMlpsFecFlow")
+				s.UnknownRecords = append(s.UnknownRecords, skipRecord(data))
 			case SFlowTypeExtendedMlpsLvpFecFlow:
 				// TODO
-				skipRecord(data)
-				return s, errors.New("skipping TypeExtendedMlpsLvpFecFlow")
+				s.UnknownRecords = append(s.UnknownRecords, skipRecord(data))
 			case SFlowTypeExtendedVlanFlow:
 				// TODO
-				skipRecord(data)
-				return s, errors.New("skipping TypeExtendedVlanFlow")
+				s.UnknownRecords = append(s.UnknownRecords, skipRecord(data))
+			case SFlowTypeExtendedL2TunnelEgressFlow:
+				// TODO
+				s.UnknownRecords = append(s.UnknownRecords, skipRecord(data))
+			case SFlowTypeExtendedL2TunnelIngressFlow:
+				// TODO
+				s.UnknownRecords = append(s.UnknownRecords, skipRecord(data))
 			case SFlowTypeExtendedIpv4TunnelEgressFlow:
 				if record, err := decodeExtendedIpv4TunnelEgress(data); err == nil {
 					s.Records = append(s.Records, record)
@@ -669,10 +682,10 @@ func decodeFlowSample(data *[]byte, expanded bool) (SFlowFlowSample, error) {
 					return s, err
 				}
 			default:
-				return s, fmt.Errorf("Unsupported flow record type: %d", flowRecordType)
+				s.UnknownRecords = append(s.UnknownRecords, skipRecord(data))
 			}
 		} else {
-			skipRecord(data)
+			s.UnknownRecords = append(s.UnknownRecords, skipRecord(data))
 		}
 	}
 	return s, nil
@@ -899,6 +912,8 @@ const (
 	SFlowTypeExtendedMlpsFecFlow            SFlowFlowRecordType = 1010
 	SFlowTypeExtendedMlpsLvpFecFlow         SFlowFlowRecordType = 1011
 	SFlowTypeExtendedVlanFlow               SFlowFlowRecordType = 1012
+	SFlowTypeExtendedL2TunnelEgressFlow     SFlowFlowRecordType = 1021
+	SFlowTypeExtendedL2TunnelIngressFlow    SFlowFlowRecordType = 1022
 	SFlowTypeExtendedIpv4TunnelEgressFlow   SFlowFlowRecordType = 1023
 	SFlowTypeExtendedIpv4TunnelIngressFlow  SFlowFlowRecordType = 1024
 	SFlowTypeExtendedIpv6TunnelEgressFlow   SFlowFlowRecordType = 1025
@@ -943,6 +958,10 @@ func (rt SFlowFlowRecordType) String() string {
 		return "Extended MPLS LVP FEC Flow Record"
 	case SFlowTypeExtendedVlanFlow:
 		return "Extended VLAN Flow Record"
+	case SFlowTypeExtendedL2TunnelIngressFlow:
+		return "Extended L2 Tunnel Ingress Record"
+	case SFlowTypeExtendedL2TunnelEgressFlow:
+		return "Extended L2 Tunnel Egress Record"
 	case SFlowTypeExtendedIpv4TunnelEgressFlow:
 		return "Extended IPv4 Tunnel Egress Record"
 	case SFlowTypeExtendedIpv4TunnelIngressFlow:
