@@ -128,7 +128,7 @@ func (sdf SFlowSourceFormat) String() string {
 	case SFlowTypeMultipleDestinations:
 		return "Multiple Destinations"
 	default:
-		return "UNKNOWN"
+		return fmt.Sprintf("UNKNOWN<%d>", sdf)
 	}
 }
 
@@ -209,7 +209,7 @@ func (eid SFlowEnterpriseID) String() string {
 	case SFlowStandard:
 		return "Standard SFlow"
 	default:
-		return ""
+		return fmt.Sprintf("UNKNOWN<%d>", eid)
 	}
 }
 
@@ -282,7 +282,7 @@ func (s SFlowIPType) String() string {
 	case SFlowIPv6:
 		return "IPv6"
 	default:
-		return ""
+		return fmt.Sprintf("UNKNOWN<%d>", s)
 	}
 }
 
@@ -606,33 +606,16 @@ func decodeFlowSample(data *[]byte, expanded bool) (SFlowFlowSample, error) {
 				} else {
 					return s, err
 				}
-			case SFlowTypeExtendedMlpsFlow:
-				// TODO
-				s.UnknownRecords = append(s.UnknownRecords, skipRecord(data))
-			case SFlowTypeExtendedNatFlow:
-				// TODO
-				s.UnknownRecords = append(s.UnknownRecords, skipRecord(data))
-			case SFlowTypeExtendedMlpsTunnelFlow:
-				// TODO
-				s.UnknownRecords = append(s.UnknownRecords, skipRecord(data))
-			case SFlowTypeExtendedMlpsVcFlow:
-				// TODO
-				s.UnknownRecords = append(s.UnknownRecords, skipRecord(data))
-			case SFlowTypeExtendedMlpsFecFlow:
-				// TODO
-				s.UnknownRecords = append(s.UnknownRecords, skipRecord(data))
-			case SFlowTypeExtendedMlpsLvpFecFlow:
-				// TODO
-				s.UnknownRecords = append(s.UnknownRecords, skipRecord(data))
-			case SFlowTypeExtendedVlanFlow:
-				// TODO
-				s.UnknownRecords = append(s.UnknownRecords, skipRecord(data))
-			case SFlowTypeExtendedL2TunnelEgressFlow:
-				// TODO
-				s.UnknownRecords = append(s.UnknownRecords, skipRecord(data))
-			case SFlowTypeExtendedL2TunnelIngressFlow:
-				// TODO
-				s.UnknownRecords = append(s.UnknownRecords, skipRecord(data))
+			// TODO: decode these types
+			// case SFlowTypeExtendedMlpsFlow:
+			// case SFlowTypeExtendedNatFlow:
+			// case SFlowTypeExtendedMlpsTunnelFlow:
+			// case SFlowTypeExtendedMlpsVcFlow:
+			// case SFlowTypeExtendedMlpsFecFlow:
+			// case SFlowTypeExtendedMlpsLvpFecFlow:
+			// case SFlowTypeExtendedVlanFlow:
+			// case SFlowTypeExtendedL2TunnelEgressFlow:
+			// case SFlowTypeExtendedL2TunnelIngressFlow:
 			case SFlowTypeExtendedIpv4TunnelEgressFlow:
 				if record, err := decodeExtendedIpv4TunnelEgress(data); err == nil {
 					s.Records = append(s.Records, record)
@@ -784,8 +767,7 @@ func (cr SFlowCounterRecordType) String() string {
 	case SFlowTypeOVSDPCounters:
 		return "OVSDP Counters"
 	default:
-		return ""
-
+		return fmt.Sprintf("UNKNOWN<%d>", cr)
 	}
 }
 
@@ -979,7 +961,7 @@ func (rt SFlowFlowRecordType) String() string {
 	case SFlowTypeExtendedVniIngressFlow:
 		return "Extended VNI Ingress Record"
 	default:
-		return ""
+		return fmt.Sprintf("UNKNOWN<%d>", rt)
 	}
 }
 
@@ -1073,7 +1055,7 @@ func (sfhp SFlowRawHeaderProtocol) String() string {
 	case SFlowProtoPOS:
 		return "POS"
 	}
-	return "UNKNOWN"
+	return fmt.Sprintf("UNKNOWN<%d>", sfhp)
 }
 
 func decodeRawPacketFlowRecord(data *[]byte) (SFlowRawPacketFlowRecord, error) {
@@ -1264,7 +1246,7 @@ func (apt SFlowASPathType) String() string {
 	case SFlowASSequence:
 		return "AS Sequence"
 	default:
-		return ""
+		return fmt.Sprintf("UNKNOWN<%d>", apt)
 	}
 }
 
@@ -1281,7 +1263,7 @@ func (asd SFlowASDestination) String() string {
 	case SFlowASSequence:
 		return fmt.Sprint("AS Sequence:", asd.Members)
 	default:
-		return ""
+		return fmt.Sprintf("UNKNOWN<%d>", asd)
 	}
 }
 
@@ -1358,7 +1340,7 @@ func (urld SFlowURLDirection) String() string {
 	case SFlowURLdst:
 		return "Destination address is the server"
 	default:
-		return ""
+		return fmt.Sprintf("UNKNOWN<%d>", urld)
 	}
 }
 
