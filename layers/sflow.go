@@ -366,8 +366,6 @@ type SFlowFlowSample struct {
 	RecordCount           uint32
 	Records               []SFlowRecord
 	UnknownRecords        []SFlowBaseFlowRecord
-
-	// TODO: skipped records and unsupported records should be recorded above
 }
 
 // Flow samples have the following structure. Note
@@ -451,7 +449,7 @@ func (fs SFlowFlowSample) GetType() SFlowSampleType {
 	return SFlowTypeFlowSample
 }
 
-func skipRecord(data *[]byte) SFlowBaseFlowRecord {
+func skipFlowRecord(data *[]byte) SFlowBaseFlowRecord {
 	sdf := SFlowFlowDataFormat(binary.BigEndian.Uint32((*data)[:4]))
 
 	recordLength := int(binary.BigEndian.Uint32((*data)[4:]))
@@ -459,6 +457,22 @@ func skipRecord(data *[]byte) SFlowBaseFlowRecord {
 
 	id, f := sdf.decode()
 	rec := SFlowBaseFlowRecord{
+		EnterpriseID:   id,
+		Format:         f,
+		FlowDataLength: uint32(recordLength),
+	}
+
+	return rec
+}
+
+func skipCounterRecord(data *[]byte) SFlowBaseCounterRecord {
+	sdf := SFlowCounterDataFormat(binary.BigEndian.Uint32((*data)[:4]))
+
+	recordLength := int(binary.BigEndian.Uint32((*data)[4:]))
+	*data = (*data)[(recordLength+((4-recordLength)%4))+8:]
+
+	id, f := sdf.decode()
+	rec := SFlowBaseCounterRecord{
 		EnterpriseID:   id,
 		Format:         f,
 		FlowDataLength: uint32(recordLength),
@@ -665,10 +679,10 @@ func decodeFlowSample(data *[]byte, expanded bool) (SFlowFlowSample, error) {
 					return s, err
 				}
 			default:
-				s.UnknownRecords = append(s.UnknownRecords, skipRecord(data))
+				s.UnknownRecords = append(s.UnknownRecords, skipFlowRecord(data))
 			}
 		} else {
-			s.UnknownRecords = append(s.UnknownRecords, skipRecord(data))
+			s.UnknownRecords = append(s.UnknownRecords, skipFlowRecord(data))
 		}
 	}
 	return s, nil
@@ -689,6 +703,7 @@ type SFlowCounterSample struct {
 	SourceIDIndex  SFlowSourceValue
 	RecordCount    uint32
 	Records        []SFlowRecord
+	UnknownRecords []SFlowBaseCounterRecord
 }
 
 // Counter samples have the following structure:
@@ -806,12 +821,9 @@ func decodeCounterSample(data *[]byte, expanded bool) (SFlowCounterSample, error
 			} else {
 				return s, err
 			}
-		case SFlowTypeTokenRingInterfaceCounters:
-			skipRecord(data)
-			return s, errors.New("skipping TypeTokenRingInterfaceCounters")
-		case SFlowType100BaseVGInterfaceCounters:
-			skipRecord(data)
-			return s, errors.New("skipping Type100BaseVGInterfaceCounters")
+		// TODO: add support for cases
+		// case SFlowTypeTokenRingInterfaceCounters:
+		// case SFlowType100BaseVGInterfaceCounters:
 		case SFlowTypeVLANCounters:
 			if record, err := decodeVLANCounters(data); err == nil {
 				s.Records = append(s.Records, record)
@@ -855,7 +867,7 @@ func decodeCounterSample(data *[]byte, expanded bool) (SFlowCounterSample, error
 				return s, err
 			}
 		default:
-			return s, fmt.Errorf("Invalid counter record type: %d", counterRecordType)
+			s.UnknownRecords = append(s.UnknownRecords, skipCounterRecord(data))
 		}
 	}
 	return s, nil
