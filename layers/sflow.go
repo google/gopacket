@@ -1731,7 +1731,7 @@ type SFlowIpv4Record struct {
 	// The length of the IP packet excluding ower layer encapsulations
 	Length uint32
 	// IP Protocol type (for example, TCP = 6, UDP = 17)
-	Protocol uint32
+	Protocol IPProtocol
 	// Source IP Address
 	IPSrc net.IP
 	// Destination IP Address
@@ -1750,7 +1750,7 @@ func decodeSFlowIpv4Record(data *[]byte) (SFlowIpv4Record, error) {
 	si := SFlowIpv4Record{}
 
 	*data, si.Length = (*data)[4:], binary.BigEndian.Uint32((*data)[:4])
-	*data, si.Protocol = (*data)[4:], binary.BigEndian.Uint32((*data)[:4])
+	*data, si.Protocol = (*data)[4:], IPProtocol(binary.BigEndian.Uint32((*data)[:4]))
 	*data, si.IPSrc = (*data)[4:], net.IP((*data)[:4])
 	*data, si.IPDst = (*data)[4:], net.IP((*data)[:4])
 	*data, si.PortSrc = (*data)[4:], binary.BigEndian.Uint32((*data)[:4])
