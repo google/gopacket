@@ -128,7 +128,7 @@ func (sdf SFlowSourceFormat) String() string {
 	case SFlowTypeMultipleDestinations:
 		return "Multiple Destinations"
 	default:
-		return "UNKNOWN"
+		return fmt.Sprintf("UNKNOWN<%d>", sdf)
 	}
 }
 
@@ -209,7 +209,7 @@ func (eid SFlowEnterpriseID) String() string {
 	case SFlowStandard:
 		return "Standard SFlow"
 	default:
-		return ""
+		return fmt.Sprintf("UNKNOWN<%d>", eid)
 	}
 }
 
@@ -282,7 +282,7 @@ func (s SFlowIPType) String() string {
 	case SFlowIPv6:
 		return "IPv6"
 	default:
-		return ""
+		return fmt.Sprintf("UNKNOWN<%d>", s)
 	}
 }
 
@@ -365,6 +365,7 @@ type SFlowFlowSample struct {
 	OutputInterface       uint32
 	RecordCount           uint32
 	Records               []SFlowRecord
+	UnknownRecords        []SFlowBaseFlowRecord
 }
 
 // Flow samples have the following structure. Note
@@ -448,9 +449,36 @@ func (fs SFlowFlowSample) GetType() SFlowSampleType {
 	return SFlowTypeFlowSample
 }
 
-func skipRecord(data *[]byte) {
+func skipFlowRecord(data *[]byte) SFlowBaseFlowRecord {
+	sdf := SFlowFlowDataFormat(binary.BigEndian.Uint32((*data)[:4]))
+
 	recordLength := int(binary.BigEndian.Uint32((*data)[4:]))
 	*data = (*data)[(recordLength+((4-recordLength)%4))+8:]
+
+	id, f := sdf.decode()
+	rec := SFlowBaseFlowRecord{
+		EnterpriseID:   id,
+		Format:         f,
+		FlowDataLength: uint32(recordLength),
+	}
+
+	return rec
+}
+
+func skipCounterRecord(data *[]byte) SFlowBaseCounterRecord {
+	sdf := SFlowCounterDataFormat(binary.BigEndian.Uint32((*data)[:4]))
+
+	recordLength := int(binary.BigEndian.Uint32((*data)[4:]))
+	*data = (*data)[(recordLength+((4-recordLength)%4))+8:]
+
+	id, f := sdf.decode()
+	rec := SFlowBaseCounterRecord{
+		EnterpriseID:   id,
+		Format:         f,
+		FlowDataLength: uint32(recordLength),
+	}
+
+	return rec
 }
 
 func decodeFlowSample(data *[]byte, expanded bool) (SFlowFlowSample, error) {
@@ -592,34 +620,16 @@ func decodeFlowSample(data *[]byte, expanded bool) (SFlowFlowSample, error) {
 				} else {
 					return s, err
 				}
-			case SFlowTypeExtendedMlpsFlow:
-				// TODO
-				skipRecord(data)
-				return s, errors.New("skipping TypeExtendedMlpsFlow")
-			case SFlowTypeExtendedNatFlow:
-				// TODO
-				skipRecord(data)
-				return s, errors.New("skipping TypeExtendedNatFlow")
-			case SFlowTypeExtendedMlpsTunnelFlow:
-				// TODO
-				skipRecord(data)
-				return s, errors.New("skipping TypeExtendedMlpsTunnelFlow")
-			case SFlowTypeExtendedMlpsVcFlow:
-				// TODO
-				skipRecord(data)
-				return s, errors.New("skipping TypeExtendedMlpsVcFlow")
-			case SFlowTypeExtendedMlpsFecFlow:
-				// TODO
-				skipRecord(data)
-				return s, errors.New("skipping TypeExtendedMlpsFecFlow")
-			case SFlowTypeExtendedMlpsLvpFecFlow:
-				// TODO
-				skipRecord(data)
-				return s, errors.New("skipping TypeExtendedMlpsLvpFecFlow")
-			case SFlowTypeExtendedVlanFlow:
-				// TODO
-				skipRecord(data)
-				return s, errors.New("skipping TypeExtendedVlanFlow")
+			// TODO: decode these types
+			// case SFlowTypeExtendedMlpsFlow:
+			// case SFlowTypeExtendedNatFlow:
+			// case SFlowTypeExtendedMlpsTunnelFlow:
+			// case SFlowTypeExtendedMlpsVcFlow:
+			// case SFlowTypeExtendedMlpsFecFlow:
+			// case SFlowTypeExtendedMlpsLvpFecFlow:
+			// case SFlowTypeExtendedVlanFlow:
+			// case SFlowTypeExtendedL2TunnelEgressFlow:
+			// case SFlowTypeExtendedL2TunnelIngressFlow:
 			case SFlowTypeExtendedIpv4TunnelEgressFlow:
 				if record, err := decodeExtendedIpv4TunnelEgress(data); err == nil {
 					s.Records = append(s.Records, record)
@@ -669,10 +679,10 @@ func decodeFlowSample(data *[]byte, expanded bool) (SFlowFlowSample, error) {
 					return s, err
 				}
 			default:
-				return s, fmt.Errorf("Unsupported flow record type: %d", flowRecordType)
+				s.UnknownRecords = append(s.UnknownRecords, skipFlowRecord(data))
 			}
 		} else {
-			skipRecord(data)
+			s.UnknownRecords = append(s.UnknownRecords, skipFlowRecord(data))
 		}
 	}
 	return s, nil
@@ -693,6 +703,7 @@ type SFlowCounterSample struct {
 	SourceIDIndex  SFlowSourceValue
 	RecordCount    uint32
 	Records        []SFlowRecord
+	UnknownRecords []SFlowBaseCounterRecord
 }
 
 // Counter samples have the following structure:
@@ -771,8 +782,7 @@ func (cr SFlowCounterRecordType) String() string {
 	case SFlowTypeOVSDPCounters:
 		return "OVSDP Counters"
 	default:
-		return ""
-
+		return fmt.Sprintf("UNKNOWN<%d>", cr)
 	}
 }
 
@@ -811,12 +821,9 @@ func decodeCounterSample(data *[]byte, expanded bool) (SFlowCounterSample, error
 			} else {
 				return s, err
 			}
-		case SFlowTypeTokenRingInterfaceCounters:
-			skipRecord(data)
-			return s, errors.New("skipping TypeTokenRingInterfaceCounters")
-		case SFlowType100BaseVGInterfaceCounters:
-			skipRecord(data)
-			return s, errors.New("skipping Type100BaseVGInterfaceCounters")
+		// TODO: add support for cases
+		// case SFlowTypeTokenRingInterfaceCounters:
+		// case SFlowType100BaseVGInterfaceCounters:
 		case SFlowTypeVLANCounters:
 			if record, err := decodeVLANCounters(data); err == nil {
 				s.Records = append(s.Records, record)
@@ -860,7 +867,7 @@ func decodeCounterSample(data *[]byte, expanded bool) (SFlowCounterSample, error
 				return s, err
 			}
 		default:
-			return s, fmt.Errorf("Invalid counter record type: %d", counterRecordType)
+			s.UnknownRecords = append(s.UnknownRecords, skipCounterRecord(data))
 		}
 	}
 	return s, nil
@@ -899,6 +906,8 @@ const (
 	SFlowTypeExtendedMlpsFecFlow            SFlowFlowRecordType = 1010
 	SFlowTypeExtendedMlpsLvpFecFlow         SFlowFlowRecordType = 1011
 	SFlowTypeExtendedVlanFlow               SFlowFlowRecordType = 1012
+	SFlowTypeExtendedL2TunnelEgressFlow     SFlowFlowRecordType = 1021
+	SFlowTypeExtendedL2TunnelIngressFlow    SFlowFlowRecordType = 1022
 	SFlowTypeExtendedIpv4TunnelEgressFlow   SFlowFlowRecordType = 1023
 	SFlowTypeExtendedIpv4TunnelIngressFlow  SFlowFlowRecordType = 1024
 	SFlowTypeExtendedIpv6TunnelEgressFlow   SFlowFlowRecordType = 1025
@@ -943,6 +952,10 @@ func (rt SFlowFlowRecordType) String() string {
 		return "Extended MPLS LVP FEC Flow Record"
 	case SFlowTypeExtendedVlanFlow:
 		return "Extended VLAN Flow Record"
+	case SFlowTypeExtendedL2TunnelIngressFlow:
+		return "Extended L2 Tunnel Ingress Record"
+	case SFlowTypeExtendedL2TunnelEgressFlow:
+		return "Extended L2 Tunnel Egress Record"
 	case SFlowTypeExtendedIpv4TunnelEgressFlow:
 		return "Extended IPv4 Tunnel Egress Record"
 	case SFlowTypeExtendedIpv4TunnelIngressFlow:
@@ -960,7 +973,7 @@ func (rt SFlowFlowRecordType) String() string {
 	case SFlowTypeExtendedVniIngressFlow:
 		return "Extended VNI Ingress Record"
 	default:
-		return ""
+		return fmt.Sprintf("UNKNOWN<%d>", rt)
 	}
 }
 
@@ -1054,7 +1067,7 @@ func (sfhp SFlowRawHeaderProtocol) String() string {
 	case SFlowProtoPOS:
 		return "POS"
 	}
-	return "UNKNOWN"
+	return fmt.Sprintf("UNKNOWN<%d>", sfhp)
 }
 
 func decodeRawPacketFlowRecord(data *[]byte) (SFlowRawPacketFlowRecord, error) {
@@ -1245,7 +1258,7 @@ func (apt SFlowASPathType) String() string {
 	case SFlowASSequence:
 		return "AS Sequence"
 	default:
-		return ""
+		return fmt.Sprintf("UNKNOWN<%d>", apt)
 	}
 }
 
@@ -1262,7 +1275,7 @@ func (asd SFlowASDestination) String() string {
 	case SFlowASSequence:
 		return fmt.Sprint("AS Sequence:", asd.Members)
 	default:
-		return ""
+		return fmt.Sprintf("UNKNOWN<%d>", asd)
 	}
 }
 
@@ -1339,7 +1352,7 @@ func (urld SFlowURLDirection) String() string {
 	case SFlowURLdst:
 		return "Destination address is the server"
 	default:
-		return ""
+		return fmt.Sprintf("UNKNOWN<%d>", urld)
 	}
 }
 
@@ -1718,7 +1731,7 @@ type SFlowIpv4Record struct {
 	// The length of the IP packet excluding ower layer encapsulations
 	Length uint32
 	// IP Protocol type (for example, TCP = 6, UDP = 17)
-	Protocol uint32
+	Protocol IPProtocol
 	// Source IP Address
 	IPSrc net.IP
 	// Destination IP Address
@@ -1737,7 +1750,7 @@ func decodeSFlowIpv4Record(data *[]byte) (SFlowIpv4Record, error) {
 	si := SFlowIpv4Record{}
 
 	*data, si.Length = (*data)[4:], binary.BigEndian.Uint32((*data)[:4])
-	*data, si.Protocol = (*data)[4:], binary.BigEndian.Uint32((*data)[:4])
+	*data, si.Protocol = (*data)[4:], IPProtocol(binary.BigEndian.Uint32((*data)[:4]))
 	*data, si.IPSrc = (*data)[4:], net.IP((*data)[:4])
 	*data, si.IPDst = (*data)[4:], net.IP((*data)[:4])
 	*data, si.PortSrc = (*data)[4:], binary.BigEndian.Uint32((*data)[:4])
