@@ -20,6 +20,8 @@ import (
 // It can be passed into NewTPacket.
 type OptTPacketVersion int
 
+var pageSize = unix.Getpagesize()
+
 // String returns a string representation of the version, generally of the form V#.
 func (t OptTPacketVersion) String() string {
 	switch t {
