@@ -720,8 +720,10 @@ func (rr *DNSResourceRecord) decode(data []byte, offset int, df gopacket.DecodeF
 	}
 	rr.Data = data[endq+10 : end]
 
-	if err = rr.decodeRData(data[:end], endq+10, buffer); err != nil {
-		return 0, err
+	if rr.DataLength > 0 {
+		if err = rr.decodeRData(data[:end], endq+10, buffer); err != nil {
+			return 0, err
+		}
 	}
 
 	return endq + 10 + int(rr.DataLength), nil
