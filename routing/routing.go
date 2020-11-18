@@ -66,9 +66,10 @@ func (r routeSlice) Swap(i, j int) {
 }
 
 type router struct {
-	ifaces []net.Interface
+	ifaces [100]net.Interface // max interface index count 100
 	addrs  []ipAddrs
 	v4, v6 routeSlice
+	defaultv4, defaultv6 routeSlice
 }
 
 func (r *router) String() string {
@@ -95,9 +96,9 @@ func (r *router) RouteWithSrc(input net.HardwareAddr, src, dst net.IP) (iface *n
 	var ifaceIndex int
 	switch {
 	case dst.To4() != nil:
-		ifaceIndex, gateway, preferredSrc, err = r.route(r.v4, input, src, dst)
+		ifaceIndex, gateway, preferredSrc, err = r.route(r.v4, r.defaultv4, input, src, dst)
 	case dst.To16() != nil:
-		ifaceIndex, gateway, preferredSrc, err = r.route(r.v6, input, src, dst)
+		ifaceIndex, gateway, preferredSrc, err = r.route(r.v6, r.defaultv6, input, src, dst)
 	default:
 		err = errors.New("IP is not valid as IPv4 or IPv6")
 	}
@@ -121,7 +122,7 @@ func (r *router) RouteWithSrc(input net.HardwareAddr, src, dst net.IP) (iface *n
 	return
 }
 
-func (r *router) route(routes routeSlice, input net.HardwareAddr, src, dst net.IP) (iface int, gateway, preferredSrc net.IP, err error) {
+func (r *router) route(routes routeSlice, defaultroutes routeSlice, input net.HardwareAddr, src, dst net.IP) (iface int, gateway, preferredSrc net.IP, err error) {
 	var inputIndex uint32
 	if input != nil {
 		for i, iface := range r.ifaces {
@@ -144,6 +145,10 @@ func (r *router) route(routes routeSlice, input net.HardwareAddr, src, dst net.I
 		}
 		return int(rt.OutputIface), rt.Gateway, rt.PrefSrc, nil
 	}
+	if len(defaultroutes) > 0{
+		return int(defaultroutes[0].OutputIface), defaultroutes[0].Gateway, defaultroutes[0].PrefSrc, nil
+	}
+
 	err = fmt.Errorf("no route found for %v", dst)
 	return
 }
@@ -174,14 +179,6 @@ loop:
 			if err != nil {
 				return nil, err
 			}
-			switch rt.Family {
-			case syscall.AF_INET:
-				rtr.v4 = append(rtr.v4, &routeInfo)
-			case syscall.AF_INET6:
-				rtr.v6 = append(rtr.v6, &routeInfo)
-			default:
-				continue loop
-			}
 			for _, attr := range attrs {
 				switch attr.Attr.Type {
 				case syscall.RTA_DST:
@@ -206,19 +203,37 @@ loop:
 					routeInfo.Priority = *(*uint32)(unsafe.Pointer(&attr.Value[0]))
 				}
 			}
+			switch rt.Family {
+			case syscall.AF_INET:
+				if routeInfo.Dst == nil{
+					rtr.defaultv4 = append(rtr.defaultv4, &routeInfo)
+				}else{
+					rtr.v4 = append(rtr.v4, &routeInfo)
+				}
+			case syscall.AF_INET6:
+				if routeInfo.Dst == nil{
+					rtr.defaultv6 = append(rtr.defaultv6, &routeInfo)
+				}else{
+					rtr.v6 = append(rtr.v6, &routeInfo)
+				}
+			default:
+				continue loop
+			}
 		}
 	}
 	sort.Sort(rtr.v4)
 	sort.Sort(rtr.v6)
+	sort.Sort(rtr.defaultv4)
+	sort.Sort(rtr.defaultv6)
 	ifaces, err := net.Interfaces()
 	if err != nil {
 		return nil, err
 	}
-	for i, iface := range ifaces {
-		if i != iface.Index-1 {
-			return nil, fmt.Errorf("out of order iface %d = %v", i, iface)
-		}
-		rtr.ifaces = append(rtr.ifaces, iface)
+	for _, iface := range ifaces {
+		//if i != iface.Index-1 {
+		//	return nil, fmt.Errorf("out of order iface %d = %v", i, iface)
+		//}
+		rtr.ifaces[iface.Index-1] = iface
 		var addrs ipAddrs
 		ifaceAddrs, err := iface.Addrs()
 		if err != nil {
