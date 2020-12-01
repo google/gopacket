@@ -70,7 +70,9 @@ const (
 	DNSTypeTXT   DNSType = 16  // text strings
 	DNSTypeAAAA  DNSType = 28  // a IPv6 host address [RFC3596]
 	DNSTypeSRV   DNSType = 33  // server discovery [RFC2782] [RFC6195]
+	DNSTypeNAPTR DNSType = 35  // Naming Authority Pointer [RFC2915] [RFC2168] [RFC3403]
 	DNSTypeOPT   DNSType = 41  // OPT Pseudo-RR [RFC6891]
+	DNSType65    DNSType = 65  // HTTPS [draft-ietf-dnsop-svcb-https-00]
 	DNSTypeURI   DNSType = 256 // URI RR [RFC7553]
 )
 
@@ -114,8 +116,12 @@ func (dt DNSType) String() string {
 		return "AAAA"
 	case DNSTypeSRV:
 		return "SRV"
+	case DNSTypeNAPTR:
+		return "NAPTR"
 	case DNSTypeOPT:
 		return "OPT"
+	case DNSType65:
+		return "TYPE65"
 	case DNSTypeURI:
 		return "URI"
 	}
