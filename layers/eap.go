@@ -30,6 +30,7 @@ const (
 	EAPTypeNACK         EAPType = 3
 	EAPTypeOTP          EAPType = 4
 	EAPTypeTokenCard    EAPType = 5
+	EAPTypeEAPTLS       EAPType = 13
 )
 
 // EAP defines an Extensible Authentication Protocol (rfc 3748) layer.
