@@ -1042,6 +1042,19 @@ func TestDecodingLayerParserFullTCPPacket(t *testing.T) {
 	}
 }
 
+func TestDecodingLayerParserEmpty(t *testing.T) {
+	dlp := gopacket.NewDecodingLayerParser(LayerTypeEthernet, &Ethernet{}, &IPv4{}, &IPv6{}, &ICMPv4{}, &ICMPv6{}, &TCP{}, &UDP{})
+	decoded := make([]gopacket.LayerType, 1)
+	empty := []byte{}
+	err := dlp.DecodeLayers(empty, &decoded)
+	if err != nil {
+		t.Error("Error from dlp parser: ", err)
+	}
+	if len(decoded) != 0 {
+		t.Error("Expected 0 layers parsed, instead got ", len(decoded))
+	}
+}
+
 func testDecodingLayerContainer(t *testing.T, dlc gopacket.DecodingLayerContainer) {
 	dlc = dlc.Put(&Ethernet{})
 	dlc = dlc.Put(&IPv4{})
