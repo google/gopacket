@@ -129,8 +129,13 @@ func (r *router) route(routes routeSlice, input net.HardwareAddr, src, dst net.I
 			}
 		}
 	}
+	var defaultGateway *rtInfo = nil
 	for _, rt := range routes {
 		if rt.InputIface != 0 && rt.InputIface != inputIndex {
+			continue
+		}
+		if rt.Src == nil && rt.Dst == nil {
+			defaultGateway = rt
 			continue
 		}
 		if rt.Src != nil && !rt.Src.Contains(src) {
@@ -140,6 +145,10 @@ func (r *router) route(routes routeSlice, input net.HardwareAddr, src, dst net.I
 			continue
 		}
 		return int(rt.OutputIface), rt.Gateway, rt.PrefSrc, nil
+	}
+
+	if defaultGateway != nil {
+		return int(defaultGateway.OutputIface), defaultGateway.Gateway, defaultGateway.PrefSrc, nil
 	}
 	err = fmt.Errorf("no route found for %v", dst)
 	return
@@ -214,7 +223,8 @@ loop:
 	if err != nil {
 		return nil, err
 	}
-	for _, iface := range ifaces {
+	for _, tmp := range ifaces {
+		iface := tmp
 		rtr.ifaces[iface.Index] = &iface
 		var addrs ipAddrs
 		ifaceAddrs, err := iface.Addrs()
