@@ -90,7 +90,7 @@ func (l *Loopback) SerializeTo(b gopacket.SerializeBuffer, opts gopacket.Seriali
 	if l.Family != ProtocolFamilyUnspec {
 		binary.LittleEndian.PutUint32(bytes, uint32(l.Family))
 	} else {
-		binary.LittleEndian.PutUint32(bytes, uint32(l.EthType))
+		binary.BigEndian.PutUint32(bytes, uint32(l.EthType))
 	}
 	return nil
 }
