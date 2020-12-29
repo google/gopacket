@@ -11,8 +11,16 @@ import (
 	"encoding/binary"
 	"errors"
 	"fmt"
-	"github.com/google/gopacket"
 	"net"
+
+	"github.com/google/gopacket"
+)
+
+const (
+	// Reference: epan/etypes.h of Wireshark
+	// Maximum length of an IEEE 802.3 frame; Ethernet type/length values
+	// less than or equal to it are lengths.
+	FrameMaxLenIEEE8023 uint16 = 1500
 )
 
 // EthernetBroadcast is the broadcast MAC address used by Ethernet.
@@ -47,7 +55,7 @@ func (eth *Ethernet) DecodeFromBytes(data []byte, df gopacket.DecodeFeedback) er
 	eth.EthernetType = EthernetType(binary.BigEndian.Uint16(data[12:14]))
 	eth.BaseLayer = BaseLayer{data[:14], data[14:]}
 	eth.Length = 0
-	if eth.EthernetType < 0x0600 {
+	if uint16(eth.EthernetType) <= FrameMaxLenIEEE8023 {
 		eth.Length = uint16(eth.EthernetType)
 		eth.EthernetType = EthernetTypeLLC
 		if cmp := len(eth.Payload) - int(eth.Length); cmp < 0 {
@@ -84,7 +92,7 @@ func (eth *Ethernet) SerializeTo(b gopacket.SerializeBuffer, opts gopacket.Seria
 		}
 		if eth.EthernetType != EthernetTypeLLC {
 			return fmt.Errorf("ethernet type %v not compatible with length value %v", eth.EthernetType, eth.Length)
-		} else if eth.Length > 0x0600 {
+		} else if eth.Length > FrameMaxLenIEEE8023 {
 			return fmt.Errorf("invalid ethernet length %v", eth.Length)
 		}
 		binary.BigEndian.PutUint16(bytes[12:], eth.Length)
