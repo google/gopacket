@@ -36,10 +36,7 @@ func (l *Loopback) DecodeFromBytes(data []byte, df gopacket.DecodeFeedback) erro
 	// project to get more details.
 
 	if binary.BigEndian.Uint16(data) == 0xFF03 {
-		l.EthType = EthernetTypePPP
-		l.Family = ProtocolFamilyUnspec
-		l.BaseLayer = BaseLayer{data[:4], data[4:]}
-		return nil
+		return errors.New("looks like PPP in HDLC-like Framing")
 	}
 
 	nullHeader := binary.BigEndian.Uint32(data)
