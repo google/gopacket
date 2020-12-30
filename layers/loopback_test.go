@@ -6,6 +6,7 @@
 package layers
 
 import (
+	"reflect"
 	"testing"
 
 	"github.com/google/gopacket"
@@ -30,6 +31,21 @@ func TestPacketLoopbackType(t *testing.T) {
 	}
 	checkLayers(p, []gopacket.LayerType{LayerTypeLoopback, LayerTypeIPv4, LayerTypeTCP}, t)
 	checkSerialization(p, t)
+	if got, ok := p.Layer(LayerTypeLoopback).(*Loopback); ok {
+		want := &Loopback{
+			BaseLayer: BaseLayer{
+				Contents: testPacketLoopbackType[:4],
+				Payload:  testPacketLoopbackType[4:],
+			},
+			EthType: EthernetTypeIPv4,
+			Family:  ProtocolFamilyUnspec,
+		}
+		if !reflect.DeepEqual(got, want) {
+			t.Errorf("Loopback packet processing failed:\ngot:\n%#v\n\nwant:\n%#v\n\n", got, want)
+		}
+	} else {
+		t.Error("No Loopback layer type found in packet")
+	}
 }
 
 // Frame 1: 64 bytes on wire (512 bits), 64 bytes captured (512 bits)
@@ -51,4 +67,19 @@ func TestPacketLoopbackFamily(t *testing.T) {
 	}
 	checkLayers(p, []gopacket.LayerType{LayerTypeLoopback, LayerTypeIPv4, LayerTypeTCP}, t)
 	checkSerialization(p, t)
+	if got, ok := p.Layer(LayerTypeLoopback).(*Loopback); ok {
+		want := &Loopback{
+			BaseLayer: BaseLayer{
+				Contents: testPacketLoopbackFamily[:4],
+				Payload:  testPacketLoopbackFamily[4:],
+			},
+			EthType: EthernetTypeUnspec,
+			Family:  ProtocolFamilyIPv4,
+		}
+		if !reflect.DeepEqual(got, want) {
+			t.Errorf("Loopback packet processing failed:\ngot:\n%#v\n\nwant:\n%#v\n\n", got, want)
+		}
+	} else {
+		t.Error("No Loopback layer type found in packet")
+	}
 }
