@@ -52,7 +52,7 @@ func checkSerialization(p gopacket.Packet, t *testing.T) {
 		t.Error("Failed to encode packet:", err)
 	}
 
-	p2 := gopacket.NewPacket(buf.Bytes(), LinkTypeEthernet, gopacket.Default)
+	p2 := gopacket.NewPacket(buf.Bytes(), p.Layers()[0].LayerType(), gopacket.Default)
 	if p2.ErrorLayer() != nil {
 		t.Error("Failed to decode the re-encoded packet:", p2.ErrorLayer().Error())
 	}
