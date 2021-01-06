@@ -100,6 +100,9 @@ func (r *router) RouteWithSrc(input net.HardwareAddr, src, dst net.IP) (iface *n
 		ifaceIndex, gateway, preferredSrc, err = r.route(r.v6, input, src, dst)
 	default:
 		err = errors.New("IP is not valid as IPv4 or IPv6")
+	}
+
+	if err != nil {
 		return
 	}
 
@@ -147,7 +150,10 @@ func (r *router) route(routes routeSlice, input net.HardwareAddr, src, dst net.I
 // long-running programs to call New() regularly to take into account any
 // changes to the routing table which have occurred since the last New() call.
 func New() (Router, error) {
-	rtr := &router{ifaces: make(map[int]*net.Interface), addrs: make(map[int]ipAddrs)}
+	rtr := &router{
+		ifaces: make(map[int]*net.Interface),
+		addrs:  make(map[int]ipAddrs),
+	}
 	tab, err := syscall.NetlinkRIB(syscall.RTM_GETROUTE, syscall.AF_UNSPEC)
 	if err != nil {
 		return nil, err
@@ -209,8 +215,7 @@ loop:
 		return nil, err
 	}
 	for _, iface := range ifaces {
-		currentIface := iface
-		rtr.ifaces[iface.Index] = &currentIface
+		rtr.ifaces[iface.Index] = &iface
 		var addrs ipAddrs
 		ifaceAddrs, err := iface.Addrs()
 		if err != nil {

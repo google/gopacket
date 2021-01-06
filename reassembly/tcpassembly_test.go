@@ -7,8 +7,10 @@
 package reassembly
 
 import (
+	"bytes"
 	"encoding/hex"
 	"fmt"
+	"math/rand"
 	"net"
 	"reflect"
 	"runtime"
@@ -461,8 +463,8 @@ func TestBufferedOverlapCase6(t *testing.T) {
 			in: layers.TCP{
 				SrcPort:   1,
 				DstPort:   2,
-				Seq:       1010,
-				BaseLayer: layers.BaseLayer{Payload: []byte{10, 11, 12, 13, 14}},
+				Seq:       1007,
+				BaseLayer: layers.BaseLayer{Payload: []byte{7, 8, 9, 10, 11, 12, 13, 14}},
 			},
 			want: []Reassembly{},
 		},
@@ -954,6 +956,7 @@ type testKeepSequence struct {
 	keep    int
 	want    []byte
 	skipped int
+	flush   bool
 }
 
 func testKeep(t *testing.T, s []testKeepSequence) {
@@ -988,6 +991,10 @@ func testKeep(t *testing.T, s []testKeepSequence) {
 		}
 		if testDebug {
 			fmt.Printf("#### testKeep: #%d: bytes: %s\n", i, hex.EncodeToString(fact.bytes))
+		}
+
+		if test.flush {
+			a.FlushAll()
 		}
 	}
 }
@@ -1188,6 +1195,44 @@ func TestKeepWithFlush(t *testing.T) {
 			keep:    0,
 			skipped: 1,
 			want:    []byte{8},
+		},
+	})
+}
+
+func TestKeepWithOutOfOrderPacketAndManualFlush(t *testing.T) {
+	makePayload := func(length int) []byte {
+		data := make([]byte, length)
+		rand.Read(data)
+		return data
+	}
+
+	// The first packet is received out of order. It contains `pageBytes + 1`
+	// number of bytes, so it spans 2 pages.
+	// The second packet carries a single byte before the first packet, and we
+	// request to keep `pageBytes` bytes. Then trigger a flush.
+	// Prior to a fix, this would result in an slice bounds out of range panic
+	// when the code tries to incorrectly skip the leading bytes on the second
+	// page of the first packet.
+	testKeep(t, []testKeepSequence{
+		{
+			tcp: layers.TCP{
+				SrcPort:   1,
+				DstPort:   2,
+				Seq:       1001,
+				BaseLayer: layers.BaseLayer{Payload: makePayload(pageBytes + 1)},
+			},
+			want: []byte{},
+		},
+		{
+			tcp: layers.TCP{
+				SrcPort:   1,
+				DstPort:   2,
+				Seq:       1000,
+				BaseLayer: layers.BaseLayer{Payload: []byte{1}},
+			},
+			keep:  pageBytes,
+			want:  []byte{},
+			flush: true,
 		},
 	})
 }
@@ -1861,5 +1906,67 @@ func TestFullyOrderedAndCompleteStreamDoesNotAlloc(t *testing.T) {
 	// +1 for first packet and +1 because AllocsPerRun seems to run fun N+1 times.
 	if tf.bytes != 10*2*(N+1+1) {
 		t.Error(tf.bytes, "bytes handled, expected", 10*2*(N+1+1))
+	}
+}
+
+type testCustomContext int
+
+func (c testCustomContext) GetCaptureInfo() gopacket.CaptureInfo {
+	// We're just abusing the InterfaceIndex to identify the context, no other
+	// meaning here.
+	return gopacket.CaptureInfo{InterfaceIndex: int(c)}
+}
+
+// Make sure reassemblyObject.CaptureInfo conforms to ScatterGather interface.
+func TestReassemblyObjectCaptureInfo(t *testing.T) {
+	// Add 20 bytes worth of data into a reassemblyObject.
+	all := []byteContainer{
+		&page{
+			bytes: bytes.Repeat([]byte("1"), 10),
+			ac:    testCustomContext(1203),
+		},
+		&livePacket{
+			bytes: bytes.Repeat([]byte("1"), 10),
+			ac:    testCustomContext(794598214),
+		},
+	}
+	ro := &reassemblyObject{all: all}
+
+	testCases := []struct {
+		offset   int
+		expected testCustomContext
+	}{
+		{
+			offset: -1,
+		},
+		{
+			offset:   0,
+			expected: testCustomContext(1203),
+		},
+		{
+			offset:   5,
+			expected: testCustomContext(1203),
+		},
+		{
+			offset:   10,
+			expected: testCustomContext(794598214),
+		},
+		{
+			offset:   19,
+			expected: testCustomContext(794598214),
+		},
+		{
+			offset: 20,
+		},
+		{
+			offset: 1000000,
+		},
+	}
+	for _, c := range testCases {
+		expected := c.expected.GetCaptureInfo()
+		ci := ro.CaptureInfo(c.offset)
+		if !reflect.DeepEqual(expected, ci) {
+			t.Errorf("test CaptureInfo(%d):\nwant: %v\n got: %v\n", c.offset, expected, ci)
+		}
 	}
 }
