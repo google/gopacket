@@ -3,7 +3,11 @@ package routing
 import (
 	"fmt"
 	"net"
+	"runtime"
 	"testing"
+
+	"github.com/vishvananda/netlink"
+	"github.com/vishvananda/netns"
 )
 
 func TestPrivateRoute(t *testing.T) {
@@ -274,4 +278,237 @@ func TestPrivateRoute(t *testing.T) {
 		})
 	}
 
+}
+
+func TestRouting(t *testing.T) {
+	runtime.LockOSThread()
+	defer runtime.UnlockOSThread()
+
+	// parent network namespace
+	testNs, _ := netns.New()
+	defer testNs.Close()
+
+	// child network namespace
+	newns, _ := netns.New()
+	defer newns.Close()
+
+	veth0 := &netlink.Veth{
+		LinkAttrs: netlink.LinkAttrs{
+			Name: "veth0",
+		},
+		PeerName: "veth0-peer",
+	}
+
+	veth1 := &netlink.Veth{
+		LinkAttrs: netlink.LinkAttrs{
+			Name: "veth1",
+		},
+		PeerName: "veth1-peer",
+	}
+
+	// ip link add veth0 type veth peer name veth0-peer
+	if err := netlink.LinkAdd(veth0); err != nil {
+		t.Errorf("\nFailed SetUp Test Environment: link add veth0 type veth peer name veth0-peer: %#v\n\n", err)
+		return
+	}
+
+	// ip link add veth1 type veth peer name veth1-peer
+	if err := netlink.LinkAdd(veth1); err != nil {
+		t.Errorf("\nFailed SetUp Test Environment: link add veth1 type veth peer name veth1-peer: %#v\n\n", err)
+		return
+	}
+
+	// ip address add 192.168.10.1/24 dev veth0
+	veth0Addr, err := netlink.ParseAddr("192.168.10.1/24")
+	if err != nil {
+		t.Errorf("\nFailed SetUp Test Environment: parse addr 192.168.10.1/24: %#v\n\n", err)
+		return
+	}
+	if err := netlink.AddrAdd(veth0, veth0Addr); err != nil {
+		t.Errorf("\nFailed SetUp Test Environment: address add 192.168.10.1/24 dev veth0: %#v\n\n", err)
+		return
+	}
+
+	// ip address add 192.168.20.1/24 dev veth1
+	veth1Addr, err := netlink.ParseAddr("192.168.20.1/24")
+	if err != nil {
+		t.Errorf("\nFailed SetUp Test Environment: parse addr 192.168.20.1/24: %#v\n\n", err)
+		return
+	}
+	if err := netlink.AddrAdd(veth1, veth1Addr); err != nil {
+		t.Errorf("\nFailed SetUp Test Environment: parse addr 192.168.20.1/24 dev veth1: %#v\n\n", err)
+		return
+	}
+
+	// ip link set up veth0
+	if err := netlink.LinkSetUp(veth0); err != nil {
+		t.Errorf("\nFailed SetUp Test Environment: link set up veth0: %#v\n\n", err)
+		return
+	}
+
+	// ip link set up veth1
+	if err := netlink.LinkSetUp(veth1); err != nil {
+		t.Errorf("\nFailed SetUp Test Environment: link set up veth1: %#v\n\n", err)
+		return
+	}
+
+	veth0Peer, err := netlink.LinkByName("veth0-peer")
+	if err != nil {
+		t.Errorf("\nFailed SetUp Test Environment: link by name veth0-peer: %#v\n\n", err)
+		return
+	}
+	// ip link set up veth0-peer
+	if err := netlink.LinkSetUp(veth0Peer); err != nil {
+		t.Errorf("\nFailed SetUp Test Environment: link set up veth0-peer: %#v\n\n", err)
+		return
+	}
+	// ip link set dev veth0-peer netns {testNs}
+	if err := netlink.LinkSetNsFd(veth0Peer, int(testNs)); err != nil {
+		t.Errorf("\nFailed SetUp Test Environment: link set dev veth0-peer netns testNs: %#v\n\n", err)
+		return
+	}
+
+	veth1Peer, err := netlink.LinkByName("veth1-peer")
+	if err != nil {
+		t.Errorf("\nFailed SetUp Test Environment: link by name veth1-peer: %#v\n\n", err)
+		return
+	}
+	// ip link set up veth1-peer
+	if err := netlink.LinkSetUp(veth1Peer); err != nil {
+		t.Errorf("\nFailed SetUp Test Environment: link set up veth1-peer: %#v\n\n", err)
+		return
+	}
+	// ip link set dev veth1-peer netns {testNs}
+	if err := netlink.LinkSetNsFd(veth1Peer, int(testNs)); err != nil {
+		t.Errorf("\nFailed SetUp Test Environment: link set dev veth1-peer netns testNs: %#v\n\n", err)
+		return
+	}
+
+	/**
+	 * routing table
+	 * 192.168.10.0/24 dev veth0 proto kernel scope link src 192.168.10.1
+	 * 192.168.20.0/24 dev veth1 proto kernel scope link src 192.168.20.1
+	 */
+
+	t.Run("exists route without default gateway", func(t *testing.T) {
+		netns.Set(newns)
+		r, err := New()
+		if err != nil {
+			t.Errorf("\ngot:	%#v\nwant:	nil", err)
+			return
+		}
+
+		iface, _, _, err := r.Route(net.ParseIP("192.168.10.2"))
+		if err != nil {
+			t.Errorf("\ngot:	%#v\nwant:	nil", err)
+		}
+
+		if veth0.Index != iface.Index {
+			t.Errorf("\ngot:	%d\nwant:	%d\n\n", iface.Index, veth0.Index)
+		}
+
+		iface, _, _, err = r.Route(net.ParseIP("192.168.20.2"))
+		if err != nil {
+			t.Errorf("\ngot:	%#v\nwant:	nil", err)
+		}
+
+		if veth1.Index != iface.Index {
+			t.Errorf("\ngot:	%d\nwant:	%d\n\n", iface.Index, veth1.Index)
+		}
+	})
+
+	t.Run("not exists route without default gateway", func(t *testing.T) {
+		netns.Set(newns)
+
+		r, err := New()
+		if err != nil {
+			t.Errorf("\ngot:	%#v\nwant:	nil\n\n", err)
+			return
+		}
+
+		if _, _, _, err = r.Route(net.ParseIP("172.16.0.1")); err == nil && err == fmt.Errorf("no route found for 172.16.0.1") {
+			t.Errorf("\ngot:	%#v\nwant:	%#v\n\n", err, fmt.Errorf("no route found for 172.16.0.1"))
+			return
+		}
+	})
+
+	t.Run("exists route with default gateway", func(t *testing.T) {
+		netns.Set(newns)
+
+		netlink.RouteAdd(&netlink.Route{
+			Gw:        net.ParseIP("192.168.20.254"),
+			LinkIndex: veth1.Index,
+		})
+		defer func() {
+			// teardown
+			netlink.RouteDel(&netlink.Route{
+				Gw:        net.ParseIP("192.168.20.254"),
+				LinkIndex: veth1.Index,
+			})
+		}()
+
+		r, err := New()
+		if err != nil {
+			t.Errorf("\ngot:	%#v\nwant:	nil\n\n", err)
+			return
+		}
+
+		iface, gateway, prefSrc, err := r.Route(net.ParseIP("192.168.10.2"))
+		if err != nil {
+			t.Errorf("\ngot:	%#v\nwant:	nil\n\n", err)
+			return
+		}
+
+		if veth0.Index != iface.Index {
+			t.Errorf("\ngot:	%d\nwant:	%d\n\n", iface.Index, veth0.Index)
+		}
+
+		if gateway != nil {
+			t.Errorf("\ngot:	%#v\nwant:	nil\n\n", gateway)
+		}
+
+		if !prefSrc.Equal(net.ParseIP("192.168.10.1")) {
+			t.Errorf("\ngot:	%#v\nwant:	%#v\n\n", prefSrc, net.ParseIP("192.168.10.1"))
+		}
+	})
+
+	t.Run("not exists route with default gateway", func(t *testing.T) {
+		netns.Set(newns)
+
+		netlink.RouteAdd(&netlink.Route{
+			Gw:        net.ParseIP("192.168.20.254"),
+			LinkIndex: veth1.Index,
+		})
+		defer func() {
+			// teardown
+			netlink.RouteDel(&netlink.Route{
+				Gw:        net.ParseIP("192.168.20.254"),
+				LinkIndex: veth1.Index,
+			})
+		}()
+
+		r, err := New()
+		if err != nil {
+			t.Errorf("\ngot:	%#v\nwant:	nil\n\n", err)
+			return
+		}
+
+		iface, gateway, prefSrc, err := r.Route(net.ParseIP("172.16.0.1"))
+		if err != nil {
+			t.Errorf("\ngot:	%#v\nwant:	nil\n\n", err)
+			return
+		}
+
+		if veth1.Index != iface.Index {
+			t.Errorf("\ngot:	%d\nwant:	%d\n\n", iface.Index, veth1.Index)
+		}
+
+		if !gateway.Equal(net.ParseIP("192.168.20.254")) {
+			t.Errorf("\ngot:	%#v\nwant:	%#v\n\n", gateway, net.ParseIP("192.168.20.254"))
+		}
+
+		if !prefSrc.Equal(net.ParseIP("192.168.20.1")) {
+			t.Errorf("\ngot:	%#v\nwant:	%#v\n\n", prefSrc, net.ParseIP("192.168.20.1"))
+		}
+	})
 }
