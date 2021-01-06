@@ -8,4 +8,4 @@ go test github.com/google/gopacket/tcpassembly
 go test github.com/google/gopacket/reassembly
 go test github.com/google/gopacket/pcapgo
 go test github.com/google/gopacket/pcap
-sudo go test github.com/google/gopacket/routing
+sudo $(which go) test github.com/google/gopacket/routing
