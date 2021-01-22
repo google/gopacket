@@ -178,9 +178,8 @@ func ips(n *net.IPNet) (out []net.IP) {
 	mask := binary.BigEndian.Uint32([]byte(n.Mask))
 	net := num & mask
 	broadcast := net | ^mask
-	for net++; net < broadcast-1; {
+	for net++; net < broadcast-1; net++ {
 		var buf [4]byte
-		net++
 		binary.BigEndian.PutUint32(buf[:], net)
 		out = append(out, net.IP(buf[:]))
 	}
