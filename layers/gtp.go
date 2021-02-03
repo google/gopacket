@@ -10,6 +10,7 @@ package layers
 import (
 	"encoding/binary"
 	"fmt"
+
 	"github.com/google/gopacket"
 )
 
@@ -87,7 +88,6 @@ func (g *GTPv1U) DecodeFromBytes(data []byte, df gopacket.DecodeFeedback) error 
 				// extensionLength is in 4-octet units
 				lIndex := cIndex + (uint16(extensionLength) * 4)
 				if uint16(dLen) < lIndex {
-					fmt.Println(dLen, lIndex)
 					return fmt.Errorf("GTP packet with small extension header: %d bytes", dLen)
 				}
 				content := data[cIndex+1 : lIndex-1]
