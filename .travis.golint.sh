@@ -2,7 +2,7 @@
 
 cd "$(dirname $0)"
 
-go get golang.org/x/lint/golint
+GO111MODULE=off go get golang.org/x/lint/golint
 DIRS=". tcpassembly tcpassembly/tcpreader ip4defrag reassembly macs pcapgo pcap afpacket pfring routing defrag/lcmdefrag"
 # Add subdirectories here as we clean up golint on each.
 for subdir in $DIRS; do
