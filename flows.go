@@ -54,31 +54,18 @@ func (a Endpoint) LessThan(b Endpoint) bool {
 	return a.typ < b.typ || (a.typ == b.typ && bytes.Compare(a.raw[:a.len], b.raw[:b.len]) < 0)
 }
 
-// fnvHash is used by our FastHash functions, and implements the FNV hash
-// created by Glenn Fowler, Landon Curt Noll, and Phong Vo.
-// See http://isthe.com/chongo/tech/comp/fnv/.
-func fnvHash(s []byte) (h uint64) {
-	h = fnvBasis
-	for i := 0; i < len(s); i++ {
-		h ^= uint64(s[i])
-		h *= fnvPrime
-	}
-	return
-}
-
-const fnvBasis = 14695981039346656037
-const fnvPrime = 1099511628211
-
 // FastHash provides a quick hashing function for an endpoint, useful if you'd
 // like to split up endpoints by modulos or other load-balancing techniques.
-// It uses a variant of Fowler-Noll-Vo hashing.
+// It creates the hash by xor-ing the bytes of the address in a 64-bit, round robin
+// fashion (hash ^= addr[0],hash ^= addr[1]<<8,...,hash ^= addr[9]<<8). For
+// addresses less than or equal to 64-bits this guarantees  collision free hashes.
 //
 // The output of FastHash is not guaranteed to remain the same through future
 // code revisions, so should not be used to key values in persistent storage.
 func (a Endpoint) FastHash() (h uint64) {
-	h = fnvHash(a.raw[:a.len])
-	h ^= uint64(a.typ)
-	h *= fnvPrime
+	for i := 0; i < a.len; i++ {
+		h ^= uint64(a.raw[i]) << (8 * (uint(i) % 8))
+	}
 	return
 }
 
@@ -158,18 +145,29 @@ func FlowFromEndpoints(src, dst Endpoint) (_ Flow, err error) {
 
 // FastHash provides a quick hashing function for a flow, useful if you'd
 // like to split up flows by modulos or other load-balancing techniques.
-// It uses a variant of Fowler-Noll-Vo hashing, and is guaranteed to collide
-// with its reverse flow.  IE: the flow A->B will have the same hash as the flow
-// B->A.
+// It  is guaranteed to collide with its reverse flow.  IE: the flow A->B
+// will have the same hash as the flow B->A.
+//
+// It creates the hash by first, for each endpoint, xor-ing the bytes of the
+// address in a 32-bit round robin fashion (hash ^= addr[0],hash ^= addr[1]<<8,
+// ...,hash ^= addr[5]<<8). The result for each endpoint is then concatenated
+// together in an order independent way. For addresses less than or equal to
+// 32-bits this guarantees collision free hashes. IE: the flows A->B and B->A
+// will have a hash that no other combination of addresses can produce.
 //
 // The output of FastHash is not guaranteed to remain the same through future
 // code revisions, so should not be used to key values in persistent storage.
-func (f Flow) FastHash() (h uint64) {
-	// This combination must be commutative.  We don't use ^, since that would
-	// give the same hash for all A->A flows.
-	h = fnvHash(f.src[:f.slen]) + fnvHash(f.dst[:f.dlen])
-	h ^= uint64(f.typ)
-	h *= fnvPrime
+func (f Flow) FastHash() (a uint64) {
+	var b uint64
+	for i := 0; i < f.slen; i++ {
+		a ^= uint64(f.src[i]) << (8 * (uint(i) % 4))
+		b ^= uint64(f.dst[i]) << (8 * (uint(i) % 4))
+	}
+	if a > b {
+		a += (b << 32)
+		return
+	}
+	a = b + (a << 32)
 	return
 }
 
