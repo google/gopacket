@@ -159,15 +159,10 @@ func FlowFromEndpoints(src, dst Endpoint) (_ Flow, err error) {
 // code revisions, so should not be used to key values in persistent storage.
 func (f Flow) FastHash() (a uint64) {
 	var b uint64
-	var addrlen int
-	if f.slen > f.dlen {
-		addrlen = f.slen
-	} else {
-		addrlen = f.dlen
-	}
-	for i := 0; i < addrlen; i++ {
-		a ^= uint64(f.src[i]) << (16 * (uint(i) % 4))
-		b ^= uint64(f.dst[i]) << (16 * (uint(i) % 4))
+
+	for i := 0; i < f.slen; i++ {
+		a ^= uint64(f.src[f.slen-1-i]) << (16 * (uint(i) % 4))
+		b ^= uint64(f.dst[f.slen-1-i]) << (16 * (uint(i) % 4))
 	}
 	if a > b {
 		a += (b << 8)
