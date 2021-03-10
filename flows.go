@@ -64,7 +64,7 @@ func (a Endpoint) LessThan(b Endpoint) bool {
 // code revisions, so should not be used to key values in persistent storage.
 func (a Endpoint) FastHash() (h uint64) {
 	for i := 0; i < a.len; i++ {
-		h ^= uint64(a.raw[i]) << (8 * (uint(i) % 8))
+		h ^= uint64(a.raw[a.len-1-i]) << (8 * (uint(i) % 8))
 	}
 	return
 }
