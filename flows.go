@@ -166,14 +166,14 @@ func (f Flow) FastHash() (a uint64) {
 		addrlen = f.dlen
 	}
 	for i := 0; i < addrlen; i++ {
-		a ^= uint64(f.src[i]) << (8 * (uint(i) % 4))
-		b ^= uint64(f.dst[i]) << (8 * (uint(i) % 4))
+		a ^= uint64(f.src[i]) << (16 * (uint(i) % 4))
+		b ^= uint64(f.dst[i]) << (16 * (uint(i) % 4))
 	}
 	if a > b {
-		a += (b << 32)
+		a += (b << 8)
 		return
 	}
-	a = b + (a << 32)
+	a = b + (a << 8)
 	return
 }
 
