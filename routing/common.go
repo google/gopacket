@@ -33,4 +33,10 @@ type Router interface {
 	// information.  Either or both of input/src can be nil.  If both are, this
 	// should behave exactly like Route(dst)
 	RouteWithSrc(input net.HardwareAddr, src, dst net.IP) (iface *net.Interface, gateway, preferredSrc net.IP, err error)
+
+	//GetIPV4Route return kernel's ipv4 routing table
+	GetIPV4Routes() (v4 routeSlice)
+
+	//GetIPV6Route return kernel's ipv6 routing table
+	GetIPV6Routes() (v6 routeSlice)
 }
