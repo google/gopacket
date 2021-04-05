@@ -21,7 +21,7 @@ type DHCPv6MsgType byte
 const (
 	DHCPv6MsgTypeUnspecified DHCPv6MsgType = iota
 	DHCPv6MsgTypeSolicit
-	DHCPv6MsgTypeAdverstise
+	DHCPv6MsgTypeAdvertise
 	DHCPv6MsgTypeRequest
 	DHCPv6MsgTypeConfirm
 	DHCPv6MsgTypeRenew
@@ -42,8 +42,8 @@ func (o DHCPv6MsgType) String() string {
 		return "Unspecified"
 	case DHCPv6MsgTypeSolicit:
 		return "Solicit"
-	case DHCPv6MsgTypeAdverstise:
-		return "Adverstise"
+	case DHCPv6MsgTypeAdvertise:
+		return "Advertise"
 	case DHCPv6MsgTypeRequest:
 		return "Request"
 	case DHCPv6MsgTypeConfirm:
