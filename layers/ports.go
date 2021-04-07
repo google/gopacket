@@ -52,30 +52,44 @@ func (a TCPPort) String() string {
 //
 // Returns gopacket.LayerTypePayload for unknown/unsupported port numbers.
 func (a TCPPort) LayerType() gopacket.LayerType {
-	lt := tcpPortLayerType[uint16(a)]
-	if lt != 0 {
-		return lt
+	if tcpPortLayerTypeOverride.has(uint16(a)) {
+		return tcpPortLayerType[a]
+	}
+	switch a {
+	case 53:
+		return LayerTypeDNS
+	case 443: // https
+		return LayerTypeTLS
+	case 502: // modbustcp
+		return LayerTypeModbusTCP
+	case 636: // ldaps
+		return LayerTypeTLS
+	case 989: // ftps-data
+		return LayerTypeTLS
+	case 990: // ftps
+		return LayerTypeTLS
+	case 992: // telnets
+		return LayerTypeTLS
+	case 993: // imaps
+		return LayerTypeTLS
+	case 994: // ircs
+		return LayerTypeTLS
+	case 995: // pop3s
+		return LayerTypeTLS
+	case 5061: // ips
+		return LayerTypeTLS
 	}
 	return gopacket.LayerTypePayload
 }
 
-var tcpPortLayerType = [65536]gopacket.LayerType{
-	53:   LayerTypeDNS,
-	443:  LayerTypeTLS,       // https
-	502:  LayerTypeModbusTCP, // modbustcp
-	636:  LayerTypeTLS,       // ldaps
-	989:  LayerTypeTLS,       // ftps-data
-	990:  LayerTypeTLS,       // ftps
-	992:  LayerTypeTLS,       // telnets
-	993:  LayerTypeTLS,       // imaps
-	994:  LayerTypeTLS,       // ircs
-	995:  LayerTypeTLS,       // pop3s
-	5061: LayerTypeTLS,       // ips
-}
+var tcpPortLayerTypeOverride bitfield
+
+var tcpPortLayerType = map[TCPPort]gopacket.LayerType{}
 
 // RegisterTCPPortLayerType creates a new mapping between a TCPPort
 // and an underlaying LayerType.
 func RegisterTCPPortLayerType(port TCPPort, layerType gopacket.LayerType) {
+	tcpPortLayerTypeOverride.set(uint16(port))
 	tcpPortLayerType[port] = layerType
 }
 
@@ -95,33 +109,50 @@ func (a UDPPort) String() string {
 //
 // Returns gopacket.LayerTypePayload for unknown/unsupported port numbers.
 func (a UDPPort) LayerType() gopacket.LayerType {
-	lt := udpPortLayerType[uint16(a)]
-	if lt != 0 {
-		return lt
+	if udpPortLayerTypeOverride.has(uint16(a)) {
+		return udpPortLayerType[a]
+	}
+	switch a {
+	case 53:
+		return LayerTypeDNS
+	case 67:
+		return LayerTypeDHCPv4
+	case 68:
+		return LayerTypeDHCPv4
+	case 123:
+		return LayerTypeNTP
+	case 546:
+		return LayerTypeDHCPv6
+	case 547:
+		return LayerTypeDHCPv6
+	case 623:
+		return LayerTypeRMCP
+	case 1812:
+		return LayerTypeRADIUS
+	case 2152:
+		return LayerTypeGTPv1U
+	case 3784:
+		return LayerTypeBFD
+	case 4789:
+		return LayerTypeVXLAN
+	case 5060:
+		return LayerTypeSIP
+	case 6081:
+		return LayerTypeGeneve
+	case 6343:
+		return LayerTypeSFlow
 	}
 	return gopacket.LayerTypePayload
 }
 
-var udpPortLayerType = [65536]gopacket.LayerType{
-	53:   LayerTypeDNS,
-	123:  LayerTypeNTP,
-	4789: LayerTypeVXLAN,
-	67:   LayerTypeDHCPv4,
-	68:   LayerTypeDHCPv4,
-	546:  LayerTypeDHCPv6,
-	547:  LayerTypeDHCPv6,
-	5060: LayerTypeSIP,
-	6343: LayerTypeSFlow,
-	6081: LayerTypeGeneve,
-	3784: LayerTypeBFD,
-	2152: LayerTypeGTPv1U,
-	623:  LayerTypeRMCP,
-	1812: LayerTypeRADIUS,
-}
+var udpPortLayerTypeOverride bitfield
+
+var udpPortLayerType = map[UDPPort]gopacket.LayerType{}
 
 // RegisterUDPPortLayerType creates a new mapping between a UDPPort
 // and an underlaying LayerType.
 func RegisterUDPPortLayerType(port UDPPort, layerType gopacket.LayerType) {
+	udpPortLayerTypeOverride.set(uint16(port))
 	udpPortLayerType[port] = layerType
 }
 
