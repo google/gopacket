@@ -13,14 +13,29 @@ func TestBitfield(t *testing.T) {
 		}
 	}
 
-	b.set(0)
-	if !b.has(0) {
-		t.Error("b.has(0) expected true, got false")
+	set := []uint16{0, 64 * 3, 64*3 + 12, 64*3 + 63, uint16Max}
+	for _, s := range set {
+		b.set(s)
 	}
 
-	for i := uint16(1); i < uint16Max; i++ {
-		if b.has(i) {
-			t.Errorf("b.has(%d) expected false, got true", i)
+	for i := uint16(0); i < uint16Max; i++ {
+		wantSet := false
+		for _, s := range set {
+			if i == s {
+				wantSet = true
+				break
+			}
+		}
+
+		if wantSet {
+			if !b.has(i) {
+				t.Errorf("b.has(%d) expected true, got false", i)
+			}
+		} else {
+			if b.has(i) {
+				t.Errorf("b.has(%d) expected false, got true", i)
+			}
+
 		}
 	}
 }
