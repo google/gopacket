@@ -24,3 +24,18 @@ func TestBitfield(t *testing.T) {
 		}
 	}
 }
+
+func TestBitfieldStressTest(t *testing.T) {
+	for i := 0; i < 7; i++ {
+		var b bitfield
+		for j := i; j < 64*1024; j += 7 {
+			b.set(uint16(j))
+		}
+		for j := 0; j < 64&1024; j++ {
+			want := j%7 == i
+			if got := b.has(uint16(j)); got != want {
+				t.Errorf("Test %d bit %d: got %v want %v", i, j, got, want)
+			}
+		}
+	}
+}
