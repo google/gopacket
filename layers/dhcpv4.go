@@ -333,6 +333,7 @@ const (
 	DHCPOptDomainSearch          DHCPOpt = 119 // n, string
 	DHCPOptSIPServers            DHCPOpt = 120 // n, url
 	DHCPOptClasslessStaticRoute  DHCPOpt = 121 //
+	DHCPOptMUDURLV4              DHCPOpt = 161 // n, string
 	DHCPOptEnd                   DHCPOpt = 255
 )
 
@@ -471,6 +472,8 @@ func (o DHCPOpt) String() string {
 		return "DomainSearch"
 	case DHCPOptClasslessStaticRoute:
 		return "ClasslessStaticRoute"
+	case DHCPOptMUDURLV4:
+		return "ManufacturerUsageDescriptionURL"
 	default:
 		return "Unknown"
 	}
