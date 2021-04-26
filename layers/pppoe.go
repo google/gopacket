@@ -8,6 +8,8 @@ package layers
 
 import (
 	"encoding/binary"
+	"fmt"
+
 	"github.com/google/gopacket"
 )
 
@@ -26,18 +28,40 @@ func (p *PPPoE) LayerType() gopacket.LayerType {
 	return LayerTypePPPoE
 }
 
+// CanDecode returns the set of layer types that this DecodingLayer can decode.
+func (d *PPPoE) CanDecode() gopacket.LayerClass {
+	return LayerTypePPPoE
+}
+
+// // NextLayerType returns the layer type contained by this DecodingLayer.
+func (d *PPPoE) NextLayerType() gopacket.LayerType {
+	if d.Code == PPPoECodeSession {
+		return LayerTypePPP
+	}
+	return gopacket.LayerTypeZero
+}
+
+// DecodeFromBytes decodes the given bytes into this layer.
+func (d *PPPoE) DecodeFromBytes(data []byte, df gopacket.DecodeFeedback) error {
+	if len(data) < 6 {
+		df.SetTruncated()
+		return fmt.Errorf("PPPoE header with length %d too short", len(data))
+	}
+
+	d.Version = data[0] >> 4
+	d.Type = data[0] & 0x0F
+	d.Code = PPPoECode(data[1])
+	d.SessionId = binary.BigEndian.Uint16(data[2:4])
+	d.Length = binary.BigEndian.Uint16(data[4:6])
+	d.BaseLayer = BaseLayer{data[:6], data[6 : 6+d.Length]}
+
+	return nil
+}
+
 // decodePPPoE decodes the PPPoE header (see http://tools.ietf.org/html/rfc2516).
 func decodePPPoE(data []byte, p gopacket.PacketBuilder) error {
-	pppoe := &PPPoE{
-		Version:   data[0] >> 4,
-		Type:      data[0] & 0x0F,
-		Code:      PPPoECode(data[1]),
-		SessionId: binary.BigEndian.Uint16(data[2:4]),
-		Length:    binary.BigEndian.Uint16(data[4:6]),
-	}
-	pppoe.BaseLayer = BaseLayer{data[:6], data[6 : 6+pppoe.Length]}
-	p.AddLayer(pppoe)
-	return p.NextDecoder(pppoe.Code)
+	d := &PPPoE{}
+	return decodingLayerDecoder(d, data, p)
 }
 
 // SerializeTo writes the serialized form of this layer into the
