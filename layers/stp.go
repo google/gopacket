@@ -7,21 +7,149 @@
 package layers
 
 import (
+	"encoding/binary"
+	"errors"
+	"fmt"
+	"net"
+
 	"github.com/google/gopacket"
 )
+
+type SWITCHID struct {
+	Priority uint16 // Bridge priority
+	SysID    uint16 // VLAN ID
+	HwAddr   net.HardwareAddr
+}
 
 // STP decode spanning tree protocol packets to transport BPDU (bridge protocol data unit) message.
 type STP struct {
 	BaseLayer
+	ProtocolID        uint16
+	Version           uint8
+	Type              uint8
+	TC, TCA           bool // TC: Topologie change ; TCA: Topologie change ack
+	RouteID, BridgeID SWITCHID
+	Cost              uint32
+	PortID            uint16
+	MSG_AGE           uint16
+	MAX_AGE           uint16
+	HELLO_TIME        uint16
+	FDelay            uint16
 }
 
 // LayerType returns gopacket.LayerTypeSTP.
 func (s *STP) LayerType() gopacket.LayerType { return LayerTypeSTP }
 
+// CanDecode returns the set of layer types that this DecodingLayer can decode.
+func (s *STP) CanDecode() gopacket.LayerClass {
+	return LayerTypeSTP
+}
+
+// DecodeFromBytes decodes the given bytes into this layer.
+func (stp *STP) DecodeFromBytes(data []byte, df gopacket.DecodeFeedback) error {
+	stpLength := 35
+	if len(data) < stpLength {
+		df.SetTruncated()
+		return fmt.Errorf("STP length %d too short", len(data))
+	}
+
+	stp.ProtocolID = binary.BigEndian.Uint16(data[:2])
+	stp.Version = uint8(data[2])
+	stp.Type = uint8(data[3])
+	stp.TCA = data[4]&0x01 != 0
+	stp.TC = data[4]&0x80 != 0
+	stp.RouteID.Priority = binary.BigEndian.Uint16(data[5:7]) & 0xf000
+	stp.RouteID.SysID = binary.BigEndian.Uint16(data[5:7]) & 0x0fff
+	stp.RouteID.HwAddr = net.HardwareAddr(data[7:13])
+	stp.Cost = binary.BigEndian.Uint32(data[13:17])
+	stp.BridgeID.Priority = binary.BigEndian.Uint16(data[17:19]) & 0xf000
+	stp.BridgeID.SysID = binary.BigEndian.Uint16(data[17:19]) & 0x0fff
+	stp.RouteID.HwAddr = net.HardwareAddr(data[19:25])
+	stp.PortID = binary.BigEndian.Uint16(data[25:27])
+	stp.MSG_AGE = binary.BigEndian.Uint16(data[27:29])
+	stp.MAX_AGE = binary.BigEndian.Uint16(data[29:31])
+	stp.HELLO_TIME = binary.BigEndian.Uint16(data[31:33])
+	stp.FDelay = binary.BigEndian.Uint16(data[33:35])
+	stp.Contents = data[:stpLength]
+	stp.Payload = data[stpLength:]
+
+	return nil
+}
+
+// NextLayerType returns the layer type contained by this DecodingLayer.
+func (stp *STP) NextLayerType() gopacket.LayerType {
+	return gopacket.LayerTypePayload
+}
+
+// Check if the priority value is correct.
+func checkPriority(prio uint16) (uint16, error) {
+	switch prio {
+	case 32768:
+		return prio, nil
+	case 16384:
+		return prio, nil
+	case 8192:
+		return prio, nil
+	case 4096:
+		return prio, nil
+	default:
+		return prio, errors.New("Invalid Priority value must be one of the following:\n32768\n16384\n8192\n4096\n")
+
+	}
+}
+
+// SerializeTo writes the serialized form of this layer into the
+// SerializationBuffer, implementing gopacket.SerializableLayer.
+// See the docs for gopacket.SerializableLayer for more info.
+func (s *STP) SerializeTo(b gopacket.SerializeBuffer, opts gopacket.SerializeOptions) error {
+	var flags uint8 = 0x00
+	bytes, err := b.PrependBytes(35)
+	if err != nil {
+		return err
+	}
+	binary.BigEndian.PutUint16(bytes, s.ProtocolID)
+	bytes[2] = s.Version
+	bytes[3] = s.Type
+	if s.TCA {
+		flags |= 0x01
+	}
+	if s.TC {
+		flags |= 0x80
+	}
+	bytes[4] = flags
+
+	prioRoot, err := checkPriority(s.RouteID.Priority)
+	if err != nil {
+		panic(err)
+	}
+	if s.RouteID.SysID >= 4096 {
+		panic("Invalid VlanID value ..!")
+	}
+	binary.BigEndian.PutUint16(bytes[5:7], prioRoot|s.RouteID.SysID)
+	copy(bytes[7:13], s.RouteID.HwAddr)
+
+	binary.BigEndian.PutUint32(bytes[13:17], s.Cost)
+
+	prioBridge, err := checkPriority(s.BridgeID.Priority)
+	if err != nil {
+		panic(err)
+	}
+	if s.BridgeID.SysID >= 4096 {
+		panic("Invalid VlanID value ..!")
+	}
+	binary.BigEndian.PutUint16(bytes[17:19], prioBridge|s.BridgeID.SysID)
+	copy(bytes[19:25], s.BridgeID.HwAddr)
+
+	binary.BigEndian.PutUint16(bytes[25:27], s.PortID)
+	binary.BigEndian.PutUint16(bytes[27:29], s.MSG_AGE)
+	binary.BigEndian.PutUint16(bytes[29:31], s.MAX_AGE)
+	binary.BigEndian.PutUint16(bytes[31:33], s.HELLO_TIME)
+	binary.BigEndian.PutUint16(bytes[33:35], s.FDelay)
+
+	return nil
+}
+
 func decodeSTP(data []byte, p gopacket.PacketBuilder) error {
 	stp := &STP{}
-	stp.Contents = data[:]
-	// TODO:  parse the STP protocol into actual subfields.
-	p.AddLayer(stp)
-	return nil
+	return decodingLayerDecoder(stp, data, p)
 }
