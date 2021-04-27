@@ -15,11 +15,21 @@ import (
 	"github.com/google/gopacket"
 )
 
-type SWITCHID struct {
-	Priority uint16 // Bridge priority
-	SysID    uint16 // VLAN ID
+type STPSwitchID struct {
+	Priority STPPriority // Bridge priority
+	SysID    uint16      // VLAN ID
 	HwAddr   net.HardwareAddr
 }
+
+type STPPriority uint16
+
+// Potential values for STPSwitchID.Priority.
+const (
+	STPPriorityMax  STPPriority = 32768
+	STPPriorityHigh STPPriority = 16384
+	STPPriorityLow  STPPriority = 8192
+	STPPriorityMin  STPPriority = 4046
+)
 
 // STP decode spanning tree protocol packets to transport BPDU (bridge protocol data unit) message.
 type STP struct {
@@ -28,12 +38,12 @@ type STP struct {
 	Version           uint8
 	Type              uint8
 	TC, TCA           bool // TC: Topologie change ; TCA: Topologie change ack
-	RouteID, BridgeID SWITCHID
+	RouteID, BridgeID STPSwitchID
 	Cost              uint32
 	PortID            uint16
-	MSG_AGE           uint16
-	MAX_AGE           uint16
-	HELLO_TIME        uint16
+	MessageAge        uint16
+	MaxAge            uint16
+	HelloTime         uint16
 	FDelay            uint16
 }
 
@@ -58,17 +68,17 @@ func (stp *STP) DecodeFromBytes(data []byte, df gopacket.DecodeFeedback) error {
 	stp.Type = uint8(data[3])
 	stp.TCA = data[4]&0x01 != 0
 	stp.TC = data[4]&0x80 != 0
-	stp.RouteID.Priority = binary.BigEndian.Uint16(data[5:7]) & 0xf000
+	stp.RouteID.Priority = STPPriority(binary.BigEndian.Uint16(data[5:7]) & 0xf000)
 	stp.RouteID.SysID = binary.BigEndian.Uint16(data[5:7]) & 0x0fff
 	stp.RouteID.HwAddr = net.HardwareAddr(data[7:13])
 	stp.Cost = binary.BigEndian.Uint32(data[13:17])
-	stp.BridgeID.Priority = binary.BigEndian.Uint16(data[17:19]) & 0xf000
+	stp.BridgeID.Priority = STPPriority(binary.BigEndian.Uint16(data[17:19]) & 0xf000)
 	stp.BridgeID.SysID = binary.BigEndian.Uint16(data[17:19]) & 0x0fff
 	stp.RouteID.HwAddr = net.HardwareAddr(data[19:25])
 	stp.PortID = binary.BigEndian.Uint16(data[25:27])
-	stp.MSG_AGE = binary.BigEndian.Uint16(data[27:29])
-	stp.MAX_AGE = binary.BigEndian.Uint16(data[29:31])
-	stp.HELLO_TIME = binary.BigEndian.Uint16(data[31:33])
+	stp.MessageAge = binary.BigEndian.Uint16(data[27:29])
+	stp.MaxAge = binary.BigEndian.Uint16(data[29:31])
+	stp.HelloTime = binary.BigEndian.Uint16(data[31:33])
 	stp.FDelay = binary.BigEndian.Uint16(data[33:35])
 	stp.Contents = data[:stpLength]
 	stp.Payload = data[stpLength:]
@@ -82,19 +92,18 @@ func (stp *STP) NextLayerType() gopacket.LayerType {
 }
 
 // Check if the priority value is correct.
-func checkPriority(prio uint16) (uint16, error) {
+func checkPriority(prio STPPriority) (uint16, error) {
 	switch prio {
-	case 32768:
-		return prio, nil
-	case 16384:
-		return prio, nil
-	case 8192:
-		return prio, nil
-	case 4096:
-		return prio, nil
+	case STPPriorityMax:
+		return uint16(prio), nil
+	case STPPriorityHigh:
+		return uint16(prio), nil
+	case STPPriorityLow:
+		return uint16(prio), nil
+	case STPPriorityMin:
+		return uint16(prio), nil
 	default:
-		return prio, errors.New("Invalid Priority value must be one of the following:\n32768\n16384\n8192\n4096\n")
-
+		return uint16(prio), errors.New("Invalid Priority value must be one of the following:\n32768\n16384\n8192\n4096\n")
 	}
 }
 
@@ -141,9 +150,9 @@ func (s *STP) SerializeTo(b gopacket.SerializeBuffer, opts gopacket.SerializeOpt
 	copy(bytes[19:25], s.BridgeID.HwAddr)
 
 	binary.BigEndian.PutUint16(bytes[25:27], s.PortID)
-	binary.BigEndian.PutUint16(bytes[27:29], s.MSG_AGE)
-	binary.BigEndian.PutUint16(bytes[29:31], s.MAX_AGE)
-	binary.BigEndian.PutUint16(bytes[31:33], s.HELLO_TIME)
+	binary.BigEndian.PutUint16(bytes[27:29], s.MessageAge)
+	binary.BigEndian.PutUint16(bytes[29:31], s.MaxAge)
+	binary.BigEndian.PutUint16(bytes[31:33], s.HelloTime)
 	binary.BigEndian.PutUint16(bytes[33:35], s.FDelay)
 
 	return nil
