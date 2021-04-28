@@ -66,15 +66,15 @@ func (stp *STP) DecodeFromBytes(data []byte, df gopacket.DecodeFeedback) error {
 	stp.ProtocolID = binary.BigEndian.Uint16(data[:2])
 	stp.Version = uint8(data[2])
 	stp.Type = uint8(data[3])
-	stp.TCA = data[4]&0x01 != 0
-	stp.TC = data[4]&0x80 != 0
+	stp.TC = data[4]&0x01 != 0
+	stp.TCA = data[4]&0x80 != 0
 	stp.RouteID.Priority = STPPriority(binary.BigEndian.Uint16(data[5:7]) & 0xf000)
 	stp.RouteID.SysID = binary.BigEndian.Uint16(data[5:7]) & 0x0fff
 	stp.RouteID.HwAddr = net.HardwareAddr(data[7:13])
 	stp.Cost = binary.BigEndian.Uint32(data[13:17])
 	stp.BridgeID.Priority = STPPriority(binary.BigEndian.Uint16(data[17:19]) & 0xf000)
 	stp.BridgeID.SysID = binary.BigEndian.Uint16(data[17:19]) & 0x0fff
-	stp.RouteID.HwAddr = net.HardwareAddr(data[19:25])
+	stp.BridgeID.HwAddr = net.HardwareAddr(data[19:25])
 	stp.PortID = binary.BigEndian.Uint16(data[25:27])
 	stp.MessageAge = binary.BigEndian.Uint16(data[27:29])
 	stp.MaxAge = binary.BigEndian.Uint16(data[29:31])
@@ -119,10 +119,10 @@ func (s *STP) SerializeTo(b gopacket.SerializeBuffer, opts gopacket.SerializeOpt
 	binary.BigEndian.PutUint16(bytes, s.ProtocolID)
 	bytes[2] = s.Version
 	bytes[3] = s.Type
-	if s.TCA {
+	if s.TC {
 		flags |= 0x01
 	}
-	if s.TC {
+	if s.TCA {
 		flags |= 0x80
 	}
 	bytes[4] = flags
