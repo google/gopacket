@@ -16,20 +16,10 @@ import (
 )
 
 type STPSwitchID struct {
-	Priority STPPriority // Bridge priority
-	SysID    uint16      // VLAN ID
+	Priority uint16 // Bridge priority
+	SysID    uint16 // VLAN ID
 	HwAddr   net.HardwareAddr
 }
-
-type STPPriority uint16
-
-// Potential values for STPSwitchID.Priority.
-const (
-	STPPriorityMax  STPPriority = 32768
-	STPPriorityHigh STPPriority = 16384
-	STPPriorityLow  STPPriority = 8192
-	STPPriorityMin  STPPriority = 4046
-)
 
 // STP decode spanning tree protocol packets to transport BPDU (bridge protocol data unit) message.
 type STP struct {
@@ -68,11 +58,11 @@ func (stp *STP) DecodeFromBytes(data []byte, df gopacket.DecodeFeedback) error {
 	stp.Type = uint8(data[3])
 	stp.TC = data[4]&0x01 != 0
 	stp.TCA = data[4]&0x80 != 0
-	stp.RouteID.Priority = STPPriority(binary.BigEndian.Uint16(data[5:7]) & 0xf000)
+	stp.RouteID.Priority = binary.BigEndian.Uint16(data[5:7]) & 0xf000
 	stp.RouteID.SysID = binary.BigEndian.Uint16(data[5:7]) & 0x0fff
 	stp.RouteID.HwAddr = net.HardwareAddr(data[7:13])
 	stp.Cost = binary.BigEndian.Uint32(data[13:17])
-	stp.BridgeID.Priority = STPPriority(binary.BigEndian.Uint16(data[17:19]) & 0xf000)
+	stp.BridgeID.Priority = binary.BigEndian.Uint16(data[17:19]) & 0xf000
 	stp.BridgeID.SysID = binary.BigEndian.Uint16(data[17:19]) & 0x0fff
 	stp.BridgeID.HwAddr = net.HardwareAddr(data[19:25])
 	stp.PortID = binary.BigEndian.Uint16(data[25:27])
@@ -92,18 +82,14 @@ func (stp *STP) NextLayerType() gopacket.LayerType {
 }
 
 // Check if the priority value is correct.
-func checkPriority(prio STPPriority) (uint16, error) {
-	switch prio {
-	case STPPriorityMax:
-		return uint16(prio), nil
-	case STPPriorityHigh:
-		return uint16(prio), nil
-	case STPPriorityLow:
-		return uint16(prio), nil
-	case STPPriorityMin:
-		return uint16(prio), nil
-	default:
-		return uint16(prio), errors.New("Invalid Priority value must be one of the following:\n32768\n16384\n8192\n4096\n")
+func checkPriority(prio uint16) (uint16, error) {
+	if prio == 0 {
+		return prio, errors.New("Invalid Priority value must be in the rage <4096-61440> with an increment of 4096")
+	}
+	if prio%4096 == 0 {
+		return prio, nil
+	} else {
+		return prio, errors.New("Invalid Priority value must be in the rage <4096-61440> with an increment of 4096")
 	}
 }
 
