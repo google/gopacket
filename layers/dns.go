@@ -639,6 +639,10 @@ func (q *DNSQuestion) decode(data []byte, offset int, df gopacket.DecodeFeedback
 		return 0, err
 	}
 
+	if len(data)-endq < 4 {
+		return 0, errDNSTypeClassHasNoData
+	}
+
 	q.Name = name
 	q.Type = DNSType(binary.BigEndian.Uint16(data[endq : endq+2]))
 	q.Class = DNSClass(binary.BigEndian.Uint16(data[endq+2 : endq+4]))
@@ -1088,6 +1092,7 @@ var (
 	errDNSPointerOffsetTooHigh = errors.New("dns offset pointer too high")
 	errDNSIndexOutOfRange      = errors.New("dns index walked out of range")
 	errDNSNameHasNoData        = errors.New("no dns data found for name")
+	errDNSTypeClassHasNoData   = errors.New("dns type nor class data is missed")
 
 	errCharStringMissData = errors.New("Insufficient data for a <character-string>")
 

@@ -1154,3 +1154,23 @@ func TestDNSPacketWriteAnswer(t *testing.T) {
 		t.Fatalf("Encoded size, want %d got %d", want, got)
 	}
 }
+
+// Abnormal DNS query packet received from the Internet:
+//   00000000  38 a5 96 0d 1e 86 d9 8a  65 00 00 00 00 00        |8.......e.....|
+// This packet cause a problem like:
+//   panic: runtime error: slice bounds out of range [:15] with capacity 14
+//   goroutine 1 [running]:
+//     github.com/google/gopacket/layers.(*DNSQuestion).decode(0xc00007f7c8, 0xc000306040, 0xe, 0xe, 0xc, 0x1a478d70068, 0xc00030a000, 0xc00030c0a8, 0x1495f00, 0x0, ...)
+//       go/pkg/mod/github.com/google/gopacket@v1.1.19/layers/dns.go:643 +0x19a
+//     github.com/google/gopacket/layers.(*DNS).DecodeFromBytes(0xc00030c000, 0xc000306040, 0xe, 0xe, 0x1a478d70068, 0xc00030a000, 0x0, 0xbb5089)
+//       go/pkg/mod/github.com/google/gopacket@v1.1.19/layers/dns.go:338 +0x225
+var testPacketDNSPanic8 = []byte{0x38, 0xa5, 0x96, 0x0d, 0x1e, 0x86, 0xd9, 0x8a, 0x65, 0x00, 0x00, 0x00, 0x00, 0x00}
+
+func TestDNSPacketPanic8(t *testing.T) {
+	p := gopacket.NewPacket(testPacketDNSPanic8, LayerTypeDNS, testDecodeOptions)
+	if errLayer := p.ErrorLayer(); errLayer == nil {
+		t.Error("No error layer on invalid DNS name")
+	} else if err := errLayer.Error(); !strings.Contains(err.Error(), errDNSTypeClassHasNoData.Error()) {
+		t.Errorf("unexpected error message: %v", err)
+	}
+}
