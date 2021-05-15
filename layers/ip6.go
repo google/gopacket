@@ -563,17 +563,27 @@ type IPv6Routing struct {
 // LayerType returns LayerTypeIPv6Routing.
 func (i *IPv6Routing) LayerType() gopacket.LayerType { return LayerTypeIPv6Routing }
 
-func decodeIPv6Routing(data []byte, p gopacket.PacketBuilder) error {
-	base, err := decodeIPv6ExtensionBase(data, p)
+// CanDecode implementation according to gopacket.DecodingLayer
+func (i *IPv6Routing) CanDecode() gopacket.LayerClass {
+	return LayerTypeIPv6Routing
+}
+
+// NextLayerType implementation according to gopacket.DecodingLayer
+func (i *IPv6Routing) NextLayerType() gopacket.LayerType {
+	return i.NextHeader.LayerType()
+}
+
+// DecodeFromBytes implementation according to gopacket.DecodingLayer
+func (i *IPv6Routing) DecodeFromBytes(data []byte, df gopacket.DecodeFeedback) error {
+	base, err := decodeIPv6ExtensionBase(data, df)
 	if err != nil {
 		return err
 	}
-	i := &IPv6Routing{
-		ipv6ExtensionBase: base,
-		RoutingType:       data[2],
-		SegmentsLeft:      data[3],
-		Reserved:          data[4:8],
-	}
+	i.ipv6ExtensionBase = base
+	i.RoutingType = data[2]
+	i.SegmentsLeft = data[3]
+	i.Reserved = data[4:8]
+
 	switch i.RoutingType {
 	case 0: // Source routing
 		if (i.ActualLength-8)%16 != 0 {
@@ -585,7 +595,18 @@ func decodeIPv6Routing(data []byte, p gopacket.PacketBuilder) error {
 	default:
 		return fmt.Errorf("Unknown IPv6 routing header type %d", i.RoutingType)
 	}
+
+	return nil
+}
+
+// decodeIPv6Routing decodes the IPv6Routing header.
+func decodeIPv6Routing(data []byte, p gopacket.PacketBuilder) error {
+	i := &IPv6Routing{}
+	err := i.DecodeFromBytes(data, p)
 	p.AddLayer(i)
+	if err != nil {
+		return err
+	}
 	return p.NextDecoder(i.NextHeader)
 }
 
