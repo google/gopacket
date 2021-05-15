@@ -547,17 +547,29 @@ func (o *IPv6HopByHopOption) SetJumboLength(len uint32) {
 	o.OptionAlignment = [2]uint8{4, 2}
 }
 
-// IPv6Routing is the IPv6 routing extension.
+// IPv6Routing is the IPv6 routing extension(RFC8200).
 type IPv6Routing struct {
 	ipv6ExtensionBase
 	RoutingType  uint8
 	SegmentsLeft uint8
-	// This segment is supposed to be zero according to RFC2460, the second set of
-	// 4 bytes in the extension.
-	Reserved []byte
-	// SourceRoutingIPs is the set of IPv6 addresses requested for source routing,
-	// set only if RoutingType == 0.
+	Reserved     []byte
+	IPv6SourceRouting
+	IPv6SegmentRouting
+}
+
+// IPv6SourceRouting is the IPv6 Source Routing(RFC5095),
+// set only if RoutingType == 0.
+type IPv6SourceRouting struct {
 	SourceRoutingIPs []net.IP
+}
+
+// IPv6SegmentRouting is the IPv6 Segment Routing(RFC8754),
+// set only if RoutingType == 4.
+type IPv6SegmentRouting struct {
+	LastEntry   uint8
+	Flags       uint8
+	Tag         []byte
+	SegmentList []net.IP
 }
 
 // LayerType returns LayerTypeIPv6Routing.
@@ -582,15 +594,25 @@ func (i *IPv6Routing) DecodeFromBytes(data []byte, df gopacket.DecodeFeedback) e
 	i.ipv6ExtensionBase = base
 	i.RoutingType = data[2]
 	i.SegmentsLeft = data[3]
-	i.Reserved = data[4:8]
 
 	switch i.RoutingType {
 	case 0: // Source routing
+		i.Reserved = data[4:8]
 		if (i.ActualLength-8)%16 != 0 {
 			return fmt.Errorf("Invalid IPv6 source routing, length of type 0 packet %d", i.ActualLength)
 		}
 		for d := i.Contents[8:]; len(d) >= 16; d = d[16:] {
 			i.SourceRoutingIPs = append(i.SourceRoutingIPs, net.IP(d[:16]))
+		}
+	case 4: // Segment routing
+		i.LastEntry = data[4]
+		i.Flags = data[5]
+		i.Tag = data[6:8]
+		if (i.ActualLength-8)%16 != 0 {
+			return fmt.Errorf("Invalid IPv6 segment routing, length of type 0 packet %d", i.ActualLength)
+		}
+		for d := i.Contents[8:]; len(d) >= 16; d = d[16:] {
+			i.SegmentList = append(i.SegmentList, net.IP(d[:16]))
 		}
 	default:
 		return fmt.Errorf("Unknown IPv6 routing header type %d", i.RoutingType)
