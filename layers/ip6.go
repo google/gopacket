@@ -629,7 +629,7 @@ func decodeIPv6Routing(data []byte, p gopacket.PacketBuilder) error {
 	if err != nil {
 		return err
 	}
-	return p.NextDecoder(i.NextHeader)
+	return p.NextDecoder(i.NextLayerType())
 }
 
 // IPv6Fragment is the IPv6 fragment header, used for packet
