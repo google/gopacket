@@ -41,7 +41,7 @@ var printErrors *bool = flag.Bool("printErrors", false, "If true, check for and 
 var printLayers *bool = flag.Bool("printLayers", false, "If true, print out the layers of each packet")
 var repeat *int = flag.Int("repeat", 5, "Read over the file N times")
 var cpuProfile *string = flag.String("cpuprofile", "", "If set, write CPU profile to filename")
-var url *string = flag.String("url", "http://www.ll.mit.edu/mission/communications/cyber/CSTcorpora/ideval/data/1999/training/week1/tuesday/inside.tcpdump.gz", "URL to gzip'd pcap file")
+var url *string = flag.String("url", "https://archive.ll.mit.edu/ideval/data/1999/training/week1/tuesday/inside.tcpdump.gz", "URL to gzip'd pcap file")
 
 type BufferPacketSource struct {
 	index int
