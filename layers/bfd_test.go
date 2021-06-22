@@ -9,9 +9,11 @@
 package layers
 
 import (
-	"github.com/google/gopacket"
 	"reflect"
+	"strings"
 	"testing"
+
+	"github.com/google/gopacket"
 )
 
 //******************************************************************************
@@ -286,4 +288,22 @@ func TestBFDAuthTypeMeticulousKeyedSHA1(t *testing.T) {
 	}
 
 	checkBFD("TestBFDAuthTypeMeticulousKeyedSHA1", t, testPacketBFD, pExpectedBFD)
+}
+
+func TestBFDAuthTypeKeyedMD5Truncated(t *testing.T) {
+
+	// testPacketBFDTrunc is the packet from TestBFDAuthTypeKeyedMD5 with the
+	// Auth Header truncated to 7 bytes (i.e. cut off the last byte of the
+	// Sequence Number field) and length fields adapted; stripped lower layers.
+	var testPacketBFDTrunc = []byte{
+		0x20, 0x44, 0x05, 0x1f, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x00,
+		0x00, 0x0f, 0x42, 0x40, 0x00, 0x0f, 0x42, 0x40, 0x00, 0x00, 0x00, 0x00,
+		0x02, 0x07, 0x02, 0x00, 0x00, 0x00, 0x00,
+	}
+	p := gopacket.NewPacket(testPacketBFDTrunc, LayerTypeBFD, gopacket.Default)
+	if errLayer := p.ErrorLayer(); errLayer == nil {
+		t.Error("No error layer on invalid BFD Authentication Header")
+	} else if err := errLayer.Error(); !strings.Contains(err.Error(), "BFD Authentication Header too short") {
+		t.Errorf("unexpected error message: %v", err)
+	}
 }
