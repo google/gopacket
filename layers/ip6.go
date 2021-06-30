@@ -11,6 +11,7 @@ import (
 	"encoding/binary"
 	"errors"
 	"fmt"
+	"log"
 	"net"
 
 	"github.com/google/gopacket"
@@ -637,16 +638,21 @@ func decodeIPv6RoutingType4(base *ipv6RoutingBase, data []byte) (gopacket.Layer,
 	}
 	srh.Reserved = data[6:8]
 
+	// Compute in bytes
+	hdrLength := int(srh.HeaderLength * 8)
+	sidLength := int(srh.LastEntry+1) * 16
+
+	log.Printf("HDR LEN: %d SID LEN: %d ACTUAL LEN %d", hdrLength, sidLength, srh.ActualLength)
+	if sidLength > hdrLength {
+		return nil, fmt.Errorf("Invalid IPv6 SRH, last entry out-of-bounds")
+	}
+
 	// Check for TLVs
-	hdrLength := srh.ActualLength - 8
-	if hdrLength > (int(srh.LastEntry)+1)*2 {
-		if hdrLength%8 != 0 { // TLVs are 8 bytes aligned.
-			return nil, fmt.Errorf("Invalid IPv6 source routing, length of type 4 packet %d", srh.ActualLength)
-		}
-		srh.TLVs = data[8+(srh.LastEntry+1)*16:]
+	if hdrLength > sidLength {
+		srh.TLVs = data[8+sidLength : 8+hdrLength]
 	} else {
 		if hdrLength%16 != 0 {
-			return nil, fmt.Errorf("Invalid IPv6 source routing, length of type 4 packet %d", srh.ActualLength)
+			return nil, fmt.Errorf("Invalid IPv6 SHR, length of type 4 packet %d", srh.ActualLength)
 		}
 	}
 	for d := srh.Contents[8:]; len(d) >= 16; d = d[16:] {
