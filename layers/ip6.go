@@ -11,7 +11,6 @@ import (
 	"encoding/binary"
 	"errors"
 	"fmt"
-	"log"
 	"net"
 
 	"github.com/google/gopacket"
@@ -642,7 +641,6 @@ func decodeIPv6RoutingType4(base *ipv6RoutingBase, data []byte) (gopacket.Layer,
 	hdrLength := int(srh.HeaderLength * 8)
 	sidLength := int(srh.LastEntry+1) * 16
 
-	log.Printf("HDR LEN: %d SID LEN: %d ACTUAL LEN %d", hdrLength, sidLength, srh.ActualLength)
 	if sidLength > hdrLength {
 		return nil, fmt.Errorf("Invalid IPv6 SRH, last entry out-of-bounds")
 	}
