@@ -577,6 +577,7 @@ type IPv6SegmentRoutingHeader struct {
 
 	LastEntry uint8
 	Flags     uint8
+	Tag       uint16
 
 	// Undecoded TLVs.
 	TLVs []byte
@@ -657,6 +658,31 @@ func decodeIPv6RoutingType4(base *ipv6RoutingBase, data []byte) (gopacket.Layer,
 		srh.SourceRoutingIPs = append(srh.SourceRoutingIPs, net.IP(d[:16]))
 	}
 	return srh, nil
+}
+
+func (srh *IPv6SegmentRoutingHeader) SerializeTo(b gopacket.SerializeBuffer, opts gopacket.SerializeOptions) error {
+	totalLen := int(8) + 16*(int(srh.LastEntry)+1) + len(srh.TLVs)
+	bytes, err := b.PrependBytes(totalLen)
+
+	if err != nil {
+		return fmt.Errorf("Failed to serialize SRH: %v", err)
+	}
+
+	bytes[0] = byte(srh.NextHeader)
+	bytes[1] = byte((totalLen - 8) / 8)
+	bytes[2] = 4
+	bytes[3] = srh.SegmentsLeft
+	bytes[4] = srh.LastEntry
+	bytes[5] = srh.Flags
+	binary.BigEndian.PutUint16(bytes[6:7], srh.Tag)
+
+	for i, ip := range srh.SourceRoutingIPs {
+		copy(bytes[8+(i*16):], ip)
+	}
+
+	copy(bytes[8+(srh.LastEntry+1)*16:], srh.TLVs)
+
+	return nil
 }
 
 // IPv6Fragment is the IPv6 fragment header, used for packet
