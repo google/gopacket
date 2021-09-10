@@ -273,6 +273,11 @@ func (h *TPacket) SetBPF(filter []bpf.RawInstruction) error {
 	return setsockopt(h.fd, unix.SOL_SOCKET, unix.SO_ATTACH_FILTER, unsafe.Pointer(&p), unix.SizeofSockFprog)
 }
 
+// attach ebpf filter to af-packet
+func (h *TPacket) SetEBPF(progFd int32) error {
+	return setsockopt(h.fd, unix.SOL_SOCKET, unix.SO_ATTACH_BPF, unsafe.Pointer(&progFd), 4)
+}
+
 func (h *TPacket) releaseCurrentPacket() error {
 	h.current.clearStatus()
 	h.offset++
