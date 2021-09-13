@@ -548,7 +548,7 @@ func (o *IPv6HopByHopOption) SetJumboLength(len uint32) {
 }
 
 // Base layer for IPv6 routing headers.
-type ipv6RoutingBase struct {
+type IPv6RoutingBase struct {
 	ipv6ExtensionBase
 	RoutingType  uint8
 	SegmentsLeft uint8
@@ -563,9 +563,12 @@ type ipv6RoutingBase struct {
 	Reserved []byte
 }
 
+const IPv6SourceRoutingType = 0
+const IPv6SegmentRoutingHeaderType = 4
+
 // IPv6Routing is the IPv6 routing extension.
 type IPv6Routing struct {
-	ipv6RoutingBase
+	IPv6RoutingBase
 }
 
 // LayerType returns LayerTypeIPv6Routing.
@@ -573,7 +576,7 @@ func (i *IPv6Routing) LayerType() gopacket.LayerType { return LayerTypeIPv6Routi
 
 // IPv6SegmentRoutingHeader is the SRv6 SRH.
 type IPv6SegmentRoutingHeader struct {
-	ipv6RoutingBase
+	IPv6RoutingBase
 
 	LastEntry uint8
 	Flags     uint8
@@ -591,7 +594,7 @@ func decodeIPv6Routing(data []byte, p gopacket.PacketBuilder) error {
 	if err != nil {
 		return err
 	}
-	routingBase := ipv6RoutingBase{
+	routingBase := IPv6RoutingBase{
 		ipv6ExtensionBase: base,
 		RoutingType:       data[2],
 		SegmentsLeft:      data[3],
@@ -600,11 +603,11 @@ func decodeIPv6Routing(data []byte, p gopacket.PacketBuilder) error {
 	var layer gopacket.Layer
 
 	switch routingBase.RoutingType {
-	case 0: // Source routing
+	case IPv6SourceRoutingType:
 		if layer, err = decodeIPv6RoutingType0(&routingBase, data); err != nil {
 			return err
 		}
-	case 4: // Segment routing header
+	case IPv6SegmentRoutingHeaderType:
 		if layer, err = decodeIPv6RoutingType4(&routingBase, data); err != nil {
 			return err
 		}
@@ -615,9 +618,9 @@ func decodeIPv6Routing(data []byte, p gopacket.PacketBuilder) error {
 	return p.NextDecoder(routingBase.NextHeader)
 }
 
-func decodeIPv6RoutingType0(base *ipv6RoutingBase, data []byte) (gopacket.Layer, error) {
+func decodeIPv6RoutingType0(base *IPv6RoutingBase, data []byte) (gopacket.Layer, error) {
 	i := &IPv6Routing{
-		ipv6RoutingBase: *base,
+		IPv6RoutingBase: *base,
 	}
 	i.Reserved = data[4:8]
 
@@ -630,9 +633,9 @@ func decodeIPv6RoutingType0(base *ipv6RoutingBase, data []byte) (gopacket.Layer,
 	return i, nil
 }
 
-func decodeIPv6RoutingType4(base *ipv6RoutingBase, data []byte) (gopacket.Layer, error) {
+func decodeIPv6RoutingType4(base *IPv6RoutingBase, data []byte) (gopacket.Layer, error) {
 	srh := &IPv6SegmentRoutingHeader{
-		ipv6RoutingBase: *base,
+		IPv6RoutingBase: *base,
 		LastEntry:       data[4],
 		Flags:           data[5],
 	}
