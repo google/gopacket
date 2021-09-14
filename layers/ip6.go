@@ -677,7 +677,7 @@ func (srh *IPv6SegmentRoutingHeader) SerializeTo(b gopacket.SerializeBuffer, opt
 	bytes[3] = srh.SegmentsLeft
 	bytes[4] = srh.LastEntry
 	bytes[5] = srh.Flags
-	binary.BigEndian.PutUint16(bytes[6:7], srh.Tag)
+	binary.BigEndian.PutUint16(bytes[6:8], srh.Tag)
 
 	for i, ip := range srh.SourceRoutingIPs {
 		copy(bytes[8+(i*16):], ip)
