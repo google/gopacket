@@ -833,7 +833,7 @@ func (rr *DNSResourceRecord) String() string {
 		return "OPT " + strings.Join(opts, ",")
 	}
 	if rr.Type == DNSTypeURI {
-		return fmt.Sprintf("URI %d %d %s", rr.URI.Priority, rr.URI.Weight, string(rr.URI.Target))
+		return fmt.Sprintf("URI %d %d %s", rr.URI.Priority, rr.URI.Weight, rr.URI.Target)
 	}
 	if rr.Class == DNSClassIN {
 		switch rr.Type {
