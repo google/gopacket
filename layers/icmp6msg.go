@@ -54,6 +54,18 @@ const (
 	ICMPv6OptMTU
 )
 
+// ICMPv6GenericError represents a parameter-less ICMPv6 error.
+type ICMPv6GenericError struct {
+	BaseLayer
+	Unused uint32
+}
+
+// ICMPv6PacketTooBig represents a ICMPv6 packet-too-big error.
+type ICMPv6PacketTooBig struct {
+	BaseLayer
+	MTU uint32
+}
+
 // ICMPv6Echo represents the structure of a ping.
 type ICMPv6Echo struct {
 	BaseLayer
@@ -127,6 +139,82 @@ func (i ICMPv6Opt) String() string {
 	default:
 		return fmt.Sprintf("Unknown(%d)", i)
 	}
+}
+
+// CanDecode returns the set of layer types that this DecodingLayer can decode.
+func (i *ICMPv6GenericError) CanDecode() gopacket.LayerClass {
+	return LayerTypeICMPv6GenericError
+}
+
+// LayerType returns LayerTypeICMPv6GenericError.
+func (i *ICMPv6GenericError) LayerType() gopacket.LayerType {
+	return LayerTypeICMPv6GenericError
+}
+
+// NextLayerType returns the layer type contained by this DecodingLayer.
+func (i *ICMPv6GenericError) NextLayerType() gopacket.LayerType {
+	return LayerTypeIPv6
+}
+
+// DecodeFromBytes decodes the given bytes into this layer.
+func (i *ICMPv6GenericError) DecodeFromBytes(data []byte, df gopacket.DecodeFeedback) error {
+	if len(data) < 4 {
+		df.SetTruncated()
+		return errors.New("ICMP layer less then 4 bytes for ICMPv6 Generic Error")
+	}
+	i.Unused = binary.BigEndian.Uint32(data[0:4])
+	i.BaseLayer = BaseLayer{data[:4], data[4:]}
+	return nil
+}
+
+// SerializeTo writes the serialized form of this layer into the
+// SerializationBuffer, implementing gopacket.SerializableLayer.
+// See the docs for gopacket.SerializableLayer for more info.
+func (i *ICMPv6GenericError) SerializeTo(b gopacket.SerializeBuffer, opts gopacket.SerializeOptions) error {
+	buf, err := b.PrependBytes(4)
+	if err != nil {
+		return err
+	}
+	binary.BigEndian.PutUint32(buf, i.Unused)
+	return nil
+}
+
+// CanDecode returns the set of layer types that this DecodingLayer can decode.
+func (i *ICMPv6PacketTooBig) CanDecode() gopacket.LayerClass {
+	return LayerTypeICMPv6PacketTooBig
+}
+
+// LayerType returns LayerTypeICMPv6PacketTooBig.
+func (i *ICMPv6PacketTooBig) LayerType() gopacket.LayerType {
+	return LayerTypeICMPv6PacketTooBig
+}
+
+// NextLayerType returns the layer type contained by this DecodingLayer.
+func (i *ICMPv6PacketTooBig) NextLayerType() gopacket.LayerType {
+	return LayerTypeIPv6
+}
+
+// DecodeFromBytes decodes the given bytes into this layer.
+func (i *ICMPv6PacketTooBig) DecodeFromBytes(data []byte, df gopacket.DecodeFeedback) error {
+	if len(data) < 4 {
+		df.SetTruncated()
+		return errors.New("ICMP layer less then 4 bytes for ICMPv6 Packet Too Big")
+	}
+	i.MTU = binary.BigEndian.Uint32(data[0:4])
+	i.BaseLayer = BaseLayer{data[:4], data[4:]}
+	return nil
+}
+
+// SerializeTo writes the serialized form of this layer into the
+// SerializationBuffer, implementing gopacket.SerializableLayer.
+// See the docs for gopacket.SerializableLayer for more info.
+func (i *ICMPv6PacketTooBig) SerializeTo(b gopacket.SerializeBuffer, opts gopacket.SerializeOptions) error {
+	buf, err := b.PrependBytes(4)
+	if err != nil {
+		return err
+	}
+	binary.BigEndian.PutUint32(buf, i.MTU)
+	return nil
 }
 
 // CanDecode returns the set of layer types that this DecodingLayer can decode.
@@ -545,6 +633,16 @@ func (i *ICMPv6Options) SerializeTo(b gopacket.SerializeBuffer, opts gopacket.Se
 	}
 
 	return nil
+}
+
+func decodeICMPv6PacketGenericError(data []byte, p gopacket.PacketBuilder) error {
+	i := &ICMPv6GenericError{}
+	return decodingLayerDecoder(i, data, p)
+}
+
+func decodeICMPv6PacketTooBig(data []byte, p gopacket.PacketBuilder) error {
+	i := &ICMPv6PacketTooBig{}
+	return decodingLayerDecoder(i, data, p)
 }
 
 func decodeICMPv6Echo(data []byte, p gopacket.PacketBuilder) error {
