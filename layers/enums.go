@@ -85,11 +85,11 @@ const (
 
 // LinkType is an enumeration of link types, and acts as a decoder for any
 // link type it supports.
-type LinkType uint8
+type LinkType uint16
 
 const (
 	// According to pcap-linktype(7) and http://www.tcpdump.org/linktypes.html
-	LinkTypeNull           LinkType = 0
+	LinkTypeNull           LinkType = iota
 	LinkTypeEthernet       LinkType = 1
 	LinkTypeAX25           LinkType = 3
 	LinkTypeTokenRing      LinkType = 6
@@ -126,6 +126,10 @@ const (
 	LinkTypeFC2Framed      LinkType = 225
 	LinkTypeIPv4           LinkType = 228
 	LinkTypeIPv6           LinkType = 229
+	LinkTypeLinuxSLL2      LinkType = 276
+
+	// Warning: this const should always be 1 larger than the largest valid value
+	LinkTypeMax LinkType = 277
 )
 
 // PPPoECode is the PPPoE code enum, taken from http://tools.ietf.org/html/rfc2516
@@ -385,6 +389,7 @@ func initActualTypeData() {
 	LinkTypeMetadata[LinkTypeLinuxUSB] = EnumMetadata{DecodeWith: gopacket.DecodeFunc(decodeUSB), Name: "USB"}
 	LinkTypeMetadata[LinkTypeLinuxSLL] = EnumMetadata{DecodeWith: gopacket.DecodeFunc(decodeLinuxSLL), Name: "Linux SLL"}
 	LinkTypeMetadata[LinkTypePrismHeader] = EnumMetadata{DecodeWith: gopacket.DecodeFunc(decodePrismHeader), Name: "Prism"}
+	LinkTypeMetadata[LinkTypeLinuxSLL2] = EnumMetadata{DecodeWith: gopacket.DecodeFunc(decodeLinuxSLL2), Name: "Linux SLL2"}
 
 	FDDIFrameControlMetadata[FDDIFrameControlLLC] = EnumMetadata{DecodeWith: gopacket.DecodeFunc(decodeLLC), Name: "LLC"}
 

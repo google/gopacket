@@ -4,6 +4,7 @@
 // that can be found in the LICENSE file in the root of the source
 // tree.
 
+//go:build ignore
 // +build ignore
 
 // This binary handles creating string constants and function templates for enums.
@@ -37,14 +38,27 @@ import (
 var funcsTmpl = template.Must(template.New("foo").Parse(`
 // Decoder calls {{.Name}}Metadata.DecodeWith's decoder.
 func (a {{.Name}}) Decode(data []byte, p gopacket.PacketBuilder) error {
+	if int(a) >= {{.Num}} {
+		errDecoder := errorDecoderFor{{.Name}}(a)
+		return &errDecoder
+	}
+
 	return {{.Name}}Metadata[a].DecodeWith.Decode(data, p)
 }
 // String returns {{.Name}}Metadata.Name.
 func (a {{.Name}}) String() string {
+	if int(a) >= {{.Num}} {
+		return "Unknown{{.Name}}"
+	}
+
 	return {{.Name}}Metadata[a].Name
 }
 // LayerType returns {{.Name}}Metadata.LayerType.
 func (a {{.Name}}) LayerType() gopacket.LayerType {
+	if int(a) >= {{.Num}} {
+		return 0
+	}
+
 	return {{.Name}}Metadata[a].LayerType
 }
 
@@ -77,7 +91,7 @@ func main() {
 		Name string
 		Num  int
 	}{
-		{"LinkType", 256},
+		{"LinkType", 277},
 		{"EthernetType", 65536},
 		{"PPPType", 65536},
 		{"IPProtocol", 256},
