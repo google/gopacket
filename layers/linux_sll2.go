@@ -19,10 +19,15 @@ import (
 type ARPHardwareType uint16
 
 const (
-	ARPHardwareTypeEthernet      ARPHardwareType = 1
-	ARPHardwareTypeFRAD          ARPHardwareType = 770
-	ARPHardwareTypeLoopback      ARPHardwareType = 772
-	ARPHardwareTypeIPGRE         ARPHardwareType = 778
+	// ARPHardwareTypeEthernet means that the SLL2 packet was captured on an ethernet link
+	ARPHardwareTypeEthernet ARPHardwareType = 1
+	// ARPHardwareTypeFRAD means that the SLL2 packet was captured on a frame relay link
+	ARPHardwareTypeFRAD ARPHardwareType = 770
+	// ARPHardwareTypeLoopback means that the SLL2 packet was captured on a loopback device
+	ARPHardwareTypeLoopback ARPHardwareType = 772
+	// ARPHardwareTypeIPGRE means that the SLL2 packet was captured on a GRE connection
+	ARPHardwareTypeIPGRE ARPHardwareType = 778
+	// ARPHardwareTypeDot11Radiotap means that the SLL2 packet was captured on a IEEE802.11 radiotap link
 	ARPHardwareTypeDot11Radiotap ARPHardwareType = 803
 )
 
@@ -47,14 +52,23 @@ func (l ARPHardwareType) String() string {
 type LinuxSLL2PacketType uint8
 
 const (
-	LinuxSLL2PacketTypeHost      LinuxSLL2PacketType = 0 // To us
-	LinuxSLL2PacketTypeBroadcast LinuxSLL2PacketType = 1 // To all
-	LinuxSLL2PacketTypeMulticast LinuxSLL2PacketType = 2 // To group
-	LinuxSLL2PacketTypeOtherhost LinuxSLL2PacketType = 3 // To someone else
-	LinuxSLL2PacketTypeOutgoing  LinuxSLL2PacketType = 4 // Outgoing of any type
+	// LinuxSLL2PacketTypeHost means a packet SLL2 was directed to us(the host capturing)
+	LinuxSLL2PacketTypeHost LinuxSLL2PacketType = 0
+	// LinuxSLL2PacketTypeBroadcast means a packet SLL2 was directed to everyone on the local network all
+	LinuxSLL2PacketTypeBroadcast LinuxSLL2PacketType = 1
+	// LinuxSLL2PacketTypeMulticast means a packet SLL2 was directed to multiple hosts
+	LinuxSLL2PacketTypeMulticast LinuxSLL2PacketType = 2
+	// LinuxSLL2PacketTypeOtherhost means a packet SLL2 was sent to another host
+	LinuxSLL2PacketTypeOtherhost LinuxSLL2PacketType = 3
+	// LinuxSLL2PacketTypeOutgoing means a packet SLL2 was sent by us(outgoing traffic)
+	LinuxSLL2PacketTypeOutgoing LinuxSLL2PacketType = 4
+
 	// These ones are invisible by user level
-	LinuxSLL2PacketTypeLoopback  LinuxSLL2PacketType = 5 // MC/BRD frame looped back
-	LinuxSLL2PacketTypeFastroute LinuxSLL2PacketType = 6 // Fastrouted frame
+
+	// LinuxSLL2PacketTypeLoopback MC/BRD frame looped back
+	LinuxSLL2PacketTypeLoopback LinuxSLL2PacketType = 5
+	// LinuxSLL2PacketTypeFastroute Fastrouted frame
+	LinuxSLL2PacketTypeFastroute LinuxSLL2PacketType = 6
 )
 
 func (l LinuxSLL2PacketType) String() string {
@@ -78,10 +92,14 @@ func (l LinuxSLL2PacketType) String() string {
 }
 
 const (
-	LinuxSLL2EthernetTypeDot3    EthernetType = 0x0001
+	// LinuxSLL2EthernetTypeDot3 means the SLL2 layer is followed by a Novell 802.3 frame without an 802.2 LLC header
+	LinuxSLL2EthernetTypeDot3 EthernetType = 0x0001
+	// LinuxSLL2EthernetTypeUnknown is emitted by the linux kernel in some unknown cases
 	LinuxSLL2EthernetTypeUnknown EthernetType = 0x0003
-	LinuxSLL2EthernetTypeLLC     EthernetType = 0x0004
-	LinuxSLL2EthernetTypeCAN     EthernetType = 0x000C
+	// LinuxSLL2EthernetTypeLLC means the SLL2 layer is followed by a LLC layer
+	LinuxSLL2EthernetTypeLLC EthernetType = 0x0004
+	// LinuxSLL2EthernetTypeCAN means the SLL2 layer is followed by a CAN bus layer
+	LinuxSLL2EthernetTypeCAN EthernetType = 0x000C
 )
 
 // LinuxSLL2 is the second version of the Linux "cooked" capture encapsulation protocol. It is used to encapsulate
@@ -100,14 +118,17 @@ type LinuxSLL2 struct {
 // LayerType returns LayerTypeLinuxSLL.
 func (sll *LinuxSLL2) LayerType() gopacket.LayerType { return LayerTypeLinuxSLL2 }
 
+// CanDecode returns the set of layer types that this DecodingLayer can decode.
 func (sll *LinuxSLL2) CanDecode() gopacket.LayerClass {
 	return LayerTypeLinuxSLL2
 }
 
+// LinkFlow returns the Flow of the link layer
 func (sll *LinuxSLL2) LinkFlow() gopacket.Flow {
 	return gopacket.NewFlow(EndpointMAC, sll.Addr, nil)
 }
 
+// NextLayerType returns the layer type of the next layer
 func (sll *LinuxSLL2) NextLayerType() gopacket.LayerType {
 	switch sll.ARPHardwareType {
 	case ARPHardwareTypeFRAD:
@@ -149,6 +170,7 @@ func (sll *LinuxSLL2) NextLayerType() gopacket.LayerType {
 	}
 }
 
+// DecodeFromBytes decodes a SLL2 layer from bytes
 func (sll *LinuxSLL2) DecodeFromBytes(data []byte, df gopacket.DecodeFeedback) error {
 	if len(data) < 20 {
 		return errors.New("Linux SLL2 packet too small")
