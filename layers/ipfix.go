@@ -632,9 +632,6 @@ func (ds *IPFIXDataSet) decodeFromBytes(data *[]byte, t IPFIXTemplateAccessor) e
 	}
 
 	dataLen := ds.Len() - ds.Header.Len()
-	// TODO: optimization, not store raw data if it was correctly decoded with
-	//       the template
-	ds.Bytes = (*data)[:dataLen]
 
 	if t != nil {
 		// a Data Set can contains multiple Data Records
@@ -668,7 +665,7 @@ func (ds *IPFIXDataSet) decodeFromBytes(data *[]byte, t IPFIXTemplateAccessor) e
 			*data = (*data)[padding:]
 		}
 	} else {
-		*data = (*data)[dataLen:]
+		ds.Bytes, *data = (*data)[:dataLen], (*data)[dataLen:]
 	}
 
 	return nil

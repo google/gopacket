@@ -701,7 +701,6 @@ func TestIPFIXDataRecord(t *testing.T) {
 				Data: []IPFIXDataSet{
 					{
 						Header: IPFIXSetHeader{ID: 256, Length: uint16(len(dataRecord) + IPFIXSetHeader{}.Len())},
-						Bytes:  dataRecord,
 						Records: []IPFIXDataRecord{
 							{
 								ID: 256,
@@ -779,7 +778,6 @@ func TestIPFIXDataRecord(t *testing.T) {
 				Data: []IPFIXDataSet{
 					{
 						Header: IPFIXSetHeader{ID: 256, Length: uint16(len(dataSet3))},
-						Bytes:  dataSet3[IPFIXSetHeader{}.Len():],
 						Records: []IPFIXDataRecord{
 							{
 								ID: 256,
@@ -871,7 +869,6 @@ func TestIPFIXDataRecord(t *testing.T) {
 				Data: []IPFIXDataSet{
 					{
 						Header: IPFIXSetHeader{ID: 256, Length: uint16(len(dataSet4))},
-						Bytes:  dataSet4[IPFIXSetHeader{}.Len():],
 						Records: []IPFIXDataRecord{
 							{
 								ID: 256,
@@ -927,7 +924,6 @@ func TestIPFIXDataRecord(t *testing.T) {
 					},
 					{
 						Header: IPFIXSetHeader{ID: 257, Length: uint16(len(dataSet5))},
-						Bytes:  dataSet5[IPFIXSetHeader{}.Len():],
 						Records: []IPFIXDataRecord{
 							{
 								ID: 257,
