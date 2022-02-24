@@ -645,8 +645,9 @@ func (ds *IPFIXDataSet) decodeFromBytes(data *[]byte, t IPFIXTemplateAccessor) e
 		dataRead := 0
 		for len(*data) >= int(t.GetMinDataRecordLength()) && dataRead < dataLen {
 			dr := &IPFIXDataRecord{
-				ID:     ds.Header.ID,
-				Fields: []IPFIXField{},
+				ID:         ds.Header.ID,
+				Fields:     []IPFIXField{},
+				fieldIndex: make(map[uint32]map[uint16]*IPFIXField),
 			}
 			n, err := dr.decodeFromBytes(data, t)
 			if err != nil {
@@ -704,6 +705,10 @@ type IPFIXDataRecord struct {
 	// List of fields in that template record.
 	// Order matter as it respect the same order of Template Field Specifiers.
 	Fields []IPFIXField
+
+	// map of data record fields indexed with their Enterprise Number and
+	// Information Element ID
+	fieldIndex map[uint32]map[uint16]*IPFIXField
 }
 
 func (dr *IPFIXDataRecord) decodeFromBytes(data *[]byte, t IPFIXTemplateAccessor) (int, error) {
@@ -726,6 +731,11 @@ func (dr *IPFIXDataRecord) decodeFromBytes(data *[]byte, t IPFIXTemplateAccessor
 			return err
 		}
 		dr.Fields = append(dr.Fields, *f)
+		if _, ok := dr.fieldIndex[fs.EnterpriseNumber]; !ok {
+			dr.fieldIndex[fs.EnterpriseNumber] = map[uint16]*IPFIXField{fs.InformationElementID: f}
+		} else {
+			dr.fieldIndex[fs.EnterpriseNumber][fs.InformationElementID] = f
+		}
 		dataRead += n
 
 		return nil
@@ -734,6 +744,17 @@ func (dr *IPFIXDataRecord) decodeFromBytes(data *[]byte, t IPFIXTemplateAccessor
 	}
 
 	return dataRead, nil
+}
+
+// GetField lookup the Data Record's Fields to find the one corresponding to the
+// Enterprise Number and Information Element ID given
+func (dr *IPFIXDataRecord) GetField(en uint32, iei uint16) (*IPFIXField, bool) {
+	if fields, found := dr.fieldIndex[en]; found {
+		field, found := fields[iei]
+		return field, found
+	}
+
+	return nil, false
 }
 
 // IPFIXField is a Field in a Data Record (RFC 7011 section 3.4.3)
