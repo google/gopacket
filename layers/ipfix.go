@@ -61,6 +61,7 @@ type IPFIXTemplateAccessor interface {
 	GetID() IPFIXSetIDType
 	GetMinDataRecordLength() uint16
 	IterFieldSpecifier(fn IPFIXFieldFunc) error
+	Equals(IPFIXTemplateAccessor) bool
 }
 
 // IPFIX is the outermost container which holds packet header and holds
@@ -389,6 +390,29 @@ func (tr *IPFIXTemplateRecord) IterFieldSpecifier(fn IPFIXFieldFunc) error {
 	return nil
 }
 
+// Equals returns true if both Templates are equal
+func (tr *IPFIXTemplateRecord) Equals(otherTA IPFIXTemplateAccessor) bool {
+	other, ok := otherTA.(*IPFIXTemplateRecord)
+	if !ok {
+		return false
+	}
+	if tr.Header.Length != other.Header.Length {
+		return false
+	}
+	if tr.ID != other.ID {
+		return false
+	}
+	if tr.minDataRecordLength != other.minDataRecordLength {
+		return false
+	}
+	for idx, fs := range tr.Fields {
+		if !fs.Equals(&other.Fields[idx]) {
+			return false
+		}
+	}
+	return true
+}
+
 // IPFIXOptionTemplateRecord contains any combination of IANA-assigned and/or
 // enterprise-specific Information Element identifiers (RFC 7011 section 3.4.2.2)
 //
@@ -522,6 +546,34 @@ func (otr *IPFIXOptionTemplateRecord) IterFieldSpecifier(fn IPFIXFieldFunc) erro
 	return nil
 }
 
+// Equals returns true if both Option Templates are equal
+func (otr *IPFIXOptionTemplateRecord) Equals(otherTA IPFIXTemplateAccessor) bool {
+	other, ok := otherTA.(*IPFIXOptionTemplateRecord)
+	if !ok {
+		return false
+	}
+	if otr.Header.Length != other.Header.Length {
+		return false
+	}
+	if otr.ID != other.ID {
+		return false
+	}
+	if otr.minDataRecordLength != other.minDataRecordLength {
+		return false
+	}
+	for idx, fs := range otr.ScopeFields {
+		if !fs.Equals(&other.ScopeFields[idx]) {
+			return false
+		}
+	}
+	for idx, fs := range otr.Fields {
+		if !fs.Equals(&other.Fields[idx]) {
+			return false
+		}
+	}
+	return true
+}
+
 // IPFIXFieldSpecifier is a Field Specifier (RFC 7011 section 3.2)
 //
 //    0                   1                   2                   3
@@ -588,6 +640,17 @@ func (fs *IPFIXFieldSpecifier) decodeFromBytes(data *[]byte) error {
 		*data, fs.EnterpriseNumber = (*data)[4:], binary.BigEndian.Uint32((*data)[:4])
 	}
 	return nil
+}
+
+// Equals returns true if both Field Specifiers are equal
+func (fs IPFIXFieldSpecifier) Equals(other *IPFIXFieldSpecifier) bool {
+	if fs.EnterpriseNumber != other.EnterpriseNumber {
+		return false
+	}
+	if fs.InformationElementID != other.InformationElementID {
+		return false
+	}
+	return true
 }
 
 // IPFIXDataSet is a set of Data Records (RFC 7011 section 3.3 and 3.4.3)
