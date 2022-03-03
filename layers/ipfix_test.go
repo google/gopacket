@@ -7,6 +7,8 @@ import (
 	"reflect"
 	"testing"
 
+	"github.com/google/go-cmp/cmp"
+	"github.com/google/go-cmp/cmp/cmpopts"
 	"github.com/google/gopacket"
 )
 
@@ -121,6 +123,12 @@ var dataWithTemplateStr = "000a00405685b3700000000000bc614e000200140100000300080
 
 // var dataPacket1IPv4 = []byte{0x00, 0x0a, 0x00, 0x73, 0x61, 0x84, 0xa6, 0xd4, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x01, 0x01, 0x00, 0x00, 0x63, 0x0a, 0x00, 0x00, 0x01, 0x0a, 0x00, 0x00, 0x02, 0x04, 0xd2, 0x16, 0x2e, 0x06, 0x4a, 0xf9, 0xec, 0x88, 0x4a, 0xf9, 0xf0, 0x70, 0x02, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x03, 0x20, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x01, 0xf4, 0x00, 0x00, 0x00, 0x00, 0x00, 0x0c, 0x35, 0x00, 0x04, 0x70, 0x6f, 0x64, 0x31, 0x00, 0x12, 0x83, 0x02, 0x0b, 0x45, 0x53, 0x54, 0x41, 0x42, 0x4c, 0x49, 0x53, 0x48, 0x45, 0x44, 0x0a, 0x00, 0x00, 0x03, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x01, 0x2c, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x96, 0x00, 0x00, 0x00, 0x00, 0x00, 0x0c, 0x35, 0x00}
 // var dataPacket2IPv4 = []byte{0x00, 0x0a, 0x00, 0x73, 0x61, 0x84, 0xa6, 0xd4, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x01, 0x01, 0x00, 0x00, 0x63, 0x0a, 0x00, 0x00, 0x01, 0x0a, 0x00, 0x00, 0x02, 0x04, 0xd2, 0x16, 0x2e, 0x06, 0x4a, 0xf9, 0xec, 0x88, 0x4a, 0xf9, 0xf8, 0x40, 0x02, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x03, 0xe8, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x01, 0xf4, 0x00, 0x00, 0x00, 0x00, 0x00, 0x0f, 0x42, 0x40, 0x00, 0x04, 0x70, 0x6f, 0x64, 0x32, 0x00, 0x00, 0x02, 0x0b, 0x45, 0x53, 0x54, 0x41, 0x42, 0x4c, 0x49, 0x53, 0x48, 0x45, 0x44, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x01, 0x90, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xc8, 0x00, 0x00, 0x00, 0x00, 0x00, 0x0f, 0x42, 0x40}
+
+var opts = []cmp.Option{
+	cmp.AllowUnexported(IPFIXTemplateRecord{}),
+	cmp.AllowUnexported(IPFIXOptionTemplateRecord{}),
+	cmpopts.IgnoreUnexported(IPFIXDataRecord{}),
+}
 
 func setLengthHeader(data []byte) {
 	if len(data) > 4 {
@@ -693,7 +701,6 @@ func TestIPFIXDataRecord(t *testing.T) {
 				Data: []IPFIXDataSet{
 					{
 						Header: IPFIXSetHeader{ID: 256, Length: uint16(len(dataRecord) + IPFIXSetHeader{}.Len())},
-						Bytes:  dataRecord,
 						Records: []IPFIXDataRecord{
 							{
 								ID: 256,
@@ -771,7 +778,6 @@ func TestIPFIXDataRecord(t *testing.T) {
 				Data: []IPFIXDataSet{
 					{
 						Header: IPFIXSetHeader{ID: 256, Length: uint16(len(dataSet3))},
-						Bytes:  dataSet3[IPFIXSetHeader{}.Len():],
 						Records: []IPFIXDataRecord{
 							{
 								ID: 256,
@@ -863,7 +869,6 @@ func TestIPFIXDataRecord(t *testing.T) {
 				Data: []IPFIXDataSet{
 					{
 						Header: IPFIXSetHeader{ID: 256, Length: uint16(len(dataSet4))},
-						Bytes:  dataSet4[IPFIXSetHeader{}.Len():],
 						Records: []IPFIXDataRecord{
 							{
 								ID: 256,
@@ -919,7 +924,6 @@ func TestIPFIXDataRecord(t *testing.T) {
 					},
 					{
 						Header: IPFIXSetHeader{ID: 257, Length: uint16(len(dataSet5))},
-						Bytes:  dataSet5[IPFIXSetHeader{}.Len():],
 						Records: []IPFIXDataRecord{
 							{
 								ID: 257,
@@ -945,7 +949,9 @@ func TestIPFIXDataRecord(t *testing.T) {
 
 			if !tt.wantErr {
 				got := p.ApplicationLayer().(*IPFIX)
-				if !reflect.DeepEqual(tt.want, got) {
+				// use go-cmp instead of reflect.DeepEqual to ginore
+				// DR.fieldIndex unexported field, see `opts`
+				if !cmp.Equal(tt.want, got, opts...) {
 					t.Errorf("IPFIX layer mismatch, \nwant  %#v\ngot %#v\n", tt.want, got)
 				}
 			}
@@ -1055,6 +1061,69 @@ func TestIPFIXDataSet_DecodeWithTemplate(t *testing.T) {
 
 			if err := dataSet.DecodeWithTemplate(template); (err != nil) != tt.wantErr {
 				t.Errorf("IPFIXDataSet.DecodeWithTemplate() error = %v, wantErr %v", err, tt.wantErr)
+			}
+		})
+	}
+}
+
+func TestIPFIXDataRecord_GetField(t *testing.T) {
+	templateSet := append([]byte{}, templateSetHeader...)
+	templateSet = append(templateSet, templateRecord...)
+	setLengthHeader(templateSet)
+
+	dataSet := append([]byte{}, dataSetHeader...)
+	dataSet = append(dataSet, dataRecord...)
+	setLengthHeader(dataSet)
+
+	payload := append([]byte{}, header...)
+	payload = append(payload, templateSet...)
+	payload = append(payload, dataSet...)
+	setLengthHeader(payload)
+
+	type args struct {
+		en  uint32
+		iei uint16
+	}
+	tests := []struct {
+		name    string
+		payload []byte
+		args    args
+		want    *IPFIXField
+		want1   bool
+	}{
+		{
+			"hit",
+			payload,
+			args{uint32(56506), uint16(108)},
+			&IPFIXField{
+				EnterpriseNumber:     56506,
+				InformationElementID: 108,
+				Bytes:                []byte{0x12, 0x83},
+			},
+			true,
+		},
+		{
+			"miss",
+			payload,
+			args{uint32(56506), uint16(42)},
+			nil,
+			false,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			p := gopacket.NewPacket(tt.payload, LayerTypeIPFIX, gopacket.NoCopy)
+			if p.ErrorLayer() != nil {
+				t.Error(p.ErrorLayer().Error())
+			}
+			ipfix := p.ApplicationLayer().(*IPFIX)
+			dr := ipfix.Data[0].Records[0]
+			got, got1 := dr.GetField(tt.args.en, tt.args.iei)
+			if !reflect.DeepEqual(got, tt.want) {
+				t.Errorf("IPFIXDataRecord.GetField() got = %v, want %v", got, tt.want)
+			}
+			if got1 != tt.want1 {
+				t.Errorf("IPFIXDataRecord.GetField() got1 = %v, want %v", got1, tt.want1)
 			}
 		})
 	}

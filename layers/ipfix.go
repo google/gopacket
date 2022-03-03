@@ -61,6 +61,7 @@ type IPFIXTemplateAccessor interface {
 	GetID() IPFIXSetIDType
 	GetMinDataRecordLength() uint16
 	IterFieldSpecifier(fn IPFIXFieldFunc) error
+	Equals(IPFIXTemplateAccessor) bool
 }
 
 // IPFIX is the outermost container which holds packet header and holds
@@ -389,6 +390,29 @@ func (tr *IPFIXTemplateRecord) IterFieldSpecifier(fn IPFIXFieldFunc) error {
 	return nil
 }
 
+// Equals returns true if both Templates are equal
+func (tr *IPFIXTemplateRecord) Equals(otherTA IPFIXTemplateAccessor) bool {
+	other, ok := otherTA.(*IPFIXTemplateRecord)
+	if !ok {
+		return false
+	}
+	if tr.Header.Length != other.Header.Length {
+		return false
+	}
+	if tr.ID != other.ID {
+		return false
+	}
+	if tr.minDataRecordLength != other.minDataRecordLength {
+		return false
+	}
+	for idx, fs := range tr.Fields {
+		if !fs.Equals(&other.Fields[idx]) {
+			return false
+		}
+	}
+	return true
+}
+
 // IPFIXOptionTemplateRecord contains any combination of IANA-assigned and/or
 // enterprise-specific Information Element identifiers (RFC 7011 section 3.4.2.2)
 //
@@ -522,6 +546,34 @@ func (otr *IPFIXOptionTemplateRecord) IterFieldSpecifier(fn IPFIXFieldFunc) erro
 	return nil
 }
 
+// Equals returns true if both Option Templates are equal
+func (otr *IPFIXOptionTemplateRecord) Equals(otherTA IPFIXTemplateAccessor) bool {
+	other, ok := otherTA.(*IPFIXOptionTemplateRecord)
+	if !ok {
+		return false
+	}
+	if otr.Header.Length != other.Header.Length {
+		return false
+	}
+	if otr.ID != other.ID {
+		return false
+	}
+	if otr.minDataRecordLength != other.minDataRecordLength {
+		return false
+	}
+	for idx, fs := range otr.ScopeFields {
+		if !fs.Equals(&other.ScopeFields[idx]) {
+			return false
+		}
+	}
+	for idx, fs := range otr.Fields {
+		if !fs.Equals(&other.Fields[idx]) {
+			return false
+		}
+	}
+	return true
+}
+
 // IPFIXFieldSpecifier is a Field Specifier (RFC 7011 section 3.2)
 //
 //    0                   1                   2                   3
@@ -590,6 +642,17 @@ func (fs *IPFIXFieldSpecifier) decodeFromBytes(data *[]byte) error {
 	return nil
 }
 
+// Equals returns true if both Field Specifiers are equal
+func (fs IPFIXFieldSpecifier) Equals(other *IPFIXFieldSpecifier) bool {
+	if fs.EnterpriseNumber != other.EnterpriseNumber {
+		return false
+	}
+	if fs.InformationElementID != other.InformationElementID {
+		return false
+	}
+	return true
+}
+
 // IPFIXDataSet is a set of Data Records (RFC 7011 section 3.3 and 3.4.3)
 //
 //     0                   1                   2                   3
@@ -632,9 +695,6 @@ func (ds *IPFIXDataSet) decodeFromBytes(data *[]byte, t IPFIXTemplateAccessor) e
 	}
 
 	dataLen := ds.Len() - ds.Header.Len()
-	// TODO: optimization, not store raw data if it was correctly decoded with
-	//       the template
-	ds.Bytes = (*data)[:dataLen]
 
 	if t != nil {
 		// a Data Set can contains multiple Data Records
@@ -645,8 +705,9 @@ func (ds *IPFIXDataSet) decodeFromBytes(data *[]byte, t IPFIXTemplateAccessor) e
 		dataRead := 0
 		for len(*data) >= int(t.GetMinDataRecordLength()) && dataRead < dataLen {
 			dr := &IPFIXDataRecord{
-				ID:     ds.Header.ID,
-				Fields: []IPFIXField{},
+				ID:         ds.Header.ID,
+				Fields:     []IPFIXField{},
+				fieldIndex: make(map[uint32]map[uint16]*IPFIXField),
 			}
 			n, err := dr.decodeFromBytes(data, t)
 			if err != nil {
@@ -667,7 +728,7 @@ func (ds *IPFIXDataSet) decodeFromBytes(data *[]byte, t IPFIXTemplateAccessor) e
 			*data = (*data)[padding:]
 		}
 	} else {
-		*data = (*data)[dataLen:]
+		ds.Bytes, *data = (*data)[:dataLen], (*data)[dataLen:]
 	}
 
 	return nil
@@ -704,6 +765,10 @@ type IPFIXDataRecord struct {
 	// List of fields in that template record.
 	// Order matter as it respect the same order of Template Field Specifiers.
 	Fields []IPFIXField
+
+	// map of data record fields indexed with their Enterprise Number and
+	// Information Element ID
+	fieldIndex map[uint32]map[uint16]*IPFIXField
 }
 
 func (dr *IPFIXDataRecord) decodeFromBytes(data *[]byte, t IPFIXTemplateAccessor) (int, error) {
@@ -726,6 +791,11 @@ func (dr *IPFIXDataRecord) decodeFromBytes(data *[]byte, t IPFIXTemplateAccessor
 			return err
 		}
 		dr.Fields = append(dr.Fields, *f)
+		if _, ok := dr.fieldIndex[fs.EnterpriseNumber]; !ok {
+			dr.fieldIndex[fs.EnterpriseNumber] = map[uint16]*IPFIXField{fs.InformationElementID: f}
+		} else {
+			dr.fieldIndex[fs.EnterpriseNumber][fs.InformationElementID] = f
+		}
 		dataRead += n
 
 		return nil
@@ -734,6 +804,17 @@ func (dr *IPFIXDataRecord) decodeFromBytes(data *[]byte, t IPFIXTemplateAccessor
 	}
 
 	return dataRead, nil
+}
+
+// GetField lookup the Data Record's Fields to find the one corresponding to the
+// Enterprise Number and Information Element ID given
+func (dr *IPFIXDataRecord) GetField(en uint32, iei uint16) (*IPFIXField, bool) {
+	if fields, found := dr.fieldIndex[en]; found {
+		field, found := fields[iei]
+		return field, found
+	}
+
+	return nil, false
 }
 
 // IPFIXField is a Field in a Data Record (RFC 7011 section 3.4.3)
