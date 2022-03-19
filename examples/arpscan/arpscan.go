@@ -176,13 +176,12 @@ func writeARP(handle *pcap.Handle, iface *net.Interface, addr *net.IPNet) error 
 func ips(n *net.IPNet) (out []net.IP) {
 	num := binary.BigEndian.Uint32([]byte(n.IP))
 	mask := binary.BigEndian.Uint32([]byte(n.Mask))
-	num &= mask
-	for mask < 0xffffffff {
+	network := num & mask
+	broadcast := network | ^mask
+	for network++; network < broadcast; network++ {
 		var buf [4]byte
-		binary.BigEndian.PutUint32(buf[:], num)
+		binary.BigEndian.PutUint32(buf[:], network)
 		out = append(out, net.IP(buf[:]))
-		mask++
-		num++
 	}
 	return
 }

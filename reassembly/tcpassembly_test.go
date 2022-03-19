@@ -125,6 +125,7 @@ func test(t *testing.T, s []testSequence) {
 		if testDebug {
 			fmt.Printf("#### test: #%d: sending:%s\n", i, hex.EncodeToString(test.in.BaseLayer.Payload))
 		}
+		test.in.SetInternalPortsForTesting()
 		a.Assemble(netFlow, &test.in)
 		final := []Reassembly{}
 		if len(test.want) > 0 {
@@ -741,6 +742,7 @@ func testFlush(t *testing.T, s []testSequence, delay time.Duration, flushInterva
 		if port != test.in.SrcPort {
 			flow = flow.Reverse()
 		}
+		test.in.SetInternalPortsForTesting()
 		ctx := assemblerSimpleContext(gopacket.CaptureInfo{Timestamp: simTime})
 		a.AssembleWithContext(flow, &test.in, &ctx)
 		simTime = simTime.Add(delay)
@@ -1713,6 +1715,7 @@ func TestMemoryShrink(t *testing.T) {
 		Seq:       999,
 		BaseLayer: layers.BaseLayer{Payload: []byte{1, 2, 3, 4, 5, 6, 7, 8, 9, 0}},
 	}
+	tcp.SetInternalPortsForTesting()
 	a := NewAssembler(NewStreamPool(&testFactoryBench{}))
 	var before runtime.MemStats
 	runtime.GC()
@@ -1762,6 +1765,7 @@ func BenchmarkSingleStreamNo(b *testing.B) {
 		Seq:       1000,
 		BaseLayer: layers.BaseLayer{Payload: []byte{1, 2, 3, 4, 5, 6, 7, 8, 9, 0}},
 	}
+	t.SetInternalPortsForTesting()
 	a := NewAssembler(NewStreamPool(&testFactoryBench{}))
 	for i := 0; i < b.N; i++ {
 		a.Assemble(netFlow, &t)
@@ -1781,6 +1785,7 @@ func BenchmarkSingleStreamSkips(b *testing.B) {
 		Seq:       1000,
 		BaseLayer: layers.BaseLayer{Payload: []byte{1, 2, 3, 4, 5, 6, 7, 8, 9, 0}},
 	}
+	t.SetInternalPortsForTesting()
 	a := NewAssembler(NewStreamPool(&testFactoryBench{}))
 	skipped := false
 	for i := 0; i < b.N; i++ {
@@ -1811,6 +1816,7 @@ func BenchmarkSingleStreamLoss(b *testing.B) {
 		Seq:       1000,
 		BaseLayer: layers.BaseLayer{Payload: []byte{1, 2, 3, 4, 5, 6, 7, 8, 9, 0}},
 	}
+	t.SetInternalPortsForTesting()
 	a := NewAssembler(NewStreamPool(&testFactoryBench{}))
 	for i := 0; i < b.N; i++ {
 		a.Assemble(netFlow, &t)
@@ -1829,6 +1835,7 @@ func BenchmarkMultiStreamGrow(b *testing.B) {
 	a := NewAssembler(NewStreamPool(&testFactoryBench{}))
 	for i := 0; i < b.N; i++ {
 		t.SrcPort = layers.TCPPort(i)
+		t.SetInternalPortsForTesting()
 		a.Assemble(netFlow, &t)
 		t.Seq += 10
 	}
@@ -1845,6 +1852,7 @@ func BenchmarkMultiStreamConn(b *testing.B) {
 	a := NewAssembler(NewStreamPool(&testFactoryBench{}))
 	for i := 0; i < b.N; i++ {
 		t.SrcPort = layers.TCPPort(i)
+		t.SetInternalPortsForTesting()
 		a.Assemble(netFlow, &t)
 		if i%65536 == 65535 {
 			if t.SYN {
@@ -1880,6 +1888,8 @@ func TestFullyOrderedAndCompleteStreamDoesNotAlloc(t *testing.T) {
 		ACK:       true,
 		BaseLayer: layers.BaseLayer{Payload: []byte{1, 2, 3, 4, 5, 6, 7, 8, 9, 0}},
 	}
+	c2s.SetInternalPortsForTesting()
+	s2c.SetInternalPortsForTesting()
 	tf := testMemoryFactory{}
 	a := NewAssembler(NewStreamPool(&tf))
 
