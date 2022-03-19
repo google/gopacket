@@ -385,6 +385,8 @@ func initActualTypeData() {
 	LinkTypeMetadata[LinkTypeLinuxUSB] = EnumMetadata{DecodeWith: gopacket.DecodeFunc(decodeUSB), Name: "USB"}
 	LinkTypeMetadata[LinkTypeLinuxSLL] = EnumMetadata{DecodeWith: gopacket.DecodeFunc(decodeLinuxSLL), Name: "Linux SLL"}
 	LinkTypeMetadata[LinkTypePrismHeader] = EnumMetadata{DecodeWith: gopacket.DecodeFunc(decodePrismHeader), Name: "Prism"}
+	LinkTypeMetadata[LinkTypeIPv4] = EnumMetadata{DecodeWith: gopacket.DecodeFunc(decodeIPv4), Name: "IPv4"}
+	LinkTypeMetadata[LinkTypeIPv6] = EnumMetadata{DecodeWith: gopacket.DecodeFunc(decodeIPv6), Name: "IPv6"}
 
 	FDDIFrameControlMetadata[FDDIFrameControlLLC] = EnumMetadata{DecodeWith: gopacket.DecodeFunc(decodeLLC), Name: "LLC"}
 
