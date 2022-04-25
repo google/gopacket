@@ -442,8 +442,11 @@ func extractLSAInformation(lstype, lsalength uint16, data []byte) (interface{}, 
 			RefAdvRouter:   binary.BigEndian.Uint32(data[28:32]),
 			Prefixes:       prefixes,
 		}
+	case SummaryLSANetworktypeV2:
+		fallthrough
 	default:
-		return nil, fmt.Errorf("Unknown Link State type.")
+		return nil, nil
+		// return nil, fmt.Errorf("Unknown Link State type.")
 	}
 	return content, nil
 }
