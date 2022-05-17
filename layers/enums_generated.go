@@ -50,11 +50,11 @@ func (a *errorDecoderForLinkType) Error() string {
 	return fmt.Sprintf("Unable to decode LinkType %d", int(*a))
 }
 
-var errorDecodersForLinkType [256]errorDecoderForLinkType
-var LinkTypeMetadata [256]EnumMetadata
+var errorDecodersForLinkType [277]errorDecoderForLinkType
+var LinkTypeMetadata [277]EnumMetadata
 
 func initUnknownTypesForLinkType() {
-	for i := 0; i < 256; i++ {
+	for i := 0; i < 277; i++ {
 		errorDecodersForLinkType[i] = errorDecoderForLinkType(i)
 		LinkTypeMetadata[i] = EnumMetadata{
 			DecodeWith: &errorDecodersForLinkType[i],
