@@ -122,6 +122,46 @@ func (i *IGMPv1or2) decodeResponse(data []byte) error {
 	return nil
 }
 
+func igmpchecksum(bytes []byte) uint16 {
+	// Assumed that the checksum bytes are set to zero
+	var csum uint32
+	for i := 0; i < len(bytes); i += 2 {
+		csum += uint32(bytes[i]) << 8
+		csum += uint32(bytes[i+1])
+	}
+	for {
+		// Break when sum is less or equals to 0xFFFF
+		if csum <= 65535 {
+			break
+		}
+		// Add carry to the sum
+		csum = (csum >> 16) + uint32(uint16(csum))
+	}
+	// Flip all the bits
+	return ^uint16(csum)
+}
+
+func (i *IGMPv1or2) SerializeTo(b gopacket.SerializeBuffer, opts gopacket.SerializeOptions) error {
+	bytes, err := b.PrependBytes(8)
+	if err != nil {
+		return err
+	}
+	// Put the packet type
+	bytes[0] = byte(i.Type)
+	bytes[1] = igmpTimeEncode(i.MaxResponseTime)
+	// Put the checksum as zero to start
+	binary.BigEndian.PutUint16(bytes[2:], 0)
+	addr, err := checkIPv4Address(i.GroupAddress)
+	if err != nil {
+		return err
+	}
+	i.GroupAddress = addr
+	copy(bytes[4:8], i.GroupAddress)
+	csum := igmpchecksum(bytes)
+	binary.BigEndian.PutUint16(bytes[2:], csum)
+	return nil
+}
+
 //  0                   1                   2                   3
 //  0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1
 // +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
@@ -166,6 +206,31 @@ type IGMPv3GroupRecord struct {
 	MulticastAddress net.IP
 	SourceAddresses  []net.IP
 	AuxData          uint32 // NOT USED
+}
+
+func (g *IGMPv3GroupRecord) length() int {
+	return(8 + 4 * len(g.SourceAddresses))
+}
+
+func (g *IGMPv3GroupRecord) encode(b []byte) (int, error) {
+	length := g.length()
+	b[0] = byte(g.Type) // Record Type
+	b[1] = byte(0) // Aux data length
+	binary.BigEndian.PutUint16(b[2:], uint16(len(g.SourceAddresses)))
+	addr, err := checkIPv4Address(g.MulticastAddress)
+	if err != nil {
+		return 0, err
+	}
+	copy(b[4:8], addr)
+	start := 8
+	for i, src := range g.SourceAddresses {
+		addr1, err := checkIPv4Address(src)
+		if err != nil {
+			return 0, err
+		}
+		copy(b[start+i*4 : start+(i+1)*4], addr1)
+	}
+	return length, nil
 }
 
 func (i *IGMP) decodeIGMPv3MembershipReport(data []byte) error {
@@ -256,6 +321,50 @@ func igmpTimeDecode(t uint8) time.Duration {
 	return time.Millisecond * 100 * time.Duration((mant|0x10)<<(exp+3))
 }
 
+func igmpTimeEncode(t time.Duration) byte {
+	decisecs := uint32(t/(100 * time.Millisecond))
+	maxexp := 7 + 3 // exp + 3, 7 from 3 bits of exp
+	maxmsb := maxexp + 4 + 1 // mant | 0x10
+	if decisecs < 127 {
+		return byte(decisecs)
+	} else {
+		for i := 31; i > 10; i-- {
+			mask := uint32(1) << uint8(i)
+			if decisecs & mask != 0 {
+				if i > maxmsb {
+					break
+				}
+				exp := byte(i - 3)
+				mant := byte(decisecs >> uint8(i - 5))
+				return byte(0x80) | exp << 4 | (mant & 0x0f)
+			}
+		}
+	}
+	return byte(127)
+}
+
+func igmpIntervalEncode(t time.Duration) byte {
+	secs := uint32(t/(time.Second))
+	maxexp := 7 + 3 // exp + 3, 7 from 3 bits of exp
+	maxmsb := maxexp + 4 + 1 // mant | 0x10
+	if secs < 127 {
+		return byte(secs)
+	} else {
+		for i := 31; i > 10; i-- {
+			mask := uint32(1) << uint8(i)
+			if secs & mask != 0 {
+				if i > maxmsb {
+					break
+				}
+				exp := byte(i - 3)
+				mant := byte(secs >> uint8(i - 5))
+				return byte(0x80) | exp << 4 | (mant & 0x0f)
+			}
+		}
+	}
+	return byte(127)
+}
+
 // LayerType returns LayerTypeIGMP for the V1,2,3 message protocol formats.
 func (i *IGMP) LayerType() gopacket.LayerType      { return LayerTypeIGMP }
 func (i *IGMPv1or2) LayerType() gopacket.LayerType { return LayerTypeIGMP }
@@ -299,6 +408,81 @@ func (i *IGMP) DecodeFromBytes(data []byte, df gopacket.DecodeFeedback) error {
 		return errors.New("unsupported IGMP type")
 	}
 
+	return nil
+}
+
+func (i *IGMP) SerializeTo(b gopacket.SerializeBuffer, opts gopacket.SerializeOptions) error {
+	// Get the length of the packet and preprend bytes
+	switch i.Type {
+	case IGMPMembershipQuery:
+		return i.serializeIGMPv3MembershipQuery(b, opts)
+	case IGMPMembershipReportV3:
+		return i.serializeIGMPv3MembershipReport(b, opts)
+	default:
+	}
+	return errors.New("Unsupported IGMPv3 Message Type")
+}
+
+func (i *IGMP) serializeIGMPv3MembershipQuery(b gopacket.SerializeBuffer, opts gopacket.SerializeOptions) error {
+	numsrcip := len(i.SourceAddresses)
+	length := 12 + (4 * numsrcip)
+	bytes, err := b.PrependBytes(length)
+	if err != nil {
+		return err
+	}
+	bytes[0] = byte(i.Type)
+	bytes[1] = igmpTimeEncode(i.MaxResponseTime)
+	// Set the checksum to 0 initially
+	binary.BigEndian.PutUint16(bytes[2:], 0)
+	addr, err := checkIPv4Address(i.GroupAddress)
+	if err != nil {
+		return err
+	}
+	i.GroupAddress = addr
+	copy(bytes[4:8], i.GroupAddress)
+	bytes[8] = 0
+	bytes[9] = igmpIntervalEncode(i.IntervalTime)
+	binary.BigEndian.PutUint16(bytes[10:], uint16(numsrcip))
+	for i, ip := range i.SourceAddresses {
+		addr1, err := checkIPv4Address(ip)
+		if err != nil {
+			return err
+		}
+		copy(bytes[12 + i*4:12 + (i+1)*4], addr1)
+	}
+	csum := igmpchecksum(bytes)
+	binary.BigEndian.PutUint16(bytes[2:], csum)
+	return nil
+}
+
+func (i *IGMP) serializeIGMPv3MembershipReport(b gopacket.SerializeBuffer, opts gopacket.SerializeOptions) error {
+	// This is for the first two 32 bit rows in the report which is the fixed part
+	length := 8
+	for _, g := range i.GroupRecords {
+		length = length + g.length()
+	}
+	bytes, err := b.PrependBytes(length)
+	if err != nil {
+		return err
+	}
+	bytes[0] = byte(i.Type)
+	bytes[1] = byte(0)
+	// Checksum needs to go here
+	binary.BigEndian.PutUint16(bytes[2:], uint16(0))
+
+	// The reserved field and the number of IGMP group records
+	binary.BigEndian.PutUint16(bytes[4:], uint16(0))
+	binary.BigEndian.PutUint16(bytes[6:], uint16(len(i.GroupRecords)))
+	start := 8
+	for _, g := range i.GroupRecords {
+		numb, err := g.encode(bytes[start:])
+		if err != nil {
+			return err
+		}
+		start = start + numb
+	}
+	csum := igmpchecksum(bytes)
+	binary.BigEndian.PutUint16(bytes[2:], csum)
 	return nil
 }
 

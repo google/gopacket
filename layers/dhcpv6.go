@@ -8,6 +8,7 @@ package layers
 
 import (
 	"encoding/binary"
+	"errors"
 	"fmt"
 	"net"
 
@@ -234,6 +235,7 @@ const (
 	DHCPv6DUIDTypeLLT DHCPv6DUIDType = iota + 1
 	DHCPv6DUIDTypeEN
 	DHCPv6DUIDTypeLL
+	DHCPv6DUIDTypeUUID
 )
 
 // String returns a string version of a DHCPv6DUIDType.
@@ -245,6 +247,8 @@ func (o DHCPv6DUIDType) String() string {
 		return "EN"
 	case DHCPv6DUIDTypeLL:
 		return "LL"
+	case DHCPv6DUIDTypeUUID:
+		return "UUID"
 	default:
 		return "Unknown"
 	}
@@ -263,6 +267,8 @@ type DHCPv6DUID struct {
 	LinkLayerAddress net.HardwareAddr
 	// EN
 	Identifier []byte
+	// UUID
+	UniqueIdentifier []byte
 }
 
 // DecodeFromBytes decodes the given bytes into a DHCPv6DUID
@@ -291,6 +297,8 @@ func (d *DHCPv6DUID) DecodeFromBytes(data []byte) error {
 		}
 		d.EnterpriseNumber = data[2:6]
 		d.Identifier = data[6:]
+	} else if d.Type == DHCPv6DUIDTypeUUID {
+		d.UniqueIdentifier = data[2:]
 	} else { // DHCPv6DUIDTypeLL
 		if len(data) < 4 {
 			return fmt.Errorf("Not enough bytes to decode: %d", len(data))
@@ -357,4 +365,177 @@ func decodeDHCPv6DUID(data []byte) (*DHCPv6DUID, error) {
 		return nil, err
 	}
 	return duid, nil
+}
+
+type DHCPv6IAPD struct {
+	IAID [4]byte
+	T1   uint32
+	T2   uint32
+	PD   DHCPv6PD
+}
+
+type DHCPv6PD struct {
+	PrefLifeTime  uint32
+	ValidLifeTime uint32
+	PrefixLength  byte
+	Prefix        net.IP
+}
+
+// DecodeFromBytes decodes the given bytes into a DHCPv6DUID
+func (d *DHCPv6IAPD) DecodeFromBytes(data []byte) error {
+	if len(data) != 41 {
+		return errors.New("Not enough bytes to decode: " + string(len(data)))
+	}
+
+	copy(d.IAID[:], data[:4])
+	d.T1 = binary.BigEndian.Uint32(data[4:8])
+	d.T2 = binary.BigEndian.Uint32(data[8:12])
+
+	PDType := binary.BigEndian.Uint16(data[12:14])
+	if PDType != uint16(DHCPv6OptIAPrefix) {
+		return errors.New("Invalid IE Included: " + string(PDType))
+	}
+	PDLen := binary.BigEndian.Uint16(data[14:16])
+	if PDLen != 25 {
+		return errors.New("Invalid Length for PD: " + string(PDLen))
+	}
+	if err := (&d.PD).DecodeFromBytes(data[16:]); err != nil {
+		return err
+	}
+	return nil
+}
+
+func (pd *DHCPv6PD) DecodeFromBytes(data []byte) error {
+	pd.PrefLifeTime = binary.BigEndian.Uint32(data[0:4])
+	pd.ValidLifeTime = binary.BigEndian.Uint32(data[4:8])
+	pd.PrefixLength = data[8]
+	pd.Prefix = data[9:]
+	return nil
+}
+
+func (d *DHCPv6IAPD) Encode() []byte {
+	length := 41
+	data := make([]byte, length)
+	copy(data[0:4], d.IAID[:])
+	binary.BigEndian.PutUint32(data[4:8], d.T1)
+	binary.BigEndian.PutUint32(data[8:12], d.T2)
+	binary.BigEndian.PutUint16(data[12:14], uint16(DHCPv6OptIAPrefix))
+	binary.BigEndian.PutUint16(data[14:16], 25)
+	x := (&d.PD).Encode()
+	copy(data[16:41], x)
+	return data
+}
+
+func (pd *DHCPv6PD) Encode() []byte {
+	data := make([]byte, 25)
+	binary.BigEndian.PutUint32(data[0:4], pd.PrefLifeTime)
+	binary.BigEndian.PutUint32(data[4:8], pd.ValidLifeTime)
+	data[8] = pd.PrefixLength
+	copy(data[9:25], pd.Prefix)
+	return data
+}
+
+// Implementation of Remote ID of DHCPv6 used by LDRA
+// Defined in RFC 6221
+type DHCPv6RemoteId struct {
+	EnterpriseID [4]byte
+	RemoteId     []byte
+}
+
+func (d *DHCPv6RemoteId) Encode() []byte {
+	length := 4 + len(d.RemoteId)
+	data := make([]byte, length)
+	copy(data[0:4], d.EnterpriseID[:])
+	copy(data[4:], d.RemoteId)
+	return data
+}
+
+func (d *DHCPv6RemoteId) DecodeFromBytes(data []byte) error {
+	copy(d.EnterpriseID[:], data[0:4])
+	copy(d.RemoteId, data[4:])
+	return nil
+}
+
+// Implementation of Interface Id of DHCPv6 used by LDRA
+// Defined in RFC 6221
+type DHCPv6IntfId struct {
+	Data []byte
+}
+
+func (d *DHCPv6IntfId) Encode() []byte {
+	length := len(d.Data)
+	data := make([]byte, length)
+	copy(data[0:length], d.Data)
+	return data
+}
+
+func (d *DHCPv6IntfId) DecodeFromBytes(data []byte) error {
+	copy(d.Data, data)
+	return nil
+}
+
+type DHCPv6IANA struct {
+	IAID [4]byte
+	T1   uint32
+	T2   uint32
+	IA   DHCPv6IA
+}
+
+type DHCPv6IA struct {
+	PrefLifeTime  uint32
+	ValidLifeTime uint32
+	IPv6Addr      net.IP
+}
+
+// DecodeFromBytes decodes the given bytes into a DHCPv6DUID
+func (d *DHCPv6IANA) DecodeFromBytes(data []byte) error {
+	if len(data) != 40 {
+		return errors.New("Not enough bytes to decode: " + string(len(data)))
+	}
+
+	copy(d.IAID[:], data[:4])
+	d.T1 = binary.BigEndian.Uint32(data[4:8])
+	d.T2 = binary.BigEndian.Uint32(data[8:12])
+
+	IAType := binary.BigEndian.Uint16(data[12:14])
+	if IAType != uint16(DHCPv6OptIAAddr) {
+		return errors.New("Invalid IE Included: " + string(IAType))
+	}
+	IALen := binary.BigEndian.Uint16(data[14:16])
+	if IALen != 24 {
+		return errors.New("Invalid Length for PD: " + string(IALen))
+	}
+	if err := (&d.IA).DecodeFromBytes(data[16:]); err != nil {
+		return err
+	}
+	return nil
+}
+
+func (ia *DHCPv6IA) DecodeFromBytes(data []byte) error {
+	ia.IPv6Addr = data[0:16]
+	ia.PrefLifeTime = binary.BigEndian.Uint32(data[16:20])
+	ia.ValidLifeTime = binary.BigEndian.Uint32(data[20:])
+
+	return nil
+}
+
+func (d *DHCPv6IANA) Encode() []byte {
+	length := 40
+	data := make([]byte, length)
+	copy(data[0:4], d.IAID[:])
+	binary.BigEndian.PutUint32(data[4:8], d.T1)
+	binary.BigEndian.PutUint32(data[8:12], d.T2)
+	binary.BigEndian.PutUint16(data[12:14], uint16(DHCPv6OptIAPrefix))
+	binary.BigEndian.PutUint16(data[14:16], 24)
+	x := (&d.IA).Encode()
+	copy(data[16:40], x)
+	return data
+}
+
+func (ia *DHCPv6IA) Encode() []byte {
+	data := make([]byte, 24)
+	copy(data[0:16], ia.IPv6Addr)
+	binary.BigEndian.PutUint32(data[16:20], ia.PrefLifeTime)
+	binary.BigEndian.PutUint32(data[20:24], ia.ValidLifeTime)
+	return data
 }
