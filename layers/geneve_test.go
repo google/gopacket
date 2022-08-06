@@ -136,7 +136,7 @@ func TestDecodeGeneve3(t *testing.T) {
 			Protocol:       EthernetTypeTransparentEthernetBridging,
 			VNI:            0xa,
 			Options: []*GeneveOption{
-				&GeneveOption{
+				{
 					Class:  0x0,
 					Type:   0x80,
 					Length: 8,
@@ -153,5 +153,41 @@ func TestDecodeGeneve3(t *testing.T) {
 func BenchmarkDecodeGeneve1(b *testing.B) {
 	for i := 0; i < b.N; i++ {
 		gopacket.NewPacket(testPacketGeneve1, LinkTypeEthernet, gopacket.NoCopy)
+	}
+}
+
+func TestIsomorphicPacketGeneve(t *testing.T) {
+	gn := &Geneve{
+		Version:        0x0,
+		OptionsLength:  0x14,
+		OAMPacket:      false,
+		CriticalOption: true,
+		Protocol:       EthernetTypeTransparentEthernetBridging,
+		VNI:            0xa,
+		Options: []*GeneveOption{
+			{
+				Class:  0x0,
+				Type:   0x80,
+				Length: 12,
+				Data:   []byte{0, 0, 0, 0, 0, 0, 0, 0xc},
+			},
+			{
+				Class:  0x0,
+				Type:   0x80,
+				Length: 8,
+				Data:   []byte{0, 0, 0, 0xc},
+			},
+		},
+	}
+
+	b := gopacket.NewSerializeBuffer()
+	gn.SerializeTo(b, gopacket.SerializeOptions{})
+
+	p := gopacket.NewPacket(b.Bytes(), gopacket.DecodeFunc(decodeGeneve), gopacket.Default)
+	gnTranslated := p.Layer(LayerTypeGeneve).(*Geneve)
+	gnTranslated.BaseLayer = BaseLayer{}
+
+	if !reflect.DeepEqual(gn, gnTranslated) {
+		t.Errorf("VXLAN isomorph mismatch, \nwant %#v\ngot %#v\n", gn, gnTranslated)
 	}
 }
