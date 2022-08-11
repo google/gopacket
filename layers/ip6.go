@@ -547,46 +547,145 @@ func (o *IPv6HopByHopOption) SetJumboLength(len uint32) {
 	o.OptionAlignment = [2]uint8{4, 2}
 }
 
-// IPv6Routing is the IPv6 routing extension.
-type IPv6Routing struct {
+// Base layer for IPv6 routing headers.
+type IPv6RoutingBase struct {
 	ipv6ExtensionBase
 	RoutingType  uint8
 	SegmentsLeft uint8
-	// This segment is supposed to be zero according to RFC2460, the second set of
-	// 4 bytes in the extension.
-	Reserved []byte
+
 	// SourceRoutingIPs is the set of IPv6 addresses requested for source routing,
 	// set only if RoutingType == 0.
+	// To be interpreted according to actual routing headers e.g. source routing
+	// IPs (type 0) or SegmentList (type 4).
 	SourceRoutingIPs []net.IP
+
+	// That varies see extended type (e.g. 4 for type 0 RFC2460, 2 for type 4 RFC8754)
+	Reserved []byte
+}
+
+const IPv6SourceRoutingType = 0
+const IPv6SegmentRoutingHeaderType = 4
+
+// IPv6Routing is the IPv6 routing extension.
+type IPv6Routing struct {
+	IPv6RoutingBase
 }
 
 // LayerType returns LayerTypeIPv6Routing.
 func (i *IPv6Routing) LayerType() gopacket.LayerType { return LayerTypeIPv6Routing }
+
+// IPv6SegmentRoutingHeader is the SRv6 SRH.
+type IPv6SegmentRoutingHeader struct {
+	IPv6RoutingBase
+
+	LastEntry uint8
+	Flags     uint8
+	Tag       uint16
+
+	// Undecoded TLVs.
+	TLVs []byte
+}
+
+// LayerType returns LayerTypeIPv6Routing.
+func (i *IPv6SegmentRoutingHeader) LayerType() gopacket.LayerType { return LayerTypeIPv6SegmentRouting }
 
 func decodeIPv6Routing(data []byte, p gopacket.PacketBuilder) error {
 	base, err := decodeIPv6ExtensionBase(data, p)
 	if err != nil {
 		return err
 	}
-	i := &IPv6Routing{
+	routingBase := IPv6RoutingBase{
 		ipv6ExtensionBase: base,
 		RoutingType:       data[2],
 		SegmentsLeft:      data[3],
-		Reserved:          data[4:8],
 	}
-	switch i.RoutingType {
-	case 0: // Source routing
-		if (i.ActualLength-8)%16 != 0 {
-			return fmt.Errorf("Invalid IPv6 source routing, length of type 0 packet %d", i.ActualLength)
+
+	var layer gopacket.Layer
+
+	switch routingBase.RoutingType {
+	case IPv6SourceRoutingType:
+		if layer, err = decodeIPv6RoutingType0(&routingBase, data); err != nil {
+			return err
 		}
-		for d := i.Contents[8:]; len(d) >= 16; d = d[16:] {
-			i.SourceRoutingIPs = append(i.SourceRoutingIPs, net.IP(d[:16]))
+	case IPv6SegmentRoutingHeaderType:
+		if layer, err = decodeIPv6RoutingType4(&routingBase, data); err != nil {
+			return err
 		}
 	default:
-		return fmt.Errorf("Unknown IPv6 routing header type %d", i.RoutingType)
+		return fmt.Errorf("Unknown IPv6 routing header type %d", routingBase.RoutingType)
 	}
-	p.AddLayer(i)
-	return p.NextDecoder(i.NextHeader)
+	p.AddLayer(layer)
+	return p.NextDecoder(routingBase.NextHeader)
+}
+
+func decodeIPv6RoutingType0(base *IPv6RoutingBase, data []byte) (gopacket.Layer, error) {
+	i := &IPv6Routing{
+		IPv6RoutingBase: *base,
+	}
+	i.Reserved = data[4:8]
+
+	if (i.ActualLength-8)%16 != 0 {
+		return nil, fmt.Errorf("Invalid IPv6 source routing, length of type 0 packet %d", i.ActualLength)
+	}
+	for d := i.Contents[8:]; len(d) >= 16; d = d[16:] {
+		i.SourceRoutingIPs = append(i.SourceRoutingIPs, net.IP(d[:16]))
+	}
+	return i, nil
+}
+
+func decodeIPv6RoutingType4(base *IPv6RoutingBase, data []byte) (gopacket.Layer, error) {
+	srh := &IPv6SegmentRoutingHeader{
+		IPv6RoutingBase: *base,
+		LastEntry:       data[4],
+		Flags:           data[5],
+	}
+	srh.Reserved = data[6:8]
+
+	// Compute in bytes
+	hdrLength := int(srh.HeaderLength * 8)
+	sidLength := int(srh.LastEntry+1) * 16
+
+	if sidLength > hdrLength {
+		return nil, fmt.Errorf("Invalid IPv6 SRH, last entry out-of-bounds")
+	}
+
+	// Check for TLVs
+	if hdrLength > sidLength {
+		srh.TLVs = data[8+sidLength : 8+hdrLength]
+	} else {
+		if hdrLength%16 != 0 {
+			return nil, fmt.Errorf("Invalid IPv6 SHR, length of type 4 packet %d", srh.ActualLength)
+		}
+	}
+	for d := srh.Contents[8:]; len(d) >= 16; d = d[16:] {
+		srh.SourceRoutingIPs = append(srh.SourceRoutingIPs, net.IP(d[:16]))
+	}
+	return srh, nil
+}
+
+func (srh *IPv6SegmentRoutingHeader) SerializeTo(b gopacket.SerializeBuffer, opts gopacket.SerializeOptions) error {
+	totalLen := int(8) + 16*(int(srh.LastEntry)+1) + len(srh.TLVs)
+	bytes, err := b.PrependBytes(totalLen)
+
+	if err != nil {
+		return fmt.Errorf("Failed to serialize SRH: %v", err)
+	}
+
+	bytes[0] = byte(srh.NextHeader)
+	bytes[1] = byte((totalLen - 8) / 8)
+	bytes[2] = 4
+	bytes[3] = srh.SegmentsLeft
+	bytes[4] = srh.LastEntry
+	bytes[5] = srh.Flags
+	binary.BigEndian.PutUint16(bytes[6:8], srh.Tag)
+
+	for i, ip := range srh.SourceRoutingIPs {
+		copy(bytes[8+(i*16):], ip)
+	}
+
+	copy(bytes[8+(srh.LastEntry+1)*16:], srh.TLVs)
+
+	return nil
 }
 
 // IPv6Fragment is the IPv6 fragment header, used for packet
