@@ -657,9 +657,9 @@ func TestDecodeSCTPPackets(t *testing.T) {
 	wantLayers := [][]gopacket.LayerType{
 		[]gopacket.LayerType{LayerTypeSCTPInit},
 		[]gopacket.LayerType{LayerTypeSCTPInitAck},
-		[]gopacket.LayerType{LayerTypeSCTPCookieEcho, LayerTypeSCTPData, gopacket.LayerTypePayload},
+		[]gopacket.LayerType{LayerTypeSCTPCookieEcho, LayerTypeSCTPData},
 		[]gopacket.LayerType{LayerTypeSCTPCookieAck, LayerTypeSCTPSack},
-		[]gopacket.LayerType{LayerTypeSCTPData, gopacket.LayerTypePayload},
+		[]gopacket.LayerType{LayerTypeSCTPData},
 		[]gopacket.LayerType{LayerTypeSCTPSack},
 		[]gopacket.LayerType{LayerTypeSCTPShutdown},
 		[]gopacket.LayerType{LayerTypeSCTPShutdownAck},
