@@ -1490,7 +1490,7 @@ func (m *Dot11InformationElement) DecodeFromBytes(data []byte, df gopacket.Decod
 
 func (d *Dot11InformationElement) String() string {
 	if d.ID == 0 {
-		return fmt.Sprintf("802.11 Information Element (ID: %v, Length: %v, SSID: %v)", d.ID, d.Length, string(d.Info))
+		return fmt.Sprintf("802.11 Information Element (ID: %v, Length: %v, SSID: %s)", d.ID, d.Length, d.Info)
 	} else if d.ID == 1 {
 		rates := ""
 		for i := 0; i < len(d.Info); i++ {

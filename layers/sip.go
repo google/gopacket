@@ -392,7 +392,7 @@ func (s *SIP) ParseHeader(header []byte) (err error) {
 	if header[0] == '\t' || header[0] == ' ' {
 
 		header = bytes.TrimSpace(header)
-		s.Headers[s.lastHeaderParsed][len(s.Headers[s.lastHeaderParsed])-1] += fmt.Sprintf(" %s", string(header))
+		s.Headers[s.lastHeaderParsed][len(s.Headers[s.lastHeaderParsed])-1] += fmt.Sprintf(" %s", header)
 		return
 	}
 

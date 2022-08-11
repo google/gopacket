@@ -493,7 +493,7 @@ func (o DHCPOption) String() string {
 	case DHCPOptHostname, DHCPOptMeritDumpFile, DHCPOptDomainName, DHCPOptRootPath,
 		DHCPOptExtensionsPath, DHCPOptNISDomain, DHCPOptNetBIOSTCPScope, DHCPOptXFontServer,
 		DHCPOptXDisplayManager, DHCPOptMessage, DHCPOptDomainSearch: // string
-		return fmt.Sprintf("Option(%s:%s)", o.Type, string(o.Data))
+		return fmt.Sprintf("Option(%s:%s)", o.Type, o.Data)
 
 	case DHCPOptMessageType:
 		if len(o.Data) != 1 {
