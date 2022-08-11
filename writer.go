@@ -216,6 +216,30 @@ func SerializeLayers(w SerializeBuffer, opts SerializeOptions, layers ...Seriali
 	return nil
 }
 
+// SerializeMultiLayers clears the given write buffer, then writes all layers into it so
+// they correctly wrap each other.  Note that by clearing the buffer, it
+// invalidates all slices previously returned by w.Bytes()
+//
+// Example:
+//   buf := gopacket.NewSerializeBuffer()
+//   opts := gopacket.SerializeOptions{}
+//   gopacket.SerializeLayers(buf, opts, a, b, c)
+//   firstPayload := buf.Bytes()  // contains byte representation of a(b(c))
+//   gopacket.SerializeLayers(buf, opts, d, e, f)
+//   secondPayload := buf.Bytes()  // contains byte representation of d(e(f)). firstPayload is now invalidated, since the SerializeLayers call Clears buf.
+func SerializeMultiLayers(w SerializeBuffer, opts SerializeOptions, layers []SerializableLayer) error {
+	w.Clear()
+	for i := len(layers) - 1; i >= 0; i-- {
+		layer := layers[i]
+		err := layer.SerializeTo(w, opts)
+		if err != nil {
+			return err
+		}
+		w.PushLayer(layer.LayerType())
+	}
+	return nil
+}
+
 // SerializePacket is a convenience function that calls SerializeLayers
 // on packet's Layers().
 // It returns an error if one of the packet layers is not a SerializableLayer.

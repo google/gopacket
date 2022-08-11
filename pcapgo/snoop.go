@@ -19,6 +19,7 @@ import (
 
 const snoopMagic uint64 = 0x736e6f6f70000000 //8 byte in big endian
 const snoopVersion uint32 = 2
+const defaultBufLen uint32 = 150
 const maxCaptureLen int = 4096
 
 // Errors
