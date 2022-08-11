@@ -374,6 +374,10 @@ func (d *BFD) DecodeFromBytes(data []byte, df gopacket.DecodeFeedback) error {
 	data, d.RequiredMinEchoRxInterval = data[4:], BFDTimeInterval(binary.BigEndian.Uint32(data[:4]))
 
 	if d.AuthPresent && (len(data) > 2) {
+		authLen := uint8(data[1])
+		if len(data) != int(authLen) {
+			return errors.New("BFD Authentication Header length does not match")
+		}
 		d.AuthHeader = &BFDAuthHeader{}
 		data, d.AuthHeader.AuthType = data[1:], BFDAuthType(data[0])
 		data, _ = data[1:], uint8(data[0]) // Consume length
@@ -382,11 +386,13 @@ func (d *BFD) DecodeFromBytes(data []byte, df gopacket.DecodeFeedback) error {
 		switch d.AuthHeader.AuthType {
 		case BFDAuthTypePassword:
 			d.AuthHeader.Data = BFDAuthData(data)
-		case BFDAuthTypeKeyedMD5, BFDAuthTypeMeticulousKeyedMD5:
-			// Skipped reserved byte
-			data, d.AuthHeader.SequenceNumber = data[5:], BFDAuthSequenceNumber(binary.BigEndian.Uint32(data[1:5]))
-			d.AuthHeader.Data = BFDAuthData(data)
-		case BFDAuthTypeKeyedSHA1, BFDAuthTypeMeticulousKeyedSHA1:
+		case BFDAuthTypeKeyedMD5, BFDAuthTypeMeticulousKeyedMD5,
+			BFDAuthTypeKeyedSHA1, BFDAuthTypeMeticulousKeyedSHA1:
+
+			if len(data) < 5 { // 1 byte reserved + 4 byte sequence number
+				df.SetTruncated()
+				return errors.New("BFD Authentication Header too short")
+			}
 			// Skipped reserved byte
 			data, d.AuthHeader.SequenceNumber = data[5:], BFDAuthSequenceNumber(binary.BigEndian.Uint32(data[1:5]))
 			d.AuthHeader.Data = BFDAuthData(data)
