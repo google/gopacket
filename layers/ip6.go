@@ -38,8 +38,11 @@ type IPv6 struct {
 	SrcIP        net.IP
 	DstIP        net.IP
 	HopByHop     *IPv6HopByHop
+	Routing      *IPv6Routing
 	// hbh will be pointed to by HopByHop if that layer exists.
 	hbh IPv6HopByHop
+	// rt will be pointed to by Routing if that layer exists.
+	rt IPv6Routing
 }
 
 // LayerType returns LayerTypeIPv6
@@ -188,6 +191,33 @@ func (ipv6 *IPv6) SerializeTo(b gopacket.SerializeBuffer, opts gopacket.Serializ
 			}
 		}
 	}
+	rtAlreadySerialized := false
+	if ipv6.Routing != nil {
+		for _, l := range b.Layers() {
+			if l == LayerTypeIPv6Routing {
+				rtAlreadySerialized = true
+				break
+			}
+		}
+	}
+	if ipv6.Routing != nil && !rtAlreadySerialized {
+		if ipv6.NextHeader != IPProtocolIPv6Routing {
+			// Just fix it instead of throwing an error
+			ipv6.NextHeader = IPProtocolIPv6Routing
+		}
+		err = ipv6.Routing.SerializeTo(b, opts)
+		if err != nil {
+			return err
+		}
+		payload = b.Bytes()
+		pLen = len(payload)
+		if opts.FixLengths && jumbo {
+			err := setIPv6PayloadJumboLength(payload)
+			if err != nil {
+				return err
+			}
+		}
+	}
 
 	if !jumbo && pLen > ipv6MaxPayloadLength {
 		return errors.New("Cannot fit payload into IPv6 header")
@@ -262,6 +292,14 @@ func (ipv6 *IPv6) DecodeFromBytes(data []byte, df gopacket.DecodeFeedback) error
 			ipv6.Payload = ipv6.Payload[ipv6.hbh.ActualLength:]
 		}
 	}
+	if ipv6.NextHeader == IPProtocolIPv6Routing {
+		err := ipv6.rt.DecodeFromBytes(ipv6.Payload, df)
+		if err != nil {
+			return err
+		}
+		ipv6.Routing = &ipv6.rt
+		ipv6.Payload = ipv6.Payload[ipv6.rt.ActualLength:]
+	}
 
 	if ipv6.Length == 0 {
 		return fmt.Errorf("IPv6 length 0, but next header is %v, not HopByHop", ipv6.NextHeader)
@@ -297,6 +335,9 @@ func decodeIPv6(data []byte, p gopacket.PacketBuilder) error {
 	p.SetNetworkLayer(ip6)
 	if ip6.HopByHop != nil {
 		p.AddLayer(ip6.HopByHop)
+	}
+	if ip6.Routing != nil {
+		p.AddLayer(ip6.Routing)
 	}
 	if err != nil {
 		return err
@@ -555,6 +596,10 @@ type IPv6Routing struct {
 	// This segment is supposed to be zero according to RFC2460, the second set of
 	// 4 bytes in the extension.
 	Reserved []byte
+	// RFC8754
+	LastEntry uint8
+	Flags     uint8
+	Tags      uint16
 	// SourceRoutingIPs is the set of IPv6 addresses requested for source routing,
 	// set only if RoutingType == 0.
 	SourceRoutingIPs []net.IP
@@ -563,29 +608,85 @@ type IPv6Routing struct {
 // LayerType returns LayerTypeIPv6Routing.
 func (i *IPv6Routing) LayerType() gopacket.LayerType { return LayerTypeIPv6Routing }
 
-func decodeIPv6Routing(data []byte, p gopacket.PacketBuilder) error {
-	base, err := decodeIPv6ExtensionBase(data, p)
+// SerializeTo implementation according to gopacket.SerializableLayer
+func (i *IPv6Routing) SerializeTo(b gopacket.SerializeBuffer, opts gopacket.SerializeOptions) error {
+	bytes, err := b.PrependBytes(8 + len(i.SourceRoutingIPs)*16)
 	if err != nil {
 		return err
 	}
-	i := &IPv6Routing{
-		ipv6ExtensionBase: base,
-		RoutingType:       data[2],
-		SegmentsLeft:      data[3],
-		Reserved:          data[4:8],
+	if opts.FixLengths {
+		i.HeaderLength = uint8(len(i.SourceRoutingIPs) * 2)
+	}
+	bytes[0] = byte(i.NextHeader)
+	bytes[1] = i.HeaderLength
+	bytes[2] = i.RoutingType
+	bytes[3] = i.SegmentsLeft
+	switch i.RoutingType {
+	case 0:
+		copy(bytes[4:], i.Reserved)
+	case 4:
+		if opts.FixLengths {
+			i.LastEntry = uint8(len(i.SourceRoutingIPs))
+		}
+		bytes[4] = i.LastEntry
+		bytes[5] = i.Flags
+		binary.BigEndian.PutUint16(bytes[6:], i.Tags)
+	default:
+		return fmt.Errorf("IPv6Routing: RoutingType %d not supported", i.RoutingType)
+	}
+
+	for j, ip := range i.SourceRoutingIPs {
+		copy(bytes[8+j*16:], ip.To16())
+	}
+
+	return nil
+}
+
+// DecodeFromBytes implementation according to gopacket.DecodingLayer
+func (i *IPv6Routing) DecodeFromBytes(data []byte, df gopacket.DecodeFeedback) error {
+	var err error
+	i.ipv6ExtensionBase, err = decodeIPv6ExtensionBase(data, df)
+	if err != nil {
+		return err
+	}
+	if len(data) < 8 {
+		return fmt.Errorf("IPv6Routing: data too short")
+	}
+	i.NextHeader = IPProtocol(data[0])
+	i.HeaderLength = data[1]
+	i.RoutingType = data[2]
+	i.SegmentsLeft = data[3]
+	if len(data)-8 != int(i.HeaderLength)*8 {
+		return fmt.Errorf("IPv6Routing: data length mismatch")
 	}
 	switch i.RoutingType {
-	case 0: // Source routing
-		if (i.ActualLength-8)%16 != 0 {
-			return fmt.Errorf("Invalid IPv6 source routing, length of type 0 packet %d", i.ActualLength)
-		}
-		for d := i.Contents[8:]; len(d) >= 16; d = d[16:] {
-			i.SourceRoutingIPs = append(i.SourceRoutingIPs, net.IP(d[:16]))
+	case 0:
+		i.Reserved = data[4:8]
+	case 4:
+		i.LastEntry = data[4]
+		i.Flags = data[5]
+		i.Tags = binary.BigEndian.Uint16(data[6:8])
+		if len(data)-8 < int(i.LastEntry)*16 {
+			return fmt.Errorf("IPv6Routing: data too short")
 		}
 	default:
-		return fmt.Errorf("Unknown IPv6 routing header type %d", i.RoutingType)
+		return fmt.Errorf("IPv6Routing: RoutingType %d not supported", i.RoutingType)
 	}
+	i.SourceRoutingIPs = make([]net.IP, i.LastEntry)
+	for j := 0; j < int(i.LastEntry); j++ {
+		i.SourceRoutingIPs[j] = net.IP(data[8+j*16 : 8+j*16+16])
+	}
+
+	return nil
+}
+
+func decodeIPv6Routing(data []byte, p gopacket.PacketBuilder) error {
+	i := &IPv6Routing{}
+	err := i.DecodeFromBytes(data, p)
 	p.AddLayer(i)
+	if err != nil {
+		return err
+	}
 	return p.NextDecoder(i.NextHeader)
 }
 
