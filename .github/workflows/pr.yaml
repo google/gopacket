@@ -1,0 +1,68 @@
+on: [pull_request]
+
+jobs:
+  build:
+    name: Build
+    runs-on: ubuntu-22.04
+    steps:
+
+    - name: Set up Go 1.x
+      uses: actions/setup-go@v2
+      with:
+        go-version: ^1.19
+
+    - name: Check out code into the Go module directory
+      uses: actions/checkout@v2
+
+    - name: Get dependencies
+      run: |
+        sudo apt install -y libpcap-dev  
+        go get -v 
+
+    - name: check code formatting
+      run: |
+        if [ -n "$(go fmt ./...)" ]; then
+          echo "Go code is not formatted, run 'go fmt github.com/google/stenographer/...'" >&2
+          exit 1
+        fi
+
+    - name: check linting
+      run: |
+        go get golang.org/x/lint/golint
+        DIRS=". tcpassembly tcpassembly/tcpreader ip4defrag reassembly macs pcapgo pcap afpacket pfring routing defrag/lcmdefrag"
+        # Add subdirectories here as we clean up golint on each.
+        for subdir in $DIRS; do
+          pushd $subdir
+          if golint |
+              grep -v CannotSetRFMon |  # pcap exported error name
+              grep -v DataLost |        # tcpassembly/tcpreader exported error name
+              grep .; then
+            exit 1
+          fi
+          popd
+        done
+
+        pushd layers
+        for file in *.go; do
+          if cat .lint_blacklist | grep -q $file; then
+            echo "Skipping lint of $file due to .lint_blacklist"
+          elif golint $file | grep .; then
+            echo "Lint error in file $file"
+            exit 1
+          fi
+        done
+        popd
+
+    - name: vet go code
+    - run: |
+      DIRS=". layers pcap pcapgo tcpassembly tcpassembly/tcpreader routing ip4defrag bytediff macs defrag/lcmdefrag"
+      set -e
+      for subdir in $DIRS; do
+        pushd $subdir
+        go vet
+        popd
+      done
+
+    - name: Test
+      run: go test -v ./...
+
