@@ -27,6 +27,7 @@ jobs:
         fi
 
     - name: check linting
+      if: always()
       run: |
         go get golang.org/x/lint/golint
         DIRS=". tcpassembly tcpassembly/tcpreader ip4defrag reassembly macs pcapgo pcap afpacket pfring routing defrag/lcmdefrag"
@@ -54,6 +55,7 @@ jobs:
         popd
 
     - name: vet go code
+      if: always()
       run: |
         DIRS=". layers pcap pcapgo tcpassembly tcpassembly/tcpreader routing ip4defrag bytediff macs defrag/lcmdefrag"
         set -e
@@ -64,5 +66,6 @@ jobs:
         done
 
     - name: Test
+      if: always()
       run: go test -v ./...
 
