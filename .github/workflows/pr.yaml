@@ -54,7 +54,7 @@ jobs:
         popd
 
     - name: vet go code
-    - run: |
+      run: |
         DIRS=". layers pcap pcapgo tcpassembly tcpassembly/tcpreader routing ip4defrag bytediff macs defrag/lcmdefrag"
         set -e
         for subdir in $DIRS; do
