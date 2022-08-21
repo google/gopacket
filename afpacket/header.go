@@ -4,6 +4,7 @@
 // that can be found in the LICENSE file in the root of the source
 // tree.
 
+//go:build linux
 // +build linux
 
 package afpacket
@@ -45,6 +46,8 @@ type header interface {
 	// getIfaceIndex returns the index of the network interface
 	// where the packet was seen. The index can later be translated to a name.
 	getIfaceIndex() int
+	// getPktType returns the packet type
+	getPktType() uint
 	// getVLAN returns the VLAN of a packet if it was provided out-of-band
 	getVLAN() int
 	// next moves this header to point to the next packet it contains,
@@ -103,6 +106,10 @@ func (h *v1header) getIfaceIndex() int {
 	ll := (*C.struct_sockaddr_ll)(unsafe.Pointer(uintptr(unsafe.Pointer(h)) + uintptr(tpAlign(int(C.sizeof_struct_tpacket_hdr)))))
 	return int(ll.sll_ifindex)
 }
+func (h *v1header) getPktType() uint {
+	ll := (*C.struct_sockaddr_ll)(unsafe.Pointer(uintptr(unsafe.Pointer(h)) + uintptr(tpAlign(int(C.sizeof_struct_tpacket_hdr)))))
+	return uint(ll.sll_pkttype)
+}
 func (h *v1header) next() bool {
 	return false
 }
@@ -129,6 +136,10 @@ func (h *v2header) getLength() int {
 func (h *v2header) getIfaceIndex() int {
 	ll := (*C.struct_sockaddr_ll)(unsafe.Pointer(uintptr(unsafe.Pointer(h)) + uintptr(tpAlign(int(C.sizeof_struct_tpacket2_hdr)))))
 	return int(ll.sll_ifindex)
+}
+func (h *v2header) getPktType() uint {
+	ll := (*C.struct_sockaddr_ll)(unsafe.Pointer(uintptr(unsafe.Pointer(h)) + uintptr(tpAlign(int(C.sizeof_struct_tpacket2_hdr)))))
+	return uint(ll.sll_pkttype)
 }
 func (h *v2header) next() bool {
 	return false
@@ -177,6 +188,10 @@ func (w *v3wrapper) getLength() int {
 func (w *v3wrapper) getIfaceIndex() int {
 	ll := (*C.struct_sockaddr_ll)(unsafe.Pointer(uintptr(unsafe.Pointer(w.packet)) + uintptr(tpAlign(int(C.sizeof_struct_tpacket3_hdr)))))
 	return int(ll.sll_ifindex)
+}
+func (w *v3wrapper) getPktType() uint {
+	ll := (*C.struct_sockaddr_ll)(unsafe.Pointer(uintptr(unsafe.Pointer(w.packet)) + uintptr(tpAlign(int(C.sizeof_struct_tpacket3_hdr)))))
+	return uint(ll.sll_pkttype)
 }
 func (w *v3wrapper) next() bool {
 	w.used++
