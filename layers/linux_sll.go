@@ -80,6 +80,10 @@ func (sll *LinuxSLL) DecodeFromBytes(data []byte, df gopacket.DecodeFeedback) er
 	sll.AddrType = binary.BigEndian.Uint16(data[2:4])
 	sll.AddrLen = binary.BigEndian.Uint16(data[4:6])
 
+	if sll.AddrLen > 8 {
+		return errors.New("Linux SLL address length too large")
+	}
+
 	sll.Addr = net.HardwareAddr(data[6 : sll.AddrLen+6])
 	sll.EthernetType = EthernetType(binary.BigEndian.Uint16(data[14:16]))
 	sll.BaseLayer = BaseLayer{data[:16], data[16:]}
