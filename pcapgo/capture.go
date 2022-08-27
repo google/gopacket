@@ -66,7 +66,7 @@ func (h *EthernetHandle) readOne() (ci gopacket.CaptureInfo, vlan int, haveVlan 
 	n, _, e := syscall.Syscall(unix.SYS_RECVMSG, uintptr(h.fd), uintptr(unsafe.Pointer(&msg)), uintptr(unix.MSG_TRUNC))
 
 	if e != 0 {
-		return gopacket.CaptureInfo{}, 0, false, fmt.Errorf("couldn't read packet: %s", e)
+		return gopacket.CaptureInfo{}, 0, false, e
 	}
 
 	if sa.Family == unix.AF_PACKET {
@@ -126,7 +126,7 @@ func (h *EthernetHandle) ReadPacketData() ([]byte, gopacket.CaptureInfo, error) 
 	ci, vlan, haveVlan, err := h.readOne()
 	if err != nil {
 		h.mu.Unlock()
-		return nil, gopacket.CaptureInfo{}, fmt.Errorf("couldn't read packet data: %s", err)
+		return nil, gopacket.CaptureInfo{}, err
 	}
 
 	b := make([]byte, ci.CaptureLength)
