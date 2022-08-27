@@ -152,6 +152,7 @@ func (i *ICMPv6Echo) DecodeFromBytes(data []byte, df gopacket.DecodeFeedback) er
 	}
 	i.Identifier = binary.BigEndian.Uint16(data[0:2])
 	i.SeqNumber = binary.BigEndian.Uint16(data[2:4])
+	i.BaseLayer = BaseLayer{data[:4], data[4:]}
 
 	return nil
 }
