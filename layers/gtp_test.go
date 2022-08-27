@@ -1,158 +1,548 @@
-// Copyright 2017 Google, Inc. All rights reserved.
-//
-// Use of this source code is governed by a BSD-style license
-// that can be found in the LICENSE file in the root of the source
-// tree.
-//
-
 package layers
 
+//
+// This file is generated automatically. DO NOT EDIT.
+// Generated on 2021-03-22 12:04:41.912148485 +0600 +06 m=+0.011386345
+//
 import (
-	"github.com/google/gopacket"
-	"reflect"
+	"bytes"
 	"testing"
+	"time"
+
+	"github.com/google/gopacket"
 )
 
-// testGTPPacket is the packet:
-//0000  00 0c 29 e3 c6 4d 00 0c  29 da d1 de 08 00 45 00   ..)..M.. ).....E.
-//0010  00 7c 00 00 40 00 40 11  67 bb c0 a8 28 b2 c0 a8   .|..@.@. g...(...
-//0020  28 b3 08 68 08 68 00 68  c1 c4 32 ff 00 58 00 00   (..h.h.h ..2..X..
-//0030  00 01 26 7b 00 00 45 00  00 54 06 76 00 00 40 01   ..&{..E. .T.v..@.
-//0040  98 2f c0 a8 28 b2 ca 0b  28 9e 00 00 39 e9 00 00   ./..(... (...9...
-//0050  28 7d 06 11 20 4b 7f 3a  0d 00 08 09 0a 0b 0c 0d   (}.. K.: ........
-//0060  0e 0f 10 11 12 13 14 15  16 17 18 19 1a 1b 1c 1d   ........ ........
-//0070  1e 1f 20 21 22 23 24 25  26 27 28 29 2a 2b 2c 2d   .. !"#$% &'()*+,-
-//0080  2e 2f 30 31 32 33 34 35  36 37                     ./012345 67
+// GTPv12 represents GTP session.
+var GTPv12 = []struct {
+	Data []byte
+	gopacket.CaptureInfo
+}{
+	// Frame 1: 123 bytes on wire (984 bits), 123 bytes captured (984 bits)
+	// Ethernet II, Src: Vendor1 (11:11:11:11:11:11), Dst: Vendor 2 (22:22:22:22:22:22)
+	// 802.1Q Virtual LAN, PRI: 0, DEI: 0, ID: 601
+	// Internet Protocol Version 4, Src: 100.64.187.3, Dst: 100.64.189.1
+	//     0100 .... = Version: 4
+	//     .... 0101 = Header Length: 20 bytes (5)
+	//     Differentiated Services Field: 0xc0 (DSCP: CS6, ECN: Not-ECT)
+	//     Total Length: 105
+	//     Identification: 0xabaa (43946)
+	//     Flags: 0x0000
+	//     ...0 0000 0000 0000 = Fragment offset: 0
+	//     Time to live: 254
+	//     Protocol: UDP (17)
+	//     Header checksum: 0x3a4e [validation disabled]
+	//     [Header checksum status: Unverified]
+	//     Source: 100.64.187.3
+	//     Destination: 100.64.189.1
+	// User Datagram Protocol, Src Port: 2123, Dst Port: 2123
+	// GPRS Tunneling Protocol
+	//     Flags: 0x32
+	//     Message Type: Update PDP context response (0x13)
+	//     Length: 69
+	//     TEID: 0x2ccc2549 (751576393)
+	//     Sequence number: 0x9bb0 (39856)
+	//     Cause: Request accepted (128)
+	//     Recovery: 162
+	//     TEID Data I: 0x201995c0 (538547648)
+	//     Charging ID: 0xd523f2a9 (3575902889)
+	//     GSN address : 100.64.187.3
+	//     GSN address : 100.64.187.3
+	//     Quality of Service
+	//     Charging Gateway address : 10.95.1.7
+	//     Private Extension : NxNetworks (1)
+	{
+		[]byte{
+			//
+			// Ethernet, off: 0, len: 14
+			0x11, 0x11, 0x11, 0x11, 0x11, 0x11, 0x22, 0x22,
+			0x22, 0x22, 0x22, 0x22, 0x81, 0x00,
+			//
+			// Dot1Q, off: 14, len: 4
+			0x02, 0x59, 0x08, 0x00,
+			//
+			// IPv4, off: 18, len: 20
+			0x45, 0xC0, 0x00, 0x69, 0xAB, 0xAA, 0x00, 0x00,
+			0xFE, 0x11, 0x3A, 0x4E, 0x64, 0x40, 0xBB, 0x03,
+			0x64, 0x40, 0xBD, 0x01,
+			//
+			// UDP, off: 38, len: 8
+			0x08, 0x4B, 0x08, 0x4B, 0x00, 0x55, 0x00, 0x00,
+			//
+			// GTP, off: 46, len: 77
+			0x32, 0x13, 0x00, 0x45, 0x2C, 0xCC, 0x25, 0x49,
+			0x9B, 0xB0, 0x00, 0x00, 0x01, 0x80, 0x0E, 0xA2,
+			0x10, 0x20, 0x19, 0x95, 0xC0, 0x7F, 0xD5, 0x23,
+			0xF2, 0xA9, 0x85, 0x00, 0x04, 0x64, 0x40, 0xBB,
+			0x03, 0x85, 0x00, 0x04, 0x64, 0x40, 0xBB, 0x03,
+			0x87, 0x00, 0x0F, 0x02, 0x23, 0x92, 0x1F, 0x91,
+			0x96, 0xFE, 0xFE, 0x44, 0xFB, 0x01, 0x01, 0x00,
+			0x5A, 0x00, 0xFB, 0x00, 0x04, 0x0A, 0x5F, 0x01,
+			0x07, 0xFF, 0x00, 0x09, 0x00, 0x01, 0x49, 0x53,
+			0x50, 0x2E, 0x63, 0x6F, 0x6D,
+		},
+		gopacket.CaptureInfo{
+			// 2019-06-07T22:07:16.089019+06:00
+			Timestamp:     time.Unix(1559923636, 89019000),
+			CaptureLength: 123,
+			Length:        123,
+		},
+	},
 
-var testGTPPacket = []byte{
-	0x00, 0x0c, 0x29, 0xe3, 0xc6, 0x4d, 0x00, 0x0c,
-	0x29, 0xda, 0xd1, 0xde, 0x08, 0x00, 0x45, 0x00,
-	0x00, 0x7c, 0x00, 0x00, 0x40, 0x00, 0x40, 0x11,
-	0x67, 0xbb, 0xc0, 0xa8, 0x28, 0xb2, 0xc0, 0xa8,
-	0x28, 0xb3, 0x08, 0x68, 0x08, 0x68, 0x00, 0x68,
-	0xc1, 0xc4, 0x32, 0xff, 0x00, 0x58, 0x00, 0x00,
-	0x00, 0x01, 0x26, 0x7b, 0x00, 0x00, 0x45, 0x00,
-	0x00, 0x54, 0x06, 0x76, 0x00, 0x00, 0x40, 0x01,
-	0x98, 0x2f, 0xc0, 0xa8, 0x28, 0xb2, 0xca, 0x0b,
-	0x28, 0x9e, 0x00, 0x00, 0x39, 0xe9, 0x00, 0x00,
-	0x28, 0x7d, 0x06, 0x11, 0x20, 0x4b, 0x7f, 0x3a,
-	0x0d, 0x00, 0x08, 0x09, 0x0a, 0x0b, 0x0c, 0x0d,
-	0x0e, 0x0f, 0x10, 0x11, 0x12, 0x13, 0x14, 0x15,
-	0x16, 0x17, 0x18, 0x19, 0x1a, 0x1b, 0x1c, 0x1d,
-	0x1e, 0x1f, 0x20, 0x21, 0x22, 0x23, 0x24, 0x25,
-	0x26, 0x27, 0x28, 0x29, 0x2a, 0x2b, 0x2c, 0x2d,
-	0x2e, 0x2f, 0x30, 0x31, 0x32, 0x33, 0x34, 0x35,
-	0x36, 0x37,
+	// Frame 2: 184 bytes on wire (1472 bits), 184 bytes captured (1472 bits)
+	// Ethernet II, Src: Vendor1 (11:11:11:11:11:11), Dst: Vendor 2 (22:22:22:22:22:22)
+	// 802.1Q Virtual LAN, PRI: 0, DEI: 0, ID: 601
+	// Internet Protocol Version 4, Src: 10.90.106.138, Dst: 100.64.65.21
+	//     0100 .... = Version: 4
+	//     .... 0101 = Header Length: 20 bytes (5)
+	//     Differentiated Services Field: 0xc0 (DSCP: CS6, ECN: Not-ECT)
+	//     Total Length: 166
+	//     Identification: 0x7eb2 (32434)
+	//     Flags: 0x0000
+	//     ...0 0000 0000 0000 = Fragment offset: 0
+	//     Time to live: 254
+	//     Protocol: UDP (17)
+	//     Header checksum: 0x3991 [validation disabled]
+	//     [Header checksum status: Unverified]
+	//     Source: 10.90.106.138
+	//     Destination: 100.64.65.21
+	// User Datagram Protocol, Src Port: 2123, Dst Port: 2123
+	// GPRS Tunneling Protocol V2
+	//     Flags: 0x48
+	//     Message Type: Create Session Response (33)
+	//     Message Length: 134
+	//     Tunnel Endpoint Identifier: 0x3c881f98 (1015553944)
+	//     Sequence Number: 0x004c50f4 (5001460)
+	//     Spare: 0
+	//     Cause : Request accepted (16)
+	//     Fully Qualified Tunnel Endpoint Identifier (F-TEID) : S11/S4 SGW GTP-C interface, TEID/GRE Key: 0x01c0e0f7, IPv4 10.90.106.138
+	//     Fully Qualified Tunnel Endpoint Identifier (F-TEID) : S5/S8 PGW GTP-C interface, TEID/GRE Key: 0x201d95c0, IPv4 100.64.187.3
+	//     APN Restriction : No Existing Contexts or Restriction (0)
+	//     Aggregate Maximum Bit Rate (AMBR) :
+	//     Bearer Context : [Grouped IE]
+	//         IE Type: Bearer Context (93)
+	//         IE Length: 63
+	//         0000 .... = CR flag: 0
+	//         .... 0000 = Instance: 0
+	//         EPS Bearer ID (EBI) : 5
+	//         Cause : Request accepted (16)
+	//         Fully Qualified Tunnel Endpoint Identifier (F-TEID) : S1-U SGW GTP-U interface, TEID/GRE Key: 0x01c0e0f7, IPv4 10.106.0.152
+	//         Fully Qualified Tunnel Endpoint Identifier (F-TEID) : S5/S8 PGW GTP-U interface, TEID/GRE Key: 0x201995c0, IPv4 100.64.187.3
+	//         Bearer Level Quality of Service (Bearer QoS) :
+	//     Recovery (Restart Counter) : 217
+	//     EPS Bearer ID (EBI) : 5
+	{
+		[]byte{
+			//
+			// Ethernet, off: 0, len: 14
+			0x11, 0x11, 0x11, 0x11, 0x11, 0x11, 0x22, 0x22,
+			0x22, 0x22, 0x22, 0x22, 0x81, 0x00,
+			//
+			// Dot1Q, off: 14, len: 4
+			0x02, 0x59, 0x08, 0x00,
+			//
+			// IPv4, off: 18, len: 20
+			0x45, 0xC0, 0x00, 0xA6, 0x7E, 0xB2, 0x00, 0x00,
+			0xFE, 0x11, 0x39, 0x91, 0x0A, 0x5A, 0x6A, 0x8A,
+			0x64, 0x40, 0x12, 0x13,
+			//
+			// UDP, off: 38, len: 8
+			0x08, 0x4B, 0x08, 0x4B, 0x00, 0x92, 0x00, 0x00,
+			//
+			// GTP, off: 46, len: 138
+			0x48, 0x21, 0x00, 0x86, 0x3C, 0x88, 0x1F, 0x98,
+			0x4C, 0x50, 0xF4, 0x00, 0x02, 0x00, 0x02, 0x00,
+			0x10, 0x00, 0x57, 0x00, 0x09, 0x00, 0x8B, 0x01,
+			0xC0, 0xE0, 0xF7, 0x0A, 0x5A, 0x6A, 0x8A, 0x57,
+			0x00, 0x09, 0x01, 0x87, 0x20, 0x1D, 0x95, 0xC0,
+			0x64, 0x40, 0xBB, 0x03, 0x7F, 0x00, 0x01, 0x00,
+			0x00, 0x48, 0x00, 0x08, 0x00, 0x00, 0x00, 0x21,
+			0xC0, 0x00, 0x00, 0x7D, 0x00, 0x5D, 0x00, 0x3F,
+			0x00, 0x49, 0x00, 0x01, 0x00, 0x05, 0x02, 0x00,
+			0x02, 0x00, 0x10, 0x00, 0x57, 0x00, 0x09, 0x00,
+			0x81, 0x01, 0xC0, 0xE0, 0xF7, 0x0A, 0x6A, 0x00,
+			0x98, 0x57, 0x00, 0x09, 0x02, 0x85, 0x20, 0x19,
+			0x95, 0xC0, 0x64, 0x40, 0xBB, 0x03, 0x50, 0x00,
+			0x16, 0x00, 0x58, 0x09, 0x00, 0x00, 0x00, 0x00,
+			0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+			0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+			0x03, 0x00, 0x01, 0x00, 0xD9, 0x49, 0x00, 0x01,
+			0x00, 0x05,
+		},
+		gopacket.CaptureInfo{
+			// 2019-06-07T22:07:17.871418+06:00
+			Timestamp:     time.Unix(1559923637, 871418000),
+			CaptureLength: 184,
+			Length:        184,
+		},
+	},
+
+	// Frame 3: 94 bytes on wire (752 bits), 94 bytes captured (752 bits)
+	// Ethernet II, Src: Vendor1 (11:11:11:11:11:11), Dst: Vendor 2 (22:22:22:22:22:22)
+	// 802.1Q Virtual LAN, PRI: 0, DEI: 0, ID: 301
+	// Internet Protocol Version 4, Src: 10.101.66.12, Dst: 10.100.1.154
+	//     0100 .... = Version: 4
+	//     .... 0101 = Header Length: 20 bytes (5)
+	//     Differentiated Services Field: 0x00 (DSCP: CS0, ECN: Not-ECT)
+	//     Total Length: 76
+	//     Identification: 0xe118 (57624)
+	//     Flags: 0x0000
+	//     ...0 0000 0000 0000 = Fragment offset: 0
+	//     Time to live: 253
+	//     Protocol: UDP (17)
+	//     Header checksum: 0x8419 [validation disabled]
+	//     [Header checksum status: Unverified]
+	//     Source: 10.101.66.12
+	//     Destination: 10.100.1.154
+	// User Datagram Protocol, Src Port: 2152, Dst Port: 2152
+	// GPRS Tunneling Protocol
+	//     Flags: 0x30
+	//     Message Type: T-PDU (0xff)
+	//     Length: 40
+	//     TEID: 0x2e50ece1 (777055457)
+	// Internet Protocol Version 4, Src: 10.88.70.206, Dst: 176.222.188.14
+	// Transmission Control Protocol, Src Port: 54807, Dst Port: 443, Seq: 1, Ack: 2801, Len: 0
+	{
+		[]byte{
+			//
+			// Ethernet, off: 0, len: 14
+			0x11, 0x11, 0x11, 0x11, 0x11, 0x11, 0x22, 0x22,
+			0x22, 0x22, 0x22, 0x22, 0x81, 0x00,
+			//
+			// Dot1Q, off: 14, len: 4
+			0x01, 0x2D, 0x08, 0x00,
+			//
+			// IPv4, off: 18, len: 20
+			0x45, 0x00, 0x00, 0x4C, 0xE1, 0x18, 0x00, 0x00,
+			0xFD, 0x11, 0x84, 0x19, 0x0A, 0x65, 0x42, 0x0C,
+			0x0A, 0x64, 0x01, 0x9A,
+			//
+			// UDP, off: 38, len: 8
+			0x08, 0x68, 0x08, 0x68, 0x00, 0x38, 0x00, 0x00,
+			//
+			// GTPv1U, off: 46, len: 8
+			0x30, 0xFF, 0x00, 0x28, 0x2E, 0x50, 0xEC, 0xE1,
+			//
+			// IPv4, off: 54, len: 20
+			0x45, 0x00, 0x00, 0x28, 0x38, 0xED, 0x40, 0x00,
+			0x3F, 0x06, 0x44, 0xD0, 0x0A, 0x58, 0x46, 0xCE,
+			0xB0, 0xDE, 0xBC, 0x0E,
+			//
+			// TCP, off: 74, len: 20
+			0xD6, 0x17, 0x01, 0xBB, 0x17, 0x2F, 0xE0, 0xE3,
+			0x34, 0x29, 0x7D, 0x01, 0x50, 0x10, 0x23, 0x5E,
+			0x4D, 0x53, 0x00, 0x00,
+		},
+		gopacket.CaptureInfo{
+			// 2020-10-28T10:13:38.042403+06:00
+			Timestamp:     time.Unix(1603858418, 42403000),
+			CaptureLength: 94,
+			Length:        94,
+		},
+	},
 }
 
-func TestGTPPacket(t *testing.T) {
-	p := gopacket.NewPacket(testGTPPacket, LayerTypeEthernet, gopacket.Default)
-	if p.ErrorLayer() != nil {
-		t.Error("Failed to decode packet:", p.ErrorLayer().Error())
-	}
-	checkLayers(p, []gopacket.LayerType{LayerTypeEthernet, LayerTypeIPv4, LayerTypeUDP, LayerTypeGTPv1U, LayerTypeIPv4,
-		LayerTypeICMPv4, gopacket.LayerTypePayload}, t)
-	if got, ok := p.Layer(LayerTypeGTPv1U).(*GTPv1U); ok {
-		want := &GTPv1U{
-			Version:             1,
-			ProtocolType:        1,
-			Reserved:            0,
-			ExtensionHeaderFlag: false,
-			SequenceNumberFlag:  true,
-			NPDUFlag:            false,
-			MessageType:         255,
-			MessageLength:       88,
-			TEID:                1,
-			SequenceNumber:      9851,
-		}
-		want.BaseLayer = BaseLayer{testGTPPacket[42:54], testGTPPacket[54:]}
-		if !reflect.DeepEqual(got, want) {
-			t.Errorf("GTP packet mismatch:\ngot  :\n%#v\n\nwant :\n%#v\n\n", got, want)
-
-		}
-		buf := gopacket.NewSerializeBuffer()
-		opts := gopacket.SerializeOptions{}
-		err := got.SerializeTo(buf, opts)
-		if err != nil {
-			t.Error(err)
-		}
-		if !reflect.DeepEqual(got.Contents, buf.Bytes()) {
-			t.Errorf("GTP packet serialization failed:\ngot  :\n%#v\n\nwant :\n%#v\n\n", buf.Bytes(), got.Contents)
-		}
-	} else {
-		t.Error("Incorrect gtp packet")
+func assert(t testing.TB, expected bool, args ...interface{}) {
+	if !expected {
+		t.Helper()
+		t.Fatal(args...)
 	}
 }
 
-// testGTPPacketWithEH is the packet
-//000000 00 0c 29 e3 c6 4d 00 0c 29 da d1 de 08 00 45 00 ..)..M..).....E.
-//000010 00 80 00 00 40 00 40 11 67 bb c0 a8 28 b2 c0 a8 ....@.@.g...(...
-//000020 28 b3 08 68 08 68 00 6c c1 95 36 ff 00 58 00 10 (..h.h.l..6..X..
-//000030 06 57 00 05 00 c0 01 09 04 00 45 00 00 54 06 a5 .W........E..T..
-//000040 00 00 40 01 98 00 c0 a8 28 b2 ca 0b 28 9e 00 00 ..@.....(...(...
-//000050 e3 b6 00 00 28 ac 35 11 20 4b a6 3d 0d 00 08 09 ....(.5. K.=....
-//000060 0a 0b 0c 0d 0e 0f 10 11 12 13 14 15 16 17 18 19 ................
-//000070 1a 1b 1c 1d 1e 1f 20 21 22 23 24 25 26 27 28 29 ...... !"#$%&'()
-//000080 2a 2b 2c 2d 2e 2f 30 31 32 33 34 35 36 37
+func TestGTPv1C(t *testing.T) {
+	packet := gopacket.NewPacket(GTPv12[0].Data, LayerTypeEthernet, gopacket.Default)
+	assert(t, packet != nil)
 
-var testGTPPacketWithEH = []byte{
-	0x00, 0x0c, 0x29, 0xe3, 0xc6, 0x4d, 0x00, 0x0c,
-	0x29, 0xda, 0xd1, 0xde, 0x08, 0x00, 0x45, 0x00,
-	0x00, 0x80, 0x00, 0x00, 0x40, 0x00, 0x40, 0x11,
-	0x67, 0xbb, 0xc0, 0xa8, 0x28, 0xb2, 0xc0, 0xa8,
-	0x28, 0xb3, 0x08, 0x68, 0x08, 0x68, 0x00, 0x6c,
-	0xc1, 0x95, 0x36, 0xff, 0x00, 0x58, 0x00, 0x10,
-	0x06, 0x57, 0x00, 0x05, 0x00, 0xc0, 0x01, 0x09,
-	0x04, 0x00, 0x45, 0x00, 0x00, 0x54, 0x06, 0xa5,
-	0x00, 0x00, 0x40, 0x01, 0x98, 0x00, 0xc0, 0xa8,
-	0x28, 0xb2, 0xca, 0x0b, 0x28, 0x9e, 0x00, 0x00,
-	0xe3, 0xb6, 0x00, 0x00, 0x28, 0xac, 0x35, 0x11,
-	0x20, 0x4b, 0xa6, 0x3d, 0x0d, 0x00, 0x08, 0x09,
-	0x0a, 0x0b, 0x0c, 0x0d, 0x0e, 0x0f, 0x10, 0x11,
-	0x12, 0x13, 0x14, 0x15, 0x16, 0x17, 0x18, 0x19,
-	0x1a, 0x1b, 0x1c, 0x1d, 0x1e, 0x1f, 0x20, 0x21,
-	0x22, 0x23, 0x24, 0x25, 0x26, 0x27, 0x28, 0x29,
-	0x2a, 0x2b, 0x2c, 0x2d, 0x2e, 0x2f, 0x30, 0x31,
-	0x32, 0x33, 0x34, 0x35, 0x36, 0x37,
+	pktLayers := packet.Layers()
+
+	assert(t, len(pktLayers) == 5, len(pktLayers))
+
+	assert(t, pktLayers[0].LayerType() == LayerTypeEthernet)
+	assert(t, pktLayers[1].LayerType() == LayerTypeDot1Q)
+	assert(t, pktLayers[2].LayerType() == LayerTypeIPv4)
+	assert(t, pktLayers[3].LayerType() == LayerTypeUDP)
+	assert(t, pktLayers[4].LayerType() == LayerTypeGTP)
+
+	gtp, ok := pktLayers[4].(*GTP)
+	assert(t, ok)
+
+	assert(t, gtp.Version == 1)
+	assert(t, gtp.V1.ProtocolType == 1)
+	assert(t, gtp.V1.IsExtensionHeader == false)
+	assert(t, gtp.V1.IsSequenceNumber == true)
+	assert(t, gtp.V1.IsNPDU == false)
+	assert(t, len(gtp.V1.ExtensionHeaders) == 0)
+	assert(t, gtp.TEID == 0x2ccc2549)
+	assert(t, gtp.SequenceNumber == 0x00009bb0)
+
+	assert(t, len(gtp.Contents) == 77)
+	//assert(t, len(gtp.InformationElements) == 65)
+	assert(t, len(gtp.Payload) == 0)
+
+	// parse IE
+	iesDescs := []GTPInformationElement{
+		{Type: 0x01, Content: []byte{
+			0x80}},
+		{Type: 0x0e, Content: []byte{
+			0xa2}},
+		{Type: 0x10, Content: []byte{
+			0x20, 0x19, 0x95, 0xc0}},
+		{Type: 0x7f, Content: []byte{
+			0xd5, 0x23, 0xf2, 0xa9}},
+		{Type: 0x85, Content: []byte{
+			0x64, 0x40, 0xbb, 0x03}},
+		{Type: 0x85, Content: []byte{
+			0x64, 0x40, 0xbb, 0x03}},
+		{Type: 0x87, Content: []byte{
+			0x02, 0x23, 0x92, 0x1f, 0x91, 0x96, 0xfe, 0xfe,
+			0x44, 0xfb, 0x01, 0x01, 0x00, 0x5a, 0x00}},
+		{Type: 0xfb, Content: []byte{
+			0x0a, 0x5f, 0x01, 0x07}},
+		{Type: 0xff, Content: []byte{
+			0x00, 0x01, 0x49, 0x53, 0x50, 0x2e, 0x63, 0x6f,
+			0x6d}},
+	}
+
+	ies := gtp.InformationElements
+	assert(t, len(ies) == len(iesDescs), len(ies))
+	for i := range iesDescs {
+		assert(t, iesDescs[i].Type == ies[i].Type, i)
+		assert(t, bytes.Equal(iesDescs[i].Content, ies[i].Content), i)
+	}
 }
 
-func TestGTPPacketWithEH(t *testing.T) {
-	p := gopacket.NewPacket(testGTPPacketWithEH, LayerTypeEthernet, gopacket.Default)
-	if p.ErrorLayer() != nil {
-		t.Error("Failed to decode packet:", p.ErrorLayer().Error())
-	}
-	checkLayers(p, []gopacket.LayerType{LayerTypeEthernet, LayerTypeIPv4, LayerTypeUDP, LayerTypeGTPv1U, LayerTypeIPv4,
-		LayerTypeICMPv4, gopacket.LayerTypePayload}, t)
-	if got, ok := p.Layer(LayerTypeGTPv1U).(*GTPv1U); ok {
-		want := &GTPv1U{
-			Version:             1,
-			ProtocolType:        1,
-			Reserved:            0,
-			ExtensionHeaderFlag: true,
-			SequenceNumberFlag:  true,
-			NPDUFlag:            false,
-			MessageType:         255,
-			MessageLength:       88,
-			TEID:                1050199,
-			SequenceNumber:      5,
-			GTPExtensionHeaders: []GTPExtensionHeader{GTPExtensionHeader{Type: uint8(192), Content: []byte{0x9, 0x4}}},
-		}
-		want.BaseLayer = BaseLayer{testGTPPacketWithEH[42:58], testGTPPacketWithEH[58:]}
-		if !reflect.DeepEqual(got, want) {
-			t.Errorf("GTP packet mismatch:\ngot  :\n%#v\n\nwant :\n%#v\n\n", got, want)
+func TestGTPv2C(t *testing.T) {
+	packet := gopacket.NewPacket(GTPv12[1].Data, LayerTypeEthernet, gopacket.Default)
+	assert(t, packet != nil)
 
-		}
-		buf := gopacket.NewSerializeBuffer()
-		opts := gopacket.SerializeOptions{}
-		err := got.SerializeTo(buf, opts)
-		if err != nil {
-			t.Error(err)
-		}
-		if !reflect.DeepEqual(got.Contents, buf.Bytes()) {
-			t.Errorf("GTP packet serialization failed:\ngot  :\n%#v\n\nbuf :\n%#v\n\n", got.Contents, buf.Bytes())
-		}
-	} else {
-		t.Errorf("Invalid GTP packet")
+	pktLayers := packet.Layers()
+
+	assert(t, len(pktLayers) == 5, len(pktLayers))
+
+	assert(t, pktLayers[0].LayerType() == LayerTypeEthernet)
+	assert(t, pktLayers[1].LayerType() == LayerTypeDot1Q)
+	assert(t, pktLayers[2].LayerType() == LayerTypeIPv4)
+	assert(t, pktLayers[3].LayerType() == LayerTypeUDP)
+	assert(t, pktLayers[4].LayerType() == LayerTypeGTP, pktLayers[4].LayerType())
+
+	gtp, ok := pktLayers[4].(*GTP)
+	assert(t, ok)
+
+	assert(t, gtp.Version == 2)
+	assert(t, gtp.TEID == 0x3c881f98)
+	assert(t, gtp.SequenceNumber == 0x004c50f4)
+	assert(t, gtp.V2.IsPiggyback == false)
+	assert(t, gtp.V2.IsTEID == true)
+	assert(t, gtp.V2.IsMsgPrio == false)
+
+	assert(t, len(gtp.Contents) == 138, len(gtp.Contents))
+	//assert(t, len(gtp.InformationElements) == 126)
+	assert(t, len(gtp.Payload) == 0)
+
+	// parse IE
+	ies := gtp.InformationElements
+
+	iesDescs := []GTPInformationElement{
+		{Type: 0x02, Instance: 0, IsGrouped: false, Content: []byte{
+			0x10, 0x00}},
+		{Type: 0x57, Instance: 0, IsGrouped: false, Content: []byte{
+			0x8b, 0x01, 0xc0, 0xe0, 0xf7, 0x0a, 0x5a, 0x6a,
+			0x8a}},
+		{Type: 0x57, Instance: 1, IsGrouped: false, Content: []byte{
+			0x87, 0x20, 0x1d, 0x95, 0xc0, 0x64, 0x40, 0xbb,
+			0x03}},
+		{Type: 0x7f, Instance: 0, IsGrouped: false, Content: []byte{
+			0x00}},
+		{Type: 0x48, Instance: 0, IsGrouped: false, Content: []byte{
+			0x00, 0x00, 0x21, 0xc0, 0x00, 0x00, 0x7d, 0x00}},
+		{Type: 0x5d, Instance: 0, IsGrouped: true, Content: []byte{
+			0x49, 0x00, 0x01, 0x00, 0x05, 0x02, 0x00, 0x02,
+			0x00, 0x10, 0x00, 0x57, 0x00, 0x09, 0x00, 0x81,
+			0x01, 0xc0, 0xe0, 0xf7, 0x0a, 0x6a, 0x00, 0x98,
+			0x57, 0x00, 0x09, 0x02, 0x85, 0x20, 0x19, 0x95,
+			0xc0, 0x64, 0x40, 0xbb, 0x03, 0x50, 0x00, 0x16,
+			0x00, 0x58, 0x09, 0x00, 0x00, 0x00, 0x00, 0x00,
+			0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+			0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00}},
+		{Type: 0x03, Instance: 0, IsGrouped: false, Content: []byte{
+			0xd9}},
+		{Type: 0x49, Instance: 0, IsGrouped: false, Content: []byte{
+			0x05}},
 	}
 
+	assert(t, len(ies) == len(iesDescs), len(ies))
+
+	for i := range iesDescs {
+		assert(t, iesDescs[i].Type == ies[i].Type, i)
+		assert(t, iesDescs[i].Instance == ies[i].Instance, i)
+		assert(t, iesDescs[i].IsGrouped == ies[i].IsGrouped, i)
+		assert(t, bytes.Equal(iesDescs[i].Content, ies[i].Content), i)
+	}
+
+	// parse Bearer Context
+	assert(t, ies[5].IsGrouped)
+	ies = ies[5].InformationElements
+
+	iesDescs = []GTPInformationElement{
+		{Type: 0x49, Instance: 0, IsGrouped: false, Content: []byte{
+			0x05}},
+		{Type: 0x02, Instance: 0, IsGrouped: false, Content: []byte{
+			0x10, 0x00}},
+		{Type: 0x57, Instance: 0, IsGrouped: false, Content: []byte{
+			0x81, 0x01, 0xc0, 0xe0, 0xf7, 0x0a, 0x6a, 0x00,
+			0x98}},
+		{Type: 0x57, Instance: 2, IsGrouped: false, Content: []byte{
+			0x85, 0x20, 0x19, 0x95, 0xc0, 0x64, 0x40, 0xbb,
+			0x03}},
+		{Type: 0x50, Instance: 0, IsGrouped: false, Content: []byte{
+			0x58, 0x09, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+			0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+			0x00, 0x00, 0x00, 0x00, 0x00, 0x00}},
+	}
+
+	assert(t, len(ies) == len(iesDescs), len(ies))
+
+	for i := range iesDescs {
+		assert(t, iesDescs[i].Type == ies[i].Type, i)
+		assert(t, iesDescs[i].Instance == ies[i].Instance, i)
+		assert(t, iesDescs[i].IsGrouped == ies[i].IsGrouped, i)
+		assert(t, bytes.Equal(iesDescs[i].Content, ies[i].Content), i)
+	}
+}
+
+func TestGTPv1U_WithGTP(t *testing.T) {
+	RegisterUDPPortLayerType(UDPPort(2152), LayerTypeGTP)
+	defer RegisterUDPPortLayerType(UDPPort(2152), LayerTypeGTPv1U)
+
+	packet := gopacket.NewPacket(GTPv12[2].Data, LayerTypeEthernet, gopacket.Default)
+	assert(t, packet != nil)
+
+	pktLayers := packet.Layers()
+
+	assert(t, len(pktLayers) == 7, len(pktLayers))
+
+	assert(t, pktLayers[0].LayerType() == LayerTypeEthernet)
+	assert(t, pktLayers[1].LayerType() == LayerTypeDot1Q)
+	assert(t, pktLayers[2].LayerType() == LayerTypeIPv4)
+	assert(t, pktLayers[3].LayerType() == LayerTypeUDP)
+	assert(t, pktLayers[4].LayerType() == LayerTypeGTP)
+	assert(t, pktLayers[5].LayerType() == LayerTypeIPv4)
+	assert(t, pktLayers[6].LayerType() == LayerTypeTCP)
+
+	gtp, ok := pktLayers[4].(*GTP)
+	assert(t, ok)
+
+	assert(t, gtp.Version == 1)
+	assert(t, gtp.Type == 0xff)
+	assert(t, gtp.TEID == 0x2e50ece1, gtp.TEID)
+	assert(t, gtp.V1.IsExtensionHeader == false)
+	assert(t, gtp.V1.IsNPDU == false)
+	assert(t, gtp.V1.IsSequenceNumber == false)
+}
+
+func BenchmarkGTPv2(b *testing.B) {
+	packet := gopacket.NewPacket(GTPv12[1].Data, LayerTypeEthernet, gopacket.Default)
+
+	pktLayers := packet.Layers()
+
+	assert(b, pktLayers[0].LayerType() == LayerTypeEthernet)
+	assert(b, pktLayers[1].LayerType() == LayerTypeDot1Q)
+	assert(b, pktLayers[2].LayerType() == LayerTypeIPv4)
+	assert(b, pktLayers[3].LayerType() == LayerTypeUDP)
+	assert(b, pktLayers[4].LayerType() == LayerTypeGTP, pktLayers[4].LayerType())
+
+	gtp, ok := pktLayers[4].(*GTP)
+	assert(b, ok)
+	assert(b, gtp.Version == 2)
+
+	assert(b, len(gtp.Contents) == 138, len(gtp.Contents))
+	assert(b, len(gtp.Payload) == 0)
+
+	data := gtp.Contents
+	gtp = &GTP{}
+
+	err := gtp.DecodeFromBytes(data, gopacket.NilDecodeFeedback)
+	assert(b, err == nil)
+
+	for i := 0; i < b.N; i++ {
+		err = gtp.DecodeFromBytes(data, gopacket.NilDecodeFeedback)
+	}
+
+	assert(b, err == nil)
+}
+
+func BenchmarkGTPv1U_WithGTP(b *testing.B) {
+	RegisterUDPPortLayerType(UDPPort(2152), LayerTypeGTP)
+	defer RegisterUDPPortLayerType(UDPPort(2152), LayerTypeGTPv1U)
+
+	packet := gopacket.NewPacket(GTPv12[2].Data, LayerTypeEthernet, gopacket.Default)
+	assert(b, packet != nil)
+
+	pktLayers := packet.Layers()
+
+	assert(b, len(pktLayers) == 7, len(pktLayers))
+
+	assert(b, pktLayers[0].LayerType() == LayerTypeEthernet)
+	assert(b, pktLayers[1].LayerType() == LayerTypeDot1Q)
+	assert(b, pktLayers[2].LayerType() == LayerTypeIPv4)
+	assert(b, pktLayers[3].LayerType() == LayerTypeUDP)
+	assert(b, pktLayers[4].LayerType() == LayerTypeGTP)
+	assert(b, pktLayers[5].LayerType() == LayerTypeIPv4)
+	assert(b, pktLayers[6].LayerType() == LayerTypeTCP)
+
+	gtp, ok := pktLayers[4].(*GTP)
+	assert(b, ok)
+
+	assert(b, gtp.Version == 1)
+	assert(b, gtp.Type == 0xff)
+	assert(b, gtp.TEID == 0x2e50ece1, gtp.TEID)
+	assert(b, gtp.V1.IsExtensionHeader == false)
+	assert(b, gtp.V1.IsNPDU == false)
+	assert(b, gtp.V1.IsSequenceNumber == false)
+
+	gtpData := append(gtp.Contents, gtp.Payload...)
+	err := gtp.DecodeFromBytes(gtpData, gopacket.NilDecodeFeedback)
+	assert(b, err == nil, err)
+	for i := 0; i < b.N; i++ {
+		gtp.DecodeFromBytes(gtpData, gopacket.NilDecodeFeedback)
+	}
+}
+
+func BenchmarkGTPv1U(b *testing.B) {
+	RegisterUDPPortLayerType(UDPPort(2152), LayerTypeGTP)
+	defer RegisterUDPPortLayerType(UDPPort(2152), LayerTypeGTPv1U)
+
+	packet := gopacket.NewPacket(GTPv12[2].Data, LayerTypeEthernet, gopacket.Default)
+	assert(b, packet != nil)
+
+	pktLayers := packet.Layers()
+
+	assert(b, len(pktLayers) == 7, len(pktLayers))
+
+	assert(b, pktLayers[0].LayerType() == LayerTypeEthernet)
+	assert(b, pktLayers[1].LayerType() == LayerTypeDot1Q)
+	assert(b, pktLayers[2].LayerType() == LayerTypeIPv4)
+	assert(b, pktLayers[3].LayerType() == LayerTypeUDP)
+	assert(b, pktLayers[4].LayerType() == LayerTypeGTP)
+	assert(b, pktLayers[5].LayerType() == LayerTypeIPv4)
+	assert(b, pktLayers[6].LayerType() == LayerTypeTCP)
+
+	gtp, ok := pktLayers[4].(*GTP)
+	assert(b, ok)
+
+	assert(b, gtp.Version == 1)
+	assert(b, gtp.Type == 0xff)
+	assert(b, gtp.TEID == 0x2e50ece1, gtp.TEID)
+	assert(b, gtp.V1.IsExtensionHeader == false)
+	assert(b, gtp.V1.IsNPDU == false)
+	assert(b, gtp.V1.IsSequenceNumber == false)
+
+	gtpv1u := new(GTPv1U)
+
+	gtpData := append(gtp.Contents, gtp.Payload...)
+	err := gtpv1u.DecodeFromBytes(gtpData, gopacket.NilDecodeFeedback)
+	assert(b, err == nil, err)
+
+	for i := 0; i < b.N; i++ {
+		gtpv1u.DecodeFromBytes(gtpData, gopacket.NilDecodeFeedback)
+	}
 }

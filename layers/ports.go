@@ -129,6 +129,8 @@ func (a UDPPort) LayerType() gopacket.LayerType {
 		return LayerTypeRMCP
 	case 1812:
 		return LayerTypeRADIUS
+	case 2123:
+		return LayerTypeGTP
 	case 2152:
 		return LayerTypeGTPv1U
 	case 3784:
