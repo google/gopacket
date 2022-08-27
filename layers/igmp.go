@@ -353,3 +353,56 @@ func decodeIGMP(data []byte, p gopacket.PacketBuilder) error {
 
 	return errors.New("Unable to determine IGMP type.")
 }
+
+// SerializeTo writes the serialized form of IGMP V2 and V3 packet layer into the
+// SerializationBuffer, implementing gopacket.SerializableLayer.
+func (igmp IGMP) SerializeTo(b gopacket.SerializeBuffer, opts gopacket.SerializeOptions) error {
+       if igmp.Version == 2 {
+	        data, err := b.PrependBytes(8)
+                if err != nil {
+                        return err
+                }
+                data[0] = byte(igmp.Type)
+                data[1] = byte(igmp.MaxResponseTime)
+                data[2] = 0
+                data[3] = 0
+                copy(data[4:8], igmp.GroupAddress.To4())
+                if opts.ComputeChecksums {
+                        igmp.Checksum = tcpipChecksum(data, 0)
+                        binary.BigEndian.PutUint16(data[2:4], igmp.Checksum)
+                }
+       } else if igmp.Version ==3{
+	        size := 8;
+                for grp := 0; grp < int(igmp.NumberOfGroupRecords); grp++ {
+                        size = size + 8 + int(igmp.GroupRecords[grp].NumberOfSources) * 4
+                }
+                data, err := b.PrependBytes(size)
+                if err != nil {
+                        return err
+                }
+                data[0] = byte(igmp.Type)
+                data[1] = 0
+                data[2] = 0
+                data[3] = 0
+                data[4] = 0
+                data[5] = 0
+                binary.BigEndian.PutUint16(data[6:8], igmp.NumberOfGroupRecords)
+                j := 8
+                for i := uint16(0); i < igmp.NumberOfGroupRecords; i++ {
+                        data[j] = byte(igmp.GroupRecords[i].Type)
+                        data[j+1] = byte(0)
+                        binary.BigEndian.PutUint16(data[j+2:j+4], igmp.GroupRecords[i].NumberOfSources)
+                        copy(data[j+4:j+8], igmp.GroupRecords[i].MulticastAddress.To4())
+                        j=j+8
+                        for m := uint16(0); m < igmp.GroupRecords[i].NumberOfSources; m++ {
+                                copy(data[j:(j+4)], igmp.GroupRecords[i].SourceAddresses[m].To4())
+                                j=j+4
+                        }
+                }
+                if opts.ComputeChecksums {
+                        igmp.Checksum = tcpipChecksum(data, 0)
+                        binary.BigEndian.PutUint16(data[2:4], igmp.Checksum)
+                }
+       }
+       return nil
+}
