@@ -69,6 +69,7 @@ const (
 	DNSTypeMX    DNSType = 15  // mail exchange
 	DNSTypeTXT   DNSType = 16  // text strings
 	DNSTypeAAAA  DNSType = 28  // a IPv6 host address [RFC3596]
+	DNSTypeNAPTR DNSType = 35  // a naptr record [RFC2915]
 	DNSTypeSRV   DNSType = 33  // server discovery [RFC2782] [RFC6195]
 	DNSTypeOPT   DNSType = 41  // OPT Pseudo-RR [RFC6891]
 	DNSTypeURI   DNSType = 256 // URI RR [RFC7553]
@@ -118,6 +119,8 @@ func (dt DNSType) String() string {
 		return "OPT"
 	case DNSTypeURI:
 		return "URI"
+	case DNSTypeNAPTR:
+		return "NAPTR"
 	}
 }
 
@@ -445,6 +448,8 @@ func recSize(rr *DNSResourceRecord) int {
 			l += len(opt.Data)
 		}
 		return l
+	case DNSTypeNAPTR:
+		return 4 + characterStringsSize(rr.NAPTR.Flags) + characterStringsSize(rr.NAPTR.Services) + characterStringsSize(rr.NAPTR.Regexp) + len(rr.NAPTR.Replacement) + 1 // and extra one is added for the terminal or root 0x00 in the Replacement
 	}
 
 	return 0
@@ -701,6 +706,7 @@ type DNSResourceRecord struct {
 	MX             DNSMX
 	OPT            []DNSOPT // See RFC 6891, section 6.1.2
 	URI            DNSURI
+	NAPTR          NAPTR
 
 	// Undecoded TXT for backward compatibility
 	TXT []byte
@@ -816,6 +822,14 @@ func (rr *DNSResourceRecord) encode(data []byte, offset int, opts gopacket.Seria
 			copy(data[noff2+4:], opt.Data)
 			noff2 += 4 + len(opt.Data)
 		}
+	case DNSTypeNAPTR:
+		binary.BigEndian.PutUint16(data[noff+10:], uint16(rr.NAPTR.Order))
+		binary.BigEndian.PutUint16(data[noff+12:], uint16(rr.NAPTR.Preference))
+		noff += encodeCharacterString(rr.NAPTR.Flags, data, noff+14)
+		noff += encodeCharacterString(rr.NAPTR.Services, data, noff)
+		noff += encodeCharacterString(rr.NAPTR.Regexp, data, noff)
+		encodeName(rr.NAPTR.Replacement, data, noff)
+
 	default:
 		return 0, fmt.Errorf("serializing resource record of type %v not supported", rr.Type)
 	}
@@ -855,10 +869,25 @@ func (rr *DNSResourceRecord) String() string {
 			return "PTR " + string(rr.PTR)
 		case DNSTypeTXT:
 			return "TXT " + string(rr.TXT)
+		case DNSTypeNAPTR:
+			n, _ := rr.NAPTR.String()
+			return n
 		}
 	}
 
 	return fmt.Sprintf("<%v, %v>", rr.Class, rr.Type)
+}
+
+func encodeCharacterString(charStrings [][]byte, data []byte, offset int) int {
+	l := 0
+	for _, charString := range charStrings {
+		l += len(charString)
+		for i := range charString {
+			data[offset+i+1] = charString[i]
+
+		}
+	}
+	return l
 }
 
 func decodeCharacterStrings(data []byte) ([][]byte, error) {
@@ -872,6 +901,29 @@ func decodeCharacterStrings(data []byte) ([][]byte, error) {
 		strings = append(strings, data[index+1:index2])
 	}
 	return strings, nil
+}
+
+func characterStringsSize(charStrings [][]byte) int {
+	size := 0
+	for _, s := range charStrings {
+		size += len(s) + 1 // +1 bit which comes before the string indicating its size
+	}
+	return size
+}
+
+func characterStringsAsString(charStrings [][]byte) (string, error) {
+	stringSize := characterStringsSize(charStrings) - len(charStrings) // -len(charStrings) will eliminate the bits indicating the length of each string in the Character strings
+	b := make([]byte, stringSize)
+	for _, charString := range charStrings {
+		for i := range charString {
+			if i < stringSize {
+				b[i] = charString[i]
+			} else {
+				return "", errCharStringMalformed
+			}
+		}
+	}
+	return string(b), nil
 }
 
 func decodeOPTs(data []byte, offset int) ([]DNSOPT, error) {
@@ -988,6 +1040,41 @@ func (rr *DNSResourceRecord) decodeRData(data []byte, offset int, buffer *[]byte
 			return err
 		}
 		rr.OPT = allOPT
+	case DNSTypeNAPTR:
+		rr.NAPTR.Order = binary.BigEndian.Uint16(data[offset : offset+2])
+		rr.NAPTR.Preference = binary.BigEndian.Uint16(data[offset+2 : offset+4])
+
+		flagsLen := int(data[offset+4])
+		flags, err := decodeCharacterStrings(data[offset+4 : offset+5+flagsLen])
+		if err != nil {
+			return err
+		}
+		rr.NAPTR.Flags = flags
+
+		index := offset + 5 + flagsLen // decalring index to avoid longer lines
+
+		servicesLen := int(data[index])
+		services, err := decodeCharacterStrings(data[index : index+servicesLen+1])
+		if err != nil {
+			return err
+		}
+		rr.NAPTR.Services = services
+
+		index = index + servicesLen + 1
+
+		regexLen := int(data[index])
+		regexp, err := decodeCharacterStrings(data[index : index+regexLen+1])
+		if err != nil {
+			return err
+		}
+		rr.NAPTR.Regexp = regexp
+
+		name, _, err := decodeName(data, index+regexLen+1, buffer, 1)
+		if err != nil {
+			return err
+		}
+
+		rr.NAPTR.Replacement = name
 	}
 	return nil
 }
@@ -1017,6 +1104,46 @@ type DNSMX struct {
 type DNSURI struct {
 	Priority, Weight uint16
 	Target           []byte
+}
+
+//       The packet format for the NAPTR record is as follows
+//                                        1  1  1  1  1  1
+//          0  1  2  3  4  5  6  7  8  9  0  1  2  3  4  5
+//        +--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+
+//        |                     ORDER                     |
+//        +--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+
+//        |                   PREFERENCE                  |
+//        +--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+
+//        /                     FLAGS                     /
+//        +--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+
+//        /                   SERVICES                    /
+//        +--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+
+//        /                    REGEXP                     /
+//        +--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+
+//        /                  REPLACEMENT                  /
+//        /                                               /
+//        +--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+
+type NAPTR struct {
+	Order       uint16
+	Preference  uint16
+	Flags       [][]byte
+	Services    [][]byte
+	Regexp      [][]byte
+	Replacement []byte
+}
+
+func (n NAPTR) String() (string, error) {
+	flags, err := characterStringsAsString(n.Flags)
+	if err != nil {
+		return "", err
+	}
+
+	regexp, err := characterStringsAsString(n.Regexp)
+	if err != nil {
+		return "", err
+	}
+
+	return fmt.Sprintf("NAPTR %d %d %s %s", n.Order, n.Preference, flags, regexp), nil
 }
 
 // DNSOptionCode represents the code of a DNS Option, see RFC6891, section 6.1.2
@@ -1097,7 +1224,8 @@ var (
 	errDNSIndexOutOfRange      = errors.New("dns index walked out of range")
 	errDNSNameHasNoData        = errors.New("no dns data found for name")
 
-	errCharStringMissData = errors.New("Insufficient data for a <character-string>")
+	errCharStringMissData  = errors.New("Insufficient data for a <character-string>")
+	errCharStringMalformed = errors.New("<character-string> is malformed")
 
 	errDecodeRecordLength = errors.New("resource record length exceeds data")
 
