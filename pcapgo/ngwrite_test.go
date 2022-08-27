@@ -64,7 +64,8 @@ func TestNgWriteSimple(t *testing.T) {
 
 func TestNgWriteComplex(t *testing.T) {
 	test := ngFileReadTest{
-		linkType: layers.LinkTypeEthernet,
+		wantEnhancedPacketOptions: true,
+		linkType:                  layers.LinkTypeEthernet,
 		sections: []ngFileReadTestSection{
 			{
 				sectionInfo: NgSectionInfo{
@@ -107,6 +108,7 @@ func TestNgWriteComplex(t *testing.T) {
 					Length:         len(ngPacketSource[0]),
 					CaptureLength:  len(ngPacketSource[0]),
 					InterfaceIndex: 0,
+					AncillaryData:  []interface{}{nil, ngPacketOptionSource[0]},
 				},
 			},
 			{
@@ -116,6 +118,7 @@ func TestNgWriteComplex(t *testing.T) {
 					Length:         len(ngPacketSource[4]),
 					CaptureLength:  len(ngPacketSource[4]),
 					InterfaceIndex: 1,
+					AncillaryData:  []interface{}{nil, ngPacketOptionSource[4]},
 				},
 			},
 			{
@@ -125,6 +128,7 @@ func TestNgWriteComplex(t *testing.T) {
 					Length:         len(ngPacketSource[1]),
 					CaptureLength:  len(ngPacketSource[1]),
 					InterfaceIndex: 0,
+					AncillaryData:  []interface{}{nil, ngPacketOptionSource[1]},
 				},
 			},
 			{
@@ -134,6 +138,7 @@ func TestNgWriteComplex(t *testing.T) {
 					Length:         len(ngPacketSource[2]),
 					CaptureLength:  96,
 					InterfaceIndex: 0,
+					AncillaryData:  []interface{}{nil, ngPacketOptionSource[2]},
 				},
 			},
 			{
@@ -143,6 +148,7 @@ func TestNgWriteComplex(t *testing.T) {
 					Length:         len(ngPacketSource[3]),
 					CaptureLength:  len(ngPacketSource[3]),
 					InterfaceIndex: 0,
+					AncillaryData:  []interface{}{nil, ngPacketOptionSource[3]},
 				},
 			},
 		},
@@ -160,7 +166,7 @@ func TestNgWriteComplex(t *testing.T) {
 	}
 
 	packets := test.packets
-	err = w.WritePacket(packets[0].ci, packets[0].data)
+	err = w.WritePacket(packets[0].ci, packets[0].data, packets[0].ci.AncillaryData[1].([]NgOption)...)
 	if err != nil {
 		t.Fatal("Couldn't write packet", err)
 	}
@@ -171,7 +177,7 @@ func TestNgWriteComplex(t *testing.T) {
 	if id != 1 {
 		t.Fatalf("Expected interface id 1, but got %d", id)
 	}
-	err = w.WritePacket(packets[1].ci, packets[1].data)
+	err = w.WritePacket(packets[1].ci, packets[1].data, packets[1].ci.AncillaryData[1].([]NgOption)...)
 	if err != nil {
 		t.Fatal("Couldn't write packet", err)
 	}
@@ -179,15 +185,15 @@ func TestNgWriteComplex(t *testing.T) {
 	if err != nil {
 		t.Fatal("Couldn't write interface stats", err)
 	}
-	err = w.WritePacket(packets[2].ci, packets[2].data)
+	err = w.WritePacket(packets[2].ci, packets[2].data, packets[2].ci.AncillaryData[1].([]NgOption)...)
 	if err != nil {
 		t.Fatal("Couldn't write packet", err)
 	}
-	err = w.WritePacket(packets[3].ci, packets[3].data)
+	err = w.WritePacket(packets[3].ci, packets[3].data, packets[3].ci.AncillaryData[1].([]NgOption)...)
 	if err != nil {
 		t.Fatal("Couldn't write packet", err)
 	}
-	err = w.WritePacket(packets[4].ci, packets[4].data)
+	err = w.WritePacket(packets[4].ci, packets[4].data, packets[4].ci.AncillaryData[1].([]NgOption)...)
 	if err != nil {
 		t.Fatal("Couldn't write packet", err)
 	}
@@ -235,5 +241,24 @@ func BenchmarkNgWritePacket(b *testing.B) {
 
 	for i := 0; i < b.N; i++ {
 		w.WritePacket(ci, data)
+	}
+}
+
+func BenchmarkNgWritePacketWithOptions(b *testing.B) {
+	ci := gopacket.CaptureInfo{
+		Timestamp:     time.Unix(0x01020304, 0xAA*1000),
+		Length:        0xABCD,
+		CaptureLength: 10,
+	}
+	data := []byte{9, 8, 7, 6, 5, 4, 3, 2, 1, 0}
+	w, err := NewNgWriter(&ngDevNull{}, layers.LinkTypeEthernet)
+	if err != nil {
+		b.Fatal("Failed creating writer:", err)
+	}
+	optComment := OptionComment("Benchmark")
+	b.ResetTimer()
+
+	for i := 0; i < b.N; i++ {
+		w.WritePacket(ci, data, optComment)
 	}
 }

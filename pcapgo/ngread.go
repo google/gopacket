@@ -33,6 +33,8 @@ type NgReaderOptions struct {
 	SectionEndCallback func([]NgInterface, NgSectionInfo)
 	// StatisticsCallback is called when a interface statistics block is read. The interface id and the read statistics are provided.
 	StatisticsCallback func(int, NgInterfaceStatistics)
+	// WantEnhancedPacketOptions enables reading options in Enhanced Packet Block. If true ReadPacketData() will read options and expose via ci.AncillaryData[1].
+	WantEnhancedPacketOptions bool
 }
 
 // DefaultNgReaderOptions provides sane defaults for a pcapng reader.
@@ -46,11 +48,11 @@ type NgReader struct {
 	linkType          layers.LinkType
 	ifaces            []NgInterface
 	currentBlock      ngBlock
-	currentOption     ngOption
+	currentOption     NgOption
 	buf               [24]byte
 	packetBuf         []byte
 	ci                gopacket.CaptureInfo
-	ancil             [1]interface{}
+	ancil             [2]interface{}
 	blen              int
 	firstSectionFound bool
 	activeSection     bool
@@ -61,10 +63,14 @@ type NgReader struct {
 func NewNgReader(r io.Reader, options NgReaderOptions) (*NgReader, error) {
 	ret := &NgReader{
 		r: bufio.NewReader(r),
-		currentOption: ngOption{
+		currentOption: NgOption{
 			value: make([]byte, 1024),
 		},
 		options: options,
+	}
+
+	if options.WantEnhancedPacketOptions {
+		ret.ancil[1] = []NgOption{}
 	}
 
 	//pcapng _must_ start with a section header
@@ -155,21 +161,22 @@ func (r *NgReader) readBlock() error {
 func (r *NgReader) readOption() error {
 	if r.currentBlock.length == 4 {
 		// no more options
-		r.currentOption.code = ngOptionCodeEndOfOptions
+		r.currentOption.Code = ngOptionCodeEndOfOptions
 		return nil
 	}
 	if err := r.readBytes(r.buf[:4]); err != nil {
 		return err
 	}
 	r.currentBlock.length -= 4
-	r.currentOption.code = ngOptionCode(r.getUint16(r.buf[:2]))
+	r.currentOption.Code = ngOptionCode(r.getUint16(r.buf[:2]))
 	length := r.getUint16(r.buf[2:4])
-	if r.currentOption.code == ngOptionCodeEndOfOptions {
+	if r.currentOption.Code == ngOptionCodeEndOfOptions {
 		if length != 0 {
 			return errors.New("End of Options must be zero length")
 		}
 		return nil
 	}
+	r.currentOption.length = length
 	if length != 0 {
 		if length < uint16(cap(r.currentOption.value)) {
 			r.currentOption.value = r.currentOption.value[:length]
@@ -179,6 +186,20 @@ func (r *NgReader) readOption() error {
 		if err := r.readBytes(r.currentOption.value); err != nil {
 			return err
 		}
+
+		switch r.currentOption.Code {
+		case ngOptionCodeComment:
+			r.currentOption.Raw = string(r.currentOption.value)
+		case ngOptionCodeEnhancedPacketFlags:
+			if length == 4 {
+				r.currentOption.Raw = r.getUint32(r.currentOption.value)
+			}
+		case ngOptionCodeEnhancedPacketDropCount:
+			if length == 8 {
+				r.currentOption.Raw = r.getUint64(r.currentOption.value)
+			}
+		}
+
 		//consume padding
 		padding := length % 4
 		if padding > 0 {
@@ -237,7 +258,7 @@ OPTIONS:
 		if err := r.readOption(); err != nil {
 			return err
 		}
-		switch r.currentOption.code {
+		switch r.currentOption.Code {
 		case ngOptionCodeEndOfOptions:
 			break OPTIONS
 		case ngOptionCodeComment:
@@ -336,7 +357,7 @@ OPTIONS:
 		if err := r.readOption(); err != nil {
 			return err
 		}
-		switch r.currentOption.code {
+		switch r.currentOption.Code {
 		case ngOptionCodeEndOfOptions:
 			break OPTIONS
 		case ngOptionCodeInterfaceName:
@@ -411,7 +432,7 @@ OPTIONS:
 		if err := r.readOption(); err != nil {
 			return err
 		}
-		switch r.currentOption.code {
+		switch r.currentOption.Code {
 		case ngOptionCodeEndOfOptions:
 			break OPTIONS
 		case ngOptionCodeComment:
@@ -526,6 +547,7 @@ FIND_PACKET:
 
 // ReadPacketData returns the next packet available from this data source.
 // If WantMixedLinkType is true, ci.AncillaryData[0] contains the link type.
+// if WantEnhancedPacketOptions is true, ci.AncillaryData[1] contains list of packet options.
 func (r *NgReader) ReadPacketData() (data []byte, ci gopacket.CaptureInfo, err error) {
 	if err = r.readPacketHeader(); err != nil {
 		return
@@ -539,8 +561,51 @@ func (r *NgReader) ReadPacketData() (data []byte, ci gopacket.CaptureInfo, err e
 	if err = r.readBytes(data); err != nil {
 		return
 	}
-	// handle options somehow - this would be expensive
-	_, err = r.r.Discard(int(r.currentBlock.length) - r.ci.CaptureLength)
+
+	// skip option reading
+	if !r.options.WantEnhancedPacketOptions {
+		_, err = r.r.Discard(int(r.currentBlock.length) - r.ci.CaptureLength)
+		return
+	}
+
+	//consume padding
+	padding := r.ci.CaptureLength % 4
+	if padding > 0 {
+		padding = 4 - padding
+		if _, err = r.r.Discard(padding); err != nil {
+			return
+		}
+	}
+	r.currentBlock.length -= uint32(r.ci.CaptureLength + padding)
+
+	var pktOpt []NgOption
+	for err = r.readOption(); err == nil && r.currentOption.Code != ngOptionCodeEndOfOptions; err = r.readOption() {
+		if r.currentOption.Code > ngOptionCodeEnhancedPacketDropCount {
+			continue
+		}
+
+		pktOpt = append(pktOpt, NgOption{
+			Code:   r.currentOption.Code,
+			length: r.currentOption.length,
+			Raw:    r.currentOption.Raw,
+		})
+	}
+	switch len(ci.AncillaryData) {
+	case 0:
+		ci.AncillaryData = make([]interface{}, 2, 2)
+		ci.AncillaryData[1] = pktOpt
+	case 1:
+		ci.AncillaryData = append(ci.AncillaryData, pktOpt)
+	default:
+		ci.AncillaryData[1] = pktOpt
+	}
+
+	if err != nil {
+		return
+	}
+
+	_, err = r.r.Discard(4)
+
 	return
 }
 
@@ -556,7 +621,7 @@ func (r *NgReader) ZeroCopyReadPacketData() (data []byte, ci gopacket.CaptureInf
 	}
 	ci = r.ci
 	if r.options.WantMixedLinkType {
-		ci.AncillaryData = r.ancil[:]
+		ci.AncillaryData = r.ancil[:1]
 	}
 	if cap(r.packetBuf) < ci.CaptureLength {
 		snaplen := int(r.ifaces[ci.InterfaceIndex].SnapLength)
@@ -569,8 +634,55 @@ func (r *NgReader) ZeroCopyReadPacketData() (data []byte, ci gopacket.CaptureInf
 	if err = r.readBytes(data); err != nil {
 		return
 	}
-	// handle options somehow - this would be expensive
-	_, err = r.r.Discard(int(r.currentBlock.length) - ci.CaptureLength)
+
+	// skip option reading
+	if !r.options.WantEnhancedPacketOptions {
+		// handle options somehow - this would be expensive
+		_, err = r.r.Discard(int(r.currentBlock.length) - ci.CaptureLength)
+		return
+	}
+
+	// consume padding
+	padding := r.ci.CaptureLength % 4
+	if padding > 0 {
+		padding = 4 - padding
+		if _, err = r.r.Discard(padding); err != nil {
+			return
+		}
+	}
+	r.currentBlock.length -= uint32(r.ci.CaptureLength + padding)
+
+	pktOpt := r.ancil[1].([]NgOption)[:0]
+	origCap := cap(pktOpt)
+
+	var i int
+	for err = r.readOption(); err == nil && r.currentOption.Code != ngOptionCodeEndOfOptions; err = r.readOption() {
+		if r.currentOption.Code > ngOptionCodeEnhancedPacketDropCount {
+			continue
+		}
+		if i < origCap {
+			pktOpt = pktOpt[:i+1]
+			pktOpt[i].Code = r.currentOption.Code
+			pktOpt[i].length = r.currentOption.length
+			pktOpt[i].Raw = r.currentOption.Raw
+			i++
+			continue
+		}
+
+		pktOpt = append(pktOpt, NgOption{
+			Code:   r.currentOption.Code,
+			length: r.currentOption.length,
+			Raw:    r.currentOption.Raw,
+		})
+	}
+	r.ancil[1] = pktOpt
+	ci.AncillaryData = r.ancil[:2]
+
+	if err != nil {
+		return
+	}
+
+	_, err = r.r.Discard(4)
 	return
 }
 

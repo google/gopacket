@@ -38,6 +38,17 @@ var ngPacketSource = [...][]byte{
 	ngMustDecode("02000000450000a4c6ce00004011f147c0a8018bffffffff445c445c0090ba037b22686f73745f696e74223a20343039343531343438332c202276657273696f6e223a205b312c20385d2c2022646973706c61796e616d65223a2022222c2022706f7274223a2031373530302c20226e616d65737061636573223a205b32303532343235372c203633393533393037322c203633393533393333372c203633393533393535355d7d"),
 }
 
+var ngPacketOptionSource = [...][]NgOption{
+	[]NgOption{OptionComment("Test option. Tестовая опция")},
+	[]NgOption{OptionEnhancedPacketFlags(FlagEnhancedPacketDirectionInbound | FlagEnhancedPacketErrorPreamble)},
+	[]NgOption{
+		OptionComment("Comment, flag"),
+		OptionEnhancedPacketFlags(FlagEnhancedPacketDirectionOutbound | FlagEnhancedPacketReceptionTypeBroadcast | FlagEnhancedPacketErrorCRC),
+	},
+	nil,
+	nil,
+}
+
 type ngFileReadTestPacket struct {
 	data []byte
 	ci   gopacket.CaptureInfo
@@ -56,6 +67,7 @@ type ngFileReadTest struct {
 	wantMixedLinkType          bool
 	errorOnMismatchingLinkType bool
 	skipUnknownVersion         bool
+	wantEnhancedPacketOptions  bool
 
 	linkType layers.LinkType
 	sections []ngFileReadTestSection
@@ -129,6 +141,7 @@ func ngRunFileReadTest(test ngFileReadTest, be string, zerocopy bool, t *testing
 	options.ErrorOnMismatchingLinkType = test.errorOnMismatchingLinkType
 	options.WantMixedLinkType = test.wantMixedLinkType
 	options.SkipUnknownVersion = test.skipUnknownVersion
+	options.WantEnhancedPacketOptions = test.wantEnhancedPacketOptions
 	if len(test.sections) > 1 {
 		options.SectionEndCallback = testSection
 	}
@@ -710,8 +723,9 @@ var tests = []ngFileReadTest{
 		},
 	},
 	{
-		testName: "test009",
-		linkType: layers.LinkTypeEthernet,
+		testName:                  "test009",
+		wantEnhancedPacketOptions: true,
+		linkType:                  layers.LinkTypeEthernet,
 		sections: []ngFileReadTestSection{
 			{
 				sectionInfo: NgSectionInfo{
@@ -737,6 +751,14 @@ var tests = []ngFileReadTest{
 					Length:         len(ngPacketSource[0]),
 					CaptureLength:  len(ngPacketSource[0]),
 					InterfaceIndex: 0,
+					AncillaryData: []interface{}{
+						nil,
+						[]NgOption{
+							OptionComment("test009-1"),
+							OptionEnhancedPacketFlags(0),
+							OptionEnhancedPacketDropCount(0),
+						},
+					},
 				},
 			},
 			{
@@ -746,6 +768,14 @@ var tests = []ngFileReadTest{
 					Length:         len(ngPacketSource[1]),
 					CaptureLength:  len(ngPacketSource[1]),
 					InterfaceIndex: 0,
+					AncillaryData: []interface{}{
+						nil,
+						[]NgOption{
+							OptionComment("test009-2"),
+							OptionEnhancedPacketFlags(FlagEnhancedPacketErrorPreamble | FlagEnhancedPacketErrorFrameGap),
+							OptionEnhancedPacketDropCount(0x3039),
+						},
+					},
 				},
 			},
 		},
@@ -1851,7 +1881,7 @@ func (e endlessNgPacketReader) Read(p []byte) (n int, err error) {
 	return
 }
 
-func setupNgReadBenchmark(b *testing.B) *NgReader {
+func setupNgReadBenchmark(b *testing.B, options NgReaderOptions) *NgReader {
 	header := bytes.NewBuffer([]byte{
 		0x0A, 0x0D, 0x0D, 0x0A, // Section Header
 		0, 0, 0, 28, // block total length
@@ -1896,7 +1926,7 @@ func setupNgReadBenchmark(b *testing.B) *NgReader {
 	}
 	packetReader := bufio.NewReaderSize(packet, len(packet.packet))
 
-	r, err := NewNgReader(header, DefaultNgReaderOptions)
+	r, err := NewNgReader(header, options)
 
 	if err != nil {
 		b.Fatal("Couldn't read header + IDB:", err)
@@ -1906,7 +1936,17 @@ func setupNgReadBenchmark(b *testing.B) *NgReader {
 }
 
 func BenchmarkNgReadPacketData(b *testing.B) {
-	r := setupNgReadBenchmark(b)
+	r := setupNgReadBenchmark(b, DefaultNgReaderOptions)
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		_, _, _ = r.ReadPacketData()
+	}
+}
+
+func BenchmarkNgReadPacketDataWithOptions(b *testing.B) {
+	options := DefaultNgReaderOptions
+	options.WantEnhancedPacketOptions = true
+	r := setupNgReadBenchmark(b, options)
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
 		_, _, _ = r.ReadPacketData()
@@ -1914,7 +1954,17 @@ func BenchmarkNgReadPacketData(b *testing.B) {
 }
 
 func BenchmarkNgZeroCopyReadPacketData(b *testing.B) {
-	r := setupNgReadBenchmark(b)
+	r := setupNgReadBenchmark(b, DefaultNgReaderOptions)
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		_, _, _ = r.ZeroCopyReadPacketData()
+	}
+}
+
+func BenchmarkNgZeroCopyReadPacketDataWithOptions(b *testing.B) {
+	options := DefaultNgReaderOptions
+	options.WantEnhancedPacketOptions = true
+	r := setupNgReadBenchmark(b, options)
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
 		_, _, _ = r.ZeroCopyReadPacketData()
