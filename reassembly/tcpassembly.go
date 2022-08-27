@@ -376,7 +376,10 @@ type Stream interface {
 	// It should return true if the connection should be removed from the pool
 	// It can return false if it want to see subsequent packets with Accept(), e.g. to
 	// see FIN-ACK, for deeper state-machine analysis.
-	ReassemblyComplete(ac AssemblerContext) bool
+	//
+	// If the Stream was flushed due to a call to FlushCloseOlderThan, FlushCloseWithOptions,
+	// or FlushAll, then flushed is true.
+	ReassemblyComplete(flushed bool) bool
 }
 
 // StreamFactory is used by assembly to create a new stream for each
@@ -1106,7 +1109,7 @@ func (a *Assembler) sendToConnection(conn *connection, half *halfconnection, ac 
 	half.stream.ReassembledSG(&a.cacheSG, ac)
 	a.cleanSG(half, ac)
 	if end {
-		a.closeHalfConnection(conn, half)
+		a.closeHalfConnection(conn, half, false)
 	}
 	if *debugLog {
 		log.Printf("after sendToConnection: nextSeq: %d\n", nextSeq)
@@ -1184,7 +1187,7 @@ func (a *Assembler) skipFlush(conn *connection, half *halfconnection) {
 	// Well, it's embarassing it there is still something in half.saved
 	// FIXME: change API to give back saved + new/no packets
 	if half.first == nil {
-		a.closeHalfConnection(conn, half)
+		a.closeHalfConnection(conn, half, true)
 		return
 	}
 	a.ret = a.ret[:0]
@@ -1195,7 +1198,7 @@ func (a *Assembler) skipFlush(conn *connection, half *halfconnection) {
 	}
 }
 
-func (a *Assembler) closeHalfConnection(conn *connection, half *halfconnection) {
+func (a *Assembler) closeHalfConnection(conn *connection, half *halfconnection, flushed bool) {
 	if *debugLog {
 		log.Printf("%v closing", conn)
 	}
@@ -1206,7 +1209,7 @@ func (a *Assembler) closeHalfConnection(conn *connection, half *halfconnection) 
 		half.pages--
 	}
 	if conn.s2c.closed && conn.c2s.closed {
-		if half.stream.ReassemblyComplete(nil) { //FIXME: which context to pass ?
+		if half.stream.ReassemblyComplete(flushed) {
 			a.connPool.remove(conn)
 		}
 	}
@@ -1304,7 +1307,7 @@ func (a *Assembler) flushClose(conn *connection, half *halfconnection, t time.Ti
 	}
 	// Close the connection only if both halfs of the connection last seen before tc.
 	if !half.closed && half.first == nil && conn.lastSeen().Before(tc) {
-		a.closeHalfConnection(conn, half)
+		a.closeHalfConnection(conn, half, true)
 		closed = true
 	}
 	return flushed, closed
@@ -1323,7 +1326,7 @@ func (a *Assembler) FlushAll() (closed int) {
 				a.skipFlush(conn, half)
 			}
 			if !half.closed {
-				a.closeHalfConnection(conn, half)
+				a.closeHalfConnection(conn, half, true)
 			}
 		}
 		conn.mu.Unlock()

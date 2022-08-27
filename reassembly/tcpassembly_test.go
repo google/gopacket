@@ -55,7 +55,7 @@ func (t *testFactoryBench) Accept(tcp *layers.TCP, ci gopacket.CaptureInfo, dir 
 }
 func (t *testFactoryBench) ReassembledSG(sg ScatterGather, ac AssemblerContext) {
 }
-func (t *testFactoryBench) ReassemblyComplete(ac AssemblerContext) bool {
+func (t *testFactoryBench) ReassemblyComplete(flushed bool) bool {
 	return true
 }
 
@@ -84,7 +84,7 @@ func (t *testFactory) ReassembledSG(sg ScatterGather, ac AssemblerContext) {
 	})
 }
 
-func (t *testFactory) ReassemblyComplete(ac AssemblerContext) bool {
+func (t *testFactory) ReassemblyComplete(flushed bool) bool {
 	return true
 }
 
@@ -107,7 +107,7 @@ func (tf *testMemoryFactory) ReassembledSG(sg ScatterGather, ac AssemblerContext
 	bytes, _ := sg.Lengths()
 	tf.bytes += bytes
 }
-func (tf *testMemoryFactory) ReassemblyComplete(ac AssemblerContext) bool {
+func (tf *testMemoryFactory) ReassemblyComplete(flushed bool) bool {
 	return true
 }
 
@@ -945,7 +945,7 @@ func (tkf *testKeepFactory) ReassembledSG(sg ScatterGather, ac AssemblerContext)
 	tkf.bytes = sg.Fetch(l)
 	sg.KeepFrom(tkf.keep)
 }
-func (tkf *testKeepFactory) ReassemblyComplete(ac AssemblerContext) bool {
+func (tkf *testKeepFactory) ReassemblyComplete(flushed bool) bool {
 	return true
 }
 
@@ -1253,7 +1253,7 @@ func (t *testFSMFactory) New(a, b gopacket.Flow, tcp *layers.TCP, ac AssemblerCo
 }
 func (t *testFSMFactory) ReassembledSG(sg ScatterGather, ac AssemblerContext) {
 }
-func (t *testFSMFactory) ReassemblyComplete(ac AssemblerContext) bool {
+func (t *testFSMFactory) ReassemblyComplete(flushed bool) bool {
 	return false
 }
 
