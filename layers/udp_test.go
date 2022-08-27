@@ -8,6 +8,7 @@
 package layers
 
 import (
+	"net"
 	"reflect"
 	"testing"
 
@@ -368,5 +369,38 @@ func TestDNSDoesNotMalloc(t *testing.T) {
 		}
 	}); n > 0 {
 		t.Error(n, "mallocs decoding DNS")
+	}
+}
+
+// RFC768: If the computed checksum is zero, it is transmitted as all ones (the
+// equivalent in one's complement arithmetic). An all zero transmitted
+// checksum  value means that the transmitter generated no checksum.
+func TestZeroChecksum(t *testing.T) {
+	ip := &IPv4{
+		Version: 4,
+		// Choosen to give a 0 checksum.
+		SrcIP:    net.ParseIP("116.43.192.186"),
+		DstIP:    net.ParseIP("8.47.167.201"),
+		Protocol: IPProtocolUDP,
+	}
+	udp := &UDP{
+		SrcPort: 1234,
+		DstPort: 5678,
+	}
+	udp.SetNetworkLayerForChecksum(ip)
+
+	buf := gopacket.NewSerializeBuffer()
+	gopacket.SerializeLayers(buf,
+		gopacket.SerializeOptions{
+			ComputeChecksums: true,
+			FixLengths:       true,
+		},
+		ip,
+		udp,
+	)
+
+	result := gopacket.NewPacket(buf.Bytes(), LayerTypeIPv4, gopacket.Default)
+	if checksum := result.Layer(LayerTypeUDP).(*UDP).Checksum; checksum != 0xFFFF {
+		t.Fatalf("expoected checksum 0xFFFF, got 0x%x", checksum)
 	}
 }
