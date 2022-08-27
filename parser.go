@@ -288,7 +288,7 @@ func (l *DecodingLayerParser) SetDecodingLayerContainer(dlc DecodingLayerContain
 //              fmt.Println("    UDP ", udp.SrcPort, udp.DstPort)
 //          }
 //        }
-//        if decodedLayers.Truncated {
+//        if parser.Truncated {
 //          fmt.Println("  Packet has been truncated")
 //        }
 //        if err != nil {
