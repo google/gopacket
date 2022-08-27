@@ -71,13 +71,23 @@ type router struct {
 	v4, v6 routeSlice
 }
 
+//GetIPV4Route return ipv4 kernel's routing table
+func (r *router) GetIPV4Routes() (v4 routeSlice) {
+	return r.v4
+}
+
+//GetIPV6Route return ipv4 kernel's routing table
+func (r *router) GetIPV6Routes() (v6 routeSlice) {
+	return r.v6
+}
+
 func (r *router) String() string {
 	strs := []string{"ROUTER", "--- V4 ---"}
-	for _, route := range r.v4 {
+	for _, route := range r.GetIPV4Routes() {
 		strs = append(strs, fmt.Sprintf("%+v", *route))
 	}
 	strs = append(strs, "--- V6 ---")
-	for _, route := range r.v6 {
+	for _, route := range r.GetIPV6Routes() {
 		strs = append(strs, fmt.Sprintf("%+v", *route))
 	}
 	return strings.Join(strs, "\n")
