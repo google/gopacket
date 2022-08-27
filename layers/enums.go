@@ -51,6 +51,7 @@ const (
 	EthernetTypeQinQ                        EthernetType = 0x88a8
 	EthernetTypeLinkLayerDiscovery          EthernetType = 0x88cc
 	EthernetTypeEthernetCTP                 EthernetType = 0x9000
+	EthernetTypeUnspec                      EthernetType = 0xffff
 )
 
 // IPProtocol is an enumeration of IP protocol values, and acts as a decoder
@@ -192,6 +193,9 @@ const (
 type ProtocolFamily uint8
 
 const (
+	// PF_UNSPEC is 0 in socket.h
+	ProtocolFamilyUnspec ProtocolFamily = 0
+
 	ProtocolFamilyIPv4 ProtocolFamily = 2
 	// BSDs use different values for INET6... glory be.  These values taken from
 	// tcpdump 4.3.0.

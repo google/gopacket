@@ -9,7 +9,7 @@ package layers
 import (
 	"encoding/binary"
 	"errors"
-	"fmt"
+	"math/bits"
 
 	"github.com/google/gopacket"
 )
@@ -19,7 +19,8 @@ import (
 // and DLT_LOOP, respectively).
 type Loopback struct {
 	BaseLayer
-	Family ProtocolFamily
+	EthType EthernetType
+	Family  ProtocolFamily
 }
 
 // LayerType returns LayerTypeLoopback.
@@ -31,21 +32,35 @@ func (l *Loopback) DecodeFromBytes(data []byte, df gopacket.DecodeFeedback) erro
 		return errors.New("Loopback packet too small")
 	}
 
-	// The protocol could be either big-endian or little-endian, we're
-	// not sure.  But we're PRETTY sure that the value is less than
-	// 256, so we can check the first two bytes.
-	var prot uint32
-	if data[0] == 0 && data[1] == 0 {
-		prot = binary.BigEndian.Uint32(data[:4])
-	} else {
-		prot = binary.LittleEndian.Uint32(data[:4])
-	}
-	if prot > 0xFF {
-		return fmt.Errorf("Invalid loopback protocol %q", data[:4])
+	// Please refer to epan/dissectors/packet-null.c and wiretap/wtap.h of Wireshark
+	// project to get more details.
+
+	if binary.BigEndian.Uint16(data) == 0xFF03 {
+		return errors.New("looks like PPP in HDLC-like Framing")
 	}
 
-	l.Family = ProtocolFamily(prot)
+	nullHeader := binary.BigEndian.Uint32(data)
+	if nullHeader&0xFFFF0000 != 0 {
+		if nullHeader&0xFF000000 == 0 && nullHeader&0x00FF0000 < 0x00060000 {
+			nullHeader >>= 16
+		} else {
+			nullHeader = bits.ReverseBytes32(nullHeader)
+		}
+	} else {
+		if nullHeader&0x000000FF == 0 && nullHeader&0x0000FF00 < 0x00000600 {
+			nullHeader = uint32(bits.ReverseBytes16(uint16(nullHeader & 0xFFFF)))
+		}
+	}
+
+	if nullHeader > uint32(FrameMaxLenIEEE8023) {
+		l.EthType = EthernetType(nullHeader)
+		l.Family = ProtocolFamilyUnspec
+	} else {
+		l.EthType = EthernetTypeUnspec
+		l.Family = ProtocolFamily(nullHeader)
+	}
 	l.BaseLayer = BaseLayer{data[:4], data[4:]}
+
 	return nil
 }
 
@@ -56,7 +71,10 @@ func (l *Loopback) CanDecode() gopacket.LayerClass {
 
 // NextLayerType returns the layer type contained by this DecodingLayer.
 func (l *Loopback) NextLayerType() gopacket.LayerType {
-	return l.Family.LayerType()
+	if l.Family != ProtocolFamilyUnspec {
+		return l.Family.LayerType()
+	}
+	return l.EthType.LayerType()
 }
 
 // SerializeTo writes the serialized form of this layer into the
@@ -66,7 +84,11 @@ func (l *Loopback) SerializeTo(b gopacket.SerializeBuffer, opts gopacket.Seriali
 	if err != nil {
 		return err
 	}
-	binary.LittleEndian.PutUint32(bytes, uint32(l.Family))
+	if l.Family != ProtocolFamilyUnspec {
+		binary.LittleEndian.PutUint32(bytes, uint32(l.Family))
+	} else {
+		binary.BigEndian.PutUint32(bytes, uint32(l.EthType))
+	}
 	return nil
 }
 
@@ -76,5 +98,8 @@ func decodeLoopback(data []byte, p gopacket.PacketBuilder) error {
 		return err
 	}
 	p.AddLayer(&l)
-	return p.NextDecoder(l.Family)
+	if l.Family != ProtocolFamilyUnspec {
+		return p.NextDecoder(l.Family)
+	}
+	return p.NextDecoder(l.EthType)
 }
