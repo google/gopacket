@@ -4,6 +4,7 @@
 // that can be found in the LICENSE file in the root of the source
 // tree.
 
+//go:build darwin || dragonfly || freebsd || netbsd || openbsd
 // +build darwin dragonfly freebsd netbsd openbsd
 
 package bsdbpf
@@ -58,6 +59,9 @@ type Options struct {
 	// as provided, to the wire.
 	// The default is true.
 	PreserveLinkAddr bool
+	// SeeSent is set to true to capture packets sent on the interface, false to only capture received packets.
+	// The default is true.
+	SeeSent bool
 }
 
 var defaultOptions = Options{
@@ -67,6 +71,7 @@ var defaultOptions = Options{
 	Promisc:          true,
 	Immediate:        true,
 	PreserveLinkAddr: true,
+	SeeSent:          true,
 }
 
 // BPFSniffer is a struct used to track state of a BSD BPF ethernet sniffer
@@ -150,6 +155,15 @@ func NewBPFSniffer(iface string, options *Options) (*BPFSniffer, error) {
 	if sniffer.options.Promisc {
 		// forces the interface into promiscuous mode
 		err = syscall.SetBpfPromisc(sniffer.fd, enable)
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	// SeeSent defaults to true, so we change it if false
+	if !sniffer.options.SeeSent {
+		enable := 0
+		_, _, err = syscall.Syscall(syscall.SYS_IOCTL, uintptr(sniffer.fd), uintptr(syscall.BIOCSSEESENT), uintptr(unsafe.Pointer(&enable)))
 		if err != nil {
 			return nil, err
 		}
