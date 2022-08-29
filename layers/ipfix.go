@@ -67,37 +67,36 @@ type IPFIXTemplateAccessor interface {
 // IPFIX is the outermost container which holds packet header and holds
 // at least one template or one data set
 //
-//    0                   1                   2                   3
-//    0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1
-//   +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-//   |                            Header                             |
-//   +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+  ---
-//   |                       Template Set #1                         |
-//   +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+   T
-//   |                   Option Template Set #2                      |   M
-//   +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+   P
-//   ...                                                                 L
-//   +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-//   |                       Template Set #n                         |
-//   +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+  ---
-//   |                  Data Sets of Template #1                     |
-//   |                       Data Record #1                          |
-//   ...
-//   |                       Data Record #n                          |
-//   +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-//   |               Data Sets of Option Template #2                 |   D
-//   |                       Data Record #1                          |   A
-//   ...                                                                 T
-//   |                       Data Record #n                          |   A
-//   +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-//   ...
-//   +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-//   |                  Data Sets of Template #n                     |
-//   |                       Data Record #1                          |
-//   ...
-//   |                       Data Record #n                          |
-//   +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+  ---
-//
+//	 0                   1                   2                   3
+//	 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1
+//	+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+//	|                            Header                             |
+//	+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+  ---
+//	|                       Template Set #1                         |
+//	+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+   T
+//	|                   Option Template Set #2                      |   M
+//	+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+   P
+//	...                                                                 L
+//	+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+//	|                       Template Set #n                         |
+//	+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+  ---
+//	|                  Data Sets of Template #1                     |
+//	|                       Data Record #1                          |
+//	...
+//	|                       Data Record #n                          |
+//	+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+//	|               Data Sets of Option Template #2                 |   D
+//	|                       Data Record #1                          |   A
+//	...                                                                 T
+//	|                       Data Record #n                          |   A
+//	+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+//	...
+//	+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+//	|                  Data Sets of Template #n                     |
+//	|                       Data Record #1                          |
+//	...
+//	|                       Data Record #n                          |
+//	+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+  ---
 type IPFIX struct {
 	BaseLayer
 
@@ -105,7 +104,6 @@ type IPFIX struct {
 	Header IPFIXMessageHeader
 	// Template and Option Template sets map referenced by their ID
 	Templates map[IPFIXSetIDType]IPFIXTemplateAccessor
-	// Templates map[IPFIXSetIDType]*IPFIXTemplateRecord
 	// Data sets contains in the message
 	// Only decoded if the message contains the corresponding template.
 	Data []IPFIXDataSet
@@ -134,25 +132,59 @@ func (i *IPFIX) DecodeFromBytes(data []byte, df gopacket.DecodeFeedback) error {
 		if err := h.decodeFromBytes(&data); err != nil {
 			return err
 		}
+		dataSet := data[:int(h.Length)-h.Len()]
+		data = data[int(h.Length)-h.Len():]
+
 		switch h.ID {
 		case IPFIXSetIDTypeTemplate:
-			t := &IPFIXTemplateRecord{Header: *h}
-			if err := t.decodeFromBytes(&data); err == nil {
-				i.Templates[t.ID] = t
-			} else {
-				return err
+			// template set can contain multiple records
+			for len(dataSet) > 0 {
+				// remaining octet can correspond to padding (RFC 7011 section 3.3.1)
+				if dataSet[0] == 0x00 && dataSet[1] == 0x00 {
+					if len(dataSet)%4 != 0 {
+						return fmt.Errorf("invalid template set padding length")
+					}
+					for _, b := range dataSet {
+						if b != 0x00 {
+							return fmt.Errorf("invalid template set padding value")
+						}
+					}
+					break
+				}
+				t := &IPFIXTemplateRecord{}
+				if err := t.decodeFromBytes(&dataSet); err == nil {
+					i.Templates[t.ID] = t
+				} else {
+					return err
+				}
 			}
+
 		case IPFIXSetIDTypeOptionTemplate:
-			ot := &IPFIXOptionTemplateRecord{Header: *h}
-			if err := ot.decodeFromBytes(&data); err == nil {
-				i.Templates[ot.ID] = ot
-			} else {
-				return err
+			// option template set can contain multiple records
+			for len(dataSet) > 0 {
+				// remaining octet can correspond to padding (RFC 7011 section 3.3.1)
+				if dataSet[0] == 0x00 && dataSet[1] == 0x00 {
+					if len(dataSet)%4 != 0 {
+						return fmt.Errorf("invalid option template set padding length")
+					}
+					for _, b := range dataSet {
+						if b != 0x00 {
+							return fmt.Errorf("invalid option template set padding value")
+						}
+					}
+					break
+				}
+				ot := &IPFIXOptionTemplateRecord{}
+				if err := ot.decodeFromBytes(&dataSet); err == nil {
+					i.Templates[ot.ID] = ot
+				} else {
+					return err
+				}
 			}
 		default:
 			d := &IPFIXDataSet{Header: *h}
 			t := i.Templates[h.ID]
-			if err := d.decodeFromBytes(&data, t); err != nil {
+			if err := d.decodeFromBytes(&dataSet, t); err != nil {
 				return err
 			}
 			i.Data = append(i.Data, *d)
@@ -165,17 +197,17 @@ func (i *IPFIX) DecodeFromBytes(data []byte, df gopacket.DecodeFeedback) error {
 //
 // The format of the Message Header on the wire is:
 //
-//    0                   1                   2                   3
-//    0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1
-//   +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-//   |       Version Number          |            Length             |
-//   +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-//   |                           Export Time                         |
-//   +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-//   |                       Sequence Number                         |
-//   +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-//   |                    Observation Domain ID                      |
-//   +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+//	 0                   1                   2                   3
+//	 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1
+//	+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+//	|       Version Number          |            Length             |
+//	+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+//	|                           Export Time                         |
+//	+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+//	|                       Sequence Number                         |
+//	+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+//	|                    Observation Domain ID                      |
+//	+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
 type IPFIXMessageHeader struct {
 	// Version of IPFIX to which this Message conforms.  The value of
 	// this field is 0x000a for the current version, incrementing by one
@@ -243,11 +275,11 @@ const (
 
 // IPFIXSetHeader is a Set Header common to all three Set types (RFC 7011 section 3.3.2)
 //
-//   0                   1                   2                   3
-//   0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1
-//  +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-//  |          Set ID               |          Length               |
-//  +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+//	 0                   1                   2                   3
+//	 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1
+//	+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+//	|          Set ID               |          Length               |
+//	+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
 type IPFIXSetHeader struct {
 	// Identifies the Set. A value of 2 is reserved for Template Sets.
 	// A value of 3 is reserved for Options Template Sets. Values from 4
@@ -293,22 +325,20 @@ func (sh *IPFIXSetHeader) decodeFromBytes(data *[]byte) error {
 // IPFIXTemplateRecord contains any combination of IANA-assigned and/or
 // enterprise-specific Information Element identifiers (RFC 7011 section 3.4.1)
 //
-//    0                   1                   2                   3
-//    0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1
-//   +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-//   |      Template ID (> 255)      |         Field Count           |
-//   +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-//   | Field Specifiers                                              |
-//   +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-//   ...
-//   +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-//   | Field Specifiers                                              |
-//   +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+//	 0                   1                   2                   3
+//	 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1
+//	+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+//	|      Template ID (> 255)      |         Field Count           |
+//	+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+//	| Field Specifiers                                              |
+//	+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+//	...
+//	+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+//	| Field Specifiers                                              |
+//	+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
 //
-//   The struct also contains the set header for convenience.
+//	The struct also contains the set header for convenience.
 type IPFIXTemplateRecord struct {
-	// Set header
-	Header IPFIXSetHeader
 	// Each Template Record is given a unique Template ID in the range
 	// 256 to 65535.  This uniqueness is local to the Transport Session
 	// and Observation Domain that generated the Template ID.
@@ -326,13 +356,12 @@ type IPFIXTemplateRecord struct {
 }
 
 // Len returns the requires lenght in octet for a Template
-// Set Header length is taken into account.
 func (tr IPFIXTemplateRecord) Len() int {
-	return IPFIXSetHeader{}.Len() + 2 /* template id */ + 2 /* field count */
+	return 2 /* template id */ + 2 /* field count */
 }
 
 func (tr *IPFIXTemplateRecord) decodeFromBytes(data *[]byte) error {
-	if len(*data) < tr.Len()-tr.Header.Len() {
+	if len(*data) < tr.Len() {
 		*data = []byte{}
 		return fmt.Errorf("invalid template record length")
 	}
@@ -348,21 +377,6 @@ func (tr *IPFIXTemplateRecord) decodeFromBytes(data *[]byte) error {
 		}
 		dataRead += tr.Fields[i].Len()
 		tr.minDataRecordLength += tr.Fields[i].FieldLength
-	}
-
-	// template set can only contains one template record
-	// remaining octet corresponding to padding  see RFC 7011 section 3.1.1
-	padding := int(tr.Header.Length) - (dataRead + tr.Len())
-	if padding > 0 {
-		if padding%4 != 0 {
-			return fmt.Errorf("invalid template record padding length")
-		}
-		for _, b := range (*data)[:padding] {
-			if b != 0x00 {
-				return fmt.Errorf("invalid template record padding value")
-			}
-		}
-		*data = (*data)[padding:]
 	}
 
 	return nil
@@ -396,9 +410,6 @@ func (tr *IPFIXTemplateRecord) Equals(otherTA IPFIXTemplateAccessor) bool {
 	if !ok {
 		return false
 	}
-	if tr.Header.Length != other.Header.Length {
-		return false
-	}
 	if tr.ID != other.ID {
 		return false
 	}
@@ -416,24 +427,22 @@ func (tr *IPFIXTemplateRecord) Equals(otherTA IPFIXTemplateAccessor) bool {
 // IPFIXOptionTemplateRecord contains any combination of IANA-assigned and/or
 // enterprise-specific Information Element identifiers (RFC 7011 section 3.4.2.2)
 //
-//    0                   1                   2                   3
-//    0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1
-//   +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-//   |      Template ID (> 255)      |         Field Count           |
-//   +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-//   |       Scope Field Count       | Field Specifiers              |
-//   +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-//   | Field Specifiers                                              |
-//   +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-//   ...
-//   +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-//   | Field Specifiers                                              |
-//   +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+//	 0                   1                   2                   3
+//	 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1
+//	+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+//	|      Template ID (> 255)      |         Field Count           |
+//	+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+//	|       Scope Field Count       | Field Specifiers              |
+//	+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+//	| Field Specifiers                                              |
+//	+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+//	...
+//	+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+//	| Field Specifiers                                              |
+//	+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
 //
-//   The struct also contains the set header for convenience.
+//	The struct also contains the set header for convenience.
 type IPFIXOptionTemplateRecord struct {
-	// Set header
-	Header IPFIXSetHeader
 	// Each Option Template Record is given a unique Template ID in the range
 	// 256 to 65535.  This uniqueness is local to the Transport Session
 	// and Observation Domain that generated the Template ID.
@@ -460,13 +469,12 @@ type IPFIXOptionTemplateRecord struct {
 }
 
 // Len returns the requires lenght in octet for an Option Template
-// Set Header length is taken into account.
 func (otr IPFIXOptionTemplateRecord) Len() int {
-	return IPFIXSetHeader{}.Len() + 2 /* template id */ + 2 /* field count */ + 2 /* scope field count */
+	return 2 /* template id */ + 2 /* field count */ + 2 /* scope field count */
 }
 
 func (otr *IPFIXOptionTemplateRecord) decodeFromBytes(data *[]byte) error {
-	if len(*data) < otr.Len()-otr.Header.Len() {
+	if len(*data) < otr.Len() {
 		*data = []byte{}
 		return fmt.Errorf("invalid option template record length")
 	}
@@ -497,21 +505,6 @@ func (otr *IPFIXOptionTemplateRecord) decodeFromBytes(data *[]byte) error {
 		}
 		dataRead += otr.Fields[i].Len()
 		otr.minDataRecordLength += otr.Fields[i].FieldLength
-	}
-
-	// option template set can only contains one option template record
-	// remaining octet corresponding to padding see RFC 7011 section 3.1.1
-	padding := int(otr.Header.Length) - (dataRead + otr.Len())
-	if padding > 0 {
-		if padding%4 != 0 {
-			return fmt.Errorf("invalid option template set padding length")
-		}
-		for _, b := range (*data)[:padding] {
-			if b != 0x00 {
-				return fmt.Errorf("invalid option template set padding value")
-			}
-		}
-		*data = (*data)[padding:]
 	}
 
 	return nil
@@ -552,9 +545,6 @@ func (otr *IPFIXOptionTemplateRecord) Equals(otherTA IPFIXTemplateAccessor) bool
 	if !ok {
 		return false
 	}
-	if otr.Header.Length != other.Header.Length {
-		return false
-	}
 	if otr.ID != other.ID {
 		return false
 	}
@@ -576,13 +566,13 @@ func (otr *IPFIXOptionTemplateRecord) Equals(otherTA IPFIXTemplateAccessor) bool
 
 // IPFIXFieldSpecifier is a Field Specifier (RFC 7011 section 3.2)
 //
-//    0                   1                   2                   3
-//    0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1
-//   +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-//   |E|  Information Element ident. |        Field Length           |
-//   +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-//   |                      Enterprise Number                        |
-//   +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+//	 0                   1                   2                   3
+//	 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1
+//	+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+//	|E|  Information Element ident. |        Field Length           |
+//	+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+//	|                      Enterprise Number                        |
+//	+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
 type IPFIXFieldSpecifier struct {
 	// Enterprise bit.  This is the first bit of the Field Specifier.  If
 	// this bit is zero, the Information Element identifier identifies an
@@ -607,8 +597,8 @@ type IPFIXFieldSpecifier struct {
 }
 
 // Len returns the length in octet for Field Specifier
-//   * 4 for IANA Information Element
-//   * 8 for enterprise-specific Information Element
+//   - 4 for IANA Information Element
+//   - 8 for enterprise-specific Information Element
 func (fs IPFIXFieldSpecifier) Len() int {
 	if fs.EnterpriseBit {
 		return 2 /* field length */ + 2 /* id */ + 4 /* enterprise id */
@@ -655,25 +645,25 @@ func (fs IPFIXFieldSpecifier) Equals(other *IPFIXFieldSpecifier) bool {
 
 // IPFIXDataSet is a set of Data Records (RFC 7011 section 3.3 and 3.4.3)
 //
-//     0                   1                   2                   3
-//     0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1
-//    +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-//    |   Set ID = Template ID        |          Length               |
-//    +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-//    |   Record 1 - Field Value 1    |   Record 1 - Field Value 2    |
-//    +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-//    |   Record 1 - Field Value 3    |             ...               |
-//    +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-//    |   Record 2 - Field Value 1    |   Record 2 - Field Value 2    |
-//    +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-//    |   Record 2 - Field Value 3    |             ...               |
-//    +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-//    |   Record 3 - Field Value 1    |   Record 3 - Field Value 2    |
-//    +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-//    |   Record 3 - Field Value 3    |             ...               |
-//    +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-//    |              ...              |      Padding (optional)       |
-//    +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+//	 0                   1                   2                   3
+//	 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1
+//	+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+//	|   Set ID = Template ID        |          Length               |
+//	+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+//	|   Record 1 - Field Value 1    |   Record 1 - Field Value 2    |
+//	+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+//	|   Record 1 - Field Value 3    |             ...               |
+//	+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+//	|   Record 2 - Field Value 1    |   Record 2 - Field Value 2    |
+//	+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+//	|   Record 2 - Field Value 3    |             ...               |
+//	+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+//	|   Record 3 - Field Value 1    |   Record 3 - Field Value 2    |
+//	+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+//	|   Record 3 - Field Value 3    |             ...               |
+//	+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+//	|              ...              |      Padding (optional)       |
+//	+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
 type IPFIXDataSet struct {
 	// Set header
 	Header IPFIXSetHeader
@@ -717,7 +707,7 @@ func (ds *IPFIXDataSet) decodeFromBytes(data *[]byte, t IPFIXTemplateAccessor) e
 			dataRead += n
 		}
 
-		// remaining octet corresponding to padding see RFC 7011 section 3.1.1
+		// remaining octet corresponding to padding (RFC 7011 section 3.3.1)
 		padding := dataLen - dataRead
 		if padding > 0 {
 			for _, b := range (*data)[:padding] {
@@ -742,23 +732,23 @@ func (ds *IPFIXDataSet) DecodeWithTemplate(t IPFIXTemplateAccessor) error {
 
 // IPFIXDataRecord is a Data Record (RFC 7011 section 3.4.3)
 //
-//      0                   1                   2                   3
-//      0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1
-//     +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-//     |   Record 1 - Field Value 1    |   Record 1 - Field Value 2    |
-//     +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-//     |   Record 1 - Field Value 3    |             ...               |
-//     +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-//     |   Record 2 - Field Value 1    |   Record 2 - Field Value 2    |
-//     +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-//     |   Record 2 - Field Value 3    |             ...               |
-//     +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-//     |   Record 3 - Field Value 1    |   Record 3 - Field Value 2    |
-//     +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-//     |   Record 3 - Field Value 3    |             ...               |
-//     +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-//     |              ...              |      Padding (optional)       |
-//     +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+//	 0                   1                   2                   3
+//	 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1
+//	+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+//	|   Record 1 - Field Value 1    |   Record 1 - Field Value 2    |
+//	+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+//	|   Record 1 - Field Value 3    |             ...               |
+//	+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+//	|   Record 2 - Field Value 1    |   Record 2 - Field Value 2    |
+//	+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+//	|   Record 2 - Field Value 3    |             ...               |
+//	+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+//	|   Record 3 - Field Value 1    |   Record 3 - Field Value 2    |
+//	+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+//	|   Record 3 - Field Value 3    |             ...               |
+//	+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+//	|              ...              |      Padding (optional)       |
+//	+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
 type IPFIXDataRecord struct {
 	// Template or Option template ID use to encode the record
 	ID IPFIXSetIDType
@@ -819,25 +809,25 @@ func (dr *IPFIXDataRecord) GetField(en uint32, iei uint16) (*IPFIXField, bool) {
 
 // IPFIXField is a Field in a Data Record (RFC 7011 section 3.4.3)
 //
-//      0                   1                   2                   3
-//      0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1
-//     +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-//     |   Set ID = Template ID        |          Length               |
-//     +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-//     |   Record 1 - Field Value 1    |   Record 1 - Field Value 2    |
-//     +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-//     |   Record 1 - Field Value 3    |             ...               |
-//     +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-//     |   Record 2 - Field Value 1    |   Record 2 - Field Value 2    |
-//     +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-//     |   Record 2 - Field Value 3    |             ...               |
-//     +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-//     |   Record 3 - Field Value 1    |   Record 3 - Field Value 2    |
-//     +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-//     |   Record 3 - Field Value 3    |             ...               |
-//     +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-//     |              ...              |      Padding (optional)       |
-//     +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+//	 0                   1                   2                   3
+//	 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1
+//	+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+//	|   Set ID = Template ID        |          Length               |
+//	+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+//	|   Record 1 - Field Value 1    |   Record 1 - Field Value 2    |
+//	+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+//	|   Record 1 - Field Value 3    |             ...               |
+//	+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+//	|   Record 2 - Field Value 1    |   Record 2 - Field Value 2    |
+//	+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+//	|   Record 2 - Field Value 3    |             ...               |
+//	+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+//	|   Record 3 - Field Value 1    |   Record 3 - Field Value 2    |
+//	+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+//	|   Record 3 - Field Value 3    |             ...               |
+//	+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+//	|              ...              |      Padding (optional)       |
+//	+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
 type IPFIXField struct {
 	// A numeric value that represents the Information Element.  Refer to
 	// [IANA-IPFIX].

@@ -31,7 +31,7 @@ var templateSetHeader = []byte{
 	0x00, 0x00, // Length (should be 124 bytes for that sample)
 }
 
-var templateRecord = []byte{
+var templateRecord1 = []byte{
 	0x01, 0x00, //             ID 256
 	0x00, 0x14, //             Field Count 20
 	0x00, 0x08, 0x00, 0x04, // FS  1
@@ -65,12 +65,19 @@ var templateRecord = []byte{
 	0x00, 0x00, 0x72, 0x79, // Enterprise ID 29305
 }
 
+var templateRecord2 = []byte{
+	0x01, 0x01, //             ID 257
+	0x00, 0x02, //             Field Count 2
+	0x00, 0x08, 0x00, 0x04, // FS  1
+	0x00, 0x0c, 0x00, 0x04, // FS  2
+}
+
 var optionTemplateSetHeader = []byte{
 	0x00, 0x03, // Option Template ID
 	0x00, 0x00, // Length (should be 124 bytes for that sample)
 }
 
-var optionTemplateRecord = []byte{
+var optionTemplateRecord1 = []byte{
 	0x01, 0x01, //             ID 257
 	0x00, 0x03, //             Field count 3
 	0x00, 0x02, //             Scoped Field Count 2
@@ -78,6 +85,14 @@ var optionTemplateRecord = []byte{
 	0x00, 0x00, 0xdc, 0xba, // Enterprise ID 56506
 	0x00, 0x07, 0x00, 0x02, // FS 2 (3)
 	0x00, 0x56, 0x00, 0x08, // FS 3 (9)
+}
+
+var optionTemplateRecord2 = []byte{
+	0x01, 0x02, //             ID 258
+	0x00, 0x02, //             Field count 2
+	0x00, 0x01, //             Scoped Field Count 1
+	0x00, 0x07, 0x00, 0x02, // FS 1 (3)
+	0x00, 0x56, 0x00, 0x08, // FS 2 (9)
 }
 
 var dataSetHeader = []byte{
@@ -248,7 +263,7 @@ func TestIPFIXHeader(t *testing.T) {
 
 func TestIPFIXSetHeader(t *testing.T) {
 	setPayload := append([]byte{}, templateSetHeader...)
-	setPayload = append(setPayload, []byte{0x00, 0x00, 0x00, 0x00}...)
+	setPayload = append(setPayload, []byte{0x01, 0x00, 0x00, 0x00}...)
 	setLengthHeader(setPayload)
 	payload := append([]byte{}, header...)
 	payload = append(payload, setPayload...)
@@ -291,9 +306,8 @@ func TestIPFIXSetHeader(t *testing.T) {
 					ObservationDomainID: 1,
 				},
 				Templates: map[IPFIXSetIDType]IPFIXTemplateAccessor{
-					0: &IPFIXTemplateRecord{
-						Header:     IPFIXSetHeader{ID: IPFIXSetIDTypeTemplate, Length: uint16(len(setPayload))},
-						ID:         0,
+					256: &IPFIXTemplateRecord{
+						ID:         256,
 						FieldCount: 0,
 						Fields:     []IPFIXFieldSpecifier{},
 					},
@@ -322,7 +336,8 @@ func TestIPFIXSetHeader(t *testing.T) {
 func TestIPFIXOptionTemplateRecord(t *testing.T) {
 	payload := append([]byte{}, header...)
 	optionTemplateSet1 := append([]byte{}, optionTemplateSetHeader...)
-	optionTemplateSet1 = append(optionTemplateSet1, optionTemplateRecord...)
+	optionTemplateSet1 = append(optionTemplateSet1, optionTemplateRecord1...)
+	optionTemplateSet1 = append(optionTemplateSet1, optionTemplateRecord2...)
 	// add some padding
 	optionTemplateSet1 = append(optionTemplateSet1, []byte{0x00, 0x00, 0x00, 0x00}...)
 	setLengthHeader(optionTemplateSet1)
@@ -338,28 +353,28 @@ func TestIPFIXOptionTemplateRecord(t *testing.T) {
 
 	invalidLength1 := append([]byte{}, header...)
 	optionTemplateSet = append([]byte{}, optionTemplateSetHeader...)
-	optionTemplateSet = append(optionTemplateSet, optionTemplateRecord[:IPFIXOptionTemplateRecord{}.Len()-IPFIXSetHeader{}.Len()-1]...)
+	optionTemplateSet = append(optionTemplateSet, optionTemplateRecord1[:IPFIXOptionTemplateRecord{}.Len()-1]...)
 	setLengthHeader(optionTemplateSet)
 	invalidLength1 = append(invalidLength1, optionTemplateSet...)
 	setLengthHeader(invalidLength1)
 
 	invalidLength2 := append([]byte{}, header...)
 	optionTemplateSet = append([]byte{}, optionTemplateSetHeader...)
-	optionTemplateSet = append(optionTemplateSet, optionTemplateRecord[:len(optionTemplateRecord)-5]...)
+	optionTemplateSet = append(optionTemplateSet, optionTemplateRecord1[:len(optionTemplateRecord1)-5]...)
 	setLengthHeader(optionTemplateSet)
 	invalidLength2 = append(invalidLength2, optionTemplateSet...)
 	setLengthHeader(invalidLength2)
 
 	invalidLength3 := append([]byte{}, header...)
 	optionTemplateSet = append([]byte{}, optionTemplateSetHeader...)
-	optionTemplateSet = append(optionTemplateSet, optionTemplateRecord[:len(optionTemplateRecord)-1]...)
+	optionTemplateSet = append(optionTemplateSet, optionTemplateRecord1[:len(optionTemplateRecord1)-1]...)
 	setLengthHeader(optionTemplateSet)
 	invalidLength3 = append(invalidLength3, optionTemplateSet...)
 	setLengthHeader(invalidLength3)
 
 	invalidFieldCount := append([]byte{}, header...)
 	optionTemplateSet = append([]byte{}, optionTemplateSetHeader...)
-	optionTemplateSet = append(optionTemplateSet, optionTemplateRecord...)
+	optionTemplateSet = append(optionTemplateSet, optionTemplateRecord1...)
 	optionTemplateSet[7] = 0x04
 	optionTemplateSet[9] = 0x03
 	setLengthHeader(optionTemplateSet)
@@ -368,7 +383,7 @@ func TestIPFIXOptionTemplateRecord(t *testing.T) {
 
 	invalidPaddingLength := append([]byte{}, header...)
 	optionTemplateSet = append([]byte{}, optionTemplateSetHeader...)
-	optionTemplateSet = append(optionTemplateSet, optionTemplateRecord...)
+	optionTemplateSet = append(optionTemplateSet, optionTemplateRecord1...)
 	optionTemplateSet = append(optionTemplateSet, []byte{0x00, 0x00, 0x00}...)
 	setLengthHeader(optionTemplateSet)
 	invalidPaddingLength = append(invalidPaddingLength, optionTemplateSet...)
@@ -376,8 +391,8 @@ func TestIPFIXOptionTemplateRecord(t *testing.T) {
 
 	invalidPaddingValue := append([]byte{}, header...)
 	optionTemplateSet = append([]byte{}, optionTemplateSetHeader...)
-	optionTemplateSet = append(optionTemplateSet, optionTemplateRecord...)
-	optionTemplateSet = append(optionTemplateSet, []byte{0xde, 0xad, 0xbe, 0xef}...)
+	optionTemplateSet = append(optionTemplateSet, optionTemplateRecord1...)
+	optionTemplateSet = append(optionTemplateSet, []byte{0x00, 0x00, 0xbe, 0xef}...)
 	setLengthHeader(optionTemplateSet)
 	invalidPaddingValue = append(invalidPaddingValue, optionTemplateSet...)
 	setLengthHeader(invalidPaddingValue)
@@ -409,13 +424,24 @@ func TestIPFIXOptionTemplateRecord(t *testing.T) {
 				},
 				Templates: map[IPFIXSetIDType]IPFIXTemplateAccessor{
 					257: &IPFIXOptionTemplateRecord{
-						Header:              IPFIXSetHeader{ID: IPFIXSetIDTypeOptionTemplate, Length: uint16(len(optionTemplateSet))},
 						ID:                  257,
 						FieldCount:          3,
 						ScopeFieldCount:     2,
 						minDataRecordLength: 12,
 						ScopeFields: []IPFIXFieldSpecifier{
 							{InformationElementID: 0x6c, FieldLength: 0x2, EnterpriseNumber: 0xdcba, EnterpriseBit: true},
+							{InformationElementID: 0x7, FieldLength: 0x2, EnterpriseNumber: 0x0, EnterpriseBit: false},
+						},
+						Fields: []IPFIXFieldSpecifier{
+							{InformationElementID: 0x56, FieldLength: 0x8, EnterpriseNumber: 0x0, EnterpriseBit: false},
+						},
+					},
+					258: &IPFIXOptionTemplateRecord{
+						ID:                  258,
+						FieldCount:          2,
+						ScopeFieldCount:     1,
+						minDataRecordLength: 10,
+						ScopeFields: []IPFIXFieldSpecifier{
 							{InformationElementID: 0x7, FieldLength: 0x2, EnterpriseNumber: 0x0, EnterpriseBit: false},
 						},
 						Fields: []IPFIXFieldSpecifier{
@@ -437,8 +463,6 @@ func TestIPFIXOptionTemplateRecord(t *testing.T) {
 			if !tt.wantErr {
 				got := p.ApplicationLayer().(*IPFIX)
 				if !reflect.DeepEqual(tt.want, got) {
-					fmt.Printf("%#v\n", got.Templates[257])
-					fmt.Printf("%#v\n", tt.want.Templates[257])
 					t.Errorf("IPFIX layer mismatch, \nwant  %#v\ngot %#v\n", tt.want, got)
 				}
 			}
@@ -449,7 +473,8 @@ func TestIPFIXOptionTemplateRecord(t *testing.T) {
 func TestIPFIXTemplateRecord(t *testing.T) {
 	payload := append([]byte{}, header...)
 	templateSet1 := append([]byte{}, templateSetHeader...)
-	templateSet1 = append(templateSet1, templateRecord...)
+	templateSet1 = append(templateSet1, templateRecord1...)
+	templateSet1 = append(templateSet1, templateRecord2...)
 	// add some padding
 	templateSet1 = append(templateSet1, []byte{0x00, 0x00, 0x00, 0x00}...)
 	setLengthHeader(templateSet1)
@@ -458,14 +483,14 @@ func TestIPFIXTemplateRecord(t *testing.T) {
 
 	invalidLength1 := append([]byte{}, header...)
 	templateSet := append([]byte{}, templateSetHeader...)
-	templateSet = append(templateSet, templateRecord[:IPFIXTemplateRecord{}.Len()-IPFIXSetHeader{}.Len()-1]...)
+	templateSet = append(templateSet, templateRecord1[:IPFIXTemplateRecord{}.Len()-1]...)
 	setLengthHeader(templateSet)
 	invalidLength1 = append(invalidLength1, templateSet...)
 	setLengthHeader(invalidLength1)
 
 	invalidLength2 := append([]byte{}, header...)
 	templateSet = append([]byte{}, templateSetHeader...)
-	templateSet = append(templateSet, templateRecord[:len(templateRecord)-1]...)
+	templateSet = append(templateSet, templateRecord1[:len(templateRecord1)-1]...)
 	setLengthHeader(templateSet)
 	invalidLength2 = append(invalidLength2, templateSet...)
 	setLengthHeader(invalidLength2)
@@ -475,7 +500,7 @@ func TestIPFIXTemplateRecord(t *testing.T) {
 
 	invalidPaddingLength := append([]byte{}, header...)
 	templateSet = append([]byte{}, templateSetHeader...)
-	templateSet = append(templateSet, templateRecord...)
+	templateSet = append(templateSet, templateRecord1...)
 	templateSet = append(templateSet, []byte{0x00, 0x00, 0x00}...)
 	setLengthHeader(templateSet)
 	invalidPaddingLength = append(invalidPaddingLength, templateSet...)
@@ -483,8 +508,8 @@ func TestIPFIXTemplateRecord(t *testing.T) {
 
 	invalidPaddingValue := append([]byte{}, header...)
 	templateSet = append([]byte{}, templateSetHeader...)
-	templateSet = append(templateSet, templateRecord...)
-	templateSet = append(templateSet, []byte{0xde, 0xad, 0xbe, 0xef}...)
+	templateSet = append(templateSet, templateRecord1...)
+	templateSet = append(templateSet, []byte{0x00, 0x00, 0xbe, 0xef}...)
 	setLengthHeader(templateSet)
 	invalidPaddingValue = append(invalidPaddingValue, templateSet...)
 	setLengthHeader(invalidPaddingValue)
@@ -514,7 +539,6 @@ func TestIPFIXTemplateRecord(t *testing.T) {
 				},
 				Templates: map[IPFIXSetIDType]IPFIXTemplateAccessor{
 					256: &IPFIXTemplateRecord{
-						Header:              IPFIXSetHeader{ID: IPFIXSetIDTypeTemplate, Length: uint16(len(templateSet))},
 						ID:                  256,
 						FieldCount:          20,
 						minDataRecordLength: 74,
@@ -539,6 +563,15 @@ func TestIPFIXTemplateRecord(t *testing.T) {
 							{InformationElementID: 0x56, FieldLength: 0x8, EnterpriseNumber: 0x7279, EnterpriseBit: true},
 							{InformationElementID: 0x2, FieldLength: 0x8, EnterpriseNumber: 0x7279, EnterpriseBit: true},
 							{InformationElementID: 0x55, FieldLength: 0x8, EnterpriseNumber: 0x7279, EnterpriseBit: true},
+						},
+					},
+					257: &IPFIXTemplateRecord{
+						ID:                  257,
+						FieldCount:          2,
+						minDataRecordLength: 8,
+						Fields: []IPFIXFieldSpecifier{
+							{InformationElementID: 0x8, FieldLength: 0x4, EnterpriseNumber: 0x0, EnterpriseBit: false},
+							{InformationElementID: 0xc, FieldLength: 0x4, EnterpriseNumber: 0x0, EnterpriseBit: false},
 						},
 					},
 				},
@@ -566,7 +599,7 @@ func TestIPFIXTemplateRecord(t *testing.T) {
 func TestIPFIXDataRecord(t *testing.T) {
 	payload := append([]byte{}, header...)
 	templateSet := append([]byte{}, templateSetHeader...)
-	templateSet = append(templateSet, templateRecord...)
+	templateSet = append(templateSet, templateRecord1...)
 	setLengthHeader(templateSet)
 	payload = append(payload, templateSet...)
 	dataSet1 := append([]byte{}, dataSetHeader...)
@@ -611,7 +644,7 @@ func TestIPFIXDataRecord(t *testing.T) {
 	multipleRecords := append([]byte{}, header...)
 	multipleRecords = append(multipleRecords, templateSet...)
 	optionTemplateSet := append([]byte{}, optionTemplateSetHeader...)
-	optionTemplateSet = append(optionTemplateSet, optionTemplateRecord...)
+	optionTemplateSet = append(optionTemplateSet, optionTemplateRecord1...)
 	setLengthHeader(optionTemplateSet)
 	multipleRecords = append(multipleRecords, optionTemplateSet...)
 	// put two records in the set
@@ -670,7 +703,6 @@ func TestIPFIXDataRecord(t *testing.T) {
 				},
 				Templates: map[IPFIXSetIDType]IPFIXTemplateAccessor{
 					256: &IPFIXTemplateRecord{
-						Header:              IPFIXSetHeader{ID: IPFIXSetIDTypeTemplate, Length: uint16(len(templateSet))},
 						ID:                  256,
 						FieldCount:          20,
 						minDataRecordLength: 74,
@@ -747,7 +779,6 @@ func TestIPFIXDataRecord(t *testing.T) {
 				},
 				Templates: map[IPFIXSetIDType]IPFIXTemplateAccessor{
 					256: &IPFIXTemplateRecord{
-						Header:              IPFIXSetHeader{ID: IPFIXSetIDTypeTemplate, Length: uint16(len(templateSet))},
 						ID:                  256,
 						FieldCount:          20,
 						minDataRecordLength: 74,
@@ -824,7 +855,6 @@ func TestIPFIXDataRecord(t *testing.T) {
 				},
 				Templates: map[IPFIXSetIDType]IPFIXTemplateAccessor{
 					256: &IPFIXTemplateRecord{
-						Header:              IPFIXSetHeader{ID: IPFIXSetIDTypeTemplate, Length: uint16(len(templateSet))},
 						ID:                  256,
 						FieldCount:          20,
 						minDataRecordLength: 74,
@@ -852,7 +882,6 @@ func TestIPFIXDataRecord(t *testing.T) {
 						},
 					},
 					257: &IPFIXOptionTemplateRecord{
-						Header:              IPFIXSetHeader{ID: IPFIXSetIDTypeOptionTemplate, Length: uint16(len(optionTemplateSet))},
 						ID:                  257,
 						FieldCount:          3,
 						ScopeFieldCount:     2,
@@ -961,11 +990,11 @@ func TestIPFIXDataRecord(t *testing.T) {
 
 func BenchmarkDecodeIPFIXPacket(b *testing.B) {
 	templateSet := append([]byte{}, templateSetHeader...)
-	templateSet = append(templateSet, templateRecord...)
+	templateSet = append(templateSet, templateRecord1...)
 	setLengthHeader(templateSet)
 
 	optionTemplateSet := append([]byte{}, optionTemplateSetHeader...)
-	optionTemplateSet = append(optionTemplateSet, optionTemplateRecord...)
+	optionTemplateSet = append(optionTemplateSet, optionTemplateRecord1...)
 	setLengthHeader(optionTemplateSet)
 
 	dataSet1 := append([]byte{}, dataSetHeader...)
@@ -1019,7 +1048,7 @@ func BenchmarkDecodeIPFIXPacket(b *testing.B) {
 
 func TestIPFIXDataSet_DecodeWithTemplate(t *testing.T) {
 	templateSet1 := append([]byte{}, templateSetHeader...)
-	templateSet1 = append(templateSet1, templateRecord...)
+	templateSet1 = append(templateSet1, templateRecord1...)
 	setLengthHeader(templateSet1)
 
 	dataSet1 := append([]byte{}, dataSetHeader...)
@@ -1045,7 +1074,7 @@ func TestIPFIXDataSet_DecodeWithTemplate(t *testing.T) {
 			if err := h.decodeFromBytes(&tt.template); err != nil {
 				t.Error(err)
 			}
-			template := &IPFIXTemplateRecord{Header: *h}
+			template := &IPFIXTemplateRecord{}
 			if err := template.decodeFromBytes(&tt.template); err != nil {
 				t.Error(err)
 			}
@@ -1068,7 +1097,7 @@ func TestIPFIXDataSet_DecodeWithTemplate(t *testing.T) {
 
 func TestIPFIXDataRecord_GetField(t *testing.T) {
 	templateSet := append([]byte{}, templateSetHeader...)
-	templateSet = append(templateSet, templateRecord...)
+	templateSet = append(templateSet, templateRecord1...)
 	setLengthHeader(templateSet)
 
 	dataSet := append([]byte{}, dataSetHeader...)
