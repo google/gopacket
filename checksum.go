@@ -6,6 +6,30 @@
 
 package gopacket
 
+// ChecksumVerificationResult provides information about a checksum verification.
+// The checksums are represented using uint32 to fit even the largest checksums.
+// If a checksum is optional and unset, Correct and Actual might mismatch even
+// though Valid is true. In this case, Correct is the computed optional checksum
+// and Actual is 0.
+type ChecksumVerificationResult struct {
+	// Valid tells whether the checksum verification succeeded.
+	Valid bool
+	// Correct is the correct checksum that was expected to be found.
+	Correct uint32
+	// Actual is the checksum that was found and which might be wrong.
+	Actual uint32
+}
+
+// ChecksumMismatch provides information about a failed checksum verification
+// for a layer.
+type ChecksumMismatch struct {
+	ChecksumVerificationResult
+	// Layer is the layer whose checksum is invalid.
+	Layer Layer
+	// LayerIndex is the index of the layer in the packet.
+	LayerIndex int
+}
+
 // ComputeChecksum computes the internet checksum as defined in RFC1071. The
 // passed-in csum is any initial checksum data that's already been computed.
 func ComputeChecksum(data []byte, csum uint32) uint32 {

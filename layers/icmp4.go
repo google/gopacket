@@ -262,6 +262,19 @@ func (i *ICMPv4) NextLayerType() gopacket.LayerType {
 	return gopacket.LayerTypePayload
 }
 
+func (i *ICMPv4) VerifyChecksum() (error, gopacket.ChecksumVerificationResult) {
+	bytes := append(i.Contents, i.Payload...)
+
+	existing := i.Checksum
+	verification := gopacket.ComputeChecksum(bytes, 0)
+	correct := gopacket.FoldChecksum(verification - uint32(existing))
+	return nil, gopacket.ChecksumVerificationResult{
+		Valid:   correct == existing,
+		Correct: uint32(correct),
+		Actual:  uint32(existing),
+	}
+}
+
 func decodeICMPv4(data []byte, p gopacket.PacketBuilder) error {
 	i := &ICMPv4{}
 	return decodingLayerDecoder(i, data, p)

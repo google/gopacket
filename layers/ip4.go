@@ -305,3 +305,14 @@ func (ip *IPv4) AddressTo4() error {
 	ip.DstIP = dst
 	return nil
 }
+
+func (ip *IPv4) VerifyChecksum() (error, gopacket.ChecksumVerificationResult) {
+	existing := ip.Checksum
+	verification := gopacket.ComputeChecksum(ip.Contents, 0)
+	correct := gopacket.FoldChecksum(verification - uint32(existing))
+	return nil, gopacket.ChecksumVerificationResult{
+		Valid:   correct == existing,
+		Correct: uint32(correct),
+		Actual:  uint32(existing),
+	}
+}

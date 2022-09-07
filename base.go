@@ -26,6 +26,13 @@ type Layer interface {
 	LayerPayload() []byte
 }
 
+// LayerWithChecksum should be implemented by layers that contain a checksum
+// that can be verified after a packet has been decoded.
+type LayerWithChecksum interface {
+	// VerifyChecksum verifies the checksum and returns the result.
+	VerifyChecksum() (error, ChecksumVerificationResult)
+}
+
 // Payload is a Layer containing the payload of a packet.  The definition of
 // what constitutes the payload of a packet depends on previous layers; for
 // TCP and UDP, we stop decoding above layer 4 and return the remaining

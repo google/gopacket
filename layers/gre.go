@@ -195,6 +195,19 @@ func (g *GRE) NextLayerType() gopacket.LayerType {
 	return g.Protocol.LayerType()
 }
 
+func (g *GRE) VerifyChecksum() (error, gopacket.ChecksumVerificationResult) {
+	bytes := append(g.Contents, g.Payload...)
+
+	existing := g.Checksum
+	verification := gopacket.ComputeChecksum(bytes, 0)
+	correct := gopacket.FoldChecksum(verification - uint32(existing))
+	return nil, gopacket.ChecksumVerificationResult{
+		Valid:   !g.ChecksumPresent || correct == existing,
+		Correct: uint32(correct),
+		Actual:  uint32(existing),
+	}
+}
+
 func decodeGRE(data []byte, p gopacket.PacketBuilder) error {
 	g := &GRE{}
 	return decodingLayerDecoder(g, data, p)

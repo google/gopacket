@@ -140,3 +140,19 @@ func (u *UDP) SetInternalPortsForTesting() {
 	binary.BigEndian.PutUint16(u.sPort, uint16(u.SrcPort))
 	binary.BigEndian.PutUint16(u.dPort, uint16(u.DstPort))
 }
+
+func (u *UDP) VerifyChecksum() (error, gopacket.ChecksumVerificationResult) {
+	bytes := append(u.Contents, u.Payload...)
+
+	existing := u.Checksum
+	verification, err := u.computeChecksum(bytes, IPProtocolUDP)
+	if err != nil {
+		return err, gopacket.ChecksumVerificationResult{}
+	}
+	correct := gopacket.FoldChecksum(verification - uint32(existing))
+	return nil, gopacket.ChecksumVerificationResult{
+		Valid:   existing == 0 || correct == existing,
+		Correct: uint32(correct),
+		Actual:  uint32(existing),
+	}
+}
