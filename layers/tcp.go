@@ -184,14 +184,18 @@ func (t *TCP) SerializeTo(b gopacket.SerializeBuffer, opts gopacket.SerializeOpt
 		if err != nil {
 			return err
 		}
-		t.Checksum = csum
+		t.Checksum = gopacket.FoldChecksum(csum)
 	}
 	binary.BigEndian.PutUint16(bytes[16:], t.Checksum)
 	return nil
 }
 
 func (t *TCP) ComputeChecksum() (uint16, error) {
-	return t.computeChecksum(append(t.Contents, t.Payload...), IPProtocolTCP)
+	csum, err := t.computeChecksum(append(t.Contents, t.Payload...), IPProtocolTCP)
+	if err != nil {
+		return 0, err
+	}
+	return gopacket.FoldChecksum(csum), nil
 }
 
 func (t *TCP) flagsAndOffset() uint16 {

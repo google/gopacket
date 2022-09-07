@@ -214,7 +214,7 @@ func (i *ICMPv6) SerializeTo(b gopacket.SerializeBuffer, opts gopacket.Serialize
 		if err != nil {
 			return err
 		}
-		i.Checksum = csum
+		i.Checksum = gopacket.FoldChecksum(csum)
 	}
 	binary.BigEndian.PutUint16(bytes[2:], i.Checksum)
 

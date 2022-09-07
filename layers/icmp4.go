@@ -245,7 +245,8 @@ func (i *ICMPv4) SerializeTo(b gopacket.SerializeBuffer, opts gopacket.Serialize
 	if opts.ComputeChecksums {
 		bytes[2] = 0
 		bytes[3] = 0
-		i.Checksum = tcpipChecksum(b.Bytes(), 0)
+		csum := gopacket.ComputeChecksum(b.Bytes(), 0)
+		i.Checksum = gopacket.FoldChecksum(csum)
 	}
 	binary.BigEndian.PutUint16(bytes[2:], i.Checksum)
 	return nil

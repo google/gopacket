@@ -85,17 +85,20 @@ func (u *UDP) SerializeTo(b gopacket.SerializeBuffer, opts gopacket.SerializeOpt
 		// zero out checksum bytes
 		bytes[6] = 0
 		bytes[7] = 0
+
 		csum, err := u.computeChecksum(b.Bytes(), IPProtocolUDP)
 		if err != nil {
 			return err
 		}
+		csumFolded := gopacket.FoldChecksum(csum)
+
 		// RFC768: If the computed checksum is zero, it is transmitted as all ones (the
 		// equivalent in one's complement arithmetic). An all zero transmitted
 		// checksum  value means that the transmitter generated no checksum.
-		if csum == 0 {
-			csum = 0xFFFF
+		if csumFolded == 0 {
+			csumFolded = 0xffff
 		}
-		u.Checksum = csum
+		u.Checksum = csumFolded
 	}
 	binary.BigEndian.PutUint16(bytes[6:], u.Checksum)
 	return nil

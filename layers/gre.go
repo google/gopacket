@@ -176,7 +176,8 @@ func (g *GRE) SerializeTo(b gopacket.SerializeBuffer, opts gopacket.SerializeOpt
 	}
 	if g.ChecksumPresent {
 		if opts.ComputeChecksums {
-			g.Checksum = tcpipChecksum(b.Bytes(), 0)
+			csum := gopacket.ComputeChecksum(b.Bytes(), 0)
+			g.Checksum = gopacket.FoldChecksum(csum)
 		}
 
 		binary.BigEndian.PutUint16(buf[4:6], g.Checksum)
