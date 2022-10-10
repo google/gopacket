@@ -237,7 +237,7 @@ type OSPF struct {
 	Content      interface{}
 }
 
-//OSPFv2 extend the OSPF head with version 2 specific fields
+// OSPFv2 extend the OSPF head with version 2 specific fields
 type OSPFv2 struct {
 	BaseLayer
 	OSPF
@@ -497,6 +497,7 @@ func (ospf *OSPFv2) DecodeFromBytes(data []byte, df gopacket.DecodeFeedback) err
 	ospf.Checksum = binary.BigEndian.Uint16(data[12:14])
 	ospf.AuType = binary.BigEndian.Uint16(data[14:16])
 	ospf.Authentication = binary.BigEndian.Uint64(data[16:24])
+	ospf.BaseLayer = BaseLayer{Contents: data}
 
 	switch ospf.Type {
 	case OSPFHello:
