@@ -15,6 +15,13 @@ import (
 	"github.com/google/gopacket"
 )
 
+func FuzzDecodeFromBytes(f *testing.F) {
+	f.Fuzz(func(t *testing.T, bytes []byte) {
+		dns := DNS{}
+		dns.DecodeFromBytes(bytes, gopacket.NilDecodeFeedback)
+	})
+}
+
 // it have a layer like that:
 //    name: xxx.com
 //    type: CNAME

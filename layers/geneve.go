@@ -9,6 +9,7 @@ package layers
 import (
 	"encoding/binary"
 	"errors"
+	"fmt"
 
 	"github.com/google/gopacket"
 )
@@ -118,4 +119,60 @@ func (gn *Geneve) NextLayerType() gopacket.LayerType {
 func decodeGeneve(data []byte, p gopacket.PacketBuilder) error {
 	gn := &Geneve{}
 	return decodingLayerDecoder(gn, data, p)
+}
+
+// SerializeTo writes the serialized form of this layer into the
+// SerializationBuffer, implementing gopacket.SerializableLayer.
+// See the docs for gopacket.SerializableLayer for more info.
+func (gn *Geneve) SerializeTo(b gopacket.SerializeBuffer, opts gopacket.SerializeOptions) error {
+	plen := int(gn.OptionsLength + 8)
+	bytes, err := b.PrependBytes(plen)
+	if err != nil {
+		return err
+	}
+
+	// PrependBytes does not guarantee that bytes are zeroed.  Setting flags via OR requires that they start off at zero
+	bytes[0] = 0
+	bytes[1] = 0
+
+	// Construct Geneve
+
+	bytes[0] |= gn.Version << 6
+	bytes[0] |= ((gn.OptionsLength >> 2) & 0x3f)
+
+	if gn.OAMPacket {
+		bytes[1] |= 0x80
+	}
+
+	if gn.CriticalOption {
+		bytes[1] |= 0x40
+	}
+
+	binary.BigEndian.PutUint16(bytes[2:4], uint16(gn.Protocol))
+
+	if gn.VNI >= 1<<24 {
+		return fmt.Errorf("Virtual Network Identifier = %x exceeds max for 24-bit uint", gn.VNI)
+	}
+	binary.BigEndian.PutUint32(bytes[4:8], gn.VNI<<8)
+
+	// Construct Options
+
+	offset, _ := uint8(8), int32(gn.OptionsLength)
+	for _, o := range gn.Options {
+		binary.BigEndian.PutUint16(bytes[offset:(offset+2)], uint16(o.Class))
+
+		offset += 2
+		bytes[offset] = o.Type
+
+		offset += 1
+		bytes[offset] |= o.Flags << 5
+		bytes[offset] |= ((o.Length - 4) >> 2) & 0x1f
+
+		offset += 1
+		copy(bytes[offset:(offset+o.Length-4)], o.Data)
+
+		offset += o.Length - 4
+	}
+
+	return nil
 }
