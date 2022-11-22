@@ -364,9 +364,35 @@ func (w *NgWriter) WritePacket(ci gopacket.CaptureInfo, data []byte) error {
 		return fmt.Errorf("invalid capture info %+v:  capture length > length", ci)
 	}
 
+	scratch := make([]ngOption, len(ci.Comments)+len(ci.CustomData))
+	i := 0
+	for _, comment := range ci.Comments {
+		scratch[i].code = ngOptionCodeComment
+		scratch[i].raw = comment
+		i++
+	}
+	for _, customData := range ci.CustomData {
+		if customData.IgnoreOnWrite {
+			continue
+		}
+		if customData.IsString {
+			scratch[i].code = ngOptionCodeCustomBinary
+			scratch[i].raw = customData.Data
+		} else {
+			scratch[i].code = ngOptionCodeCustomString
+			scratch[i].raw = string(customData.Data)
+		}
+		if customData.UnsafeToCopy {
+			scratch[i].code |= ngOptionCodeNotCopySafe
+		}
+		i++
+	}
+	options := scratch[:i]
+
 	length := uint32(len(data)) + 32
 	padding := (4 - length&3) & 3
-	length += padding
+	length += padding +
+		prepareNgOptions(options) // options
 
 	ts := ci.Timestamp.UnixNano()
 
@@ -386,8 +412,18 @@ func (w *NgWriter) WritePacket(ci gopacket.CaptureInfo, data []byte) error {
 		return err
 	}
 
-	binary.LittleEndian.PutUint32(w.buf[:4], 0)
-	_, err := w.w.Write(w.buf[4-padding : 8]) // padding + length
+	// write data padding
+	binary.LittleEndian.PutUint32(w.buf[0:4], 0)
+	if _, err := w.w.Write(make([]byte, padding)); err != nil {
+		return err
+	}
+
+	if err := w.writeOptions(options); err != nil {
+		return err
+	}
+
+	// write length
+	_, err := w.w.Write(w.buf[4:8])
 	return err
 }
 
