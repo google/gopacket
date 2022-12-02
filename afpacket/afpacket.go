@@ -264,6 +264,9 @@ errlbl:
 
 // SetBPF attaches a BPF filter to the underlying socket
 func (h *TPacket) SetBPF(filter []bpf.RawInstruction) error {
+	if len(filter) == 0 {
+		return unix.SetsockoptInt(h.fd, unix.SOL_SOCKET, unix.SO_DETACH_FILTER, 0)
+	}
 	var p unix.SockFprog
 	if len(filter) > int(^uint16(0)) {
 		return errors.New("filter too large")
