@@ -721,7 +721,7 @@ func (p *Handle) SnapLen() int {
 
 // Resolution returns the timestamp resolution of acquired timestamps before scaling to NanosecondTimestampResolution.
 func (p *Handle) Resolution() gopacket.TimestampResolution {
-	if p.nanoSecsFactor == 1 {
+	if p.nanoSecsFactor == 1000 {
 		return gopacket.TimestampResolutionMicrosecond
 	}
 	return gopacket.TimestampResolutionNanosecond
