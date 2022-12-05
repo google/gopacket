@@ -250,6 +250,9 @@ func (p *page) assemblerContext() AssemblerContext {
 }
 func (p *page) convertToPages(pc *pageCache, skip int, ac AssemblerContext) (*page, *page, int) {
 	if skip != 0 {
+		if skip > len(p.bytes) {
+			skip = len(p.bytes) - 1
+		}
 		p.bytes = p.bytes[skip:]
 		p.seq = p.seq.Add(skip)
 	}
