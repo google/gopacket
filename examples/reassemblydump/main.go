@@ -592,7 +592,7 @@ func main() {
 				CaptureInfo: packet.Metadata().CaptureInfo,
 			}
 			stats.totalsz += len(tcp.Payload)
-			assembler.AssembleWithContext(packet.NetworkLayer().NetworkFlow(), tcp, &c)
+			assembler.AssembleWithContext(packet, tcp, &c)
 		}
 		if count%*statsevery == 0 {
 			ref := packet.Metadata().CaptureInfo.Timestamp

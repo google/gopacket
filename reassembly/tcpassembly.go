@@ -376,7 +376,7 @@ type Stream interface {
 	// It should return true if the connection should be removed from the pool
 	// It can return false if it want to see subsequent packets with Accept(), e.g. to
 	// see FIN-ACK, for deeper state-machine analysis.
-	ReassemblyComplete(ac AssemblerContext) bool
+	ReassemblyComplete(ac AssemblerContext, packets []gopacket.Packet) bool
 }
 
 // StreamFactory is used by assembly to create a new stream for each
@@ -448,6 +448,7 @@ type connection struct {
 	key      key // client->server
 	c2s, s2c halfconnection
 	mu       sync.Mutex
+	packets  []gopacket.Packet
 }
 
 func (c *connection) reset(k key, s Stream, ts time.Time) {
@@ -610,12 +611,12 @@ func (asc *assemblerSimpleContext) GetCaptureInfo() gopacket.CaptureInfo {
 	return gopacket.CaptureInfo(*asc)
 }
 
-// Assemble calls AssembleWithContext with the current timestamp, useful for
-// packets being read directly off the wire.
-func (a *Assembler) Assemble(netFlow gopacket.Flow, t *layers.TCP) {
-	ctx := assemblerSimpleContext(gopacket.CaptureInfo{Timestamp: time.Now()})
-	a.AssembleWithContext(netFlow, t, &ctx)
-}
+// // Assemble calls AssembleWithContext with the current timestamp, useful for
+// // packets being read directly off the wire.
+// func (a *Assembler) Assemble(netFlow gopacket.Flow, t *layers.TCP) {
+// 	ctx := assemblerSimpleContext(gopacket.CaptureInfo{Timestamp: time.Now()})
+// 	a.AssembleWithContext(netFlow, t, &ctx)
+// }
 
 type assemblerAction struct {
 	nextSeq Sequence
@@ -635,10 +636,11 @@ type assemblerAction struct {
 //    zero or one call to StreamFactory.New, creating a stream
 //    zero or one call to ReassembledSG on a single stream
 //    zero or one call to ReassemblyComplete on the same stream
-func (a *Assembler) AssembleWithContext(netFlow gopacket.Flow, t *layers.TCP, ac AssemblerContext) {
+func (a *Assembler) AssembleWithContext(packet gopacket.Packet, t *layers.TCP, ac AssemblerContext) {
 	var conn *connection
 	var half *halfconnection
 	var rev *halfconnection
+	netFlow := packet.NetworkLayer().NetworkFlow()
 
 	a.ret = a.ret[:0]
 	key := key{netFlow, t.TransportFlow()}
@@ -652,6 +654,7 @@ func (a *Assembler) AssembleWithContext(netFlow gopacket.Flow, t *layers.TCP, ac
 		}
 		return
 	}
+	conn.packets = append(conn.packets, packet)
 	conn.mu.Lock()
 	defer conn.mu.Unlock()
 	if half.lastSeen.Before(timestamp) {
@@ -1206,7 +1209,7 @@ func (a *Assembler) closeHalfConnection(conn *connection, half *halfconnection) 
 		half.pages--
 	}
 	if conn.s2c.closed && conn.c2s.closed {
-		if half.stream.ReassemblyComplete(nil) { //FIXME: which context to pass ?
+		if half.stream.ReassemblyComplete(nil, conn.packets) { //FIXME: which context to pass ?
 			a.connPool.remove(conn)
 		}
 	}
