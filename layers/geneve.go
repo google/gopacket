@@ -165,7 +165,7 @@ func (gn *Geneve) SerializeTo(b gopacket.SerializeBuffer, opts gopacket.Serializ
 		bytes[offset] = o.Type
 
 		offset += 1
-		bytes[offset] |= o.Flags << 5
+		bytes[offset] = o.Flags << 5
 		bytes[offset] |= ((o.Length - 4) >> 2) & 0x1f
 
 		offset += 1
