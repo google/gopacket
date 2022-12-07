@@ -11,7 +11,7 @@ import (
 	"encoding/binary"
 	"errors"
 
-	"github.com/google/gopacket"
+	"github.com/kubeshark/gopacket"
 )
 
 // BFD Control Packet Format

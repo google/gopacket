@@ -47,7 +47,7 @@ package tcpreader
 
 import (
 	"errors"
-	"github.com/google/gopacket/tcpassembly"
+	"github.com/kubeshark/gopacket/tcpassembly"
 	"io"
 )
 

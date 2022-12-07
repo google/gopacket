@@ -10,7 +10,7 @@ import (
 	"reflect"
 	"testing"
 
-	"github.com/google/gopacket"
+	"github.com/kubeshark/gopacket"
 )
 
 // test harness to ensure the dot1q layer can be encoded/decoded properly
