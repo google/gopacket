@@ -36,3 +36,6 @@ examples/reassemblydump/reassemblydump
 layers/gen
 macs/gen
 pcap/pcap_tester
+
+# Editors/IDEs
+.vscode/
