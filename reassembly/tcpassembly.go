@@ -376,7 +376,14 @@ type Stream interface {
 	// It should return true if the connection should be removed from the pool
 	// It can return false if it want to see subsequent packets with Accept(), e.g. to
 	// see FIN-ACK, for deeper state-machine analysis.
-	ReassemblyComplete(ac AssemblerContext, packets []gopacket.Packet) bool
+	ReassemblyComplete(ac AssemblerContext) bool
+
+	// ReceivePacket is called by AssembleWithContext when the belonging of the packet
+	// to which TCP stream is determined and after the Accept call returns true.
+	// Its purpose is to recollect the packets into their corresponding TCP reassembly streams.
+	// The caller can simply define an empty implementation or append to a []gopacket.Packet
+	// pipe the packet into a some other procedure.
+	ReceivePacket(packet gopacket.Packet)
 }
 
 // StreamFactory is used by assembly to create a new stream for each
@@ -448,7 +455,6 @@ type connection struct {
 	key      key // client->server
 	c2s, s2c halfconnection
 	mu       sync.Mutex
-	packets  []gopacket.Packet
 }
 
 func (c *connection) reset(k key, s Stream, ts time.Time) {
@@ -654,9 +660,9 @@ func (a *Assembler) AssembleWithContext(packet gopacket.Packet, t *layers.TCP, a
 		}
 		return
 	}
-	conn.packets = append(conn.packets, packet)
 	conn.mu.Lock()
 	defer conn.mu.Unlock()
+
 	if half.lastSeen.Before(timestamp) {
 		half.lastSeen = timestamp
 	}
@@ -680,6 +686,8 @@ func (a *Assembler) AssembleWithContext(packet gopacket.Packet, t *layers.TCP, a
 		}
 		return
 	}
+
+	half.stream.ReceivePacket(packet)
 
 	seq, ack, bytes := Sequence(t.Seq), Sequence(t.Ack), t.Payload
 	if t.ACK {
@@ -1209,7 +1217,7 @@ func (a *Assembler) closeHalfConnection(conn *connection, half *halfconnection) 
 		half.pages--
 	}
 	if conn.s2c.closed && conn.c2s.closed {
-		if half.stream.ReassemblyComplete(nil, conn.packets) { //FIXME: which context to pass ?
+		if half.stream.ReassemblyComplete(nil) { //FIXME: which context to pass ?
 			a.connPool.remove(conn)
 		}
 	}
