@@ -162,10 +162,10 @@ func NewBPFSniffer(iface string, options *Options) (*BPFSniffer, error) {
 
 	// SeeSent defaults to true, so we change it if false
 	if !sniffer.options.SeeSent {
-		enable := 0
-		_, _, err = syscall.Syscall(syscall.SYS_IOCTL, uintptr(sniffer.fd), uintptr(syscall.BIOCSSEESENT), uintptr(unsafe.Pointer(&enable)))
-		if err != nil {
-			return nil, err
+		var enable int = 0
+		_, _, errno := syscall.Syscall(syscall.SYS_IOCTL, uintptr(sniffer.fd), uintptr(syscall.BIOCSSEESENT), uintptr(unsafe.Pointer(&enable)))
+		if errno != 0 {
+			return nil, errno
 		}
 	}
 
