@@ -237,7 +237,7 @@ type OSPF struct {
 	Content      interface{}
 }
 
-//OSPFv2 extend the OSPF head with version 2 specific fields
+// OSPFv2 extend the OSPF head with version 2 specific fields
 type OSPFv2 struct {
 	BaseLayer
 	OSPF
@@ -442,8 +442,11 @@ func extractLSAInformation(lstype, lsalength uint16, data []byte) (interface{}, 
 			RefAdvRouter:   binary.BigEndian.Uint32(data[28:32]),
 			Prefixes:       prefixes,
 		}
+	case SummaryLSANetworktypeV2:
+		fallthrough
 	default:
-		return nil, fmt.Errorf("Unknown Link State type.")
+		return nil, nil
+		// return nil, fmt.Errorf("Unknown Link State type.")
 	}
 	return content, nil
 }
@@ -494,6 +497,7 @@ func (ospf *OSPFv2) DecodeFromBytes(data []byte, df gopacket.DecodeFeedback) err
 	ospf.Checksum = binary.BigEndian.Uint16(data[12:14])
 	ospf.AuType = binary.BigEndian.Uint16(data[14:16])
 	ospf.Authentication = binary.BigEndian.Uint64(data[16:24])
+	ospf.BaseLayer = BaseLayer{Contents: data}
 
 	switch ospf.Type {
 	case OSPFHello:
