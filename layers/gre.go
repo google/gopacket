@@ -176,7 +176,8 @@ func (g *GRE) SerializeTo(b gopacket.SerializeBuffer, opts gopacket.SerializeOpt
 	}
 	if g.ChecksumPresent {
 		if opts.ComputeChecksums {
-			g.Checksum = tcpipChecksum(b.Bytes(), 0)
+			csum := gopacket.ComputeChecksum(b.Bytes(), 0)
+			g.Checksum = gopacket.FoldChecksum(csum)
 		}
 
 		binary.BigEndian.PutUint16(buf[4:6], g.Checksum)
@@ -192,6 +193,19 @@ func (g *GRE) CanDecode() gopacket.LayerClass {
 // NextLayerType returns the layer type contained by this DecodingLayer.
 func (g *GRE) NextLayerType() gopacket.LayerType {
 	return g.Protocol.LayerType()
+}
+
+func (g *GRE) VerifyChecksum() (error, gopacket.ChecksumVerificationResult) {
+	bytes := append(g.Contents, g.Payload...)
+
+	existing := g.Checksum
+	verification := gopacket.ComputeChecksum(bytes, 0)
+	correct := gopacket.FoldChecksum(verification - uint32(existing))
+	return nil, gopacket.ChecksumVerificationResult{
+		Valid:   !g.ChecksumPresent || correct == existing,
+		Correct: uint32(correct),
+		Actual:  uint32(existing),
+	}
 }
 
 func decodeGRE(data []byte, p gopacket.PacketBuilder) error {

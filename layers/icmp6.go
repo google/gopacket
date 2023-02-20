@@ -214,7 +214,7 @@ func (i *ICMPv6) SerializeTo(b gopacket.SerializeBuffer, opts gopacket.Serialize
 		if err != nil {
 			return err
 		}
-		i.Checksum = csum
+		i.Checksum = gopacket.FoldChecksum(csum)
 	}
 	binary.BigEndian.PutUint16(bytes[2:], i.Checksum)
 
@@ -258,6 +258,22 @@ func (i *ICMPv6) NextLayerType() gopacket.LayerType {
 	}
 
 	return gopacket.LayerTypePayload
+}
+
+func (i *ICMPv6) VerifyChecksum() (error, gopacket.ChecksumVerificationResult) {
+	bytes := append(i.Contents, i.Payload...)
+
+	existing := i.Checksum
+	verification, err := i.computeChecksum(bytes, IPProtocolICMPv6)
+	if err != nil {
+		return err, gopacket.ChecksumVerificationResult{}
+	}
+	correct := gopacket.FoldChecksum(verification - uint32(existing))
+	return nil, gopacket.ChecksumVerificationResult{
+		Valid:   correct == existing,
+		Correct: uint32(correct),
+		Actual:  uint32(existing),
+	}
 }
 
 func decodeICMPv6(data []byte, p gopacket.PacketBuilder) error {

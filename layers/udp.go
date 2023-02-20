@@ -85,11 +85,20 @@ func (u *UDP) SerializeTo(b gopacket.SerializeBuffer, opts gopacket.SerializeOpt
 		// zero out checksum bytes
 		bytes[6] = 0
 		bytes[7] = 0
+
 		csum, err := u.computeChecksum(b.Bytes(), IPProtocolUDP)
 		if err != nil {
 			return err
 		}
-		u.Checksum = csum
+		csumFolded := gopacket.FoldChecksum(csum)
+
+		// RFC768: If the computed checksum is zero, it is transmitted as all ones (the
+		// equivalent in one's complement arithmetic). An all zero transmitted
+		// checksum  value means that the transmitter generated no checksum.
+		if csumFolded == 0 {
+			csumFolded = 0xffff
+		}
+		u.Checksum = csumFolded
 	}
 	binary.BigEndian.PutUint16(bytes[6:], u.Checksum)
 	return nil
@@ -130,4 +139,20 @@ func (u *UDP) SetInternalPortsForTesting() {
 	u.dPort = make([]byte, 2)
 	binary.BigEndian.PutUint16(u.sPort, uint16(u.SrcPort))
 	binary.BigEndian.PutUint16(u.dPort, uint16(u.DstPort))
+}
+
+func (u *UDP) VerifyChecksum() (error, gopacket.ChecksumVerificationResult) {
+	bytes := append(u.Contents, u.Payload...)
+
+	existing := u.Checksum
+	verification, err := u.computeChecksum(bytes, IPProtocolUDP)
+	if err != nil {
+		return err, gopacket.ChecksumVerificationResult{}
+	}
+	correct := gopacket.FoldChecksum(verification - uint32(existing))
+	return nil, gopacket.ChecksumVerificationResult{
+		Valid:   existing == 0 || correct == existing,
+		Correct: uint32(correct),
+		Actual:  uint32(existing),
+	}
 }

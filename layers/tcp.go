@@ -184,14 +184,18 @@ func (t *TCP) SerializeTo(b gopacket.SerializeBuffer, opts gopacket.SerializeOpt
 		if err != nil {
 			return err
 		}
-		t.Checksum = csum
+		t.Checksum = gopacket.FoldChecksum(csum)
 	}
 	binary.BigEndian.PutUint16(bytes[16:], t.Checksum)
 	return nil
 }
 
 func (t *TCP) ComputeChecksum() (uint16, error) {
-	return t.computeChecksum(append(t.Contents, t.Payload...), IPProtocolTCP)
+	csum, err := t.computeChecksum(append(t.Contents, t.Payload...), IPProtocolTCP)
+	if err != nil {
+		return 0, err
+	}
+	return gopacket.FoldChecksum(csum), nil
 }
 
 func (t *TCP) flagsAndOffset() uint16 {
@@ -338,4 +342,20 @@ func (t *TCP) SetInternalPortsForTesting() {
 	t.dPort = make([]byte, 2)
 	binary.BigEndian.PutUint16(t.sPort, uint16(t.SrcPort))
 	binary.BigEndian.PutUint16(t.dPort, uint16(t.DstPort))
+}
+
+func (t *TCP) VerifyChecksum() (error, gopacket.ChecksumVerificationResult) {
+	bytes := append(t.Contents, t.Payload...)
+
+	existing := t.Checksum
+	verification, err := t.computeChecksum(bytes, IPProtocolTCP)
+	if err != nil {
+		return err, gopacket.ChecksumVerificationResult{}
+	}
+	correct := gopacket.FoldChecksum(verification - uint32(existing))
+	return nil, gopacket.ChecksumVerificationResult{
+		Valid:   correct == existing,
+		Correct: uint32(correct),
+		Actual:  uint32(existing),
+	}
 }
