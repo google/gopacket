@@ -149,6 +149,7 @@ var (
 	LayerTypeERSPANII                     = gopacket.RegisterLayerType(145, gopacket.LayerTypeMetadata{Name: "ERSPAN Type II", Decoder: gopacket.DecodeFunc(decodeERSPANII)})
 	LayerTypeRADIUS                       = gopacket.RegisterLayerType(146, gopacket.LayerTypeMetadata{Name: "RADIUS", Decoder: gopacket.DecodeFunc(decodeRADIUS)})
 	LayerTypeIPFIX                        = gopacket.RegisterLayerType(147, gopacket.LayerTypeMetadata{Name: "IPFIX", Decoder: gopacket.DecodeFunc(decodeIPFIX)})
+	LayerTypeIFA                          = gopacket.RegisterLayerType(148, gopacket.LayerTypeMetadata{Name: "IFA", Decoder: gopacket.DecodeFunc(decodeIFA)})
 )
 
 var (
