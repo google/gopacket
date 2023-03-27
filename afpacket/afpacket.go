@@ -4,6 +4,7 @@
 // that can be found in the LICENSE file in the root of the source
 // tree.
 
+//go:build linux
 // +build linux
 
 // Package afpacket provides Go bindings for MMap'd AF_PACKET socket reading.
@@ -124,8 +125,6 @@ type TPacket struct {
 	// getTPacketHeader, and we don't want to allocate a v3wrapper every time,
 	// so we leave it in the TPacket object and return a pointer to it.
 	v3 v3wrapper
-
-	statsMu sync.Mutex // guards stats below
 	// socketStats contains stats from the socket
 	socketStats SocketStats
 	// same as socketStats, but with an extra field freeze_q_cnt
@@ -214,6 +213,9 @@ func (h *TPacket) setUpRing() (err error) {
 
 // Close cleans up the TPacket.  It should not be used after the Close call.
 func (h *TPacket) Close() {
+	h.mu.Lock()
+	defer h.mu.Unlock()
+
 	if h.fd == -1 {
 		return // already closed.
 	}
@@ -263,6 +265,9 @@ errlbl:
 
 // SetBPF attaches a BPF filter to the underlying socket
 func (h *TPacket) SetBPF(filter []bpf.RawInstruction) error {
+	h.mu.Lock()
+	defer h.mu.Unlock()
+
 	var p unix.SockFprog
 	if len(filter) > int(^uint16(0)) {
 		return errors.New("filter too large")
@@ -287,10 +292,11 @@ func (h *TPacket) releaseCurrentPacket() error {
 // to old bytes when using ZeroCopyReadPacketData... if you need to keep data past
 // the next time you call ZeroCopyReadPacketData, use ReadPacketData, which copies
 // the bytes into a new buffer for you.
-//  tp, _ := NewTPacket(...)
-//  data1, _, _ := tp.ZeroCopyReadPacketData()
-//  // do everything you want with data1 here, copying bytes out of it if you'd like to keep them around.
-//  data2, _, _ := tp.ZeroCopyReadPacketData()  // invalidates bytes in data1
+//
+//	tp, _ := NewTPacket(...)
+//	data1, _, _ := tp.ZeroCopyReadPacketData()
+//	// do everything you want with data1 here, copying bytes out of it if you'd like to keep them around.
+//	data2, _, _ := tp.ZeroCopyReadPacketData()  // invalidates bytes in data1
 func (h *TPacket) ZeroCopyReadPacketData() (data []byte, ci gopacket.CaptureInfo, err error) {
 	h.mu.Lock()
 retry:
@@ -335,6 +341,9 @@ func (h *TPacket) Stats() (Stats, error) {
 
 // InitSocketStats clears socket counters and return empty stats.
 func (h *TPacket) InitSocketStats() error {
+	h.mu.Lock()
+	defer h.mu.Unlock()
+
 	if h.tpVersion == TPacketVersion3 {
 		socklen := unsafe.Sizeof(h.socketStatsV3)
 		slt := C.socklen_t(socklen)
@@ -361,8 +370,8 @@ func (h *TPacket) InitSocketStats() error {
 
 // SocketStats saves stats from the socket to the TPacket instance.
 func (h *TPacket) SocketStats() (SocketStats, SocketStatsV3, error) {
-	h.statsMu.Lock()
-	defer h.statsMu.Unlock()
+	h.mu.Lock()
+	defer h.mu.Unlock()
 	// We need to save the counters since asking for the stats will clear them
 	if h.tpVersion == TPacketVersion3 {
 		socklen := unsafe.Sizeof(h.socketStatsV3)
@@ -512,6 +521,8 @@ func (h *TPacket) SetFanout(t FanoutType, id uint16) error {
 
 // WritePacketData transmits a raw packet.
 func (h *TPacket) WritePacketData(pkt []byte) error {
+	h.mu.Lock()
+	defer h.mu.Unlock()
 	_, err := unix.Write(h.fd, pkt)
 	return err
 }
