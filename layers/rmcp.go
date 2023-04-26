@@ -79,7 +79,7 @@ type RMCP struct {
 	// v1.0; lower values are legacy, higher values are reserved.
 	Version uint8
 
-	// Sequence is the sequence number assicated with the message. Note that
+	// Sequence is the sequence number associated with the message. Note that
 	// this rolls over to 0 after 254, not 255. Seq num 255 indicates the
 	// receiver must not send an ACK.
 	Sequence uint8
