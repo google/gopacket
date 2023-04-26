@@ -129,8 +129,8 @@ func testDHCPEqual(t *testing.T, d1, d2 *DHCPv4) {
 	if d1.HardwareLen != d2.HardwareLen {
 		t.Errorf("expected HardwareLen=%v, got %v", d1.HardwareLen, d2.HardwareLen)
 	}
-	if d1.HardwareOpts != d2.HardwareOpts {
-		t.Errorf("expected HardwareOpts=%v, got %v", d1.HardwareOpts, d2.HardwareOpts)
+	if d1.RelayHops != d2.RelayHops {
+		t.Errorf("expected RelayHops=%v, got %v", d1.RelayHops, d2.RelayHops)
 	}
 	if d1.Xid != d2.Xid {
 		t.Errorf("expected Xid=%v, got %v", d1.Xid, d2.Xid)
