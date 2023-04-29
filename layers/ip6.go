@@ -206,7 +206,13 @@ func (ipv6 *IPv6) SerializeTo(b gopacket.SerializeBuffer, opts gopacket.Serializ
 			ipv6.Length = uint16(pLen)
 		}
 	}
-	binary.BigEndian.PutUint16(bytes[4:], ipv6.Length)
+
+	if opts.IPLengthHostByteOrder {
+		endian.PutUint16(bytes[4:], ipv6.Length)
+	} else {
+		binary.BigEndian.PutUint16(bytes[4:], ipv6.Length)
+	}
+
 	bytes[6] = byte(ipv6.NextHeader)
 	bytes[7] = byte(ipv6.HopLimit)
 	if err := ipv6.AddressTo16(); err != nil {
