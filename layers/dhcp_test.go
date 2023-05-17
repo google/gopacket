@@ -11,7 +11,7 @@ import (
 	"net"
 	"testing"
 
-	"github.com/google/gopacket"
+	"github.com/niklaskb/gopacket"
 )
 
 func TestDHCPv4EncodeRequest(t *testing.T) {
