@@ -431,6 +431,8 @@ func (radius *RADIUS) DecodeFromBytes(data []byte, df gopacket.DecodeFeedback) e
 		return nil
 	}
 
+	radius.Attributes = radius.Attributes[:0]
+
 	pos := radiusMinimumRecordSizeInBytes
 	for {
 		if len(data) == pos {
