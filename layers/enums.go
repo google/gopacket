@@ -85,7 +85,7 @@ const (
 
 // LinkType is an enumeration of link types, and acts as a decoder for any
 // link type it supports.
-type LinkType uint8
+type LinkType uint32
 
 const (
 	// According to pcap-linktype(7) and http://www.tcpdump.org/linktypes.html
