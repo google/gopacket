@@ -161,7 +161,7 @@ func NewBPFSniffer(iface string, options *Options) (*BPFSniffer, error) {
 
 	if !sniffer.options.SeeSent {
 		// See sent is set by default, need to turn it off
-		err = unix.IoctlSetInt(sniffer.fd, syscall.BIOCSSEESENT, 0)
+		err = unix.IoctlSetPointerInt(sniffer.fd, syscall.BIOCSSEESENT, 0)
 		if err != nil {
 			goto err
 		}
