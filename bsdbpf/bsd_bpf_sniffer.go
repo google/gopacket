@@ -189,7 +189,7 @@ func (b *BPFSniffer) pickBpfDevice() {
 		b.options.BPFDeviceName = ""
 		for i := 0; i < 99; i++ {
 			name := fmt.Sprintf("/dev/bpf%d", i)
-			b.fd, err = syscall.Open(b.options.BPFDeviceName, syscall.O_RDWR, 0)
+			b.fd, err = syscall.Open(name, syscall.O_RDWR, 0)
 			if err == nil {
 				b.options.BPFDeviceName = name
 				return
