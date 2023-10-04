@@ -234,6 +234,11 @@ loop:
 		}
 		for _, addr := range ifaceAddrs {
 			if inet, ok := addr.(*net.IPNet); ok {
+				// filter out any non routable addresses
+				if inet.IP.IsLoopback() || inet.IP.IsMulticast() || inet.IP.IsInterfaceLocalMulticast() || inet.IP.IsLinkLocalMulticast() || inet.IP.IsUnspecified() || inet.IP.IsLinkLocalUnicast() {
+					continue
+				}
+
 				// Go has a nasty habit of giving you IPv4s as ::ffff:1.2.3.4 instead of 1.2.3.4.
 				// We want to use mapped v4 addresses as v4 preferred addresses, never as v6
 				// preferred addresses.
