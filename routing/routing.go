@@ -135,8 +135,11 @@ func (r *router) route(routes routeSlice, input net.HardwareAddr, src, dst net.I
 		if rt.InputIface != 0 && rt.InputIface != inputIndex {
 			continue
 		}
-		if defaultGateway == nil && rt.Src == nil && rt.Dst == nil {
-			defaultGateway = rt
+		// use the default gateway with lowest metric
+		if rt.Src == nil && rt.Dst == nil {
+			if defaultGateway == nil && rt.Gateway != nil {
+				defaultGateway = rt
+			}
 			continue
 		}
 		if rt.Src != nil && !rt.Src.Contains(src) {
@@ -195,19 +198,31 @@ loop:
 			for _, attr := range attrs {
 				switch attr.Attr.Type {
 				case syscall.RTA_DST:
-					routeInfo.Dst = &net.IPNet{
+					inet := net.IPNet{
 						IP:   net.IP(attr.Value),
 						Mask: net.CIDRMask(int(rt.DstLen), len(attr.Value)*8),
 					}
-				case syscall.RTA_SRC:
-					routeInfo.Src = &net.IPNet{
-						IP:   net.IP(attr.Value),
-						Mask: net.CIDRMask(int(rt.SrcLen), len(attr.Value)*8),
+					if inet.IP.IsMulticast() || inet.IP.IsInterfaceLocalMulticast() || inet.IP.IsLinkLocalMulticast() || inet.IP.IsUnspecified() || inet.IP.IsLinkLocalUnicast() {
+						continue
 					}
+					routeInfo.Dst = &inet
+				case syscall.RTA_SRC:
+					inet := net.IPNet{
+						IP:   net.IP(attr.Value),
+						Mask: net.CIDRMask(int(rt.DstLen), len(attr.Value)*8),
+					}
+					if inet.IP.IsMulticast() || inet.IP.IsInterfaceLocalMulticast() || inet.IP.IsLinkLocalMulticast() || inet.IP.IsUnspecified() || inet.IP.IsLinkLocalUnicast() {
+						continue
+					}
+					routeInfo.Src = &inet
 				case syscall.RTA_GATEWAY:
 					routeInfo.Gateway = net.IP(attr.Value)
 				case syscall.RTA_PREFSRC:
-					routeInfo.PrefSrc = net.IP(attr.Value)
+					ip := net.IP(attr.Value)
+					if ip.IsLoopback() || ip.IsMulticast() || ip.IsInterfaceLocalMulticast() || ip.IsLinkLocalMulticast() || ip.IsUnspecified() || ip.IsLinkLocalUnicast() {
+						continue
+					}
+					routeInfo.PrefSrc = ip
 				case syscall.RTA_IIF:
 					routeInfo.InputIface = *(*uint32)(unsafe.Pointer(&attr.Value[0]))
 				case syscall.RTA_OIF:
@@ -232,13 +247,12 @@ loop:
 		if err != nil {
 			return nil, err
 		}
-		for _, addr := range ifaceAddrs {
+		for i, addr := range ifaceAddrs {
 			if inet, ok := addr.(*net.IPNet); ok {
 				// filter out any non routable addresses
-				if inet.IP.IsLoopback() || inet.IP.IsMulticast() || inet.IP.IsInterfaceLocalMulticast() || inet.IP.IsLinkLocalMulticast() || inet.IP.IsUnspecified() || inet.IP.IsLinkLocalUnicast() {
+				if i < len(ifaceAddrs)-1 && (inet.IP.IsMulticast() || inet.IP.IsInterfaceLocalMulticast() || inet.IP.IsLinkLocalMulticast() || inet.IP.IsUnspecified() || inet.IP.IsLinkLocalUnicast()) {
 					continue
 				}
-
 				// Go has a nasty habit of giving you IPv4s as ::ffff:1.2.3.4 instead of 1.2.3.4.
 				// We want to use mapped v4 addresses as v4 preferred addresses, never as v6
 				// preferred addresses.
