@@ -4,6 +4,7 @@
 // that can be found in the LICENSE file in the root of the source
 // tree.
 
+//go:build linux
 // +build linux
 
 // Package routing provides a very basic but mostly functional implementation of
@@ -134,7 +135,7 @@ func (r *router) route(routes routeSlice, input net.HardwareAddr, src, dst net.I
 		if rt.InputIface != 0 && rt.InputIface != inputIndex {
 			continue
 		}
-		if rt.Src == nil && rt.Dst == nil {
+		if defaultGateway == nil && rt.Src == nil && rt.Dst == nil {
 			defaultGateway = rt
 			continue
 		}
