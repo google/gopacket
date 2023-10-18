@@ -12,7 +12,7 @@ import (
 	"fmt"
 	"net"
 
-	"github.com/google/gopacket"
+	"github.com/xiaofsec/gopacket"
 )
 
 // DHCPOp rerprents a bootp operation

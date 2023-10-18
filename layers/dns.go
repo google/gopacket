@@ -13,7 +13,7 @@ import (
 	"net"
 	"strings"
 
-	"github.com/google/gopacket"
+	"github.com/xiaofsec/gopacket"
 )
 
 // DNSClass defines the class associated with a request/response.  Different DNS

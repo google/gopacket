@@ -36,8 +36,8 @@ runs a local set of checks, which should give you relatively high confidence
 that your pull won't fail github pull checks.
 
 ```sh
-go get github.com/google/gopacket
-cd $GOROOT/src/pkg/github.com/google/gopacket
+go get github.com/xiaofsec/gopacket
+cd $GOROOT/src/pkg/github.com/xiaofsec/gopacket
 git checkout -b <mynewfeature>  # create a new branch to work from
 ... code code code ...
 ./gc  # Run this to do local commits, it performs a number of checks

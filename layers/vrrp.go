@@ -11,7 +11,7 @@ import (
 	"errors"
 	"net"
 
-	"github.com/google/gopacket"
+	"github.com/xiaofsec/gopacket"
 )
 
 /*

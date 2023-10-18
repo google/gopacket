@@ -11,9 +11,9 @@ import (
 	"log"
 	"os"
 
-	"github.com/google/gopacket"
-	"github.com/google/gopacket/layers"
-	"github.com/google/gopacket/pcapgo"
+	"github.com/xiaofsec/gopacket"
+	"github.com/xiaofsec/gopacket/layers"
+	"github.com/xiaofsec/gopacket/pcapgo"
 )
 
 func Example_captureEthernet() {

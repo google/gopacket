@@ -6,7 +6,7 @@
 package layers
 
 import (
-	"github.com/google/gopacket"
+	"github.com/xiaofsec/gopacket"
 	"testing"
 )
 

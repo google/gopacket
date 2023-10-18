@@ -9,7 +9,7 @@
 // The reassembly package implements uni-directional TCP reassembly, for use in
 // packet-sniffing applications.  The caller reads packets off the wire, then
 // presents them to an Assembler in the form of gopacket layers.TCP packets
-// (github.com/google/gopacket, github.com/google/gopacket/layers).
+// (github.com/xiaofsec/gopacket, github.com/xiaofsec/gopacket/layers).
 //
 // The Assembler uses a user-supplied
 // StreamFactory to create a user-defined Stream interface, then passes packet
@@ -28,8 +28,8 @@ import (
 	"sync"
 	"time"
 
-	"github.com/google/gopacket"
-	"github.com/google/gopacket/layers"
+	"github.com/xiaofsec/gopacket"
+	"github.com/xiaofsec/gopacket/layers"
 )
 
 // TODO:
@@ -39,7 +39,7 @@ import (
 
 var defaultDebug = false
 
-var debugLog = flag.Bool("assembly_debug_log", defaultDebug, "If true, the github.com/google/gopacket/reassembly library will log verbose debugging information (at least one line per packet)")
+var debugLog = flag.Bool("assembly_debug_log", defaultDebug, "If true, the github.com/xiaofsec/gopacket/reassembly library will log verbose debugging information (at least one line per packet)")
 
 const invalidSequence = -1
 const uint32Max = 0xFFFFFFFF

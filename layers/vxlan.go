@@ -11,7 +11,7 @@ import (
 	"errors"
 	"fmt"
 
-	"github.com/google/gopacket"
+	"github.com/xiaofsec/gopacket"
 )
 
 //  VXLAN is specifed in RFC 7348 https://tools.ietf.org/html/rfc7348

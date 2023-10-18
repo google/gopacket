@@ -29,7 +29,7 @@ package layers
 import (
   "fmt"
 
-  "github.com/google/gopacket"
+  "github.com/xiaofsec/gopacket"
 )
 
 `

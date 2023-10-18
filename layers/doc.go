@@ -29,7 +29,7 @@ ApplicationLayer, while base SCTP implements TransportLayer), or possibly
 because splitting a protocol into a few layers makes decoding easier.
 
 This package is meant to be used with its parent,
-http://github.com/google/gopacket.
+http://github.com/xiaofsec/gopacket.
 
 Port Types
 

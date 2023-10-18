@@ -29,12 +29,12 @@ import (
 	"sync"
 	"time"
 
-	"github.com/google/gopacket"
-	"github.com/google/gopacket/examples/util"
-	"github.com/google/gopacket/ip4defrag"
-	"github.com/google/gopacket/layers" // pulls in all layers decoders
-	"github.com/google/gopacket/pcap"
-	"github.com/google/gopacket/reassembly"
+	"github.com/xiaofsec/gopacket"
+	"github.com/xiaofsec/gopacket/examples/util"
+	"github.com/xiaofsec/gopacket/ip4defrag"
+	"github.com/xiaofsec/gopacket/layers" // pulls in all layers decoders
+	"github.com/xiaofsec/gopacket/pcap"
+	"github.com/xiaofsec/gopacket/reassembly"
 )
 
 var maxcount = flag.Int("c", -1, "Only grab this many packets, then exit")
