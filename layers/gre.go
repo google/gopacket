@@ -8,6 +8,7 @@ package layers
 
 import (
 	"encoding/binary"
+	"github.com/NozomiNetworks/gopacket-fork-nozomi"
 )
 
 // GRE is a Generic Routing Encapsulation header.
