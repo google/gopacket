@@ -17,6 +17,7 @@ import (
 	"reflect"
 	"runtime/debug"
 	"strings"
+	"sync"
 	"syscall"
 	"time"
 )
@@ -809,25 +810,34 @@ func (p *PacketSource) NextPacket() (Packet, error) {
 	return packet, nil
 }
 
+var opening = 0
+
 // packetsToChannel reads in all packets from the packet source and sends them
 // to the given channel. This routine terminates when a non-temporary error
 // is returned by NextPacket().
-func (p *PacketSource) packetsToChannel() {
+func (p *PacketSource) packetsToChannel(wg *sync.WaitGroup) {
+	defer wg.Done()
 	defer close(p.c)
+	fmt.Println("OPENING:", opening)
+	contextOpening := opening
+	opening++
 	for {
 		packet, err := p.NextPacket()
 		if err == nil {
+			//fmt.Println("- 1 context:", contextOpening)
 			p.c <- packet
 			continue
 		}
 
 		// Immediately retry for temporary network errors
 		if nerr, ok := err.(net.Error); ok && nerr.Temporary() {
+			fmt.Println("- 2 context:", contextOpening)
 			continue
 		}
 
 		// Immediately retry for EAGAIN
 		if err == syscall.EAGAIN {
+			fmt.Println("- 3 context:", contextOpening)
 			continue
 		}
 
@@ -836,12 +846,14 @@ func (p *PacketSource) packetsToChannel() {
 			err == io.ErrNoProgress || err == io.ErrClosedPipe || err == io.ErrShortBuffer ||
 			err == syscall.EBADF ||
 			strings.Contains(err.Error(), "use of closed file") {
+			fmt.Println("- 4 context:", contextOpening)
 			break
 		}
 
 		// Sleep briefly and try again
 		time.Sleep(time.Millisecond * time.Duration(5))
 	}
+	fmt.Println("CLOSING context:", contextOpening)
 }
 
 // Packets returns a channel of packets, allowing easy iterating over
@@ -855,10 +867,11 @@ func (p *PacketSource) packetsToChannel() {
 //  }
 //
 // If called more than once, returns the same channel.
-func (p *PacketSource) Packets() chan Packet {
+func (p *PacketSource) Packets(wg *sync.WaitGroup) chan Packet {
 	if p.c == nil {
 		p.c = make(chan Packet, 1000)
-		go p.packetsToChannel()
+		wg.Add(1)
+		go p.packetsToChannel(wg)
 	}
 	return p.c
 }
