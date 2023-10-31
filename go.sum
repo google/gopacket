@@ -1,5 +1,3 @@
-github.com/NozomiNetworks/gopacket-fork-nozomi v0.0.0-20231031214432-534e6297db73 h1:5JLwHBC6Z450OCLVmllFOpgor3+vtlp+0GRSfj9EGN8=
-github.com/NozomiNetworks/gopacket-fork-nozomi v0.0.0-20231031214432-534e6297db73/go.mod h1:g3qWzRsCuwFfsfW9G5L3Ij/4SdVOw0k5ePODByrUisY=
 github.com/vishvananda/netlink v1.1.0 h1:1iyaYNBLmP6L0220aDnYQpo1QEV4t4hJ+xEEhhJH8j0=
 github.com/vishvananda/netlink v1.1.0/go.mod h1:cTgwzPIzzgDAYoQrMm0EdrjRUBkTqKYppBueQtXaqoE=
 github.com/vishvananda/netns v0.0.0-20191106174202-0a2b9b5464df/go.mod h1:JP3t17pCcGlemwknint6hfoeCVQrEMVwxRLRjXpq+BU=
