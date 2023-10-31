@@ -10,7 +10,7 @@ import (
 	"reflect"
 	"testing"
 
-	"github.com/google/gopacket"
+	"github.com/NozomiNetworks/gopacket-fork-nozomi"
 )
 
 // Test packet collected from live network. See the test below for contents
@@ -316,7 +316,7 @@ var SFlowTestPacket10 = []byte{
 	0x00, 0x01, 0xf6, 0x73, 0x00, 0x00, 0x00, 0x00,
 }
 
-//LACP counter samples
+// LACP counter samples
 var SFlowTestPacket11 = []byte{
 	0x00, 0x00, 0x00, 0x05, 0x00, 0x00, 0x00, 0x01,
 	0x7f, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x00,

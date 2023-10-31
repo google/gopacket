@@ -16,8 +16,8 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/google/gopacket"
-	"github.com/google/gopacket/bytediff"
+	"github.com/NozomiNetworks/gopacket-fork-nozomi"
+	"github.com/NozomiNetworks/gopacket-fork-nozomi/bytediff"
 )
 
 var testSimpleTCPPacket = []byte{
@@ -1077,12 +1077,13 @@ func TestDecodingLayerArray(t *testing.T) {
 }
 
 // testICMP is the packet:
-//   15:49:15.773265 IP 72.14.222.226 > 172.29.20.15: ICMP host 10.66.73.201 unreachable - admin prohibited filter, length 36
-//      0x0000:  24be 0527 0b17 001f cab3 75c0 0800 4500  $..'......u...E.
-//      0x0010:  0038 0000 0000 fc01 d7a7 480e dee2 ac1d  .8........H.....
-//      0x0020:  140f 030d 946e 0000 0000 4520 004d 0000  .....n....E..M..
-//      0x0030:  4000 3e11 2849 ac1d 140f 0a42 49c9 8ecc  @.>.(I.....BI...
-//      0x0040:  62e1 0039 769d                           b..9v.
+//
+//	15:49:15.773265 IP 72.14.222.226 > 172.29.20.15: ICMP host 10.66.73.201 unreachable - admin prohibited filter, length 36
+//	   0x0000:  24be 0527 0b17 001f cab3 75c0 0800 4500  $..'......u...E.
+//	   0x0010:  0038 0000 0000 fc01 d7a7 480e dee2 ac1d  .8........H.....
+//	   0x0020:  140f 030d 946e 0000 0000 4520 004d 0000  .....n....E..M..
+//	   0x0030:  4000 3e11 2849 ac1d 140f 0a42 49c9 8ecc  @.>.(I.....BI...
+//	   0x0040:  62e1 0039 769d                           b..9v.
 var testICMP = []byte{
 	0x24, 0xbe, 0x05, 0x27, 0x0b, 0x17, 0x00, 0x1f, 0xca, 0xb3, 0x75, 0xc0, 0x08, 0x00, 0x45, 0x00,
 	0x00, 0x38, 0x00, 0x00, 0x00, 0x00, 0xfc, 0x01, 0xd7, 0xa7, 0x48, 0x0e, 0xde, 0xe2, 0xac, 0x1d,
@@ -1106,13 +1107,14 @@ func BenchmarkDecodeICMP(b *testing.B) {
 }
 
 // testICMP6 is the packet:
-//   16:17:37.758937 IP6 fe80::21f:caff:feb3:75c0 > 2620:0:1005:0:26be:5ff:fe27:b17: ICMP6, neighbor solicitation, who has 2620:0:1005:0:26be:5ff:fe27:b17, length 32
-//      0x0000:  24be 0527 0b17 001f cab3 75c0 86dd 6e00  $..'......u...n.
-//      0x0010:  0000 0020 3aff fe80 0000 0000 0000 021f  ....:...........
-//      0x0020:  caff feb3 75c0 2620 0000 1005 0000 26be  ....u.&.......&.
-//      0x0030:  05ff fe27 0b17 8700 1eba 0000 0000 2620  ...'..........&.
-//      0x0040:  0000 1005 0000 26be 05ff fe27 0b17 0101  ......&....'....
-//      0x0050:  001f cab3 75c0                           ....u.
+//
+//	16:17:37.758937 IP6 fe80::21f:caff:feb3:75c0 > 2620:0:1005:0:26be:5ff:fe27:b17: ICMP6, neighbor solicitation, who has 2620:0:1005:0:26be:5ff:fe27:b17, length 32
+//	   0x0000:  24be 0527 0b17 001f cab3 75c0 86dd 6e00  $..'......u...n.
+//	   0x0010:  0000 0020 3aff fe80 0000 0000 0000 021f  ....:...........
+//	   0x0020:  caff feb3 75c0 2620 0000 1005 0000 26be  ....u.&.......&.
+//	   0x0030:  05ff fe27 0b17 8700 1eba 0000 0000 2620  ...'..........&.
+//	   0x0040:  0000 1005 0000 26be 05ff fe27 0b17 0101  ......&....'....
+//	   0x0050:  001f cab3 75c0                           ....u.
 var testICMP6 = []byte{
 	0x24, 0xbe, 0x05, 0x27, 0x0b, 0x17, 0x00, 0x1f, 0xca, 0xb3, 0x75, 0xc0, 0x86, 0xdd, 0x6e, 0x00,
 	0x00, 0x00, 0x00, 0x20, 0x3a, 0xff, 0xfe, 0x80, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02, 0x1f,
@@ -1137,15 +1139,16 @@ func BenchmarkDecodeICMP6(b *testing.B) {
 }
 
 // testMPLS is the packet:
-//   12:48:57.201014 MPLS (label 29, exp 0, [S], ttl 255) IP 10.1.2.1 > 10.34.0.1: ICMP echo request, id 2618, seq 1579, length 80
-//      0x0000:  0030 96e6 fc39 0030 9605 2838 8847 0001  .0...9.0..(8.G..
-//      0x0010:  d1ff 4500 0064 000b 0000 ff01 a569 0a01  ..E..d.......i..
-//      0x0020:  0201 0a22 0001 0800 3a76 0a3a 062b 0000  ..."....:v.:.+..
-//      0x0030:  0000 001f 3350 abcd abcd abcd abcd abcd  ....3P..........
-//      0x0040:  abcd abcd abcd abcd abcd abcd abcd abcd  ................
-//      0x0050:  abcd abcd abcd abcd abcd abcd abcd abcd  ................
-//      0x0060:  abcd abcd abcd abcd abcd abcd abcd abcd  ................
-//      0x0070:  abcd abcd abcd                           ......
+//
+//	12:48:57.201014 MPLS (label 29, exp 0, [S], ttl 255) IP 10.1.2.1 > 10.34.0.1: ICMP echo request, id 2618, seq 1579, length 80
+//	   0x0000:  0030 96e6 fc39 0030 9605 2838 8847 0001  .0...9.0..(8.G..
+//	   0x0010:  d1ff 4500 0064 000b 0000 ff01 a569 0a01  ..E..d.......i..
+//	   0x0020:  0201 0a22 0001 0800 3a76 0a3a 062b 0000  ..."....:v.:.+..
+//	   0x0030:  0000 001f 3350 abcd abcd abcd abcd abcd  ....3P..........
+//	   0x0040:  abcd abcd abcd abcd abcd abcd abcd abcd  ................
+//	   0x0050:  abcd abcd abcd abcd abcd abcd abcd abcd  ................
+//	   0x0060:  abcd abcd abcd abcd abcd abcd abcd abcd  ................
+//	   0x0070:  abcd abcd abcd                           ......
 var testMPLS = []byte{
 	0x00, 0x30, 0x96, 0xe6, 0xfc, 0x39, 0x00, 0x30, 0x96, 0x05, 0x28, 0x38, 0x88, 0x47, 0x00, 0x01,
 	0xd1, 0xff, 0x45, 0x00, 0x00, 0x64, 0x00, 0x0b, 0x00, 0x00, 0xff, 0x01, 0xa5, 0x69, 0x0a, 0x01,
@@ -1172,7 +1175,7 @@ func BenchmarkDecodeMPLS(b *testing.B) {
 }
 
 // testPPPGREIPv4IPv6VLAN is the packet from http://packetlife.net/captures/gre_and_4over6.cap
-//04:35:03.821897 IP6 2402:f000:1:8e01::5555 > 2607:fcd0:100:2300::b108:2a6b: IP 16.0.0.200 > 192.52.166.154: GREv1, call 6016, seq 430001, ack 539254, length 119: IP 172.16.44.3.40768 > 8.8.8.8.53: 42540+ AAAA? xqt-detect-mode2-97712e88-167a-45b9-93ee-913140e76678. (71)
+//
 //	0x0000:  6000 0000 008b 04f6 2402 f000 0001 8e01  `.......$.......
 //	0x0010:  0000 0000 0000 5555 2607 fcd0 0100 2300  ......UU&.....#.
 //	0x0020:  0000 0000 b108 2a6b 4500 008b 8caf 0000  ......*kE.......
@@ -1185,6 +1188,8 @@ func BenchmarkDecodeMPLS(b *testing.B) {
 //	0x0090:  3838 2d31 3637 612d 3435 6239 2d39 3365  88-167a-45b9-93e
 //	0x00a0:  652d 3931 3331 3430 6537 3636 3738 0000  e-913140e76678..
 //	0x00b0:  1c00 01
+//
+//04:35:03.821897 IP6 2402:f000:1:8e01::5555 > 2607:fcd0:100:2300::b108:2a6b: IP 16.0.0.200 > 192.52.166.154: GREv1, call 6016, seq 430001, ack 539254, length 119: IP 172.16.44.3.40768 > 8.8.8.8.53: 42540+ AAAA? xqt-detect-mode2-97712e88-167a-45b9-93ee-913140e76678. (71)
 var testPPPGREIPv4IPv6VLAN = []byte{
 	0xc5, 0x00, 0x00, 0x00, 0x82, 0xc4, 0x00, 0x12, 0x1e, 0xf2, 0x61, 0x3d, 0x81, 0x00, 0x00, 0x64,
 	0x86, 0xdd, 0x60, 0x00, 0x00, 0x00, 0x00, 0x8b, 0x04, 0xf6, 0x24, 0x02, 0xf0, 0x00, 0x00, 0x01,
@@ -1221,13 +1226,14 @@ func TestPPPGREIPv4IPv6VLAN(t *testing.T) {
 }
 
 // testPPPoEICMPv6 is the packet:
-//   07:43:31.091560 PPPoE  [ses 0x11] IP6 fe80::c801:eff:fe88:8 > ff02::1: ICMP6, neighbor advertisement, tgt is fe80::c801:eff:fe88:8, length 24
-//      0x0000:  cc05 0e88 0000 ca01 0e88 0006 8864 1100  .............d..
-//      0x0010:  0011 0042 0057 6e00 0000 0018 3aff fe80  ...B.Wn.....:...
-//      0x0020:  0000 0000 0000 c801 0eff fe88 0008 ff02  ................
-//      0x0030:  0000 0000 0000 0000 0000 0000 0001 8800  ................
-//      0x0040:  5083 8000 0000 fe80 0000 0000 0000 c801  P...............
-//      0x0050:  0eff fe88 0008                           ......
+//
+//	07:43:31.091560 PPPoE  [ses 0x11] IP6 fe80::c801:eff:fe88:8 > ff02::1: ICMP6, neighbor advertisement, tgt is fe80::c801:eff:fe88:8, length 24
+//	   0x0000:  cc05 0e88 0000 ca01 0e88 0006 8864 1100  .............d..
+//	   0x0010:  0011 0042 0057 6e00 0000 0018 3aff fe80  ...B.Wn.....:...
+//	   0x0020:  0000 0000 0000 c801 0eff fe88 0008 ff02  ................
+//	   0x0030:  0000 0000 0000 0000 0000 0000 0001 8800  ................
+//	   0x0040:  5083 8000 0000 fe80 0000 0000 0000 c801  P...............
+//	   0x0050:  0eff fe88 0008                           ......
 var testPPPoEICMPv6 = []byte{
 	0xcc, 0x05, 0x0e, 0x88, 0x00, 0x00, 0xca, 0x01, 0x0e, 0x88, 0x00, 0x06, 0x88, 0x64, 0x11, 0x00,
 	0x00, 0x11, 0x00, 0x42, 0x00, 0x57, 0x6e, 0x00, 0x00, 0x00, 0x00, 0x18, 0x3a, 0xff, 0xfe, 0x80,
@@ -1295,17 +1301,18 @@ func TestRegressionDot1QPriority(t *testing.T) {
 }
 
 // testPacketMPLSInMPLS is the packet:
-//   15:27:44.753678 MPLS (label 18, exp 0, ttl 255) (label 16, exp 0, [S], ttl
-//   255) IP 10.31.0.1 > 10.34.0.1: ICMP echo request, id 3941, seq 4768, length
-//   80
-//      0x0000:  0030 96e6 fc39 0030 9605 2838 8847 0001  .0...9.0..(8.G..
-//      0x0010:  20ff 0001 01ff 4500 0064 0050 0000 ff01  ......E..d.P....
-//      0x0020:  a706 0a1f 0001 0a22 0001 0800 bd11 0f65  .......".......e
-//      0x0030:  12a0 0000 0000 0053 9ee0 abcd abcd abcd  .......S........
-//      0x0040:  abcd abcd abcd abcd abcd abcd abcd abcd  ................
-//      0x0050:  abcd abcd abcd abcd abcd abcd abcd abcd  ................
-//      0x0060:  abcd abcd abcd abcd abcd abcd abcd abcd  ................
-//      0x0070:  abcd abcd abcd abcd abcd                 ..........
+//
+//	15:27:44.753678 MPLS (label 18, exp 0, ttl 255) (label 16, exp 0, [S], ttl
+//	255) IP 10.31.0.1 > 10.34.0.1: ICMP echo request, id 3941, seq 4768, length
+//	80
+//	   0x0000:  0030 96e6 fc39 0030 9605 2838 8847 0001  .0...9.0..(8.G..
+//	   0x0010:  20ff 0001 01ff 4500 0064 0050 0000 ff01  ......E..d.P....
+//	   0x0020:  a706 0a1f 0001 0a22 0001 0800 bd11 0f65  .......".......e
+//	   0x0030:  12a0 0000 0000 0053 9ee0 abcd abcd abcd  .......S........
+//	   0x0040:  abcd abcd abcd abcd abcd abcd abcd abcd  ................
+//	   0x0050:  abcd abcd abcd abcd abcd abcd abcd abcd  ................
+//	   0x0060:  abcd abcd abcd abcd abcd abcd abcd abcd  ................
+//	   0x0070:  abcd abcd abcd abcd abcd                 ..........
 var testPacketMPLSInMPLS = []byte{
 	0x00, 0x30, 0x96, 0xe6, 0xfc, 0x39, 0x00, 0x30, 0x96, 0x05, 0x28, 0x38, 0x88, 0x47, 0x00, 0x01,
 	0x20, 0xff, 0x00, 0x01, 0x01, 0xff, 0x45, 0x00, 0x00, 0x64, 0x00, 0x50, 0x00, 0x00, 0xff, 0x01,
@@ -1332,12 +1339,13 @@ func TestPacketMPLSInMPLS(t *testing.T) {
 }
 
 // testPacketIPv4Fragmented is the packet:
-//   22:11:26.616090 IP 10.1.1.1.31915 > 129.111.30.27.20197: UDP, length 28
-//      0x0000:  0000 39cf d9cd 0040 33d9 7cfd 0800 4500  ..9....@3.|...E.
-//      0x0010:  0038 00f2 2000 4011 af37 0a01 0101 816f  .8....@..7.....o
-//      0x0020:  1e1b 7cab 4ee5 0024 0000 0000 0000 0000  ..|.N..$........
-//      0x0030:  0000 0000 0000 0000 0000 0000 0000 0000  ................
-//      0x0040:  0000 0000 0000                           ......
+//
+//	22:11:26.616090 IP 10.1.1.1.31915 > 129.111.30.27.20197: UDP, length 28
+//	   0x0000:  0000 39cf d9cd 0040 33d9 7cfd 0800 4500  ..9....@3.|...E.
+//	   0x0010:  0038 00f2 2000 4011 af37 0a01 0101 816f  .8....@..7.....o
+//	   0x0020:  1e1b 7cab 4ee5 0024 0000 0000 0000 0000  ..|.N..$........
+//	   0x0030:  0000 0000 0000 0000 0000 0000 0000 0000  ................
+//	   0x0040:  0000 0000 0000                           ......
 var testPacketIPv4Fragmented = []byte{
 	0x00, 0x00, 0x39, 0xcf, 0xd9, 0xcd, 0x00, 0x40, 0x33, 0xd9, 0x7c, 0xfd, 0x08, 0x00, 0x45, 0x00,
 	0x00, 0x38, 0x00, 0xf2, 0x20, 0x00, 0x40, 0x11, 0xaf, 0x37, 0x0a, 0x01, 0x01, 0x01, 0x81, 0x6f,

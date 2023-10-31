@@ -11,8 +11,8 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/google/gopacket"
-	"github.com/google/gopacket/layers"
+	"github.com/NozomiNetworks/gopacket-fork-nozomi"
+	"github.com/NozomiNetworks/gopacket-fork-nozomi/layers"
 )
 
 const (
@@ -32,8 +32,9 @@ type lcmPacket struct {
 // LCMDefragmenter supports defragmentation of LCM messages.
 //
 // References
-//   https://lcm-proj.github.io/
-//   https://github.com/lcm-proj/lcm
+//
+//	https://lcm-proj.github.io/
+//	https://github.com/lcm-proj/lcm
 type LCMDefragmenter struct {
 	packets map[uint32]*lcmPacket
 }

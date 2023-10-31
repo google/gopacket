@@ -29,12 +29,12 @@ import (
 	"sync"
 	"time"
 
-	"github.com/google/gopacket"
-	"github.com/google/gopacket/examples/util"
-	"github.com/google/gopacket/ip4defrag"
-	"github.com/google/gopacket/layers" // pulls in all layers decoders
-	"github.com/google/gopacket/pcap"
-	"github.com/google/gopacket/reassembly"
+	"github.com/NozomiNetworks/gopacket-fork-nozomi"
+	"github.com/NozomiNetworks/gopacket-fork-nozomi/examples/util"
+	"github.com/NozomiNetworks/gopacket-fork-nozomi/ip4defrag"
+	"github.com/NozomiNetworks/gopacket-fork-nozomi/layers" // pulls in all layers decoders
+	"github.com/NozomiNetworks/gopacket-fork-nozomi/pcap"
+	"github.com/NozomiNetworks/gopacket-fork-nozomi/reassembly"
 )
 
 var maxcount = flag.Int("c", -1, "Only grab this many packets, then exit")

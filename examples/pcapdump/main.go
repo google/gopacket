@@ -11,9 +11,9 @@ package main
 import (
 	"flag"
 	"fmt"
-	"github.com/google/gopacket/dumpcommand"
-	"github.com/google/gopacket/examples/util"
-	"github.com/google/gopacket/pcap"
+	"github.com/NozomiNetworks/gopacket-fork-nozomi/dumpcommand"
+	"github.com/NozomiNetworks/gopacket-fork-nozomi/examples/util"
+	"github.com/NozomiNetworks/gopacket-fork-nozomi/pcap"
 	"log"
 	"os"
 	"strings"

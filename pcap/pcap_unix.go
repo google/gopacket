@@ -5,6 +5,7 @@
 // that can be found in the LICENSE file in the root of the source
 // tree.
 //
+//go:build !windows
 // +build !windows
 
 package pcap
@@ -17,9 +18,9 @@ import (
 	"time"
 	"unsafe"
 
-	"github.com/google/gopacket"
+	"github.com/NozomiNetworks/gopacket-fork-nozomi"
 
-	"github.com/google/gopacket/layers"
+	"github.com/NozomiNetworks/gopacket-fork-nozomi/layers"
 )
 
 /*

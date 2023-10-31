@@ -8,7 +8,7 @@ package layers
 
 import (
 	"bytes"
-	"github.com/google/gopacket"
+	"github.com/NozomiNetworks/gopacket-fork-nozomi"
 	"net"
 	"reflect"
 	"testing"
@@ -197,10 +197,11 @@ func TestPacketIPv6HopByHop0Decode(t *testing.T) {
 }
 
 // testPacketIPv6Destination0 is the packet:
-//   12:40:14.429409595 IP6 2001:db8::1 > 2001:db8::2: DSTOPT no next header
-//   	0x0000:  6000 0000 0008 3c40 2001 0db8 0000 0000  `.....<@........
-//   	0x0010:  0000 0000 0000 0001 2001 0db8 0000 0000  ................
-//   	0x0020:  0000 0000 0000 0002 3b00 0104 0000 0000  ........;.......
+//
+//	12:40:14.429409595 IP6 2001:db8::1 > 2001:db8::2: DSTOPT no next header
+//		0x0000:  6000 0000 0008 3c40 2001 0db8 0000 0000  `.....<@........
+//		0x0010:  0000 0000 0000 0001 2001 0db8 0000 0000  ................
+//		0x0020:  0000 0000 0000 0002 3b00 0104 0000 0000  ........;.......
 var testPacketIPv6Destination0 = []byte{
 	0x60, 0x00, 0x00, 0x00, 0x00, 0x08, 0x3c, 0x40, 0x20, 0x01, 0x0d, 0xb8, 0x00, 0x00, 0x00, 0x00,
 	0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x01, 0x20, 0x01, 0x0d, 0xb8, 0x00, 0x00, 0x00, 0x00,

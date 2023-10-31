@@ -29,9 +29,9 @@ ApplicationLayer, while base SCTP implements TransportLayer), or possibly
 because splitting a protocol into a few layers makes decoding easier.
 
 This package is meant to be used with its parent,
-http://github.com/google/gopacket.
+http://github.com/NozomiNetworks/gopacket-fork-nozomi.
 
-Port Types
+# Port Types
 
 Instead of using raw uint16 or uint8 values for ports, we use a different port
 type for every protocol, for example TCPPort and UDPPort.  This allows us to
@@ -39,11 +39,11 @@ override string behavior for each port, which we do by setting up port name
 maps (TCPPortNames, UDPPortNames, etc...).  Well-known ports are annotated with
 their protocol names, and their String function displays these names:
 
-  p := TCPPort(80)
-  fmt.Printf("Number: %d  String: %v", p, p)
-  // Prints: "Number: 80  String: 80(http)"
+	p := TCPPort(80)
+	fmt.Printf("Number: %d  String: %v", p, p)
+	// Prints: "Number: 80  String: 80(http)"
 
-Modifying Decode Behavior
+# Modifying Decode Behavior
 
 layers links together decoding through its enumerations.  For example, after
 decoding layer type Ethernet, it uses Ethernet.EthernetType as its next decoder.
@@ -52,8 +52,8 @@ users depending on their preferences.  For example, if you have a spiffy new
 IPv4 decoder that works way better than the one built into layers, you can do
 this:
 
- var mySpiffyIPv4Decoder gopacket.Decoder = ...
- layers.EthernetTypeMetadata[EthernetTypeIPv4].DecodeWith = mySpiffyIPv4Decoder
+	var mySpiffyIPv4Decoder gopacket.Decoder = ...
+	layers.EthernetTypeMetadata[EthernetTypeIPv4].DecodeWith = mySpiffyIPv4Decoder
 
 This will make all future ethernet packets use your new decoder to decode IPv4
 packets, instead of the built-in decoder used by gopacket.
