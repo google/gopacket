@@ -11,7 +11,7 @@ import (
 	"errors"
 	"fmt"
 
-	"github.com/google/gopacket"
+	"github.com/NozomiNetworks/gopacket-fork-nozomi"
 )
 
 type PFDirection uint8

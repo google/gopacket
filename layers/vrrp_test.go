@@ -6,16 +6,17 @@
 package layers
 
 import (
-	"github.com/google/gopacket"
+	"github.com/NozomiNetworks/gopacket-fork-nozomi"
 	"testing"
 )
 
 // vrrpPacketPriority100 is the packet:
-//   06:12:21.813317 IP 192.168.0.30 > 224.0.0.18: VRRPv2, Advertisement, vrid 1, prio 100, authtype none, intvl 1s, length 20
-//   	0x0000:  0100 5e00 0012 0000 5e00 0101 0800 45c0  ..^.....^.....E.
-//   	0x0010:  0028 0000 0000 ff70 19cd c0a8 001e e000  .(.....p........
-//   	0x0020:  0012 2101 6401 0001 ba52 c0a8 0001 0000  ..!.d....R......
-//   	0x0030:  0000 0000 0000 0000 0000 0000            ............
+//
+//	06:12:21.813317 IP 192.168.0.30 > 224.0.0.18: VRRPv2, Advertisement, vrid 1, prio 100, authtype none, intvl 1s, length 20
+//		0x0000:  0100 5e00 0012 0000 5e00 0101 0800 45c0  ..^.....^.....E.
+//		0x0010:  0028 0000 0000 ff70 19cd c0a8 001e e000  .(.....p........
+//		0x0020:  0012 2101 6401 0001 ba52 c0a8 0001 0000  ..!.d....R......
+//		0x0030:  0000 0000 0000 0000 0000 0000            ............
 var vrrpPacketPriority100 = []byte{
 	0x01, 0x00, 0x5e, 0x00, 0x00, 0x12, 0x00, 0x00, 0x5e, 0x00, 0x01, 0x01, 0x08, 0x00, 0x45, 0xc0,
 	0x00, 0x28, 0x00, 0x00, 0x00, 0x00, 0xff, 0x70, 0x19, 0xcd, 0xc0, 0xa8, 0x00, 0x1e, 0xe0, 0x00,

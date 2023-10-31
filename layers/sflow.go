@@ -77,7 +77,7 @@ import (
 	"fmt"
 	"net"
 
-	"github.com/google/gopacket"
+	"github.com/NozomiNetworks/gopacket-fork-nozomi"
 )
 
 // SFlowRecord holds both flow sample records and counter sample records.
@@ -1696,24 +1696,24 @@ func decodeExtendedUserFlow(data *[]byte) (SFlowExtendedUserFlow, error) {
 //  Packet IP version 4 Record
 // **************************************************
 
-//  0                      15                      31
-//  +--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+
-//  |                     Length                    |
-//  +--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+
-//  |                    Protocol                   |
-//  +--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+
-//  |                  Source IPv4                  |
-//  +--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+
-//  |                Destination IPv4               |
-//  +--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+
-//  |                   Source Port                 |
-//  +--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+
-//  |                Destionation Port              |
-//  +--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+
-//  |                   TCP Flags                   |
-//  +--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+
-//  |                      TOS                      |
-//  +--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+
+// 0                      15                      31
+// +--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+
+// |                     Length                    |
+// +--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+
+// |                    Protocol                   |
+// +--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+
+// |                  Source IPv4                  |
+// +--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+
+// |                Destination IPv4               |
+// +--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+
+// |                   Source Port                 |
+// +--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+
+// |                Destionation Port              |
+// +--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+
+// |                   TCP Flags                   |
+// +--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+
+// |                      TOS                      |
+// +--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+
 type SFlowIpv4Record struct {
 	// The length of the IP packet excluding ower layer encapsulations
 	Length uint32
@@ -1752,24 +1752,24 @@ func decodeSFlowIpv4Record(data *[]byte) (SFlowIpv4Record, error) {
 //  Packet IP version 6 Record
 // **************************************************
 
-//  0                      15                      31
-//  +--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+
-//  |                     Length                    |
-//  +--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+
-//  |                    Protocol                   |
-//  +--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+
-//  |                  Source IPv4                  |
-//  +--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+
-//  |                Destination IPv4               |
-//  +--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+
-//  |                   Source Port                 |
-//  +--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+
-//  |                Destionation Port              |
-//  +--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+
-//  |                   TCP Flags                   |
-//  +--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+
-//  |                    Priority                   |
-//  +--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+
+// 0                      15                      31
+// +--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+
+// |                     Length                    |
+// +--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+
+// |                    Protocol                   |
+// +--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+
+// |                  Source IPv4                  |
+// +--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+
+// |                Destination IPv4               |
+// +--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+
+// |                   Source Port                 |
+// +--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+
+// |                Destionation Port              |
+// +--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+
+// |                   TCP Flags                   |
+// +--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+
+// |                    Priority                   |
+// +--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+
 type SFlowIpv6Record struct {
 	// The length of the IP packet excluding ower layer encapsulations
 	Length uint32
@@ -1808,15 +1808,15 @@ func decodeSFlowIpv6Record(data *[]byte) (SFlowIpv6Record, error) {
 //  Extended IPv4 Tunnel Egress
 // **************************************************
 
-//  0                      15                      31
-//  +--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+
-//  |      20 bit Interprise (0)     |12 bit format |
-//  +--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+
-//  |                  record length                |
-//  +--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+
-//  /           Packet IP version 4 Record          /
-//  /                                               /
-//  +--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+
+// 0                      15                      31
+// +--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+
+// |      20 bit Interprise (0)     |12 bit format |
+// +--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+
+// |                  record length                |
+// +--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+
+// /           Packet IP version 4 Record          /
+// /                                               /
+// +--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+
 type SFlowExtendedIpv4TunnelEgressRecord struct {
 	SFlowBaseFlowRecord
 	SFlowIpv4Record SFlowIpv4Record
@@ -1838,15 +1838,15 @@ func decodeExtendedIpv4TunnelEgress(data *[]byte) (SFlowExtendedIpv4TunnelEgress
 //  Extended IPv4 Tunnel Ingress
 // **************************************************
 
-//  0                      15                      31
-//  +--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+
-//  |      20 bit Interprise (0)     |12 bit format |
-//  +--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+
-//  |                  record length                |
-//  +--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+
-//  /           Packet IP version 4 Record          /
-//  /                                               /
-//  +--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+
+// 0                      15                      31
+// +--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+
+// |      20 bit Interprise (0)     |12 bit format |
+// +--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+
+// |                  record length                |
+// +--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+
+// /           Packet IP version 4 Record          /
+// /                                               /
+// +--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+
 type SFlowExtendedIpv4TunnelIngressRecord struct {
 	SFlowBaseFlowRecord
 	SFlowIpv4Record SFlowIpv4Record
@@ -1868,15 +1868,15 @@ func decodeExtendedIpv4TunnelIngress(data *[]byte) (SFlowExtendedIpv4TunnelIngre
 //  Extended IPv6 Tunnel Egress
 // **************************************************
 
-//  0                      15                      31
-//  +--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+
-//  |      20 bit Interprise (0)     |12 bit format |
-//  +--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+
-//  |                  record length                |
-//  +--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+
-//  /           Packet IP version 6 Record          /
-//  /                                               /
-//  +--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+
+// 0                      15                      31
+// +--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+
+// |      20 bit Interprise (0)     |12 bit format |
+// +--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+
+// |                  record length                |
+// +--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+
+// /           Packet IP version 6 Record          /
+// /                                               /
+// +--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+
 type SFlowExtendedIpv6TunnelEgressRecord struct {
 	SFlowBaseFlowRecord
 	SFlowIpv6Record
@@ -1898,15 +1898,15 @@ func decodeExtendedIpv6TunnelEgress(data *[]byte) (SFlowExtendedIpv6TunnelEgress
 //  Extended IPv6 Tunnel Ingress
 // **************************************************
 
-//  0                      15                      31
-//  +--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+
-//  |      20 bit Interprise (0)     |12 bit format |
-//  +--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+
-//  |                  record length                |
-//  +--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+
-//  /           Packet IP version 6 Record          /
-//  /                                               /
-//  +--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+
+// 0                      15                      31
+// +--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+
+// |      20 bit Interprise (0)     |12 bit format |
+// +--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+
+// |                  record length                |
+// +--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+
+// /           Packet IP version 6 Record          /
+// /                                               /
+// +--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+
 type SFlowExtendedIpv6TunnelIngressRecord struct {
 	SFlowBaseFlowRecord
 	SFlowIpv6Record
@@ -1928,14 +1928,14 @@ func decodeExtendedIpv6TunnelIngress(data *[]byte) (SFlowExtendedIpv6TunnelIngre
 //  Extended Decapsulate Egress
 // **************************************************
 
-//  0                      15                      31
-//  +--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+
-//  |      20 bit Interprise (0)     |12 bit format |
-//  +--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+
-//  |                  record length                |
-//  +--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+
-//  |               Inner Header Offset             |
-//  +--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+
+// 0                      15                      31
+// +--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+
+// |      20 bit Interprise (0)     |12 bit format |
+// +--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+
+// |                  record length                |
+// +--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+
+// |               Inner Header Offset             |
+// +--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+
 type SFlowExtendedDecapsulateEgressRecord struct {
 	SFlowBaseFlowRecord
 	InnerHeaderOffset uint32
@@ -1957,14 +1957,14 @@ func decodeExtendedDecapsulateEgress(data *[]byte) (SFlowExtendedDecapsulateEgre
 //  Extended Decapsulate Ingress
 // **************************************************
 
-//  0                      15                      31
-//  +--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+
-//  |      20 bit Interprise (0)     |12 bit format |
-//  +--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+
-//  |                  record length                |
-//  +--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+
-//  |               Inner Header Offset             |
-//  +--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+
+// 0                      15                      31
+// +--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+
+// |      20 bit Interprise (0)     |12 bit format |
+// +--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+
+// |                  record length                |
+// +--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+
+// |               Inner Header Offset             |
+// +--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+
 type SFlowExtendedDecapsulateIngressRecord struct {
 	SFlowBaseFlowRecord
 	InnerHeaderOffset uint32
@@ -1986,14 +1986,14 @@ func decodeExtendedDecapsulateIngress(data *[]byte) (SFlowExtendedDecapsulateIng
 //  Extended VNI Egress
 // **************************************************
 
-//  0                      15                      31
-//  +--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+
-//  |      20 bit Interprise (0)     |12 bit format |
-//  +--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+
-//  |                  record length                |
-//  +--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+
-//  |                       VNI                     |
-//  +--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+
+// 0                      15                      31
+// +--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+
+// |      20 bit Interprise (0)     |12 bit format |
+// +--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+
+// |                  record length                |
+// +--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+
+// |                       VNI                     |
+// +--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+
 type SFlowExtendedVniEgressRecord struct {
 	SFlowBaseFlowRecord
 	VNI uint32
@@ -2015,14 +2015,14 @@ func decodeExtendedVniEgress(data *[]byte) (SFlowExtendedVniEgressRecord, error)
 //  Extended VNI Ingress
 // **************************************************
 
-//  0                      15                      31
-//  +--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+
-//  |      20 bit Interprise (0)     |12 bit format |
-//  +--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+
-//  |                  record length                |
-//  +--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+
-//  |                       VNI                     |
-//  +--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+
+// 0                      15                      31
+// +--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+
+// |      20 bit Interprise (0)     |12 bit format |
+// +--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+
+// |                  record length                |
+// +--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+
+// |                       VNI                     |
+// +--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+
 type SFlowExtendedVniIngressRecord struct {
 	SFlowBaseFlowRecord
 	VNI uint32
@@ -2317,12 +2317,12 @@ func decodeVLANCounters(data *[]byte) (SFlowVLANCounters, error) {
 	return vc, nil
 }
 
-//SFLLACPportState  :  SFlow LACP Port State (All(4) - 32 bit)
+// SFLLACPportState  :  SFlow LACP Port State (All(4) - 32 bit)
 type SFLLACPPortState struct {
 	PortStateAll uint32
 }
 
-//LACPcounters  :  LACP SFlow Counters  ( 64 Bytes )
+// LACPcounters  :  LACP SFlow Counters  ( 64 Bytes )
 type SFlowLACPCounters struct {
 	SFlowBaseCounterRecord
 	ActorSystemID        net.HardwareAddr
@@ -2457,7 +2457,7 @@ func decodeEthernetFrameFlowRecord(data *[]byte) (SFlowEthernetFrameFlowRecord, 
 	return es, nil
 }
 
-//SFlowOpenflowPortCounters  :  OVS-Sflow OpenFlow Port Counter  ( 20 Bytes )
+// SFlowOpenflowPortCounters  :  OVS-Sflow OpenFlow Port Counter  ( 20 Bytes )
 type SFlowOpenflowPortCounters struct {
 	SFlowBaseCounterRecord
 	DatapathID uint64
@@ -2477,7 +2477,7 @@ func decodeOpenflowportCounters(data *[]byte) (SFlowOpenflowPortCounters, error)
 	return ofp, nil
 }
 
-//SFlowAppresourcesCounters  :  OVS_Sflow App Resources Counter ( 48 Bytes )
+// SFlowAppresourcesCounters  :  OVS_Sflow App Resources Counter ( 48 Bytes )
 type SFlowAppresourcesCounters struct {
 	SFlowBaseCounterRecord
 	UserTime   uint32
@@ -2509,7 +2509,7 @@ func decodeAppresourcesCounters(data *[]byte) (SFlowAppresourcesCounters, error)
 	return app, nil
 }
 
-//SFlowOVSDPCounters  :  OVS-Sflow DataPath Counter  ( 32 Bytes )
+// SFlowOVSDPCounters  :  OVS-Sflow DataPath Counter  ( 32 Bytes )
 type SFlowOVSDPCounters struct {
 	SFlowBaseCounterRecord
 	NHit     uint32
@@ -2537,7 +2537,7 @@ func decodeOVSDPCounters(data *[]byte) (SFlowOVSDPCounters, error) {
 	return dp, nil
 }
 
-//SFlowPORTNAME  :  OVS-Sflow PORTNAME Counter Sampletype ( 20 Bytes )
+// SFlowPORTNAME  :  OVS-Sflow PORTNAME Counter Sampletype ( 20 Bytes )
 type SFlowPORTNAME struct {
 	SFlowBaseCounterRecord
 	Len uint32

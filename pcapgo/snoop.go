@@ -13,8 +13,8 @@ import (
 	"io"
 	"time"
 
-	"github.com/google/gopacket"
-	"github.com/google/gopacket/layers"
+	"github.com/NozomiNetworks/gopacket-fork-nozomi"
+	"github.com/NozomiNetworks/gopacket-fork-nozomi/layers"
 )
 
 const snoopMagic uint64 = 0x736e6f6f70000000 //8 byte in big endian

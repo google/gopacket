@@ -9,7 +9,7 @@
 // The tcpassembly package implements uni-directional TCP reassembly, for use in
 // packet-sniffing applications.  The caller reads packets off the wire, then
 // presents them to an Assembler in the form of gopacket layers.TCP packets
-// (github.com/google/gopacket, github.com/google/gopacket/layers).
+// (github.com/NozomiNetworks/gopacket-fork-nozomi, github.com/NozomiNetworks/gopacket-fork-nozomi/layers).
 //
 // The Assembler uses a user-supplied
 // StreamFactory to create a user-defined Stream interface, then passes packet
@@ -21,15 +21,15 @@ package tcpassembly
 import (
 	"flag"
 	"fmt"
-	"github.com/google/gopacket"
-	"github.com/google/gopacket/layers"
+	"github.com/NozomiNetworks/gopacket-fork-nozomi"
+	"github.com/NozomiNetworks/gopacket-fork-nozomi/layers"
 	"log"
 	"sync"
 	"time"
 )
 
-var memLog = flag.Bool("assembly_memuse_log", false, "If true, the github.com/google/gopacket/tcpassembly library will log information regarding its memory use every once in a while.")
-var debugLog = flag.Bool("assembly_debug_log", false, "If true, the github.com/google/gopacket/tcpassembly library will log verbose debugging information (at least one line per packet)")
+var memLog = flag.Bool("assembly_memuse_log", false, "If true, the github.com/NozomiNetworks/gopacket-fork-nozomi/tcpassembly library will log information regarding its memory use every once in a while.")
+var debugLog = flag.Bool("assembly_debug_log", false, "If true, the github.com/NozomiNetworks/gopacket-fork-nozomi/tcpassembly library will log verbose debugging information (at least one line per packet)")
 
 const invalidSequence = -1
 const uint32Size = 1 << 32
@@ -42,9 +42,11 @@ type Sequence int64
 
 // Difference defines an ordering for comparing TCP sequences that's safe for
 // roll-overs.  It returns:
-//    > 0 : if t comes after s
-//    < 0 : if t comes before s
-//      0 : if t == s
+//
+//	> 0 : if t comes after s
+//	< 0 : if t comes before s
+//	  0 : if t == s
+//
 // The number returned is the sequence difference, so 4.Difference(8) will
 // return 4.
 //
@@ -164,9 +166,9 @@ func (c *pageCache) replace(p *page) {
 // it to create a new Stream for every TCP stream.
 //
 // assembly will, in order:
-//    1) Create the stream via StreamFactory.New
-//    2) Call Reassembled 0 or more times, passing in reassembled TCP data in order
-//    3) Call ReassemblyComplete one time, after which the stream is dereferenced by assembly.
+//  1. Create the stream via StreamFactory.New
+//  2. Call Reassembled 0 or more times, passing in reassembled TCP data in order
+//  3. Call ReassemblyComplete one time, after which the stream is dereferenced by assembly.
 type Stream interface {
 	// Reassembled is called zero or more times.  assembly guarantees
 	// that the set of all Reassembly objects passed in during all
@@ -419,7 +421,7 @@ type AssemblerOptions struct {
 // applications written in Go.  The Assembler uses the following methods to be
 // as fast as possible, to keep packet processing speedy:
 //
-// Avoids Lock Contention
+// # Avoids Lock Contention
 //
 // Assemblers locks connections, but each connection has an individual lock, and
 // rarely will two Assemblers be looking at the same connection.  Assemblers
@@ -439,7 +441,7 @@ type AssemblerOptions struct {
 // avoiding all lock contention.  Only when different Assemblers could receive
 // packets for the same Stream should a StreamPool be shared between them.
 //
-// Avoids Memory Copying
+// # Avoids Memory Copying
 //
 // In the common case, handling of a single TCP packet should result in zero
 // memory allocations.  The Assembler will look up the connection, figure out
@@ -447,7 +449,7 @@ type AssemblerOptions struct {
 // the appropriate connection's handling code.  Only if a packet arrives out of
 // order is its contents copied and stored in memory for later.
 //
-// Avoids Memory Allocation
+// # Avoids Memory Allocation
 //
 // Assemblers try very hard to not use memory allocation unless absolutely
 // necessary.  Packet data for sequential packets is passed directly to streams
@@ -527,9 +529,9 @@ func (a *Assembler) Assemble(netFlow gopacket.Flow, t *layers.TCP) {
 //
 // Each Assemble call results in, in order:
 //
-//    zero or one calls to StreamFactory.New, creating a stream
-//    zero or one calls to Reassembled on a single stream
-//    zero or one calls to ReassemblyComplete on the same stream
+//	zero or one calls to StreamFactory.New, creating a stream
+//	zero or one calls to Reassembled on a single stream
+//	zero or one calls to ReassemblyComplete on the same stream
 func (a *Assembler) AssembleWithTimestamp(netFlow gopacket.Flow, t *layers.TCP, timestamp time.Time) {
 	// Ignore empty TCP packets
 	if !t.SYN && !t.FIN && !t.RST && len(t.LayerPayload()) == 0 {

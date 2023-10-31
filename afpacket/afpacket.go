@@ -28,7 +28,7 @@ import (
 	"golang.org/x/net/bpf"
 	"golang.org/x/sys/unix"
 
-	"github.com/google/gopacket"
+	"github.com/NozomiNetworks/gopacket-fork-nozomi"
 )
 
 /*
@@ -293,10 +293,11 @@ func (h *TPacket) releaseCurrentPacket() error {
 // to old bytes when using ZeroCopyReadPacketData... if you need to keep data past
 // the next time you call ZeroCopyReadPacketData, use ReadPacketData, which copies
 // the bytes into a new buffer for you.
-//  tp, _ := NewTPacket(...)
-//  data1, _, _ := tp.ZeroCopyReadPacketData()
-//  // do everything you want with data1 here, copying bytes out of it if you'd like to keep them around.
-//  data2, _, _ := tp.ZeroCopyReadPacketData()  // invalidates bytes in data1
+//
+//	tp, _ := NewTPacket(...)
+//	data1, _, _ := tp.ZeroCopyReadPacketData()
+//	// do everything you want with data1 here, copying bytes out of it if you'd like to keep them around.
+//	data2, _, _ := tp.ZeroCopyReadPacketData()  // invalidates bytes in data1
 func (h *TPacket) ZeroCopyReadPacketData() (data []byte, ci gopacket.CaptureInfo, err error) {
 	h.mu.Lock()
 retry:

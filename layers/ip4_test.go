@@ -16,7 +16,7 @@ import (
 	"reflect"
 	"testing"
 
-	"github.com/google/gopacket"
+	"github.com/NozomiNetworks/gopacket-fork-nozomi"
 )
 
 // Test the function getIPv4OptionSize when the ipv4 has no options

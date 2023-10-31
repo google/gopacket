@@ -3,6 +3,7 @@
 // Use of this source code is governed by a BSD-style license
 // that can be found in the LICENSE file in the root of the source
 // tree.
+//go:build linux && go1.9
 // +build linux,go1.9
 
 package pcapgo
@@ -19,7 +20,7 @@ import (
 	"golang.org/x/net/bpf"
 	"golang.org/x/sys/unix"
 
-	"github.com/google/gopacket"
+	"github.com/NozomiNetworks/gopacket-fork-nozomi"
 )
 
 var hdrLen = unix.CmsgSpace(0)
@@ -232,7 +233,7 @@ func (h *EthernetHandle) Stats() (*unix.TpacketStats, error) {
 }
 
 // NewEthernetHandle implements pcap.OpenLive for network devices.
-// If you want better performance have a look at github.com/google/gopacket/afpacket.
+// If you want better performance have a look at github.com/NozomiNetworks/gopacket-fork-nozomi/afpacket.
 // SetCaptureLength can be used to limit the maximum capture length.
 func NewEthernetHandle(ifname string) (*EthernetHandle, error) {
 	intf, err := net.InterfaceByName(ifname)

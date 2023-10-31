@@ -6,14 +6,15 @@
 package layers
 
 import (
-	"github.com/google/gopacket"
+	"github.com/NozomiNetworks/gopacket-fork-nozomi"
 	"testing"
 )
 
 // testPacketRadiotap0 is the packet:
-//   09:34:34.799438 1.0 Mb/s 2412 MHz 11b -58dB signal antenna 7 Acknowledgment RA:88:1f:a1:ae:9d:cb
-//      0x0000:  0000 1200 2e48 0000 1002 6c09 a000 c607  .....H....l.....
-//      0x0010:  0000 d400 0000 881f a1ae 9dcb c630 4b4b  .............0KK
+//
+//	09:34:34.799438 1.0 Mb/s 2412 MHz 11b -58dB signal antenna 7 Acknowledgment RA:88:1f:a1:ae:9d:cb
+//	   0x0000:  0000 1200 2e48 0000 1002 6c09 a000 c607  .....H....l.....
+//	   0x0010:  0000 d400 0000 881f a1ae 9dcb c630 4b4b  .............0KK
 var testPacketRadiotap0 = []byte{
 	0x00, 0x00, 0x12, 0x00, 0x2e, 0x48, 0x00, 0x00, 0x10, 0x02, 0x6c, 0x09, 0xa0, 0x00, 0xc6, 0x07,
 	0x00, 0x00, 0xd4, 0x00, 0x00, 0x00, 0x88, 0x1f, 0xa1, 0xae, 0x9d, 0xcb, 0xc6, 0x30, 0x4b, 0x4b,
@@ -40,11 +41,12 @@ func BenchmarkDecodePacketRadiotap0(b *testing.B) {
 }
 
 // testPacketRadiotap1 is the packet:
-//   05:24:21.380948 2412 MHz 11g -36dB signal antenna 5 65.0 Mb/s MCS 7 20 MHz lon GI
-//   	0x0000:  0000 1500 2a48 0800 1000 6c09 8004 dc05  ....*H....l.....
-//   	0x0010:  0000 0700 0748 112c 0000 3a9d aaf0 191c  .....H.,..:.....
-//   	0x0020:  aba7 f213 9d00 3a9d aaf0 1970 b2ee a9f1  ......:....p....
-//   	0x0030:  16                                       .
+//
+//	05:24:21.380948 2412 MHz 11g -36dB signal antenna 5 65.0 Mb/s MCS 7 20 MHz lon GI
+//		0x0000:  0000 1500 2a48 0800 1000 6c09 8004 dc05  ....*H....l.....
+//		0x0010:  0000 0700 0748 112c 0000 3a9d aaf0 191c  .....H.,..:.....
+//		0x0020:  aba7 f213 9d00 3a9d aaf0 1970 b2ee a9f1  ......:....p....
+//		0x0030:  16                                       .
 var testPacketRadiotap1 = []byte{
 	0x00, 0x00, 0x15, 0x00, 0x2a, 0x48, 0x08, 0x00, 0x10, 0x00, 0x6c, 0x09, 0x80, 0x04, 0xdc, 0x05,
 	0x00, 0x00, 0x07, 0x00, 0x07, 0x48, 0x11, 0x2c, 0x00, 0x00, 0x3a, 0x9d, 0xaa, 0xf0, 0x19, 0x1c,

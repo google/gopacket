@@ -15,8 +15,8 @@ import (
 	"sync"
 	"time"
 
-	"github.com/google/gopacket"
-	"github.com/google/gopacket/layers"
+	"github.com/NozomiNetworks/gopacket-fork-nozomi"
+	"github.com/NozomiNetworks/gopacket-fork-nozomi/layers"
 )
 
 // Quick and Easy to use debug code to trace
@@ -55,24 +55,23 @@ const (
 // the packet, a new IPv4 layer will be returned, and will be set to
 // the entire defragmented packet,
 //
-// It use a map of all the running flows
+// # It use a map of all the running flows
 //
 // Usage example:
 //
-// func HandlePacket(in *layers.IPv4) err {
-//     defragger := ip4defrag.NewIPv4Defragmenter()
-//     in, err := defragger.DefragIPv4(in)
-//     if err != nil {
-//         return err
-//     } else if in == nil {
-//         return nil  // packet fragment, we don't have whole packet yet.
-//     }
-//     // At this point, we know that 'in' is defragmented.
-//     //It may be the same 'in' passed to
-//	   // HandlePacket, or it may not, but we don't really care :)
-//	   ... do stuff to 'in' ...
-//}
-//
+//	func HandlePacket(in *layers.IPv4) err {
+//	    defragger := ip4defrag.NewIPv4Defragmenter()
+//	    in, err := defragger.DefragIPv4(in)
+//	    if err != nil {
+//	        return err
+//	    } else if in == nil {
+//	        return nil  // packet fragment, we don't have whole packet yet.
+//	    }
+//	    // At this point, we know that 'in' is defragmented.
+//	    //It may be the same 'in' passed to
+//		   // HandlePacket, or it may not, but we don't really care :)
+//		   ... do stuff to 'in' ...
+//	}
 func (d *IPv4Defragmenter) DefragIPv4(in *layers.IPv4) (*layers.IPv4, error) {
 	return d.DefragIPv4WithTimestamp(in, time.Now())
 }
@@ -82,7 +81,6 @@ func (d *IPv4Defragmenter) DefragIPv4(in *layers.IPv4) (*layers.IPv4, error) {
 // old fragments instead of time.Now()
 //
 // This is useful when operating on pcap files instead of live captured data
-//
 func (d *IPv4Defragmenter) DefragIPv4WithTimestamp(in *layers.IPv4, t time.Time) (*layers.IPv4, error) {
 	// check if we need to defrag
 	if st := d.dontDefrag(in); st == true {

@@ -13,7 +13,7 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/google/gopacket"
+	"github.com/NozomiNetworks/gopacket-fork-nozomi"
 )
 
 // SIPVersion defines the different versions of the SIP Protocol
@@ -180,7 +180,6 @@ var compactSipHeadersCorrespondance = map[string]string{
 // -> The SIP Response code (if it's a response)
 // -> The SIP Status line (if it's a response)
 // You can easily know the type of the packet with the IsResponse boolean
-//
 type SIP struct {
 	BaseLayer
 
@@ -307,10 +306,9 @@ func (s *SIP) DecodeFromBytes(data []byte, df gopacket.DecodeFeedback) error {
 //
 // Examples of first line of SIP Prococol :
 //
-// 	Request 	: INVITE bob@example.com SIP/2.0
-// 	Response 	: SIP/2.0 200 OK
-// 	Response	: SIP/2.0 501 Not Implemented
-//
+//	Request 	: INVITE bob@example.com SIP/2.0
+//	Response 	: SIP/2.0 200 OK
+//	Response	: SIP/2.0 501 Not Implemented
 func (s *SIP) ParseFirstLine(firstLine []byte) error {
 
 	var err error
@@ -372,13 +370,12 @@ func (s *SIP) ParseFirstLine(firstLine []byte) error {
 //
 // Examples of header :
 //
-//  CSeq: 1 REGISTER
-//  Via: SIP/2.0/UDP there.com:5060
-//  Authorization:Digest username="UserB",
-//	  realm="MCI WorldCom SIP",
-//    nonce="1cec4341ae6cbe5a359ea9c8e88df84f", opaque="",
-//    uri="sip:ss2.wcom.com", response="71ba27c64bd01de719686aa4590d5824"
-//
+//	 CSeq: 1 REGISTER
+//	 Via: SIP/2.0/UDP there.com:5060
+//	 Authorization:Digest username="UserB",
+//		  realm="MCI WorldCom SIP",
+//	   nonce="1cec4341ae6cbe5a359ea9c8e88df84f", opaque="",
+//	   uri="sip:ss2.wcom.com", response="71ba27c64bd01de719686aa4590d5824"
 func (s *SIP) ParseHeader(header []byte) (err error) {
 
 	// Ignore empty headers

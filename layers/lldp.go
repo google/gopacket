@@ -11,7 +11,7 @@ import (
 	"errors"
 	"fmt"
 
-	"github.com/google/gopacket"
+	"github.com/NozomiNetworks/gopacket-fork-nozomi"
 )
 
 // LLDPTLVType is the type of each TLV value in a LinkLayerDiscovery packet.
@@ -240,7 +240,7 @@ type LinkLayerDiscoveryInfo struct {
 	Unknown         []LinkLayerDiscoveryValue // undecoded TLVs
 }
 
-/// IEEE 802.1 TLV Subtypes
+// / IEEE 802.1 TLV Subtypes
 const (
 	LLDP8021SubtypePortVLANID       uint8 = 1
 	LLDP8021SubtypeProtocolVLANID   uint8 = 2

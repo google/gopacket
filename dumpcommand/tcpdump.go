@@ -16,9 +16,9 @@ import (
 	"os"
 	"time"
 
-	"github.com/google/gopacket"
-	"github.com/google/gopacket/ip4defrag"
-	"github.com/google/gopacket/layers" // pulls in all layers decoders
+	"github.com/NozomiNetworks/gopacket-fork-nozomi"
+	"github.com/NozomiNetworks/gopacket-fork-nozomi/ip4defrag"
+	"github.com/NozomiNetworks/gopacket-fork-nozomi/layers" // pulls in all layers decoders
 )
 
 var (

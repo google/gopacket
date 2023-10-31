@@ -24,11 +24,11 @@ import (
 	"net"
 	"time"
 
-	"github.com/google/gopacket"
-	"github.com/google/gopacket/examples/util"
-	"github.com/google/gopacket/layers"
-	"github.com/google/gopacket/pcap"
-	"github.com/google/gopacket/routing"
+	"github.com/NozomiNetworks/gopacket-fork-nozomi"
+	"github.com/NozomiNetworks/gopacket-fork-nozomi/examples/util"
+	"github.com/NozomiNetworks/gopacket-fork-nozomi/layers"
+	"github.com/NozomiNetworks/gopacket-fork-nozomi/pcap"
+	"github.com/NozomiNetworks/gopacket-fork-nozomi/routing"
 )
 
 // scanner handles scanning a single IP address.

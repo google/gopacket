@@ -11,7 +11,7 @@ import (
 	"fmt"
 	"runtime"
 
-	"github.com/google/gopacket"
+	"github.com/NozomiNetworks/gopacket-fork-nozomi"
 )
 
 // EnumMetadata keeps track of a set of metadata for each enumeration value

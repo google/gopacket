@@ -11,7 +11,7 @@ import (
 	"errors"
 	"fmt"
 
-	"github.com/google/gopacket"
+	"github.com/NozomiNetworks/gopacket-fork-nozomi"
 )
 
 // Geneve is specifed here https://tools.ietf.org/html/draft-ietf-nvo3-geneve-03

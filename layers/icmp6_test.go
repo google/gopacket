@@ -8,19 +8,20 @@
 package layers
 
 import (
-	"github.com/google/gopacket"
+	"github.com/NozomiNetworks/gopacket-fork-nozomi"
 	"net"
 	"reflect"
 	"testing"
 )
 
 // testPacketICMPv6 is the packet:
-//   10:48:30.088384 IP6 2620:0:1005:0:26be:5ff:fe27:b17 > fe80::21f:caff:feb3:7640: ICMP6, neighbor advertisement, tgt is 2620:0:1005:0:26be:5ff:fe27:b17, length 24
-//      0x0000:  001f cab3 7640 24be 0527 0b17 86dd 6000  ....v@$..'....`.
-//      0x0010:  0000 0018 3aff 2620 0000 1005 0000 26be  ....:.&.......&.
-//      0x0020:  05ff fe27 0b17 fe80 0000 0000 0000 021f  ...'............
-//      0x0030:  caff feb3 7640 8800 1ed6 4000 0000 2620  ....v@....@...&.
-//      0x0040:  0000 1005 0000 26be 05ff fe27 0b17       ......&....'..
+//
+//	10:48:30.088384 IP6 2620:0:1005:0:26be:5ff:fe27:b17 > fe80::21f:caff:feb3:7640: ICMP6, neighbor advertisement, tgt is 2620:0:1005:0:26be:5ff:fe27:b17, length 24
+//	   0x0000:  001f cab3 7640 24be 0527 0b17 86dd 6000  ....v@$..'....`.
+//	   0x0010:  0000 0018 3aff 2620 0000 1005 0000 26be  ....:.&.......&.
+//	   0x0020:  05ff fe27 0b17 fe80 0000 0000 0000 021f  ...'............
+//	   0x0030:  caff feb3 7640 8800 1ed6 4000 0000 2620  ....v@....@...&.
+//	   0x0040:  0000 1005 0000 26be 05ff fe27 0b17       ......&....'..
 var testPacketICMPv6 = []byte{
 	0x00, 0x1f, 0xca, 0xb3, 0x76, 0x40, 0x24, 0xbe, 0x05, 0x27, 0x0b, 0x17, 0x86, 0xdd, 0x60, 0x00,
 	0x00, 0x00, 0x00, 0x18, 0x3a, 0xff, 0x26, 0x20, 0x00, 0x00, 0x10, 0x05, 0x00, 0x00, 0x26, 0xbe,

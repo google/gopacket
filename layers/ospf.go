@@ -11,7 +11,7 @@ import (
 	"errors"
 	"fmt"
 
-	"github.com/google/gopacket"
+	"github.com/NozomiNetworks/gopacket-fork-nozomi"
 )
 
 // OSPFType denotes what kind of OSPF type it is
@@ -237,7 +237,7 @@ type OSPF struct {
 	Content      interface{}
 }
 
-//OSPFv2 extend the OSPF head with version 2 specific fields
+// OSPFv2 extend the OSPF head with version 2 specific fields
 type OSPFv2 struct {
 	BaseLayer
 	OSPF

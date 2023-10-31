@@ -12,8 +12,8 @@ import (
 	"io"
 	"time"
 
-	"github.com/google/gopacket"
-	"github.com/google/gopacket/layers"
+	"github.com/NozomiNetworks/gopacket-fork-nozomi"
+	"github.com/NozomiNetworks/gopacket-fork-nozomi/layers"
 )
 
 // Writer wraps an underlying io.Writer to write packet data in PCAP
@@ -38,18 +38,18 @@ const versionMinor = 4
 // an append), you must call WriteFileHeader before WritePacket.  Packet
 // timestamps are written with nanosecond precision.
 //
-//  // Write a new file:
-//  f, _ := os.Create("/tmp/file.pcap")
-//  w := pcapgo.NewWriterNanos(f)
-//  w.WriteFileHeader(65536, layers.LinkTypeEthernet)  // new file, must do this.
-//  w.WritePacket(gopacket.CaptureInfo{...}, data1)
-//  f.Close()
-//  // Append to existing file (must have same snaplen and linktype)
-//  f2, _ := os.OpenFile("/tmp/fileNano.pcap", os.O_APPEND, 0700)
-//  w2 := pcapgo.NewWriter(f2)
-//  // no need for file header, it's already written.
-//  w2.WritePacket(gopacket.CaptureInfo{...}, data2)
-//  f2.Close()
+//	// Write a new file:
+//	f, _ := os.Create("/tmp/file.pcap")
+//	w := pcapgo.NewWriterNanos(f)
+//	w.WriteFileHeader(65536, layers.LinkTypeEthernet)  // new file, must do this.
+//	w.WritePacket(gopacket.CaptureInfo{...}, data1)
+//	f.Close()
+//	// Append to existing file (must have same snaplen and linktype)
+//	f2, _ := os.OpenFile("/tmp/fileNano.pcap", os.O_APPEND, 0700)
+//	w2 := pcapgo.NewWriter(f2)
+//	// no need for file header, it's already written.
+//	w2.WritePacket(gopacket.CaptureInfo{...}, data2)
+//	f2.Close()
 func NewWriterNanos(w io.Writer) *Writer {
 	return &Writer{w: w, tsScaler: nanosPerNano}
 }
@@ -59,18 +59,18 @@ func NewWriterNanos(w io.Writer) *Writer {
 // an append), you must call WriteFileHeader before WritePacket.
 // Packet timestamps are written witn microsecond precision.
 //
-//  // Write a new file:
-//  f, _ := os.Create("/tmp/file.pcap")
-//  w := pcapgo.NewWriter(f)
-//  w.WriteFileHeader(65536, layers.LinkTypeEthernet)  // new file, must do this.
-//  w.WritePacket(gopacket.CaptureInfo{...}, data1)
-//  f.Close()
-//  // Append to existing file (must have same snaplen and linktype)
-//  f2, _ := os.OpenFile("/tmp/file.pcap", os.O_APPEND, 0700)
-//  w2 := pcapgo.NewWriter(f2)
-//  // no need for file header, it's already written.
-//  w2.WritePacket(gopacket.CaptureInfo{...}, data2)
-//  f2.Close()
+//	// Write a new file:
+//	f, _ := os.Create("/tmp/file.pcap")
+//	w := pcapgo.NewWriter(f)
+//	w.WriteFileHeader(65536, layers.LinkTypeEthernet)  // new file, must do this.
+//	w.WritePacket(gopacket.CaptureInfo{...}, data1)
+//	f.Close()
+//	// Append to existing file (must have same snaplen and linktype)
+//	f2, _ := os.OpenFile("/tmp/file.pcap", os.O_APPEND, 0700)
+//	w2 := pcapgo.NewWriter(f2)
+//	// no need for file header, it's already written.
+//	w2.WritePacket(gopacket.CaptureInfo{...}, data2)
+//	f2.Close()
 func NewWriter(w io.Writer) *Writer {
 	return &Writer{w: w, tsScaler: nanosPerMicro}
 }

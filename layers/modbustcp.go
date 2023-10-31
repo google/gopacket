@@ -12,7 +12,7 @@ import (
 	"encoding/binary"
 	"errors"
 
-	"github.com/google/gopacket"
+	"github.com/NozomiNetworks/gopacket-fork-nozomi"
 )
 
 //******************************************************************************
@@ -51,7 +51,6 @@ func (mp ModbusProtocol) String() string {
 // Type ModbusTCP implements the DecodingLayer interface. Each ModbusTCP object
 // represents in a structured form the MODBUS Application Protocol header (MBAP) record present as the TCP
 // payload in an ModbusTCP TCP packet.
-//
 type ModbusTCP struct {
 	BaseLayer // Stores the packet bytes and payload (Modbus PDU) bytes .
 

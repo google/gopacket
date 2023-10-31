@@ -12,7 +12,7 @@ import (
 	"fmt"
 	"hash/crc32"
 
-	"github.com/google/gopacket"
+	"github.com/NozomiNetworks/gopacket-fork-nozomi"
 )
 
 // SCTP contains information on the top level of an SCTP packet.
