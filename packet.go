@@ -168,8 +168,8 @@ func (p *packet) AddLayer(l Layer) {
 }
 
 func (p *packet) DumpPacketData() {
-	fmt.Fprint(os.Stderr, p.packetDump())
-	os.Stderr.Sync()
+	_, _ = fmt.Fprint(os.Stderr, p.packetDump())
+	_ = os.Stderr.Sync()
 }
 
 func (p *packet) Metadata() *PacketMetadata {
@@ -290,7 +290,7 @@ func layerString(v reflect.Value, anonymous bool, writeSpace bool) string {
 					b.WriteByte(' ')
 				}
 				writeSpace = true
-				fmt.Fprintf(&b, "%s=%s", typ.Field(i).Name, layerString(f, false, writeSpace))
+				_, _ = fmt.Fprintf(&b, "%s=%s", typ.Field(i).Name, layerString(f, false, writeSpace))
 			}
 		}
 		if !anonymous {
@@ -301,7 +301,7 @@ func layerString(v reflect.Value, anonymous bool, writeSpace bool) string {
 		var b bytes.Buffer
 		b.WriteByte('[')
 		if v.Len() > 4 {
-			fmt.Fprintf(&b, "..%d..", v.Len())
+			_, _ = fmt.Fprintf(&b, "..%d..", v.Len())
 		} else {
 			for j := 0; j < v.Len(); j++ {
 				if j != 0 {
@@ -376,20 +376,20 @@ func layerGoString(i interface{}, b *bytes.Buffer) {
 				b.WriteString(", ")
 			}
 			if t.Field(i).Name == "BaseLayer" {
-				fmt.Fprintf(b, "BaseLayer:%s", baseLayerString(v.Field(i)))
+				_, _ = fmt.Fprintf(b, "BaseLayer:%s", baseLayerString(v.Field(i)))
 			} else if v.Field(i).Kind() == reflect.Struct {
-				fmt.Fprintf(b, "%s:", t.Field(i).Name)
+				_, _ = fmt.Fprintf(b, "%s:", t.Field(i).Name)
 				layerGoString(v.Field(i), b)
 			} else if v.Field(i).Kind() == reflect.Ptr {
 				b.WriteByte('&')
 				layerGoString(v.Field(i), b)
 			} else {
-				fmt.Fprintf(b, "%s:%#v", t.Field(i).Name, v.Field(i))
+				_, _ = fmt.Fprintf(b, "%s:%#v", t.Field(i).Name, v.Field(i))
 			}
 		}
 		b.WriteByte('}')
 	default:
-		fmt.Fprintf(b, "%#v", i)
+		_, _ = fmt.Fprintf(b, "%#v", i)
 	}
 }
 
@@ -403,28 +403,28 @@ func LayerGoString(l Layer) string {
 
 func (p *packet) packetString() string {
 	var b bytes.Buffer
-	fmt.Fprintf(&b, "PACKET: %d bytes", len(p.Data()))
+	_, _ = fmt.Fprintf(&b, "PACKET: %d bytes", len(p.Data()))
 	if p.metadata.Truncated {
 		b.WriteString(", truncated")
 	}
 	if p.metadata.Length > 0 {
-		fmt.Fprintf(&b, ", wire length %d cap length %d", p.metadata.Length, p.metadata.CaptureLength)
+		_, _ = fmt.Fprintf(&b, ", wire length %d cap length %d", p.metadata.Length, p.metadata.CaptureLength)
 	}
 	if !p.metadata.Timestamp.IsZero() {
-		fmt.Fprintf(&b, " @ %v", p.metadata.Timestamp)
+		_, _ = fmt.Fprintf(&b, " @ %v", p.metadata.Timestamp)
 	}
 	b.WriteByte('\n')
 	for i, l := range p.layers {
-		fmt.Fprintf(&b, "- Layer %d (%02d bytes) = %s\n", i+1, len(l.LayerContents()), LayerString(l))
+		_, _ = fmt.Fprintf(&b, "- Layer %d (%02d bytes) = %s\n", i+1, len(l.LayerContents()), LayerString(l))
 	}
 	return b.String()
 }
 
 func (p *packet) packetDump() string {
 	var b bytes.Buffer
-	fmt.Fprintf(&b, "-- FULL PACKET DATA (%d bytes) ------------------------------------\n%s", len(p.data), hex.Dump(p.data))
+	_, _ = fmt.Fprintf(&b, "-- FULL PACKET DATA (%d bytes) ------------------------------------\n%s", len(p.data), hex.Dump(p.data))
 	for i, l := range p.layers {
-		fmt.Fprintf(&b, "--- Layer %d ---\n%s", i+1, LayerDump(l))
+		_, _ = fmt.Fprintf(&b, "--- Layer %d ---\n%s", i+1, LayerDump(l))
 	}
 	return b.String()
 }
@@ -754,15 +754,7 @@ type ZeroCopyPacketDataSource interface {
 //
 // # Reading With Packets Function
 //
-// This method is the most convenient and easiest to code, but lacks
-// flexibility.  Packets returns a 'chan Packet', then asynchronously writes
-// packets into that channel.  Packets uses a blocking channel, and closes
-// it if an io.EOF is returned by the underlying PacketDataSource.  All other
-// PacketDataSource errors are ignored and discarded.
-//
-//	for packet := range packetSource.Packets() {
-//	  ...
-//	}
+// # For convenience, calls NextPacket internally, see Packets function documentation
 //
 // # Reading With NextPacket Function
 //
@@ -790,7 +782,6 @@ type PacketSource struct {
 	// of packet data.  This can/should be changed by the user to reflect the
 	// way packets should be decoded.
 	DecodeOptions
-	c chan Packet
 }
 
 // NewPacketSource creates a packet data source.
@@ -815,24 +806,19 @@ func (p *PacketSource) NextPacket() (Packet, error) {
 	return packet, nil
 }
 
-var opening = 0
-
-// packetsToChannel reads in all packets from the packet source and sends them
+// packetsToChannel reads in packets from PacketSource and sends them
 // to the given channel. This routine terminates when a non-temporary error
 // is returned by NextPacket().
-func (p *PacketSource) sendData(ctx context.Context, trueChan chan<- Packet) {
-	fmt.Println("OPENING:", opening)
-	contextOpening := opening
-	opening++
+func (p *PacketSource) packetsToChannel(ctx context.Context, packets chan<- Packet) {
 	for {
 		select {
+		case <-ctx.Done():
+			return
 		default:
-			//fmt.Println("- 0, waiting, context:", contextOpening)
-			packet, err := p.NextPacket()
+			npacket, err := p.NextPacket()
 			if err == nil {
-				//fmt.Println("- 1 context:", contextOpening)
 				select {
-				case trueChan <- packet:
+				case packets <- npacket:
 				default:
 					// discarded
 				}
@@ -840,48 +826,51 @@ func (p *PacketSource) sendData(ctx context.Context, trueChan chan<- Packet) {
 			}
 
 			// Immediately retry for temporary network errors
-			if nerr, ok := err.(net.Error); ok && nerr.Temporary() {
-				fmt.Println("- 2 context:", contextOpening)
+			var nerr net.Error
+			if errors.As(err, &nerr) && nerr.Temporary() {
 				continue
 			}
 
 			// Immediately retry for EAGAIN
 			if err == syscall.EAGAIN {
-				fmt.Println("- 3 context:", contextOpening)
 				continue
 			}
 
-			// Immediately break for known unrecoverable errors
-			if err == io.EOF || err == io.ErrUnexpectedEOF ||
-				err == io.ErrNoProgress || err == io.ErrClosedPipe || err == io.ErrShortBuffer ||
+			// Immediately return for known unrecoverable errors
+			if err == io.EOF || errors.Is(err, io.ErrUnexpectedEOF) ||
+				errors.Is(err, io.ErrNoProgress) || errors.Is(err, io.ErrClosedPipe) || errors.Is(err, io.ErrShortBuffer) ||
 				err == syscall.EBADF ||
 				strings.Contains(err.Error(), "use of closed file") {
-				fmt.Println("- 4 context:", contextOpening)
-				break
+				return
 			}
 
 			// Sleep briefly and try again
 			time.Sleep(time.Millisecond * time.Duration(5))
-		case <-ctx.Done():
-			fmt.Println("CLOSING, context:", contextOpening)
-			return
 		}
 	}
 }
 
-// Packets returns a channel of packets, allowing easy iterating over
-// packets.  Packets will be asynchronously read in from the underlying
-// PacketDataSource and written to the returned channel.  If the underlying
-// PacketDataSource returns an io.EOF error, the channel will be closed.
-// If any other error is encountered, it is ignored.
+// Packets is a blocking function sending packets to a channel.
+// The packets will be asynchronously read in from the underlying
+// PacketDataSource and written to the channel.  If the underlying
+// PacketDataSource returns an unrecoverable error, the function will return.
 //
-//	for packet := range packetSource.Packets() {
-//	  handlePacket(packet)  // Do something with each packet.
+//	packetSource := gopacket.NewPacketSource(handle, handle.LinkType())
+//	packets := make(chan gopacket.Packet, 1000)
+//	ctx, cancel := context.WithCancel(context.Background())
+//	wg := sync.WaitGroup{}
+//	wg.Add(1)
+//	go packetSource.Packets(ctx, &wg, packets)
+//	for {
+//	    select {
+//	    case packet := <-packets:
+//	    // do something with each packet and decide when to stop
+//	    }
 //	}
-//
-// If called more than once, returns the same channel.
-func (p *PacketSource) Packets(ctx context.Context, wg *sync.WaitGroup, trueChan chan<- Packet) {
+//	cancel()
+//	wg.Wait()
+func (p *PacketSource) Packets(ctx context.Context, wg *sync.WaitGroup, packets chan<- Packet) {
 	defer wg.Done()
-	p.sendData(ctx, trueChan)
-	close(trueChan)
+	p.packetsToChannel(ctx, packets)
+	close(packets)
 }
