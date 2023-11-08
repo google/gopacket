@@ -1,6 +1,6 @@
 module github.com/NozomiNetworks/gopacket-fork-nozomi
 
-go 1.21.0
+go 1.20
 
 require (
 	github.com/vishvananda/netlink v1.1.0
