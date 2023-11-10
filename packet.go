@@ -19,6 +19,7 @@ import (
 	"runtime/debug"
 	"strings"
 	"sync"
+	"sync/atomic"
 	"syscall"
 	"time"
 )
@@ -778,8 +779,8 @@ type ZeroCopyPacketDataSource interface {
 type PacketSource struct {
 	source         PacketDataSource
 	decoder        Decoder
-	DroppedPackets uint64
-	DroppedBytes   uint64
+	DroppedPackets atomic.Uint64
+	DroppedBytes   atomic.Uint64
 	// DecodeOptions is the set of options to use for decoding each piece
 	// of packet data.  This can/should be changed by the user to reflect the
 	// way packets should be decoded.
@@ -789,9 +790,8 @@ type PacketSource struct {
 // NewPacketSource creates a packet data source.
 func NewPacketSource(source PacketDataSource, decoder Decoder) *PacketSource {
 	return &PacketSource{
-		source:         source,
-		decoder:        decoder,
-		DroppedPackets: 0,
+		source:  source,
+		decoder: decoder,
 	}
 }
 
@@ -824,8 +824,8 @@ func (p *PacketSource) packetsToChannel(ctx context.Context, packets chan<- Pack
 				case packets <- npacket:
 				default:
 					// discarded
-					p.DroppedPackets++
-					p.DroppedBytes += uint64(npacket.Metadata().CaptureLength)
+					p.DroppedPackets.Add(1)
+					p.DroppedBytes.Add(uint64(npacket.Metadata().CaptureLength))
 				}
 				continue
 			}
