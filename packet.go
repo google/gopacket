@@ -776,8 +776,9 @@ type ZeroCopyPacketDataSource interface {
 //	  handlePacket(packet)  // Do something with each packet.
 //	}
 type PacketSource struct {
-	source  PacketDataSource
-	decoder Decoder
+	source         PacketDataSource
+	decoder        Decoder
+	droppedPackets uint64
 	// DecodeOptions is the set of options to use for decoding each piece
 	// of packet data.  This can/should be changed by the user to reflect the
 	// way packets should be decoded.
@@ -787,8 +788,9 @@ type PacketSource struct {
 // NewPacketSource creates a packet data source.
 func NewPacketSource(source PacketDataSource, decoder Decoder) *PacketSource {
 	return &PacketSource{
-		source:  source,
-		decoder: decoder,
+		source:         source,
+		decoder:        decoder,
+		droppedPackets: 0,
 	}
 }
 
@@ -821,6 +823,7 @@ func (p *PacketSource) packetsToChannel(ctx context.Context, packets chan<- Pack
 				case packets <- npacket:
 				default:
 					// discarded
+					p.droppedPackets++
 				}
 				continue
 			}
