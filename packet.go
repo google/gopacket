@@ -778,7 +778,8 @@ type ZeroCopyPacketDataSource interface {
 type PacketSource struct {
 	source         PacketDataSource
 	decoder        Decoder
-	droppedPackets uint64
+	DroppedPackets uint64
+	DroppedBytes   uint64
 	// DecodeOptions is the set of options to use for decoding each piece
 	// of packet data.  This can/should be changed by the user to reflect the
 	// way packets should be decoded.
@@ -790,7 +791,7 @@ func NewPacketSource(source PacketDataSource, decoder Decoder) *PacketSource {
 	return &PacketSource{
 		source:         source,
 		decoder:        decoder,
-		droppedPackets: 0,
+		DroppedPackets: 0,
 	}
 }
 
@@ -823,7 +824,8 @@ func (p *PacketSource) packetsToChannel(ctx context.Context, packets chan<- Pack
 				case packets <- npacket:
 				default:
 					// discarded
-					p.droppedPackets++
+					p.DroppedPackets++
+					p.DroppedBytes += uint64(npacket.Metadata().CaptureLength)
 				}
 				continue
 			}
