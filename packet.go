@@ -779,8 +779,8 @@ type ZeroCopyPacketDataSource interface {
 type PacketSource struct {
 	source         PacketDataSource
 	decoder        Decoder
-	DroppedPackets atomic.Uint64
-	DroppedBytes   atomic.Uint64
+	DroppedPackets atomic.Int64 // restricted to Int64 by open telemetry framework
+	DroppedBytes   atomic.Int64 // restricted to Int64 by open telemetry framework
 	// DecodeOptions is the set of options to use for decoding each piece
 	// of packet data.  This can/should be changed by the user to reflect the
 	// way packets should be decoded.
@@ -825,7 +825,7 @@ func (p *PacketSource) packetsToChannel(ctx context.Context, packets chan<- Pack
 				default:
 					// discarded
 					p.DroppedPackets.Add(1)
-					p.DroppedBytes.Add(uint64(npacket.Metadata().CaptureLength))
+					p.DroppedBytes.Add(int64(npacket.Metadata().CaptureLength))
 				}
 				continue
 			}
