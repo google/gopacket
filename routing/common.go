@@ -25,7 +25,7 @@ type Router interface {
 	// available).  If the preferred src address is not given in the routing
 	// table, the first IP address of the interface is provided.
 	//
-	// If an error is encountered, iface, geteway, and
+	// If an error is encountered, iface, gateway, and
 	// preferredSrc will be nil, and err will be set.
 	Route(dst net.IP) (iface *net.Interface, gateway, preferredSrc net.IP, err error)
 
