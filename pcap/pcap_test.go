@@ -7,11 +7,13 @@
 package pcap
 
 import (
+	"context"
 	"fmt"
 	"io"
 	"io/ioutil"
 	"log"
 	"os"
+	"sync"
 	"testing"
 
 	"github.com/NozomiNetworks/gopacket-fork-nozomi"
@@ -98,9 +100,17 @@ func TestPcapFileRead(t *testing.T) {
 			if file.err != "" {
 				t.Fatalf("Expected error, got none")
 			}
+
 			packetSource := gopacket.NewPacketSource(handle, handle.LinkType())
-			for packet := range packetSource.Packets() {
-				packets = append(packets, packet)
+			captureBarrier := sync.WaitGroup{}
+			captureCtx := context.Background()
+			packetChan := make(chan gopacket.Packet, 1000)
+			captureBarrier.Add(1)
+			packetSource.Packets(captureCtx, &captureBarrier, packetChan)
+			captureBarrier.Wait()
+
+			for packetReceived := range packetChan {
+				packets = append(packets, packetReceived)
 			}
 		}
 		if len(packets) != file.num {
