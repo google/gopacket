@@ -8,6 +8,7 @@
 package pcap
 
 import (
+	_ "embed"
 	"errors"
 	"fmt"
 	"os"
@@ -17,6 +18,7 @@ import (
 	"time"
 	"unsafe"
 
+	gosignature "github.com/NozomiNetworks/go-signature"
 	"github.com/NozomiNetworks/gopacket-fork-nozomi"
 	"github.com/NozomiNetworks/gopacket-fork-nozomi/layers"
 	"golang.org/x/sys/windows"
@@ -25,6 +27,16 @@ import (
 var pcapLoaded = false
 
 const npcapPath = "\\Npcap"
+
+//go:embed ca/DigiCertAut2021_2021-04-29.cer
+var DigiCertAutCert []byte
+
+//go:embed ca/VerisignAut2010-02-08.cer
+var VerisignAutCert []byte
+
+func hasDllAValidSignature(path string) bool {
+	return gosignature.CheckExeSignature(path, [][]byte{DigiCertAutCert, VerisignAutCert}) == nil
+}
 
 func initDllPath(kernel32 syscall.Handle) {
 	setDllDirectory, err := syscall.GetProcAddress(kernel32, "SetDllDirectoryA")
