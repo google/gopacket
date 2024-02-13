@@ -32,13 +32,14 @@ func initDllPath(kernel32 syscall.Handle) {
 		// we can't do anything since SetDllDirectoryA is missing - fall back to use first wpcap.dll we encounter
 		return
 	}
+
 	getSystemDirectory, err := syscall.GetProcAddress(kernel32, "GetSystemDirectoryA")
 	if err != nil {
 		// we can't do anything since SetDllDirectoryA is missing - fall back to use first wpcap.dll we encounter
 		return
 	}
 	buf := make([]byte, 4096)
-	r, _, _ := syscall.Syscall(getSystemDirectory, 2, uintptr(unsafe.Pointer(&buf[0])), uintptr(len(buf)), 0)
+	r, _, _ := syscall.SyscallN(getSystemDirectory, uintptr(unsafe.Pointer(&buf[0])), uintptr(len(buf)))
 	if r == 0 || r > 4096-uintptr(len(npcapPath))-1 {
 		// we can't do anything since SetDllDirectoryA is missing - fall back to use first wpcap.dll we encounter
 		return

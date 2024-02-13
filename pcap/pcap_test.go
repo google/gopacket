@@ -35,7 +35,7 @@ func TestPcapFileRead(t *testing.T) {
 		0xAB, 0xAD, 0x1D, 0xEA,
 	}
 
-	invalidPcap, err := ioutil.TempFile("", "invalid.pcap")
+	invalidPcap, err := os.CreateTemp(t.TempDir(), "*invalid.pcap")
 	if err != nil {
 		t.Fatal(err)
 	}
