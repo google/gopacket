@@ -3,6 +3,7 @@ module github.com/NozomiNetworks/gopacket-fork-nozomi
 go 1.20
 
 require (
+	github.com/NozomiNetworks/go-signature v0.0.0-20240209130747-5bd8ec5e81d1
 	github.com/vishvananda/netlink v1.1.0
 	github.com/vishvananda/netns v0.0.4
 	golang.org/x/net v0.17.0
@@ -10,7 +11,6 @@ require (
 )
 
 require (
-	github.com/NozomiNetworks/go-signature v0.0.0-20240209130747-5bd8ec5e81d1 // indirect
 	github.com/alessio/shellescape v1.4.1 // indirect
 	github.com/danieljoos/wincred v1.2.0 // indirect
 	github.com/edsrzf/mmap-go v1.1.0 // indirect
