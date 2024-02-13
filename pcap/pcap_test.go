@@ -10,7 +10,6 @@ import (
 	"context"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"log"
 	"os"
 	"sync"
@@ -44,7 +43,7 @@ func TestPcapFileRead(t *testing.T) {
 	invalidPcap.Close() // if the file is still open later, the invalid test fails with permission denied on windows
 	defer os.Remove(invalidPcap.Name())
 
-	err = ioutil.WriteFile(invalidPcap.Name(), invalidData, 0644)
+	err = os.WriteFile(invalidPcap.Name(), invalidData, 0644)
 	if err != nil {
 		t.Fatal(err)
 	}

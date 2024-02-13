@@ -54,7 +54,7 @@ func initDllPath(kernel32 syscall.Handle) {
 		return
 	}
 	copy(buf[r:], npcapPath)
-	_, _, _ = syscall.Syscall(setDllDirectory, 1, uintptr(unsafe.Pointer(&buf[0])), 0, 0)
+	_, _, _ = syscall.SyscallN(setDllDirectory, uintptr(unsafe.Pointer(&buf[0])))
 	// ignore errors here - we just fallback to load wpcap.dll from default locations
 }
 
@@ -67,7 +67,7 @@ func initLoadedDllPath(kernel32 syscall.Handle) error {
 		return err
 	}
 	buf := make([]byte, 4096)
-	r, _, _ := syscall.Syscall(getModuleFileName, 3, uintptr(wpcapHandle), uintptr(unsafe.Pointer(&buf[0])), uintptr(len(buf)))
+	r, _, _ := syscall.SyscallN(getModuleFileName, uintptr(wpcapHandle), uintptr(unsafe.Pointer(&buf[0])), uintptr(len(buf)))
 	if r == 0 {
 		// we can't get the filename of the loaded module in this case - just leave default of wpcap.dll
 		return err
@@ -283,9 +283,9 @@ func (h *pcapPkthdr) getCaplen() int {
 func statusError(status pcapCint) error {
 	var ret uintptr
 	if pcapStatustostrPtr == 0 {
-		ret, _, _ = syscall.Syscall(pcapStrerrorPtr, 1, uintptr(status), 0, 0)
+		ret, _, _ = syscall.SyscallN(pcapStrerrorPtr, uintptr(status))
 	} else {
-		ret, _, _ = syscall.Syscall(pcapStatustostrPtr, 1, uintptr(status), 0, 0)
+		ret, _, _ = syscall.SyscallN(pcapStatustostrPtr, uintptr(status))
 	}
 	return errors.New(bytePtrToString(ret))
 }
@@ -294,7 +294,7 @@ func pcapGetTstampPrecision(cptr pcapTPtr) int {
 	if pcapGetTstampPrecisionPtr == 0 {
 		return pcapTstampPrecisionMicro
 	}
-	ret, _, _ := syscall.Syscall(pcapGetTstampPrecisionPtr, 1, uintptr(cptr), 0, 0)
+	ret, _, _ := syscall.SyscallN(pcapGetTstampPrecisionPtr, uintptr(cptr))
 	return int(pcapCint(ret))
 }
 
@@ -302,7 +302,7 @@ func pcapSetTstampPrecision(cptr pcapTPtr, precision int) error {
 	if pcapSetTstampPrecisionPtr == 0 {
 		return errors.New("Not supported")
 	}
-	ret, _, _ := syscall.Syscall(pcapSetTstampPrecisionPtr, 2, uintptr(cptr), uintptr(precision), 0)
+	ret, _, _ := syscall.SyscallN(pcapSetTstampPrecisionPtr, uintptr(cptr), uintptr(precision))
 	if pcapCint(ret) < 0 {
 		return errors.New("Not supported")
 	}
@@ -321,7 +321,7 @@ func pcapOpenLive(device string, snaplen int, pro int, timeout int) (*Handle, er
 		return nil, err
 	}
 
-	cptr, _, _ := syscall.Syscall6(pcapOpenLivePtr, 5, uintptr(unsafe.Pointer(dev)), uintptr(snaplen), uintptr(pro), uintptr(timeout), uintptr(unsafe.Pointer(&buf[0])), 0)
+	cptr, _, _ := syscall.SyscallN(pcapOpenLivePtr, uintptr(unsafe.Pointer(dev)), uintptr(snaplen), uintptr(pro), uintptr(timeout), uintptr(unsafe.Pointer(&buf[0])))
 
 	if cptr == 0 {
 		return nil, errors.New(byteSliceToString(buf))
@@ -343,9 +343,9 @@ func openOffline(file string) (handle *Handle, err error) {
 
 	var cptr uintptr
 	if pcapOpenOfflineWithTstampPrecisionPtr == 0 {
-		cptr, _, _ = syscall.Syscall(pcapOpenOfflinePtr, 2, uintptr(unsafe.Pointer(f)), uintptr(unsafe.Pointer(&buf[0])), 0)
+		cptr, _, _ = syscall.SyscallN(pcapOpenOfflinePtr, uintptr(unsafe.Pointer(f)), uintptr(unsafe.Pointer(&buf[0])))
 	} else {
-		cptr, _, _ = syscall.Syscall(pcapOpenOfflineWithTstampPrecisionPtr, 3, uintptr(unsafe.Pointer(f)), uintptr(pcapTstampPrecisionNano), uintptr(unsafe.Pointer(&buf[0])))
+		cptr, _, _ = syscall.SyscallN(pcapOpenOfflineWithTstampPrecisionPtr, uintptr(unsafe.Pointer(f)), uintptr(pcapTstampPrecisionNano), uintptr(unsafe.Pointer(&buf[0])))
 	}
 
 	if cptr == 0 {
@@ -358,19 +358,19 @@ func openOffline(file string) (handle *Handle, err error) {
 
 func (p *Handle) pcapClose() {
 	if p.cptr != 0 {
-		_, _, _ = syscall.Syscall(pcapClosePtr, 1, uintptr(p.cptr), 0, 0)
+		_, _, _ = syscall.SyscallN(pcapClosePtr, uintptr(p.cptr))
 	}
 	p.cptr = 0
 }
 
 func (p *Handle) pcapGeterr() error {
-	ret, _, _ := syscall.Syscall(pcapGeterrPtr, 1, uintptr(p.cptr), 0, 0)
+	ret, _, _ := syscall.SyscallN(pcapGeterrPtr, uintptr(p.cptr))
 	return errors.New(bytePtrToString(ret))
 }
 
 func (p *Handle) pcapStats() (*Stats, error) {
 	var cstats pcapStats
-	ret, _, _ := syscall.Syscall(pcapStatsPtr, 2, uintptr(p.cptr), uintptr(unsafe.Pointer(&cstats)), 0)
+	ret, _, _ := syscall.SyscallN(pcapStatsPtr, uintptr(p.cptr), uintptr(unsafe.Pointer(&cstats)))
 	if pcapCint(ret) < 0 {
 		return nil, p.pcapGeterr()
 	}
@@ -392,7 +392,7 @@ func (p *Handle) pcapCompile(expr string, maskp uint32) (pcapBpfProgram, error) 
 	}
 	pcapCompileMu.Lock()
 	defer pcapCompileMu.Unlock()
-	res, _, _ := syscall.Syscall6(pcapCompilePtr, 5, uintptr(p.cptr), uintptr(unsafe.Pointer(&bpf)), uintptr(unsafe.Pointer(cexpr)), uintptr(1), uintptr(maskp), 0)
+	res, _, _ := syscall.SyscallN(pcapCompilePtr, uintptr(p.cptr), uintptr(unsafe.Pointer(&bpf)), uintptr(unsafe.Pointer(cexpr)), uintptr(1), uintptr(maskp))
 	if pcapCint(res) < 0 {
 		return bpf, p.pcapGeterr()
 	}
@@ -400,7 +400,7 @@ func (p *Handle) pcapCompile(expr string, maskp uint32) (pcapBpfProgram, error) 
 }
 
 func (p pcapBpfProgram) free() {
-	_, _, _ = syscall.Syscall(pcapFreecodePtr, 1, uintptr(unsafe.Pointer(&p)), 0, 0)
+	_, _, _ = syscall.SyscallN(pcapFreecodePtr, uintptr(unsafe.Pointer(&p)))
 }
 
 func (p pcapBpfProgram) toBPFInstruction() []BPFInstruction {
@@ -419,7 +419,7 @@ func (p pcapBpfProgram) toBPFInstruction() []BPFInstruction {
 func pcapBpfProgramFromInstructions(bpfInstructions []BPFInstruction) pcapBpfProgram {
 	var bpf pcapBpfProgram
 	bpf.Len = uint32(len(bpfInstructions))
-	cbpfInsns, _, _ := syscall.Syscall(callocPtr, 2, uintptr(len(bpfInstructions)), uintptr(unsafe.Sizeof(bpfInstructions[0])), 0)
+	cbpfInsns, _, _ := syscall.SyscallN(callocPtr, uintptr(len(bpfInstructions)), uintptr(unsafe.Sizeof(bpfInstructions[0])))
 	gbpfInsns := (*[bpfInstructionBufferSize]pcapBpfInstruction)(unsafe.Pointer(cbpfInsns))
 
 	for i, v := range bpfInstructions {
@@ -444,7 +444,7 @@ func pcapLookupnet(device string) (netp, maskp uint32, err error) {
 	if err != nil {
 		return 0, 0, err
 	}
-	e, _, _ := syscall.Syscall6(pcapLookupnetPtr, 4, uintptr(unsafe.Pointer(dev)), uintptr(unsafe.Pointer(&netp)), uintptr(unsafe.Pointer(&maskp)), uintptr(unsafe.Pointer(&buf[0])), 0, 0)
+	e, _, _ := syscall.Syscall(pcapLookupnetPtr, uintptr(unsafe.Pointer(dev)), uintptr(unsafe.Pointer(&netp)), uintptr(unsafe.Pointer(&maskp)), uintptr(unsafe.Pointer(&buf[0])))
 	if pcapCint(e) < 0 {
 		return 0, 0, errors.New(byteSliceToString(buf))
 	}
@@ -457,12 +457,12 @@ func (b *BPF) pcapOfflineFilter(ci gopacket.CaptureInfo, data []byte) bool {
 	hdr.Ts.Usec = int32(ci.Timestamp.Nanosecond() / 1000)
 	hdr.Caplen = uint32(len(data)) // Trust actual length over ci.Length.
 	hdr.Len = uint32(ci.Length)
-	e, _, _ := syscall.Syscall(pcapOfflineFilterPtr, 3, uintptr(unsafe.Pointer(&b.bpf.bpf)), uintptr(unsafe.Pointer(&hdr)), uintptr(unsafe.Pointer(&data[0])))
+	e, _, _ := syscall.SyscallN(pcapOfflineFilterPtr, uintptr(unsafe.Pointer(&b.bpf.bpf)), uintptr(unsafe.Pointer(&hdr)), uintptr(unsafe.Pointer(&data[0])))
 	return e != 0
 }
 
 func (p *Handle) pcapSetfilter(bpf pcapBpfProgram) error {
-	e, _, _ := syscall.Syscall(pcapSetfilterPtr, 2, uintptr(p.cptr), uintptr(unsafe.Pointer(&bpf)), 0)
+	e, _, _ := syscall.SyscallN(pcapSetfilterPtr, uintptr(p.cptr), uintptr(unsafe.Pointer(&bpf)))
 	if pcapCint(e) < 0 {
 		return p.pcapGeterr()
 	}
@@ -471,14 +471,14 @@ func (p *Handle) pcapSetfilter(bpf pcapBpfProgram) error {
 
 func (p *Handle) pcapListDatalinks() (datalinks []Datalink, err error) {
 	var dltbuf *pcapCint
-	ret, _, _ := syscall.Syscall(pcapListDatalinksPtr, 2, uintptr(p.cptr), uintptr(unsafe.Pointer(&dltbuf)), 0)
+	ret, _, _ := syscall.SyscallN(pcapListDatalinksPtr, uintptr(p.cptr), uintptr(unsafe.Pointer(&dltbuf)))
 
 	n := int(pcapCint(ret))
 
 	if n < 0 {
 		return nil, p.pcapGeterr()
 	}
-	defer syscall.Syscall(pcapFreeDatalinksPtr, 1, uintptr(unsafe.Pointer(dltbuf)), 0, 0)
+	defer syscall.SyscallN(pcapFreeDatalinksPtr, uintptr(unsafe.Pointer(dltbuf)))
 
 	datalinks = make([]Datalink, n)
 
@@ -498,7 +498,7 @@ func pcapOpenDead(linkType layers.LinkType, captureLength int) (*Handle, error) 
 		return nil, err
 	}
 
-	cptr, _, _ := syscall.Syscall(pcapOpenDeadPtr, 2, uintptr(linkType), uintptr(captureLength), 0)
+	cptr, _, _ := syscall.SyscallN(pcapOpenDeadPtr, uintptr(linkType), uintptr(captureLength))
 	if cptr == 0 {
 		return nil, errors.New("error opening dead capture")
 	}
