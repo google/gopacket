@@ -507,7 +507,7 @@ func pcapOpenDead(linkType layers.LinkType, captureLength int) (*Handle, error) 
 }
 
 func (p *Handle) pcapNextPacketEx() NextError {
-	r, _, _ := syscall.Syscall(pcapNextExPtr, 3, uintptr(p.cptr), uintptr(unsafe.Pointer(&p.pkthdr)), uintptr(unsafe.Pointer(&p.bufptr)))
+	r, _, _ := syscall.SyscallN(pcapNextExPtr, uintptr(p.cptr), uintptr(unsafe.Pointer(&p.pkthdr)), uintptr(unsafe.Pointer(&p.bufptr)))
 	ret := pcapCint(r)
 	// According to https://github.com/the-tcpdump-group/libpcap/blob/1131a7c26c6f4d4772e4a2beeaf7212f4dea74ac/pcap.c#L398-L406 ,
 	// the return value of pcap_next_ex could be greater than 1 for success.
@@ -519,12 +519,12 @@ func (p *Handle) pcapNextPacketEx() NextError {
 }
 
 func (p *Handle) pcapDatalink() layers.LinkType {
-	ret, _, _ := syscall.Syscall(pcapDatalinkPtr, 1, uintptr(p.cptr), 0, 0)
+	ret, _, _ := syscall.SyscallN(pcapDatalinkPtr, uintptr(p.cptr))
 	return layers.LinkType(ret)
 }
 
 func (p *Handle) pcapSetDatalink(dlt layers.LinkType) error {
-	ret, _, _ := syscall.Syscall(pcapSetDatalinkPtr, 2, uintptr(p.cptr), uintptr(dlt), 0)
+	ret, _, _ := syscall.SyscallN(pcapSetDatalinkPtr, 2, uintptr(p.cptr), uintptr(dlt))
 	if pcapCint(ret) < 0 {
 		return p.pcapGeterr()
 	}
@@ -558,7 +558,7 @@ func pcapDatalinkNameToVal(name string) int {
 	if err != nil {
 		return 0
 	}
-	ret, _, _ := syscall.Syscall(pcapDatalinkNameToValPtr, 1, uintptr(unsafe.Pointer(cptr)), 0, 0)
+	ret, _, _ := syscall.SyscallN(pcapDatalinkNameToValPtr, uintptr(unsafe.Pointer(cptr)))
 	return int(pcapCint(ret))
 }
 
@@ -567,7 +567,7 @@ func pcapLibVersion() string {
 	if err != nil {
 		panic(err)
 	}
-	ret, _, _ := syscall.Syscall(pcapLibVersionPtr, 0, 0, 0, 0)
+	ret, _, _ := syscall.SyscallN(pcapLibVersionPtr)
 	return bytePtrToString(ret)
 }
 
@@ -580,7 +580,7 @@ type pcapDevices struct {
 }
 
 func (p pcapDevices) free() {
-	syscall.Syscall(pcapFreealldevsPtr, 1, uintptr(unsafe.Pointer(p.all)), 0, 0)
+	syscall.SyscallN(pcapFreealldevsPtr, uintptr(unsafe.Pointer(p.all)))
 }
 
 func (p *pcapDevices) next() bool {
@@ -658,7 +658,7 @@ func pcapFindAllDevs() (pcapDevices, error) {
 
 	buf := make([]byte, errorBufferSize)
 
-	ret, _, _ := syscall.Syscall(pcapFindalldevsPtr, 2, uintptr(unsafe.Pointer(&alldevsp.all)), uintptr(unsafe.Pointer(&buf[0])), 0)
+	ret, _, _ := syscall.SyscallN(pcapFindalldevsPtr, uintptr(unsafe.Pointer(&alldevsp.all)), uintptr(unsafe.Pointer(&buf[0])))
 
 	if pcapCint(ret) < 0 {
 		return pcapDevices{}, errors.New(byteSliceToString(buf))
@@ -667,7 +667,7 @@ func pcapFindAllDevs() (pcapDevices, error) {
 }
 
 func (p *Handle) pcapSendpacket(data []byte) error {
-	ret, _, _ := syscall.Syscall(pcapSendpacketPtr, 3, uintptr(p.cptr), uintptr(unsafe.Pointer(&data[0])), uintptr(len(data)))
+	ret, _, _ := syscall.SyscallN(pcapSendpacketPtr, uintptr(p.cptr), uintptr(unsafe.Pointer(&data[0])), uintptr(len(data)))
 	if pcapCint(ret) < 0 {
 		return p.pcapGeterr()
 	}
@@ -675,7 +675,7 @@ func (p *Handle) pcapSendpacket(data []byte) error {
 }
 
 func (p *Handle) pcapSetdirection(direction Direction) error {
-	status, _, _ := syscall.Syscall(pcapSetdirectionPtr, 2, uintptr(p.cptr), uintptr(direction), 0)
+	status, _, _ := syscall.SyscallN(pcapSetdirectionPtr, 2, uintptr(p.cptr), uintptr(direction))
 	if pcapCint(status) < 0 {
 		return statusError(pcapCint(status))
 	}
@@ -683,7 +683,7 @@ func (p *Handle) pcapSetdirection(direction Direction) error {
 }
 
 func (p *Handle) pcapSnapshot() int {
-	ret, _, _ := syscall.Syscall(pcapSnapshotPtr, 1, uintptr(p.cptr), 0, 0)
+	ret, _, _ := syscall.SyscallN(pcapSnapshotPtr, uintptr(p.cptr))
 	return int(pcapCint(ret))
 }
 
@@ -697,7 +697,7 @@ func (t TimestampSource) pcapTstampTypeValToName() string {
 	if pcapTstampTypeValToNamePtr == 0 {
 		return "pcap timestamp types not supported"
 	}
-	ret, _, _ := syscall.Syscall(pcapTstampTypeValToNamePtr, 1, uintptr(t), 0, 0)
+	ret, _, _ := syscall.SyscallN(pcapTstampTypeValToNamePtr, 1, uintptr(t))
 	return bytePtrToString(ret)
 }
 
@@ -715,7 +715,7 @@ func pcapTstampTypeNameToVal(s string) (TimestampSource, error) {
 	if err != nil {
 		return 0, err
 	}
-	ret, _, _ := syscall.Syscall(pcapTstampTypeNameToValPtr, 1, uintptr(unsafe.Pointer(cs)), 0, 0)
+	ret, _, _ := syscall.SyscallN(pcapTstampTypeNameToValPtr, 1, uintptr(unsafe.Pointer(cs)))
 	t := pcapCint(ret)
 	if t < 0 {
 		return 0, statusError(pcapCint(t))
@@ -724,12 +724,12 @@ func pcapTstampTypeNameToVal(s string) (TimestampSource, error) {
 }
 
 func (p *InactiveHandle) pcapGeterr() error {
-	ret, _, _ := syscall.Syscall(pcapGeterrPtr, 1, uintptr(p.cptr), 0, 0)
+	ret, _, _ := syscall.SyscallN(pcapGeterrPtr, uintptr(p.cptr))
 	return errors.New(bytePtrToString(ret))
 }
 
 func (p *InactiveHandle) pcapActivate() (*Handle, activateError) {
-	r, _, _ := syscall.Syscall(pcapActivatePtr, 1, uintptr(p.cptr), 0, 0)
+	r, _, _ := syscall.SyscallN(pcapActivatePtr, uintptr(p.cptr))
 	ret := activateError(pcapCint(r))
 	if ret != aeNoError {
 		return nil, ret
@@ -743,7 +743,7 @@ func (p *InactiveHandle) pcapActivate() (*Handle, activateError) {
 
 func (p *InactiveHandle) pcapClose() {
 	if p.cptr != 0 {
-		_, _, _ = syscall.Syscall(pcapClosePtr, 1, uintptr(p.cptr), 0, 0)
+		_, _, _ = syscall.SyscallN(pcapClosePtr, uintptr(p.cptr))
 	}
 	p.cptr = 0
 }
@@ -759,7 +759,7 @@ func pcapCreate(device string) (*InactiveHandle, error) {
 	if err != nil {
 		return nil, err
 	}
-	cptr, _, _ := syscall.Syscall(pcapCreatePtr, 2, uintptr(unsafe.Pointer(dev)), uintptr(unsafe.Pointer(&buf[0])), 0)
+	cptr, _, _ := syscall.SyscallN(pcapCreatePtr, uintptr(unsafe.Pointer(dev)), uintptr(unsafe.Pointer(&buf[0])))
 	if cptr == 0 {
 		return nil, errors.New(byteSliceToString(buf))
 	}
