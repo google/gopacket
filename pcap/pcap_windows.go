@@ -8,6 +8,7 @@
 package pcap
 
 import (
+	_ "embed"
 	"errors"
 	"fmt"
 	"os"
@@ -17,6 +18,7 @@ import (
 	"time"
 	"unsafe"
 
+	gosignature "github.com/NozomiNetworks/go-signature"
 	"github.com/NozomiNetworks/gopacket-fork-nozomi"
 	"github.com/NozomiNetworks/gopacket-fork-nozomi/layers"
 	"golang.org/x/sys/windows"
@@ -25,6 +27,13 @@ import (
 var pcapLoaded = false
 
 const npcapPath = "\\Npcap"
+
+//go:embed ca/DigiCertAut2021_2021-04-29.cer
+var DigiCertAutCert []byte
+
+func hasDllAValidSignature(path string) error {
+	return gosignature.CheckExeSignature(path, [][]byte{DigiCertAutCert})
+}
 
 func initDllPath(kernel32 syscall.Handle) {
 	setDllDirectory, err := syscall.GetProcAddress(kernel32, "SetDllDirectoryA")
@@ -52,19 +61,19 @@ func initDllPath(kernel32 syscall.Handle) {
 // loadedDllPath will hold the full pathname of the loaded wpcap.dll after init if possible
 var loadedDllPath = "wpcap.dll"
 
-func initLoadedDllPath(kernel32 syscall.Handle) {
+func initLoadedDllPath(kernel32 syscall.Handle) error {
 	getModuleFileName, err := syscall.GetProcAddress(kernel32, "GetModuleFileNameA")
 	if err != nil {
-		// we can't get the filename of the loaded module in this case - just leave default of wpcap.dll
-		return
+		return err
 	}
 	buf := make([]byte, 4096)
 	r, _, _ := syscall.Syscall(getModuleFileName, 3, uintptr(wpcapHandle), uintptr(unsafe.Pointer(&buf[0])), uintptr(len(buf)))
 	if r == 0 {
 		// we can't get the filename of the loaded module in this case - just leave default of wpcap.dll
-		return
+		return err
 	}
 	loadedDllPath = string(buf[:int(r)])
+	return hasDllAValidSignature(loadedDllPath)
 }
 
 func mustLoad(fun string) uintptr {
@@ -176,9 +185,8 @@ func LoadWinPCAP() error {
 	if haveSearch, _ := syscall.GetProcAddress(kernel32, "AddDllDirectory"); haveSearch != 0 {
 		// if AddDllDirectory is present, we can use LOAD_LIBRARY_* stuff with LoadLibraryEx to avoid wpcap.dll hijacking
 		// see: https://msdn.microsoft.com/en-us/library/ff919712%28VS.85%29.aspx
-		const LOAD_LIBRARY_SEARCH_USER_DIRS = 0x00000400
 		const LOAD_LIBRARY_SEARCH_SYSTEM32 = 0x00000800
-		wpcapHandle, err = windows.LoadLibraryEx("wpcap.dll", 0, LOAD_LIBRARY_SEARCH_USER_DIRS|LOAD_LIBRARY_SEARCH_SYSTEM32)
+		wpcapHandle, err = windows.LoadLibraryEx("wpcap.dll", 0, LOAD_LIBRARY_SEARCH_SYSTEM32)
 		if err != nil {
 			return fmt.Errorf("couldn't load wpcap.dll")
 		}
@@ -189,7 +197,10 @@ func LoadWinPCAP() error {
 			return fmt.Errorf("couldn't load wpcap.dll")
 		}
 	}
-	initLoadedDllPath(kernel32)
+	err = initLoadedDllPath(kernel32)
+	if err != nil {
+		return err
+	}
 	msvcrtHandle, err = syscall.LoadLibrary("msvcrt.dll")
 	if err != nil {
 		return fmt.Errorf("couldn't load msvcrt.dll")
