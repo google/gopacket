@@ -767,7 +767,7 @@ func pcapCreate(device string) (*InactiveHandle, error) {
 }
 
 func (p *InactiveHandle) pcapSetSnaplen(snaplen int) error {
-	status, _, _ := syscall.Syscall(pcapSetSnaplenPtr, 2, uintptr(p.cptr), uintptr(snaplen), 0)
+	status, _, _ := syscall.SyscallN(pcapSetSnaplenPtr, uintptr(p.cptr), uintptr(snaplen))
 	if pcapCint(status) < 0 {
 		return statusError(pcapCint(status))
 	}
@@ -779,7 +779,7 @@ func (p *InactiveHandle) pcapSetPromisc(promisc bool) error {
 	if promisc {
 		pro = 1
 	}
-	status, _, _ := syscall.Syscall(pcapSetPromiscPtr, 2, uintptr(p.cptr), pro, 0)
+	status, _, _ := syscall.SyscallN(pcapSetPromiscPtr, uintptr(p.cptr), pro)
 	if pcapCint(status) < 0 {
 		return statusError(pcapCint(status))
 	}
@@ -787,7 +787,7 @@ func (p *InactiveHandle) pcapSetPromisc(promisc bool) error {
 }
 
 func (p *InactiveHandle) pcapSetTimeout(timeout time.Duration) error {
-	status, _, _ := syscall.Syscall(pcapSetTimeoutPtr, 2, uintptr(p.cptr), uintptr(timeoutMillis(timeout)), 0)
+	status, _, _ := syscall.SyscallN(pcapSetTimeoutPtr, uintptr(p.cptr), uintptr(timeoutMillis(timeout)))
 
 	if pcapCint(status) < 0 {
 		return statusError(pcapCint(status))
@@ -801,12 +801,12 @@ func (p *InactiveHandle) pcapListTstampTypes() (out []TimestampSource) {
 		return
 	}
 	var types *pcapCint
-	ret, _, _ := syscall.Syscall(pcapListTstampTypesPtr, 2, uintptr(p.cptr), uintptr(unsafe.Pointer(&types)), 0)
+	ret, _, _ := syscall.SyscallN(pcapListTstampTypesPtr, uintptr(p.cptr), uintptr(unsafe.Pointer(&types)))
 	n := int(pcapCint(ret))
 	if n < 0 {
 		return // public interface doesn't have error :(
 	}
-	defer syscall.Syscall(pcapFreeTstampTypesPtr, 1, uintptr(unsafe.Pointer(types)), 0, 0)
+	defer syscall.SyscallN(pcapFreeTstampTypesPtr, 1, uintptr(unsafe.Pointer(types)))
 	typesArray := (*[1 << 28]pcapCint)(unsafe.Pointer(types))
 	for i := 0; i < n; i++ {
 		out = append(out, TimestampSource((*typesArray)[i]))
@@ -819,7 +819,7 @@ func (p *InactiveHandle) pcapSetTstampType(t TimestampSource) error {
 	if pcapSetTstampTypePtr == 0 {
 		return statusError(pcapError)
 	}
-	status, _, _ := syscall.Syscall(pcapSetTstampTypePtr, 2, uintptr(p.cptr), uintptr(t), 0)
+	status, _, _ := syscall.SyscallN(pcapSetTstampTypePtr, uintptr(p.cptr), uintptr(t))
 	if pcapCint(status) < 0 {
 		return statusError(pcapCint(status))
 	}
@@ -835,7 +835,7 @@ func (p *InactiveHandle) pcapSetRfmon(monitor bool) error {
 	if monitor {
 		mon = 1
 	}
-	canset, _, _ := syscall.Syscall(pcapCanSetRfmonPtr, 1, uintptr(p.cptr), 0, 0)
+	canset, _, _ := syscall.SyscallN(pcapCanSetRfmonPtr, uintptr(p.cptr))
 	switch canset {
 	case 0:
 		return CannotSetRFMon
@@ -844,7 +844,7 @@ func (p *InactiveHandle) pcapSetRfmon(monitor bool) error {
 	default:
 		return statusError(pcapCint(canset))
 	}
-	status, _, _ := syscall.Syscall(pcapSetRfmonPtr, 2, uintptr(p.cptr), mon, 0)
+	status, _, _ := syscall.SyscallN(pcapSetRfmonPtr, uintptr(p.cptr), mon)
 	if status != 0 {
 		return statusError(pcapCint(status))
 	}
@@ -852,7 +852,7 @@ func (p *InactiveHandle) pcapSetRfmon(monitor bool) error {
 }
 
 func (p *InactiveHandle) pcapSetBufferSize(bufferSize int) error {
-	status, _, _ := syscall.Syscall(pcapSetBufferSizePtr, 2, uintptr(p.cptr), uintptr(bufferSize), 0)
+	status, _, _ := syscall.SyscallN(pcapSetBufferSizePtr, uintptr(p.cptr), uintptr(bufferSize))
 	if pcapCint(status) < 0 {
 		return statusError(pcapCint(status))
 	}
@@ -868,7 +868,7 @@ func (p *InactiveHandle) pcapSetImmediateMode(mode bool) error {
 	if mode {
 		md = 1
 	}
-	status, _, _ := syscall.Syscall(pcapSetImmediateModePtr, 2, uintptr(p.cptr), md, 0)
+	status, _, _ := syscall.SyscallN(pcapSetImmediateModePtr, uintptr(p.cptr), md)
 	if pcapCint(status) < 0 {
 		return statusError(pcapCint(status))
 	}
@@ -898,9 +898,9 @@ func openOfflineFile(file *os.File) (handle *Handle, err error) {
 
 	var cptr uintptr
 	if pcapOpenOfflineWithTstampPrecisionPtr == 0 {
-		cptr, _, _ = syscall.Syscall(pcapHopenOfflinePtr, 2, cf, uintptr(unsafe.Pointer(&buf[0])), 0)
+		cptr, _, _ = syscall.SyscallN(pcapHopenOfflinePtr, cf, uintptr(unsafe.Pointer(&buf[0])))
 	} else {
-		cptr, _, _ = syscall.Syscall(pcapHOpenOfflineWithTstampPrecisionPtr, 3, cf, uintptr(pcapTstampPrecisionNano), uintptr(unsafe.Pointer(&buf[0])))
+		cptr, _, _ = syscall.SyscallN(pcapHOpenOfflineWithTstampPrecisionPtr, cf, uintptr(pcapTstampPrecisionNano), uintptr(unsafe.Pointer(&buf[0])))
 	}
 
 	if cptr == 0 {
