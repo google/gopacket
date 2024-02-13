@@ -12,6 +12,7 @@ import (
 	"errors"
 	"fmt"
 	"os"
+	"path/filepath"
 	"runtime"
 	"sync"
 	"syscall"
@@ -27,6 +28,7 @@ import (
 var pcapLoaded = false
 
 const npcapPath = "\\Npcap"
+const wpcapDllName = "wpcap.dll"
 
 //go:embed ca/DigiCertAut2021_2021-04-29.cer
 var DigiCertAutCert []byte
@@ -35,31 +37,51 @@ func hasDllAValidSignature(path string) error {
 	return gosignature.CheckExeSignature(path, [][]byte{DigiCertAutCert})
 }
 
-func initDllPath(kernel32 syscall.Handle) {
+func resolveNpcapDllPath(kernel32 syscall.Handle) (string, error) {
+	// We load SetDllDirectoryA, used to add a path to dll search path
 	setDllDirectory, err := syscall.GetProcAddress(kernel32, "SetDllDirectoryA")
 	if err != nil {
 		// we can't do anything since SetDllDirectoryA is missing - fall back to use first wpcap.dll we encounter
-		return
+		return "", err
 	}
 
+	// We load GetSystemDirectoryA, used to retrieve the system32 folder path
 	getSystemDirectory, err := syscall.GetProcAddress(kernel32, "GetSystemDirectoryA")
 	if err != nil {
-		// we can't do anything since SetDllDirectoryA is missing - fall back to use first wpcap.dll we encounter
-		return
+		// we can't do anything since GetSystemDirectoryA is missing - fall back to use first wpcap.dll we encounter
+		return "", err
 	}
-	buf := make([]byte, 4096)
-	r, _, _ := syscall.SyscallN(getSystemDirectory, uintptr(unsafe.Pointer(&buf[0])), uintptr(len(buf)))
-	if r == 0 || r > 4096-uintptr(len(npcapPath))-1 {
-		// we can't do anything since SetDllDirectoryA is missing - fall back to use first wpcap.dll we encounter
-		return
-	}
-	copy(buf[r:], npcapPath)
-	_, _, _ = syscall.SyscallN(setDllDirectory, uintptr(unsafe.Pointer(&buf[0])))
-	// ignore errors here - we just fallback to load wpcap.dll from default locations
-}
 
-// loadedDllPath will hold the full pathname of the loaded wpcap.dll after init if possible
-var loadedDllPath = "wpcap.dll"
+	const bufferSize = 4096
+	buf := make([]byte, bufferSize)
+	r, _, _ := syscall.SyscallN(getSystemDirectory, uintptr(unsafe.Pointer(&buf[0])), uintptr(len(buf)))
+	if r == 0 || int(r) > bufferSize-len(npcapPath)-1 {
+		// Failed to get system32 folder, fallback to env variable
+		system32Path := filepath.Join(os.Getenv("systemroot"), "System32", npcapPath)
+		r = uintptr(len(system32Path))
+		copy(buf, system32Path)
+	} else {
+		copy(buf[r:], npcapPath)
+		r = uintptr(int(r) + len(npcapPath))
+	}
+
+	_, _, errN := syscall.SyscallN(setDllDirectory, uintptr(unsafe.Pointer(&buf[0])))
+	// ignore errors here - we just fallback to load wpcap.dll from default locations
+	if errN != windows.SEVERITY_SUCCESS {
+		return "", fmt.Errorf("failed to set npcap path as search folder")
+	}
+
+	wpcapPath := filepath.Join(string(buf[:int(r)]), wpcapDllName)
+	if os.Stat(wpcapPath); err != nil {
+		return "", fmt.Errorf("%s doesn't exist in %s", wpcapDllName, wpcapPath)
+	}
+
+	err = hasDllAValidSignature(wpcapPath)
+	if err != nil {
+		return "", err
+	}
+	return wpcapPath, nil
+}
 
 func initLoadedDllPath(kernel32 syscall.Handle) error {
 	getModuleFileName, err := syscall.GetProcAddress(kernel32, "GetModuleFileNameA")
@@ -72,16 +94,16 @@ func initLoadedDllPath(kernel32 syscall.Handle) error {
 		// we can't get the filename of the loaded module in this case - just leave default of wpcap.dll
 		return err
 	}
-	loadedDllPath = string(buf[:int(r)])
+	loadedDllPath := string(buf[:int(r)])
 	return hasDllAValidSignature(loadedDllPath)
 }
 
-func mustLoad(fun string) uintptr {
+func mustLoad(fun string) (uintptr, error) {
 	addr, err := windows.GetProcAddress(wpcapHandle, fun)
 	if err != nil {
-		panic(fmt.Sprintf("Couldn't load function %s from %s", fun, loadedDllPath))
+		return 0, fmt.Errorf("Couldn't load function %s from %s", fun, wpcapDllName)
 	}
-	return addr
+	return addr, nil
 }
 
 func mightLoad(fun string) uintptr {
@@ -165,7 +187,7 @@ var (
 )
 
 func init() {
-	LoadWinPCAP()
+	_ = LoadWinPCAP()
 }
 
 // LoadWinPCAP attempts to dynamically load the wpcap DLL and resolve necessary functions
@@ -180,21 +202,27 @@ func LoadWinPCAP() error {
 	}
 	defer syscall.FreeLibrary(kernel32)
 
-	initDllPath(kernel32)
-
+	npcapDllPath, err := resolveNpcapDllPath(kernel32)
 	if haveSearch, _ := syscall.GetProcAddress(kernel32, "AddDllDirectory"); haveSearch != 0 {
 		// if AddDllDirectory is present, we can use LOAD_LIBRARY_* stuff with LoadLibraryEx to avoid wpcap.dll hijacking
 		// see: https://msdn.microsoft.com/en-us/library/ff919712%28VS.85%29.aspx
 		const LOAD_LIBRARY_SEARCH_SYSTEM32 = 0x00000800
-		wpcapHandle, err = windows.LoadLibraryEx("wpcap.dll", 0, LOAD_LIBRARY_SEARCH_SYSTEM32)
+		const LOAD_WITH_ALTERED_SEARCH_PATH = 0x00000008
+		if err == nil {
+			wpcapHandle, err = windows.LoadLibraryEx(npcapDllPath, 0, LOAD_WITH_ALTERED_SEARCH_PATH)
+		} else {
+			wpcapHandle, err = windows.LoadLibraryEx(wpcapDllName, 0, LOAD_LIBRARY_SEARCH_SYSTEM32)
+		}
+
 		if err != nil {
-			return fmt.Errorf("couldn't load wpcap.dll")
+			return fmt.Errorf("couldn't load %s", wpcapDllName)
 		}
 	} else {
 		// otherwise fall back to load it with the unsafe search cause by SetDllDirectory
-		wpcapHandle, err = windows.LoadLibrary("wpcap.dll")
+		// This is unsafe, but required on windows 7 without KB2533623
+		wpcapHandle, err = windows.LoadLibrary(wpcapDllName)
 		if err != nil {
-			return fmt.Errorf("couldn't load wpcap.dll")
+			return fmt.Errorf("couldn't load %s", wpcapDllName)
 		}
 	}
 	err = initLoadedDllPath(kernel32)
@@ -210,33 +238,99 @@ func LoadWinPCAP() error {
 		return fmt.Errorf("couldn't get calloc function")
 	}
 
-	pcapStrerrorPtr = mustLoad("pcap_strerror")
-	pcapStatustostrPtr = mightLoad("pcap_statustostr") // not available on winpcap
-	pcapOpenLivePtr = mustLoad("pcap_open_live")
-	pcapOpenOfflinePtr = mustLoad("pcap_open_offline")
-	pcapClosePtr = mustLoad("pcap_close")
-	pcapGeterrPtr = mustLoad("pcap_geterr")
-	pcapStatsPtr = mustLoad("pcap_stats")
-	pcapCompilePtr = mustLoad("pcap_compile")
-	pcapFreecodePtr = mustLoad("pcap_freecode")
-	pcapLookupnetPtr = mustLoad("pcap_lookupnet")
-	pcapOfflineFilterPtr = mustLoad("pcap_offline_filter")
-	pcapSetfilterPtr = mustLoad("pcap_setfilter")
-	pcapListDatalinksPtr = mustLoad("pcap_list_datalinks")
-	pcapFreeDatalinksPtr = mustLoad("pcap_free_datalinks")
-	pcapDatalinkValToNamePtr = mustLoad("pcap_datalink_val_to_name")
-	pcapDatalinkValToDescriptionPtr = mustLoad("pcap_datalink_val_to_description")
-	pcapOpenDeadPtr = mustLoad("pcap_open_dead")
-	pcapNextExPtr = mustLoad("pcap_next_ex")
-	pcapDatalinkPtr = mustLoad("pcap_datalink")
-	pcapSetDatalinkPtr = mustLoad("pcap_set_datalink")
-	pcapDatalinkNameToValPtr = mustLoad("pcap_datalink_name_to_val")
-	pcapLibVersionPtr = mustLoad("pcap_lib_version")
-	pcapFreealldevsPtr = mustLoad("pcap_freealldevs")
-	pcapFindalldevsPtr = mustLoad("pcap_findalldevs")
-	pcapSendpacketPtr = mustLoad("pcap_sendpacket")
-	pcapSetdirectionPtr = mustLoad("pcap_setdirection")
-	pcapSnapshotPtr = mustLoad("pcap_snapshot")
+	//libpcap <1.5 does not have pcap_set_immediate_mode
+	err = linkWpcapMethods()
+	if err != nil {
+		return err
+	}
+
+	pcapLoaded = true
+	return nil
+}
+
+func linkWpcapMethods() (err error) {
+	if pcapStrerrorPtr, err = mustLoad("pcap_strerror"); err != nil {
+		return err
+	}
+	// pcap_statustostr not available on winpcap
+	pcapStatustostrPtr = mightLoad("pcap_statustostr")
+
+	if pcapOpenLivePtr, err = mustLoad("pcap_open_live"); err != nil {
+		return err
+	}
+	if pcapOpenOfflinePtr, err = mustLoad("pcap_open_offline"); err != nil {
+		return err
+	}
+	if pcapClosePtr, err = mustLoad("pcap_close"); err != nil {
+		return err
+	}
+	if pcapGeterrPtr, err = mustLoad("pcap_geterr"); err != nil {
+		return err
+	}
+	if pcapStatsPtr, err = mustLoad("pcap_stats"); err != nil {
+		return err
+	}
+	if pcapCompilePtr, err = mustLoad("pcap_compile"); err != nil {
+		return err
+	}
+	if pcapFreecodePtr, err = mustLoad("pcap_freecode"); err != nil {
+		return err
+	}
+	if pcapLookupnetPtr, err = mustLoad("pcap_lookupnet"); err != nil {
+		return err
+	}
+	if pcapOfflineFilterPtr, err = mustLoad("pcap_offline_filter"); err != nil {
+		return err
+	}
+	if pcapSetfilterPtr, err = mustLoad("pcap_setfilter"); err != nil {
+		return err
+	}
+	if pcapListDatalinksPtr, err = mustLoad("pcap_list_datalinks"); err != nil {
+		return err
+	}
+	if pcapFreeDatalinksPtr, err = mustLoad("pcap_free_datalinks"); err != nil {
+		return err
+	}
+	if pcapDatalinkValToNamePtr, err = mustLoad("pcap_datalink_val_to_name"); err != nil {
+		return err
+	}
+	if pcapDatalinkValToDescriptionPtr, err = mustLoad("pcap_datalink_val_to_description"); err != nil {
+		return err
+	}
+	if pcapOpenDeadPtr, err = mustLoad("pcap_open_dead"); err != nil {
+		return err
+	}
+	if pcapNextExPtr, err = mustLoad("pcap_next_ex"); err != nil {
+		return err
+	}
+	if pcapDatalinkPtr, err = mustLoad("pcap_datalink"); err != nil {
+		return err
+	}
+	if pcapSetDatalinkPtr, err = mustLoad("pcap_set_datalink"); err != nil {
+		return err
+	}
+	if pcapDatalinkNameToValPtr, err = mustLoad("pcap_datalink_name_to_val"); err != nil {
+		return err
+	}
+	if pcapLibVersionPtr, err = mustLoad("pcap_lib_version"); err != nil {
+		return err
+	}
+	if pcapFreealldevsPtr, err = mustLoad("pcap_freealldevs"); err != nil {
+		return err
+	}
+	if pcapFindalldevsPtr, err = mustLoad("pcap_findalldevs"); err != nil {
+		return err
+	}
+	if pcapSendpacketPtr, err = mustLoad("pcap_sendpacket"); err != nil {
+		return err
+	}
+	if pcapSetdirectionPtr, err = mustLoad("pcap_setdirection"); err != nil {
+		return err
+	}
+	if pcapSnapshotPtr, err = mustLoad("pcap_snapshot"); err != nil {
+		return err
+	}
+
 	//libpcap <1.2 doesn't have pcap_*_tstamp_* functions
 	pcapTstampTypeValToNamePtr = mightLoad("pcap_tstamp_type_val_to_name")
 	pcapTstampTypeNameToValPtr = mightLoad("pcap_tstamp_type_name_to_val")
@@ -245,22 +339,36 @@ func LoadWinPCAP() error {
 	pcapSetTstampTypePtr = mightLoad("pcap_set_tstamp_type")
 	pcapGetTstampPrecisionPtr = mightLoad("pcap_get_tstamp_precision")
 	pcapSetTstampPrecisionPtr = mightLoad("pcap_set_tstamp_precision")
+
 	pcapOpenOfflineWithTstampPrecisionPtr = mightLoad("pcap_open_offline_with_tstamp_precision")
 	pcapHOpenOfflineWithTstampPrecisionPtr = mightLoad("pcap_hopen_offline_with_tstamp_precision")
-	pcapActivatePtr = mustLoad("pcap_activate")
-	pcapCreatePtr = mustLoad("pcap_create")
-	pcapSetSnaplenPtr = mustLoad("pcap_set_snaplen")
-	pcapSetPromiscPtr = mustLoad("pcap_set_promisc")
-	pcapSetTimeoutPtr = mustLoad("pcap_set_timeout")
+	if pcapActivatePtr, err = mustLoad("pcap_activate"); err != nil {
+		return err
+	}
+	if pcapCreatePtr, err = mustLoad("pcap_create"); err != nil {
+		return err
+	}
+	if pcapSetSnaplenPtr, err = mustLoad("pcap_set_snaplen"); err != nil {
+		return err
+	}
+	if pcapSetPromiscPtr, err = mustLoad("pcap_set_promisc"); err != nil {
+		return err
+	}
+	if pcapSetTimeoutPtr, err = mustLoad("pcap_set_timeout"); err != nil {
+		return err
+	}
+
 	//winpcap does not support rfmon
 	pcapCanSetRfmonPtr = mightLoad("pcap_can_set_rfmon")
 	pcapSetRfmonPtr = mightLoad("pcap_set_rfmon")
-	pcapSetBufferSizePtr = mustLoad("pcap_set_buffer_size")
-	//libpcap <1.5 does not have pcap_set_immediate_mode
-	pcapSetImmediateModePtr = mightLoad("pcap_set_immediate_mode")
-	pcapHopenOfflinePtr = mustLoad("pcap_hopen_offline")
+	if pcapSetBufferSizePtr, err = mustLoad("pcap_set_buffer_size"); err != nil {
+		return err
+	}
 
-	pcapLoaded = true
+	pcapSetImmediateModePtr = mightLoad("pcap_set_immediate_mode")
+	if pcapHopenOfflinePtr, err = mustLoad("pcap_hopen_offline"); err != nil {
+		return err
+	}
 	return nil
 }
 
@@ -444,6 +552,7 @@ func pcapLookupnet(device string) (netp, maskp uint32, err error) {
 	if err != nil {
 		return 0, 0, err
 	}
+	// TODO: check this syscall because the number of arguments doesn't match
 	e, _, _ := syscall.Syscall(pcapLookupnetPtr, uintptr(unsafe.Pointer(dev)), uintptr(unsafe.Pointer(&netp)), uintptr(unsafe.Pointer(&maskp)), uintptr(unsafe.Pointer(&buf[0])))
 	if pcapCint(e) < 0 {
 		return 0, 0, errors.New(byteSliceToString(buf))
@@ -532,28 +641,19 @@ func (p *Handle) pcapSetDatalink(dlt layers.LinkType) error {
 }
 
 func pcapDatalinkValToName(dlt int) string {
-	err := LoadWinPCAP()
-	if err != nil {
-		panic(err)
-	}
-	ret, _, _ := syscall.Syscall(pcapDatalinkValToNamePtr, 1, uintptr(dlt), 0, 0)
+	_ = LoadWinPCAP()
+	ret, _, _ := syscall.SyscallN(pcapDatalinkValToNamePtr, uintptr(dlt))
 	return bytePtrToString(ret)
 }
 
 func pcapDatalinkValToDescription(dlt int) string {
-	err := LoadWinPCAP()
-	if err != nil {
-		panic(err)
-	}
-	ret, _, _ := syscall.Syscall(pcapDatalinkValToDescriptionPtr, 1, uintptr(dlt), 0, 0)
+	_ = LoadWinPCAP()
+	ret, _, _ := syscall.SyscallN(pcapDatalinkValToDescriptionPtr, uintptr(dlt))
 	return bytePtrToString(ret)
 }
 
 func pcapDatalinkNameToVal(name string) int {
-	err := LoadWinPCAP()
-	if err != nil {
-		panic(err)
-	}
+	_ = LoadWinPCAP()
 	cptr, err := syscall.BytePtrFromString(name)
 	if err != nil {
 		return 0
@@ -563,10 +663,7 @@ func pcapDatalinkNameToVal(name string) int {
 }
 
 func pcapLibVersion() string {
-	err := LoadWinPCAP()
-	if err != nil {
-		panic(err)
-	}
+	_ = LoadWinPCAP()
 	ret, _, _ := syscall.SyscallN(pcapLibVersionPtr)
 	return bytePtrToString(ret)
 }
