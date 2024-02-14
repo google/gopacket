@@ -189,10 +189,6 @@ var (
 	pcapHopenOfflinePtr uintptr
 )
 
-func init() {
-	_ = LoadNPCAP()
-}
-
 func IsNpcapLoaded() bool {
 	return pcapLoaded
 }
@@ -209,7 +205,7 @@ func FreeNpcap() error {
 	return nil
 }
 
-func IsLoadLibraryExWithSearchFlagsSupported(kernel32 windows.Handle) bool {
+func isLoadLibraryExWithSearchFlagsSupported(kernel32 windows.Handle) bool {
 	haveSearch, _ := windows.GetProcAddress(kernel32, "AddDllDirectory")
 	return haveSearch != 0
 }
@@ -227,7 +223,7 @@ func LoadNPCAP() error {
 	defer windows.FreeLibrary(kernel32)
 
 	npcapDllPath, err := resolveNpcapDllPath(kernel32)
-	if IsLoadLibraryExWithSearchFlagsSupported(kernel32) {
+	if isLoadLibraryExWithSearchFlagsSupported(kernel32) {
 		// if AddDllDirectory is present, we can use LOAD_LIBRARY_* stuff with LoadLibraryEx to avoid wpcap.dll hijacking
 		// see: https://msdn.microsoft.com/en-us/library/ff919712%28VS.85%29.aspx
 		if err == nil {
@@ -287,7 +283,7 @@ func loadKernel32() (windows.Handle, error) {
 
 func loadMsvcrt(kernel32 windows.Handle) (err error) {
 	// this requires MS VC++ runtime
-	if IsLoadLibraryExWithSearchFlagsSupported(kernel32) {
+	if isLoadLibraryExWithSearchFlagsSupported(kernel32) {
 		msvcrtHandle, err = windows.LoadLibraryEx("msvcrt.dll", 0, LOAD_LIBRARY_SEARCH_SYSTEM32)
 	} else {
 		//load in an unsafe way. this is case is still vulnerable
