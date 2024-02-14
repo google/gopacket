@@ -18,7 +18,7 @@ require (
 	github.com/howeyc/gopass v0.0.0-20210920133722-c8aef6fb66ef // indirect
 	github.com/inconshreveable/mousetrap v1.1.0 // indirect
 	github.com/pkg/errors v0.9.1 // indirect
-	github.com/saferwall/pe v1.4.8 // indirect
+	github.com/saferwall/pe v1.5.2 // indirect
 	github.com/sassoftware/relic v7.2.1+incompatible // indirect
 	github.com/satori/go.uuid v1.2.0 // indirect
 	github.com/spf13/cobra v1.8.0 // indirect
