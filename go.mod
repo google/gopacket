@@ -3,7 +3,7 @@ module github.com/NozomiNetworks/gopacket-fork-nozomi
 go 1.20
 
 require (
-	github.com/NozomiNetworks/go-signature v0.0.0-20240209130747-5bd8ec5e81d1
+	github.com/NozomiNetworks/go-signature v0.0.0-20240214072814-b30cb638c2f5
 	github.com/vishvananda/netlink v1.1.0
 	github.com/vishvananda/netns v0.0.4
 	golang.org/x/net v0.17.0

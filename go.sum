@@ -1,5 +1,5 @@
-github.com/NozomiNetworks/go-signature v0.0.0-20240209130747-5bd8ec5e81d1 h1:RznWYxrBTzJNJrkNIRc/AySqkxz1bGC9LoHfXUdpXGE=
-github.com/NozomiNetworks/go-signature v0.0.0-20240209130747-5bd8ec5e81d1/go.mod h1:9pT+HGkWNvMc1Ax8ytkJXnKZZMwMMWi1qwXbAkU4oGw=
+github.com/NozomiNetworks/go-signature v0.0.0-20240214072814-b30cb638c2f5 h1:zVTyvNxmAjyqIp9qlHrGys4OfZSFRvtxSjACSb1Q+ic=
+github.com/NozomiNetworks/go-signature v0.0.0-20240214072814-b30cb638c2f5/go.mod h1:Ids80fqV6fJLbKyD/7RlqAWmz9qCy0L+2KszMFHIj/o=
 github.com/alessio/shellescape v1.4.1 h1:V7yhSDDn8LP4lc4jS8pFkt0zCnzVJlG5JXy9BVKJUX0=
 github.com/alessio/shellescape v1.4.1/go.mod h1:PZAiSCk0LJaZkiCSkPv8qIobYglO3FPpyFjDCtHLS30=
 github.com/cpuguy83/go-md2man/v2 v2.0.3/go.mod h1:tgQtvFlXSQOSOSIRvRPT7W67SCa46tRHOmNcaadrF8o=
