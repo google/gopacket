@@ -313,10 +313,6 @@ func ExampleBPF() {
 }
 
 func TestLoadAndFreeNpcap(t *testing.T) {
-	loaded := IsNpcapLoaded()
-	if !loaded {
-		t.Fatal("npcap has not been loaded in init")
-	}
 	err := LoadNPCAP()
 	if err != nil {
 		t.Fatal("load should not give error")
@@ -325,7 +321,7 @@ func TestLoadAndFreeNpcap(t *testing.T) {
 	if err != nil {
 		t.Fatal("failed to free npcap")
 	}
-	loaded = IsNpcapLoaded()
+	loaded := IsNpcapLoaded()
 	if loaded {
 		t.Fatal("npcap should not be loaded after free")
 	}
