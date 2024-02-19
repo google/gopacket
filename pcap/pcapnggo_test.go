@@ -8,7 +8,7 @@ package pcap
 
 import (
 	"bytes"
-	"io/ioutil"
+	"os"
 	"reflect"
 	"testing"
 	"time"
@@ -19,7 +19,7 @@ import (
 )
 
 func TestPCAPGoNgWrite(t *testing.T) {
-	f, err := ioutil.TempFile("", "pcapnggo")
+	f, err := os.CreateTemp("", "pcapnggo")
 	if err != nil {
 		t.Fatal(err)
 	}

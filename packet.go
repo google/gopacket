@@ -779,8 +779,8 @@ type ZeroCopyPacketDataSource interface {
 type PacketSource struct {
 	source         PacketDataSource
 	decoder        Decoder
-	DroppedPackets atomic.Int64 // restricted to Int64 by open telemetry framework
-	DroppedBytes   atomic.Int64 // restricted to Int64 by open telemetry framework
+	droppedPackets atomic.Int64 // restricted to Int64 by open telemetry framework
+	droppedBytes   atomic.Int64 // restricted to Int64 by open telemetry framework
 	// DecodeOptions is the set of options to use for decoding each piece
 	// of packet data.  This can/should be changed by the user to reflect the
 	// way packets should be decoded.
@@ -802,11 +802,11 @@ func (p *PacketSource) NextPacket() (Packet, error) {
 	if err != nil {
 		return nil, err
 	}
-	packet := NewPacket(data, p.decoder, p.DecodeOptions)
-	m := packet.Metadata()
+	newPacket := NewPacket(data, p.decoder, p.DecodeOptions)
+	m := newPacket.Metadata()
 	m.CaptureInfo = ci
 	m.Truncated = m.Truncated || ci.CaptureLength < ci.Length
-	return packet, nil
+	return newPacket, nil
 }
 
 // packetsToChannel reads in packets from PacketSource and sends them
@@ -824,13 +824,15 @@ func (p *PacketSource) packetsToChannel(ctx context.Context, packets chan<- Pack
 				case packets <- npacket:
 				default:
 					// discarded
-					p.DroppedPackets.Add(1)
-					p.DroppedBytes.Add(int64(npacket.Metadata().CaptureLength))
+					p.droppedPackets.Add(1)
+					p.droppedBytes.Add(int64(npacket.Metadata().CaptureLength))
 				}
 				continue
 			}
 
 			// Immediately retry for temporary network errors
+			// net.Error.Temporary() is deprecated but no reasonable alternative is provided by Go for now
+			// Should not cause any problem
 			var nerr net.Error
 			if errors.As(err, &nerr) && nerr.Temporary() {
 				continue
@@ -878,4 +880,12 @@ func (p *PacketSource) Packets(ctx context.Context, wg *sync.WaitGroup, packets 
 	defer wg.Done()
 	p.packetsToChannel(ctx, packets)
 	close(packets)
+}
+
+func (p *PacketSource) DroppedBytes() int64 {
+	return p.droppedBytes.Load()
+}
+
+func (p *PacketSource) DroppedPackets() int64 {
+	return p.droppedPackets.Load()
 }
