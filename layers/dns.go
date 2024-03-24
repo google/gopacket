@@ -1084,7 +1084,7 @@ func (svcb DNSSVCB) size() int {
 	// Target.
 	sz := len(svcb.Target)
 	if sz == 0 {
-		sz += 1
+		sz++
 	} else {
 		sz += 2
 	}
@@ -1180,8 +1180,8 @@ func (param DNSSvcParam) encode(data []byte, offset int) int {
 	return offset
 }
 
-func (svc DNSSvcParam) String() string {
-	return fmt.Sprintf("%s=%x", svc.Key, svc.Value)
+func (param DNSSvcParam) String() string {
+	return fmt.Sprintf("%s=%x", param.Key, param.Value)
 }
 
 // DNSURI is a URI record, defining a target (URI) of a server/service
