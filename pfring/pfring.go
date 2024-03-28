@@ -27,7 +27,7 @@ struct metadata {
 // struct (struct metadata above).
 // Another way to do this, would be to store the struct offsets in defines
 // and use encoding/binary in go-land. But this has the downside, that there is
-// no native endianess in encoding/binary and storing ByteOrder in a variable
+// no native endianness in encoding/binary and storing ByteOrder in a variable
 // leads to an expensive itab lookup + call (instead of very fast inlined and
 // optimized movs). Using unsafe magic could lead to problems with unaligned
 // access.
