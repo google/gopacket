@@ -4,6 +4,7 @@
 // that can be found in the LICENSE file in the root of the source
 // tree.
 
+//go:build linux
 // +build linux
 
 package afpacket
@@ -126,6 +127,7 @@ type options struct {
 	version        OptTPacketVersion
 	socktype       OptSocketType
 	iface          string
+	ifaceIdx       int
 }
 
 var defaultOpts = options{
