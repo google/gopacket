@@ -1071,7 +1071,7 @@ func decodeRawPacketFlowRecord(data *[]byte) (SFlowRawPacketFlowRecord, error) {
 	*data, rec.HeaderLength = (*data)[4:], binary.BigEndian.Uint32((*data)[:4])
 	headerLenWithPadding := int(rec.HeaderLength + ((4 - rec.HeaderLength) % 4))
 	*data, header = (*data)[headerLenWithPadding:], (*data)[:headerLenWithPadding]
-	rec.Header = gopacket.NewPacket(header, LayerTypeEthernet, gopacket.Default)
+	rec.Header = gopacket.NewPacket(header, LayerTypeEthernet, gopacket.Default, 0)
 	return rec, nil
 }
 

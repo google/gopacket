@@ -37,6 +37,8 @@ type CaptureInfo struct {
 	// For example, the afpacket source can report the VLAN of captured
 	// packets this way.
 	AncillaryData []interface{}
+
+	CgroupID uint64
 }
 
 // PacketMetadata contains metadata for a packet.
@@ -97,6 +99,9 @@ type Packet interface {
 	Data() []byte
 	// Metadata returns packet metadata associated with this packet.
 	Metadata() *PacketMetadata
+
+	// CgroupID returns the cgroup ID of the packet sender, if available.
+	CgroupID() uint64
 }
 
 // packet contains all the information we need to fulfill the Packet interface,
@@ -492,6 +497,10 @@ func (p *eagerPacket) LayerClass(lc LayerClass) Layer {
 func (p *eagerPacket) String() string { return p.packetString() }
 func (p *eagerPacket) Dump() string   { return p.packetDump() }
 
+func (p *eagerPacket) CgroupID() uint64 {
+	return p.metadata.CgroupID
+}
+
 // lazyPacket does lazy decoding on its packet data.  On construction it does
 // no initial decoding.  For each function call, it decodes only as many layers
 // as are necessary to compute the return value for that function.
@@ -604,6 +613,10 @@ func (p *lazyPacket) LayerClass(lc LayerClass) Layer {
 func (p *lazyPacket) String() string { p.Layers(); return p.packetString() }
 func (p *lazyPacket) Dump() string   { p.Layers(); return p.packetDump() }
 
+func (p *lazyPacket) CgroupID() uint64 {
+	return p.metadata.CgroupID
+}
+
 // DecodeOptions tells gopacket how to decode a packet.
 type DecodeOptions struct {
 	// Lazy decoding decodes the minimum number of layers needed to return data
@@ -651,7 +664,7 @@ var DecodeStreamsAsDatagrams = DecodeOptions{DecodeStreamsAsDatagrams: true}
 // NewPacket creates a new Packet object from a set of bytes.  The
 // firstLayerDecoder tells it how to interpret the first layer from the bytes,
 // future layers will be generated from that first layer automatically.
-func NewPacket(data []byte, firstLayerDecoder Decoder, options DecodeOptions) Packet {
+func NewPacket(data []byte, firstLayerDecoder Decoder, options DecodeOptions, cgroupID uint64) Packet {
 	if !options.NoCopy {
 		dataCopy := make([]byte, len(data))
 		copy(dataCopy, data)
@@ -680,6 +693,7 @@ func NewPacket(data []byte, firstLayerDecoder Decoder, options DecodeOptions) Pa
 	}
 	p.layers = p.initialLayers[:0]
 	p.initialDecode(firstLayerDecoder)
+	p.metadata.CaptureInfo.CgroupID = cgroupID
 	return p
 }
 
@@ -802,7 +816,7 @@ func (p *PacketSource) NextPacket() (Packet, error) {
 	if err != nil {
 		return nil, err
 	}
-	packet := NewPacket(data, p.decoder, p.DecodeOptions)
+	packet := NewPacket(data, p.decoder, p.DecodeOptions, ci.CgroupID)
 	m := packet.Metadata()
 	m.CaptureInfo = ci
 	m.Truncated = m.Truncated || ci.CaptureLength < ci.Length

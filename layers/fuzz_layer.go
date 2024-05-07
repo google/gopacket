@@ -28,7 +28,8 @@ func FuzzLayer(data []byte) int {
 		SkipDecodeRecovery:       data[2]&0x4 != 0,
 		DecodeStreamsAsDatagrams: data[2]&0x8 != 0,
 	}
-	p := gopacket.NewPacket(data[3:], gopacket.LayerType(startLayer), fuzzOpts)
+	var cgroupID uint64
+	p := gopacket.NewPacket(data[3:], gopacket.LayerType(startLayer), fuzzOpts, cgroupID)
 	for _, l := range p.Layers() {
 		gopacket.LayerString(l)
 	}
