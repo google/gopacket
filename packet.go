@@ -664,7 +664,7 @@ var NoCopy = DecodeOptions{NoCopy: true}
 var DecodeStreamsAsDatagrams = DecodeOptions{DecodeStreamsAsDatagrams: true}
 
 // CgroupID is zero when it's unknown
-var UnknownCgroupID = 0
+var UnknownCgroupID uint64 = 0
 
 // NewPacket creates a new Packet object from a set of bytes.  The
 // firstLayerDecoder tells it how to interpret the first layer from the bytes,
