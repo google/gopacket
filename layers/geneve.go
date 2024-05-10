@@ -73,6 +73,10 @@ func decodeGeneveOption(data []byte, gn *Geneve, df gopacket.DecodeFeedback) (*G
 	return opt, opt.Length, nil
 }
 
+func (gn *Geneve) CanDecode() gopacket.LayerClass {
+	return LayerTypeGeneve
+}
+
 func (gn *Geneve) DecodeFromBytes(data []byte, df gopacket.DecodeFeedback) error {
 	if len(data) < 7 {
 		df.SetTruncated()
