@@ -19,6 +19,8 @@ import (
 	"strings"
 	"syscall"
 	"time"
+
+	"github.com/kubeshark/tracerproto/pkg/unixpacket"
 )
 
 // CaptureInfo provides standardized information about a packet captured off
@@ -38,7 +40,10 @@ type CaptureInfo struct {
 	// packets this way.
 	AncillaryData []interface{}
 
+	// Added for Kubeshark, cgroup ID of the packet sender or reciever.
 	CgroupID uint64
+	// Added for Kubeshark, direction of the packet. Could be PacketSent or PacketRecived.
+	Direction unixpacket.PacketDirection
 }
 
 // PacketMetadata contains metadata for a packet.
@@ -100,8 +105,10 @@ type Packet interface {
 	// Metadata returns packet metadata associated with this packet.
 	Metadata() *PacketMetadata
 
-	// CgroupID returns the cgroup ID of the packet sender, if available.
+	// Added for Kubeshark, returns cgroup ID of the packet sender or reciever.
 	CgroupID() uint64
+	// Added for Kubeshark, returns direction of the packet. Could be PacketSent or PacketRecived.
+	Direction() unixpacket.PacketDirection
 }
 
 // packet contains all the information we need to fulfill the Packet interface,
@@ -503,6 +510,10 @@ func (p *eagerPacket) CgroupID() uint64 {
 	return p.metadata.CgroupID
 }
 
+func (p *eagerPacket) Direction() unixpacket.PacketDirection {
+	return p.metadata.Direction
+}
+
 // lazyPacket does lazy decoding on its packet data.  On construction it does
 // no initial decoding.  For each function call, it decodes only as many layers
 // as are necessary to compute the return value for that function.
@@ -619,6 +630,10 @@ func (p *lazyPacket) CgroupID() uint64 {
 	return p.metadata.CgroupID
 }
 
+func (p *lazyPacket) Direction() unixpacket.PacketDirection {
+	return p.metadata.Direction
+}
+
 // DecodeOptions tells gopacket how to decode a packet.
 type DecodeOptions struct {
 	// Lazy decoding decodes the minimum number of layers needed to return data
@@ -669,7 +684,7 @@ var UnknownCgroupID uint64 = 0
 // NewPacket creates a new Packet object from a set of bytes.  The
 // firstLayerDecoder tells it how to interpret the first layer from the bytes,
 // future layers will be generated from that first layer automatically.
-func NewPacket(data []byte, firstLayerDecoder Decoder, options DecodeOptions, cgroupID uint64) Packet {
+func NewPacket(data []byte, firstLayerDecoder Decoder, options DecodeOptions, cgroupID uint64, direction unixpacket.PacketDirection) Packet {
 	if !options.NoCopy {
 		dataCopy := make([]byte, len(data))
 		copy(dataCopy, data)
@@ -698,7 +713,8 @@ func NewPacket(data []byte, firstLayerDecoder Decoder, options DecodeOptions, cg
 	}
 	p.layers = p.initialLayers[:0]
 	p.initialDecode(firstLayerDecoder)
-	p.metadata.CaptureInfo.CgroupID = cgroupID
+	p.metadata.CgroupID = cgroupID
+	p.metadata.Direction = direction
 	return p
 }
 

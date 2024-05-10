@@ -9,6 +9,7 @@ import (
 	"encoding/binary"
 
 	"github.com/kubeshark/gopacket"
+	"github.com/kubeshark/tracerproto/pkg/unixpacket"
 )
 
 // FuzzLayer is a fuzz target for the layers package of gopacket
@@ -28,8 +29,7 @@ func FuzzLayer(data []byte) int {
 		SkipDecodeRecovery:       data[2]&0x4 != 0,
 		DecodeStreamsAsDatagrams: data[2]&0x8 != 0,
 	}
-	var cgroupID uint64
-	p := gopacket.NewPacket(data[3:], gopacket.LayerType(startLayer), fuzzOpts, cgroupID)
+	p := gopacket.NewPacket(data[3:], gopacket.LayerType(startLayer), fuzzOpts, gopacket.UnknownCgroupID, unixpacket.PacketSent)
 	for _, l := range p.Layers() {
 		gopacket.LayerString(l)
 	}
