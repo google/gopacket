@@ -839,7 +839,7 @@ func (p *PacketSource) NextPacket() (Packet, error) {
 	if err != nil {
 		return nil, err
 	}
-	packet := NewPacket(data, p.decoder, p.DecodeOptions, ci.CgroupID)
+	packet := NewPacket(data, p.decoder, p.DecodeOptions, ci.CgroupID, ci.Direction)
 	m := packet.Metadata()
 	m.CaptureInfo = ci
 	m.Truncated = m.Truncated || ci.CaptureLength < ci.Length
