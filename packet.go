@@ -42,7 +42,7 @@ type CaptureInfo struct {
 
 	// Added for Kubeshark, cgroup ID of the packet sender or reciever.
 	CgroupID uint64
-	// Added for Kubeshark, direction of the packet. Could be PacketSent or PacketRecived.
+	// Added for Kubeshark, direction of the packet. Could be PacketSent or PacketReceived.
 	Direction unixpacket.PacketDirection
 }
 
@@ -107,7 +107,7 @@ type Packet interface {
 
 	// Added for Kubeshark, returns cgroup ID of the packet sender or reciever.
 	CgroupID() uint64
-	// Added for Kubeshark, returns direction of the packet. Could be PacketSent or PacketRecived.
+	// Added for Kubeshark, returns direction of the packet. Could be PacketSent or PacketReceived.
 	Direction() unixpacket.PacketDirection
 }
 
