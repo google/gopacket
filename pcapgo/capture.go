@@ -3,6 +3,7 @@
 // Use of this source code is governed by a BSD-style license
 // that can be found in the LICENSE file in the root of the source
 // tree.
+//go:build linux && go1.9
 // +build linux,go1.9
 
 package pcapgo
@@ -63,7 +64,7 @@ func (h *EthernetHandle) readOne() (ci gopacket.CaptureInfo, vlan int, haveVlan 
 	}
 
 	// use msg_trunc so we know packet size without auxdata, which might be missing
-	n, _, e := syscall.Syscall(unix.SYS_RECVMSG, uintptr(h.fd), uintptr(unsafe.Pointer(&msg)), uintptr(unix.MSG_TRUNC))
+	n, _, e := syscall.SyscallN(unix.SYS_RECVMSG, uintptr(h.fd), uintptr(unsafe.Pointer(&msg)), uintptr(unix.MSG_TRUNC))
 
 	if e != 0 {
 		return gopacket.CaptureInfo{}, 0, false, fmt.Errorf("couldn't read packet: %s", e)
