@@ -27,11 +27,11 @@ import (
 type CaptureBackend uint8
 
 const (
-	CaptureBackendLibpcap CaptureBackend = iota
-	CaptureBackendAfPacket
-	CaptureBackendPfRing
-	CaptureBackendEbpf
-	CaptureBackendEbpfTls
+	CaptureBackendLibpcap  CaptureBackend = 0
+	CaptureBackendAfPacket CaptureBackend = 1
+	CaptureBackendPfRing   CaptureBackend = 2
+	CaptureBackendEbpf     CaptureBackend = 3
+	CaptureBackendEbpfTls  CaptureBackend = 4
 )
 
 func (c CaptureBackend) String() string {
