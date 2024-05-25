@@ -23,6 +23,34 @@ import (
 	"github.com/kubeshark/tracerproto/pkg/unixpacket"
 )
 
+// Added for Kubeshark, possible packet capture backends
+type CaptureBackend uint8
+
+const (
+	CaptureBackendLibpcap CaptureBackend = iota
+	CaptureBackendAfPacket
+	CaptureBackendPfRing
+	CaptureBackendEbpf
+	CaptureBackendEbpfTls
+)
+
+func (c CaptureBackend) String() string {
+	switch c {
+	case CaptureBackendLibpcap:
+		return "libpcap"
+	case CaptureBackendAfPacket:
+		return "af_packet"
+	case CaptureBackendPfRing:
+		return "pf_ring"
+	case CaptureBackendEbpf:
+		return "ebpf"
+	case CaptureBackendEbpfTls:
+		return "ebpf_tls"
+	default:
+		return "unknown"
+	}
+}
+
 // CaptureInfo provides standardized information about a packet captured off
 // the wire or read from a file.
 type CaptureInfo struct {
@@ -44,6 +72,8 @@ type CaptureInfo struct {
 	CgroupID uint64
 	// Added for Kubeshark, direction of the packet. Could be PacketSent or PacketReceived.
 	Direction unixpacket.PacketDirection
+	// Added for Kubeshark, packet capture backend
+	CaptureBackend CaptureBackend
 }
 
 // PacketMetadata contains metadata for a packet.
@@ -109,6 +139,10 @@ type Packet interface {
 	CgroupID() uint64
 	// Added for Kubeshark, returns direction of the packet. Could be PacketSent or PacketReceived.
 	Direction() unixpacket.PacketDirection
+	// Added for Kubeshark, returns the packet capture backend
+	GetBackend() CaptureBackend
+	// Added for Kubeshark, sets the packet capture backend
+	SetBackend(backend CaptureBackend)
 }
 
 // packet contains all the information we need to fulfill the Packet interface,
@@ -514,6 +548,14 @@ func (p *eagerPacket) Direction() unixpacket.PacketDirection {
 	return p.metadata.Direction
 }
 
+func (p *eagerPacket) GetBackend() CaptureBackend {
+	return p.metadata.CaptureBackend
+}
+
+func (p *eagerPacket) SetBackend(backend CaptureBackend) {
+	p.metadata.CaptureBackend = backend
+}
+
 // lazyPacket does lazy decoding on its packet data.  On construction it does
 // no initial decoding.  For each function call, it decodes only as many layers
 // as are necessary to compute the return value for that function.
@@ -632,6 +674,14 @@ func (p *lazyPacket) CgroupID() uint64 {
 
 func (p *lazyPacket) Direction() unixpacket.PacketDirection {
 	return p.metadata.Direction
+}
+
+func (p *lazyPacket) GetBackend() CaptureBackend {
+	return p.metadata.CaptureBackend
+}
+
+func (p *lazyPacket) SetBackend(backend CaptureBackend) {
+	p.metadata.CaptureBackend = backend
 }
 
 // DecodeOptions tells gopacket how to decode a packet.
