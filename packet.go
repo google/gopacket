@@ -27,7 +27,8 @@ import (
 type CaptureBackend uint8
 
 const (
-	CaptureBackendLibpcap CaptureBackend = iota
+	CaptureBackendNone CaptureBackend = iota
+	CaptureBackendLibpcap
 	CaptureBackendAfPacket
 	CaptureBackendPfRing
 	CaptureBackendEbpf
@@ -36,6 +37,8 @@ const (
 
 func (c CaptureBackend) String() string {
 	switch c {
+	case CaptureBackendNone:
+		return "none"
 	case CaptureBackendLibpcap:
 		return "libpcap"
 	case CaptureBackendAfPacket:
