@@ -52,11 +52,9 @@ type Sequence int64
 
 // Difference defines an ordering for comparing TCP sequences that's safe for
 // roll-overs.  It returns:
-//
-//	> 0 : if t comes after s
-//	< 0 : if t comes before s
-//	  0 : if t == s
-//
+//    > 0 : if t comes after s
+//    < 0 : if t comes before s
+//      0 : if t == s
 // The number returned is the sequence difference, so 4.Difference(8) will
 // return 4.
 //
@@ -358,9 +356,9 @@ func (lp *livePacket) release(*pageCache) int {
 // it to create a new Stream for every TCP stream.
 //
 // assembly will, in order:
-//  1. Create the stream via StreamFactory.New
-//  2. Call ReassembledSG 0 or more times, passing in reassembled TCP data in order
-//  3. Call ReassemblyComplete one time, after which the stream is dereferenced by assembly.
+//    1) Create the stream via StreamFactory.New
+//    2) Call ReassembledSG 0 or more times, passing in reassembled TCP data in order
+//    3) Call ReassemblyComplete one time, after which the stream is dereferenced by assembly.
 type Stream interface {
 	// Tell whether the TCP packet should be accepted, start could be modified to force a start even if no SYN have been seen
 	Accept(tcp *layers.TCP, ci gopacket.CaptureInfo, dir TCPFlowDirection, nextSeq Sequence, start *bool, ac AssemblerContext) bool
@@ -385,9 +383,7 @@ type Stream interface {
 	// Its purpose is to recollect the packets into their corresponding TCP reassembly streams.
 	// The caller can simply define an empty implementation or append to a []gopacket.Packet
 	// pipe the packet into a some other procedure.
-	//
-	// retransmission argument is set to true in case of TCP retransmission.
-	ReceivePacket(packet gopacket.Packet, retransmission bool)
+	ReceivePacket(packet gopacket.Packet)
 }
 
 // StreamFactory is used by assembly to create a new stream for each
@@ -528,7 +524,7 @@ type AssemblerOptions struct {
 // applications written in Go.  The Assembler uses the following methods to be
 // as fast as possible, to keep packet processing speedy:
 //
-// # Avoids Lock Contention
+// Avoids Lock Contention
 //
 // Assemblers locks connections, but each connection has an individual lock, and
 // rarely will two Assemblers be looking at the same connection.  Assemblers
@@ -548,7 +544,7 @@ type AssemblerOptions struct {
 // avoiding all lock contention.  Only when different Assemblers could receive
 // packets for the same Stream should a StreamPool be shared between them.
 //
-// # Avoids Memory Copying
+// Avoids Memory Copying
 //
 // In the common case, handling of a single TCP packet should result in zero
 // memory allocations.  The Assembler will look up the connection, figure out
@@ -556,7 +552,7 @@ type AssemblerOptions struct {
 // the appropriate connection's handling code.  Only if a packet arrives out of
 // order is its contents copied and stored in memory for later.
 //
-// # Avoids Memory Allocation
+// Avoids Memory Allocation
 //
 // Assemblers try very hard to not use memory allocation unless absolutely
 // necessary.  Packet data for sequential packets is passed directly to streams
@@ -643,9 +639,9 @@ type assemblerAction struct {
 //
 // Each AssembleWithContext call results in, in order:
 //
-//	zero or one call to StreamFactory.New, creating a stream
-//	zero or one call to ReassembledSG on a single stream
-//	zero or one call to ReassemblyComplete on the same stream
+//    zero or one call to StreamFactory.New, creating a stream
+//    zero or one call to ReassembledSG on a single stream
+//    zero or one call to ReassemblyComplete on the same stream
 func (a *Assembler) AssembleWithContext(packet gopacket.Packet, t *layers.TCP, ac AssemblerContext) {
 	var conn *connection
 	var half *halfconnection
@@ -690,6 +686,8 @@ func (a *Assembler) AssembleWithContext(packet gopacket.Packet, t *layers.TCP, a
 		}
 		return
 	}
+
+	half.stream.ReceivePacket(packet)
 
 	seq, ack, bytes := Sequence(t.Seq), Sequence(t.Ack), t.Payload
 	if t.ACK {
@@ -738,9 +736,6 @@ func (a *Assembler) AssembleWithContext(packet gopacket.Packet, t *layers.TCP, a
 	if len(a.ret) > 0 {
 		action.nextSeq = a.sendToConnection(conn, half, ac)
 	}
-
-	half.stream.ReceivePacket(packet, action.nextSeq == invalidSequence)
-
 	if action.nextSeq != invalidSequence {
 		half.nextSeq = action.nextSeq
 		if t.FIN {
@@ -1130,6 +1125,7 @@ func (a *Assembler) sendToConnection(conn *connection, half *halfconnection, ac 
 	return nextSeq
 }
 
+//
 func (a *Assembler) addPending(half *halfconnection, firstSeq Sequence) int {
 	if half.saved == nil {
 		return 0
