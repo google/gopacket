@@ -734,12 +734,12 @@ func (a *Assembler) AssembleWithContext(packet gopacket.Packet, t *layers.TCP, a
 		}
 	}
 
-	half.stream.ReceivePacket(packet, action.queue)
-
 	action = a.handleBytes(bytes, seq, half, t.SYN, t.RST || t.FIN, action, ac)
 	if len(a.ret) > 0 {
 		action.nextSeq = a.sendToConnection(conn, half, ac)
 	}
+
+	half.stream.ReceivePacket(packet, action.nextSeq == invalidSequence)
 
 	if action.nextSeq != invalidSequence {
 		half.nextSeq = action.nextSeq
