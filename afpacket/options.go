@@ -4,6 +4,7 @@
 // that can be found in the LICENSE file in the root of the source
 // tree.
 
+//go:build linux
 // +build linux
 
 package afpacket
@@ -106,6 +107,10 @@ type OptPollTimeout time.Duration
 // be provided if available.
 type OptAddVLANHeader bool
 
+// OptAddPktType enables extraction / population of the packet type as reported by the
+// kernel via the AncillaryPktType struct in CaptureInfo.AncillaryData
+type OptAddPktType bool
+
 // Default constants used by options.
 const (
 	DefaultFrameSize    = 4096                   // Default value for OptFrameSize.
@@ -121,6 +126,7 @@ type options struct {
 	blockSize      int
 	numBlocks      int
 	addVLANHeader  bool
+	addPktType     bool
 	blockTimeout   time.Duration
 	pollTimeout    time.Duration
 	version        OptTPacketVersion
@@ -160,6 +166,8 @@ func parseOptions(opts ...interface{}) (ret options, err error) {
 			ret.socktype = v
 		case OptAddVLANHeader:
 			ret.addVLANHeader = bool(v)
+		case OptAddPktType:
+			ret.addPktType = bool(v)
 		default:
 			err = errors.New("unknown type in options")
 			return
