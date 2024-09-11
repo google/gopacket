@@ -21,6 +21,7 @@
 package reassembly
 
 import (
+	"encoding/binary"
 	"encoding/hex"
 	"flag"
 	"fmt"
@@ -29,6 +30,7 @@ import (
 	"time"
 
 	"github.com/kubeshark/gopacket"
+	"github.com/kubeshark/gopacket/afpacket"
 	"github.com/kubeshark/gopacket/layers"
 )
 
@@ -650,14 +652,22 @@ func (a *Assembler) AssembleWithContext(packet gopacket.Packet, t *layers.TCP, a
 	var rev *halfconnection
 	netFlow := packet.NetworkLayer().NetworkFlow()
 
-	var dot1Q *layers.Dot1Q
+	var vlanFlow gopacket.Flow
 	dot1QLayer := packet.Layer(layers.LayerTypeDot1Q)
-	if dot1QLayer == nil {
-		dot1Q = dot1QLayer.(*layers.Dot1Q)
+	if dot1QLayer != nil {
+		vlanFlow = dot1QLayer.(*layers.Dot1Q).VLANFlow()
+	} else {
+		for _, v := range packet.Metadata().AncillaryData {
+			if av, ok := v.(afpacket.AncillaryVLAN); ok {
+				b := make([]byte, 2)
+				binary.BigEndian.PutUint16(b, uint16(av.VLAN))
+				vlanFlow = gopacket.NewFlow(layers.EndpointVLAN, b, b)
+			}
+		}
 	}
 
 	a.ret = a.ret[:0]
-	key := key{dot1Q.VLANFlow(), netFlow, t.TransportFlow()}
+	key := key{vlanFlow, netFlow, t.TransportFlow()}
 	ci := ac.GetCaptureInfo()
 	timestamp := ci.Timestamp
 

@@ -53,7 +53,7 @@ func (d *Dot1Q) NextLayerType() gopacket.LayerType {
 func (d *Dot1Q) VLANFlow() gopacket.Flow {
 	b := make([]byte, 2)
 	binary.BigEndian.PutUint16(b, d.VLANIdentifier)
-	return gopacket.NewFlow(EndpointTCPPort, b, b)
+	return gopacket.NewFlow(EndpointVLAN, b, b)
 }
 
 func decodeDot1Q(data []byte, p gopacket.PacketBuilder) error {
