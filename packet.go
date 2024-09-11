@@ -20,8 +20,16 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/kubeshark/gopacket/layers"
 	"github.com/kubeshark/tracerproto/pkg/unixpacket"
 )
+
+// AncillaryVLAN structures are used to pass the captured VLAN
+// as ancillary data via CaptureInfo.
+type AncillaryVLAN struct {
+	// The VLAN VID provided by the kernel.
+	VLAN int
+}
 
 // Added for Kubeshark, possible packet capture backends
 type CaptureBackend uint8
@@ -146,6 +154,8 @@ type Packet interface {
 	GetBackend() CaptureBackend
 	// Added for Kubeshark, sets the packet capture backend
 	SetBackend(backend CaptureBackend)
+	// Added for Kubeshark, returns vlan ID of the packet
+	VLAN() (id uint16, dot1q bool)
 }
 
 // packet contains all the information we need to fulfill the Packet interface,
@@ -559,6 +569,23 @@ func (p *eagerPacket) SetBackend(backend CaptureBackend) {
 	p.metadata.CaptureBackend = backend
 }
 
+func (p *eagerPacket) VLAN() (id uint16, dot1q bool) {
+
+	dot1QLayer := p.Layer(layers.LayerTypeDot1Q)
+	if dot1QLayer != nil {
+		id = dot1QLayer.(*layers.Dot1Q).VLANIdentifier
+		dot1q = true
+	} else {
+		for _, v := range p.Metadata().AncillaryData {
+			if av, ok := v.(AncillaryVLAN); ok {
+				id = uint16(av.VLAN)
+			}
+		}
+	}
+
+	return
+}
+
 // lazyPacket does lazy decoding on its packet data.  On construction it does
 // no initial decoding.  For each function call, it decodes only as many layers
 // as are necessary to compute the return value for that function.
@@ -685,6 +712,22 @@ func (p *lazyPacket) GetBackend() CaptureBackend {
 
 func (p *lazyPacket) SetBackend(backend CaptureBackend) {
 	p.metadata.CaptureBackend = backend
+}
+
+func (p *lazyPacket) VLAN() (id uint16, dot1q bool) {
+	dot1QLayer := p.Layer(layers.LayerTypeDot1Q)
+	if dot1QLayer != nil {
+		id = dot1QLayer.(*layers.Dot1Q).VLANIdentifier
+		dot1q = true
+	} else {
+		for _, v := range p.Metadata().AncillaryData {
+			if av, ok := v.(AncillaryVLAN); ok {
+				id = uint16(av.VLAN)
+			}
+		}
+	}
+
+	return
 }
 
 // DecodeOptions tells gopacket how to decode a packet.

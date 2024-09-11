@@ -30,7 +30,6 @@ import (
 	"time"
 
 	"github.com/kubeshark/gopacket"
-	"github.com/kubeshark/gopacket/afpacket"
 	"github.com/kubeshark/gopacket/layers"
 )
 
@@ -400,13 +399,14 @@ type StreamFactory interface {
 type key [3]gopacket.Flow
 
 func (k *key) String() string {
-	return fmt.Sprintf("%s@%s:%s", k[0], k[1], k[2])
+	return fmt.Sprintf("%s:%s@%s", k[0], k[1], k[2])
 }
 
 func (k *key) Reverse() key {
 	return key{
 		k[0].Reverse(),
 		k[1].Reverse(),
+		k[2].Reverse(),
 	}
 }
 
@@ -658,7 +658,7 @@ func (a *Assembler) AssembleWithContext(packet gopacket.Packet, t *layers.TCP, a
 		vlanFlow = dot1QLayer.(*layers.Dot1Q).VLANFlow()
 	} else {
 		for _, v := range packet.Metadata().AncillaryData {
-			if av, ok := v.(afpacket.AncillaryVLAN); ok {
+			if av, ok := v.(gopacket.AncillaryVLAN); ok {
 				b := make([]byte, 2)
 				binary.BigEndian.PutUint16(b, uint16(av.VLAN))
 				vlanFlow = gopacket.NewFlow(layers.EndpointVLAN, b, b)

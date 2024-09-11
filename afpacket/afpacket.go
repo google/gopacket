@@ -50,13 +50,6 @@ var ErrPoll = errors.New("packet poll failed")
 // ErrTimeout returned on poll timeout
 var ErrTimeout = errors.New("packet poll timeout expired")
 
-// AncillaryVLAN structures are used to pass the captured VLAN
-// as ancillary data via CaptureInfo.
-type AncillaryVLAN struct {
-	// The VLAN VID provided by the kernel.
-	VLAN int
-}
-
 // Stats is a set of counters detailing the work TPacket has done so far.
 type Stats struct {
 	// Packets is the total number of packets returned to the caller.
@@ -293,10 +286,11 @@ func (h *TPacket) releaseCurrentPacket() error {
 // to old bytes when using ZeroCopyReadPacketData... if you need to keep data past
 // the next time you call ZeroCopyReadPacketData, use ReadPacketData, which copies
 // the bytes into a new buffer for you.
-//  tp, _ := NewTPacket(...)
-//  data1, _, _ := tp.ZeroCopyReadPacketData()
-//  // do everything you want with data1 here, copying bytes out of it if you'd like to keep them around.
-//  data2, _, _ := tp.ZeroCopyReadPacketData()  // invalidates bytes in data1
+//
+//	tp, _ := NewTPacket(...)
+//	data1, _, _ := tp.ZeroCopyReadPacketData()
+//	// do everything you want with data1 here, copying bytes out of it if you'd like to keep them around.
+//	data2, _, _ := tp.ZeroCopyReadPacketData()  // invalidates bytes in data1
 func (h *TPacket) ZeroCopyReadPacketData() (data []byte, ci gopacket.CaptureInfo, err error) {
 	h.mu.Lock()
 retry:
@@ -322,7 +316,7 @@ retry:
 	ci.InterfaceIndex = h.current.getIfaceIndex()
 	vlan := h.current.getVLAN()
 	if vlan >= 0 {
-		ci.AncillaryData = append(ci.AncillaryData, AncillaryVLAN{vlan})
+		ci.AncillaryData = append(ci.AncillaryData, gopacket.AncillaryVLAN{vlan})
 	}
 	atomic.AddInt64(&h.stats.Packets, 1)
 	h.headerNextNeeded = true
