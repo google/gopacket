@@ -10,6 +10,7 @@ package layers
 import (
 	"encoding/binary"
 	"fmt"
+
 	"github.com/kubeshark/gopacket"
 )
 
@@ -47,6 +48,12 @@ func (d *Dot1Q) CanDecode() gopacket.LayerClass {
 // NextLayerType returns the layer type contained by this DecodingLayer.
 func (d *Dot1Q) NextLayerType() gopacket.LayerType {
 	return d.Type.LayerType()
+}
+
+func (d *Dot1Q) VLANFlow() gopacket.Flow {
+	b := make([]byte, 2)
+	binary.BigEndian.PutUint16(b, d.VLANIdentifier)
+	return gopacket.NewFlow(EndpointTCPPort, b, b)
 }
 
 func decodeDot1Q(data []byte, p gopacket.PacketBuilder) error {

@@ -395,10 +395,10 @@ type StreamFactory interface {
 	New(netFlow, tcpFlow gopacket.Flow, tcp *layers.TCP, ac AssemblerContext) Stream
 }
 
-type key [2]gopacket.Flow
+type key [3]gopacket.Flow
 
 func (k *key) String() string {
-	return fmt.Sprintf("%s:%s", k[0], k[1])
+	return fmt.Sprintf("%s@%s:%s", k[0], k[1], k[2])
 }
 
 func (k *key) Reverse() key {
@@ -650,8 +650,14 @@ func (a *Assembler) AssembleWithContext(packet gopacket.Packet, t *layers.TCP, a
 	var rev *halfconnection
 	netFlow := packet.NetworkLayer().NetworkFlow()
 
+	var dot1Q *layers.Dot1Q
+	dot1QLayer := packet.Layer(layers.LayerTypeDot1Q)
+	if dot1QLayer == nil {
+		dot1Q = dot1QLayer.(*layers.Dot1Q)
+	}
+
 	a.ret = a.ret[:0]
-	key := key{netFlow, t.TransportFlow()}
+	key := key{dot1Q.VLANFlow(), netFlow, t.TransportFlow()}
 	ci := ac.GetCaptureInfo()
 	timestamp := ci.Timestamp
 

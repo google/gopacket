@@ -8,9 +8,10 @@ package layers
 
 import (
 	"encoding/binary"
-	"github.com/kubeshark/gopacket"
 	"net"
 	"strconv"
+
+	"github.com/kubeshark/gopacket"
 )
 
 var (
@@ -45,6 +46,7 @@ var (
 	EndpointPPP = gopacket.RegisterEndpointType(9, gopacket.EndpointTypeMetadata{Name: "PPP", Formatter: func([]byte) string {
 		return "point"
 	}})
+	EndpointVLAN = gopacket.RegisterEndpointType(10, gopacket.EndpointTypeMetadata{Name: "VLAN", Formatter: nil})
 )
 
 // NewIPEndpoint creates a new IP (v4 or v6) endpoint from a net.IP address.
