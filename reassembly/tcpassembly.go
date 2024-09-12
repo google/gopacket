@@ -671,7 +671,7 @@ func (a *Assembler) AssembleWithContext(packet gopacket.Packet, t *layers.TCP, a
 	}
 
 	a.ret = a.ret[:0]
-	key := key{vlanFlow, netFlow, t.TransportFlow()}
+	key := key{netFlow, t.TransportFlow(), vlanFlow}
 	ci := ac.GetCaptureInfo()
 	timestamp := ci.Timestamp
 
