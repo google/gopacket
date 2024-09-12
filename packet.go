@@ -20,7 +20,6 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/kubeshark/gopacket/layers"
 	"github.com/kubeshark/tracerproto/pkg/unixpacket"
 )
 
@@ -85,6 +84,10 @@ type CaptureInfo struct {
 	Direction unixpacket.PacketDirection
 	// Added for Kubeshark, packet capture backend
 	CaptureBackend CaptureBackend
+	// Added for Kubeshark, VLAN ID of the packet
+	VlanID uint16
+	// Added for Kubeshark, Dot1Q layer existence
+	Dot1Q bool
 }
 
 // PacketMetadata contains metadata for a packet.
@@ -154,8 +157,14 @@ type Packet interface {
 	GetBackend() CaptureBackend
 	// Added for Kubeshark, sets the packet capture backend
 	SetBackend(backend CaptureBackend)
-	// Added for Kubeshark, returns vlan ID of the packet
-	VLAN() (id uint16, dot1q bool)
+	// Added for Kubeshark, returns VLAN ID of the packet
+	GetVlanID() uint16
+	// Added for Kubeshark, sets VLAN ID of the packet
+	SetVlanID(vlanId uint16)
+	// Added for Kubeshark, returns true if Dot1Q layers exists in the packet
+	GetVlanDot1Q() bool
+	// Added for Kubeshark, sets Dot1Q layers existence value
+	SetVlanDot1Q(dot1q bool)
 }
 
 // packet contains all the information we need to fulfill the Packet interface,
@@ -569,21 +578,20 @@ func (p *eagerPacket) SetBackend(backend CaptureBackend) {
 	p.metadata.CaptureBackend = backend
 }
 
-func (p *eagerPacket) VLAN() (id uint16, dot1q bool) {
+func (p *eagerPacket) GetVlanID() uint16 {
+	return p.metadata.VlanID
+}
 
-	dot1QLayer := p.Layer(layers.LayerTypeDot1Q)
-	if dot1QLayer != nil {
-		id = dot1QLayer.(*layers.Dot1Q).VLANIdentifier
-		dot1q = true
-	} else {
-		for _, v := range p.Metadata().AncillaryData {
-			if av, ok := v.(AncillaryVLAN); ok {
-				id = uint16(av.VLAN)
-			}
-		}
-	}
+func (p *eagerPacket) SetVlanID(vlanId uint16) {
+	p.metadata.VlanID = vlanId
+}
 
-	return
+func (p *eagerPacket) GetVlanDot1Q() bool {
+	return p.metadata.Dot1Q
+}
+
+func (p *eagerPacket) SetVlanDot1Q(dot1q bool) {
+	p.metadata.Dot1Q = dot1q
 }
 
 // lazyPacket does lazy decoding on its packet data.  On construction it does
@@ -714,20 +722,20 @@ func (p *lazyPacket) SetBackend(backend CaptureBackend) {
 	p.metadata.CaptureBackend = backend
 }
 
-func (p *lazyPacket) VLAN() (id uint16, dot1q bool) {
-	dot1QLayer := p.Layer(layers.LayerTypeDot1Q)
-	if dot1QLayer != nil {
-		id = dot1QLayer.(*layers.Dot1Q).VLANIdentifier
-		dot1q = true
-	} else {
-		for _, v := range p.Metadata().AncillaryData {
-			if av, ok := v.(AncillaryVLAN); ok {
-				id = uint16(av.VLAN)
-			}
-		}
-	}
+func (p *lazyPacket) GetVlanID() uint16 {
+	return p.metadata.VlanID
+}
 
-	return
+func (p *lazyPacket) SetVlanID(vlanId uint16) {
+	p.metadata.VlanID = vlanId
+}
+
+func (p *lazyPacket) GetVlanDot1Q() bool {
+	return p.metadata.Dot1Q
+}
+
+func (p *lazyPacket) SetVlanDot1Q(dot1q bool) {
+	p.metadata.Dot1Q = dot1q
 }
 
 // DecodeOptions tells gopacket how to decode a packet.

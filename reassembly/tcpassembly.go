@@ -655,12 +655,16 @@ func (a *Assembler) AssembleWithContext(packet gopacket.Packet, t *layers.TCP, a
 	var vlanFlow gopacket.Flow
 	dot1QLayer := packet.Layer(layers.LayerTypeDot1Q)
 	if dot1QLayer != nil {
+		packet.SetVlanDot1Q(true)
+		packet.SetVlanID(dot1QLayer.(*layers.Dot1Q).VLANIdentifier)
 		vlanFlow = dot1QLayer.(*layers.Dot1Q).VLANFlow()
 	} else {
+		packet.SetVlanDot1Q(false)
 		for _, v := range packet.Metadata().AncillaryData {
 			if av, ok := v.(gopacket.AncillaryVLAN); ok {
+				packet.SetVlanID(uint16(av.VLAN))
 				b := make([]byte, 2)
-				binary.BigEndian.PutUint16(b, uint16(av.VLAN))
+				binary.BigEndian.PutUint16(b, packet.GetVlanID())
 				vlanFlow = gopacket.NewFlow(layers.EndpointVLAN, b, b)
 			}
 		}
