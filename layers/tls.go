@@ -49,7 +49,7 @@ func (tv TLSVersion) String() string {
 	switch tv {
 	default:
 		return "Unknown"
-	case 0x0200:
+	case 0x0002:
 		return "SSL 2.0"
 	case 0x0300:
 		return "SSL 3.0"
