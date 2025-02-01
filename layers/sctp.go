@@ -24,6 +24,33 @@ type SCTP struct {
 	sPort, dPort     []byte
 }
 
+func (s *SCTP) GetChunks() (chunks []*SCTPChunk) {
+	data := make([]byte, len(s.Payload))
+	copy(data, s.Payload)
+	for len(data) > 4 {
+		length := binary.BigEndian.Uint16(data[2:4])
+		if length < 4 {
+			return
+		}
+		actual := roundUpToNearest4(int(length))
+		ct := SCTPChunkType(data[0])
+
+		chunks = append(chunks, &SCTPChunk{
+			Type:         ct,
+			Flags:        data[1],
+			Length:       length,
+			ActualLength: actual,
+			BaseLayer:    BaseLayer{data[:4], data[4:actual]},
+		})
+
+		newData := make([]byte, len(data[actual:]))
+		copy(newData, data[actual:])
+
+		data = newData
+	}
+	return
+}
+
 // LayerType returns gopacket.LayerTypeSCTP
 func (s *SCTP) LayerType() gopacket.LayerType { return LayerTypeSCTP }
 
