@@ -188,6 +188,10 @@ func TestIsomorphicPacketGeneve(t *testing.T) {
 	gnTranslated.BaseLayer = BaseLayer{}
 
 	if !reflect.DeepEqual(gn, gnTranslated) {
-		t.Errorf("VXLAN isomorph mismatch, \nwant %#v\ngot %#v\n", gn, gnTranslated)
+		t.Errorf("Geneve isomorph mismatch, \nwant %#v\ngot %#v\n", gn, gnTranslated)
 	}
+}
+
+func TestGeneveAsDecodingLayer(t *testing.T) {
+	_ = gopacket.NewDecodingLayerParser(LayerTypeGeneve, &Geneve{})
 }
