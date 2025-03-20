@@ -37,7 +37,25 @@ const (
 	ngBlockTypeSimplePacket        ngBlockType = 3          // Simple packet block
 	ngBlockTypeInterfaceStatistics ngBlockType = 5          // Interface statistics block
 	ngBlockTypeEnhancedPacket      ngBlockType = 6          // Enhanced packet block
+	ngBlockTypeDecryptionSecrets   ngBlockType = 0x0000000A // Decryption secrets block
 	ngBlockTypeSectionHeader       ngBlockType = 0x0A0D0D0A // Section header block (same in both endians)
+)
+
+const (
+	/*
+	 * Type describing the format of Decryption Secrets Block (DSB).
+	 */
+	DSB_SECRETS_TYPE_TLS            uint32 = 0x544c534b /* TLS Key Log */
+	DSB_SECRETS_TYPE_SSH            uint32 = 0x5353484b /* SSH Key Log */
+	DSB_SECRETS_TYPE_WIREGUARD      uint32 = 0x57474b4c /* WireGuard Key Log */
+	DSB_SECRETS_TYPE_ZIGBEE_NWK_KEY uint32 = 0x5a4e574b /* Zigbee NWK Key */
+	DSB_SECRETS_TYPE_ZIGBEE_APS_KEY uint32 = 0x5a415053 /* Zigbee APS Key */
+)
+
+// define error types for DSB
+var (
+	ErrUnsupportedSecretsType = errors.New("Unsupported Decryption Secrets Block (DSB) type")
+	ErrUnknownSecretsType     = errors.New("Unknown Decryption Secrets Block (DSB) type")
 )
 
 type ngOptionCode uint16
