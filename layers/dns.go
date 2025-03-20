@@ -157,7 +157,7 @@ func (drc DNSResponseCode) String() string {
 	case DNSResponseCodeFormErr:
 		return "Format Error"
 	case DNSResponseCodeServFail:
-		return "Server Failure "
+		return "Server Failure"
 	case DNSResponseCodeNXDomain:
 		return "Non-Existent Domain"
 	case DNSResponseCodeNotImp:
