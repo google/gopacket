@@ -237,7 +237,6 @@ func TestDefragMaxSize(t *testing.T) {
 
 	_, err := defrag.DefragIPv4(&ip2)
 	if err != nil {
-		t.Fatal(err)
 		t.Fatalf("defrag: Maximum length is supposed to be 65535")
 	}
 }
