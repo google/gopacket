@@ -1980,3 +1980,118 @@ func TestReassemblyObjectCaptureInfo(t *testing.T) {
 		}
 	}
 }
+
+type testCustomContextFactory struct {
+	streams []*testCustomContextStream
+}
+
+func (tf *testCustomContextFactory) New(a, b gopacket.Flow, tcp *layers.TCP, ac AssemblerContext) Stream {
+	m := make(map[TCPFlowDirection]map[testCustomContext]int)
+	m[TCPDirClientToServer] = make(map[testCustomContext]int)
+	m[TCPDirServerToClient] = make(map[testCustomContext]int)
+	s := &testCustomContextStream{ctxs: m}
+	tf.streams = append(tf.streams, s)
+	return s
+}
+
+type testCustomContextStream struct {
+	// Maps context to the index of the first byte with that context.
+	ctxs map[TCPFlowDirection]map[testCustomContext]int
+}
+
+func (tf *testCustomContextStream) Accept(tcp *layers.TCP, ci gopacket.CaptureInfo, dir TCPFlowDirection, seq Sequence, start *bool, ac AssemblerContext) bool {
+	return true
+}
+func (tf *testCustomContextStream) ReassembledSG(sg ScatterGather, ac AssemblerContext) {
+	dir, _, _, _ := sg.Info()
+	bytes, _ := sg.Lengths()
+
+	for i := 0; i < bytes; i++ {
+		ctx := sg.AssemblerContext(i).(testCustomContext)
+		if _, ok := tf.ctxs[dir][ctx]; !ok {
+			tf.ctxs[dir][ctx] = i
+		}
+	}
+
+	// Keep everything so the byte index is always relative to the start of the
+	// stream.
+	sg.KeepFrom(0)
+}
+func (tf *testCustomContextStream) ReassemblyComplete(ac AssemblerContext) bool {
+	return true
+}
+
+func TestAssemblerContextFromGatherScatter(t *testing.T) {
+	c2sSYN := layers.TCP{
+		SrcPort: 12039,
+		DstPort: 80,
+		Seq:     0,
+		SYN:     true,
+	}
+	s2cSYNACK := layers.TCP{
+		SrcPort: 80,
+		DstPort: 12039,
+		Seq:     0,
+		Ack:     1,
+		SYN:     true,
+		ACK:     true,
+	}
+	c2sACK := layers.TCP{
+		SrcPort: 12039,
+		DstPort: 80,
+		Seq:     1,
+		Ack:     1,
+		SYN:     true,
+		ACK:     true,
+	}
+	c2s1 := layers.TCP{
+		SrcPort:   12039,
+		DstPort:   80,
+		Seq:       1,
+		Ack:       1,
+		BaseLayer: layers.BaseLayer{Payload: []byte{1, 2, 3, 4, 5, 6, 7, 8, 9, 10}},
+	}
+	c2s2 := layers.TCP{
+		SrcPort:   12039,
+		DstPort:   80,
+		Seq:       11,
+		Ack:       1,
+		BaseLayer: layers.BaseLayer{Payload: []byte{11, 12, 13, 14, 15, 16, 17, 18, 19, 20}},
+	}
+	s2c := layers.TCP{
+		SrcPort:   80,
+		DstPort:   12039,
+		Seq:       1,
+		Ack:       21,
+		BaseLayer: layers.BaseLayer{Payload: []byte{1, 2, 3, 4, 5, 6, 7, 8, 9, 10}},
+	}
+
+	tf := testCustomContextFactory{}
+	a := NewAssembler(NewStreamPool(&tf))
+
+	a.AssembleWithContext(netFlow, &c2sSYN, testCustomContext(-3))
+	a.AssembleWithContext(netFlow.Reverse(), &s2cSYNACK, testCustomContext(-2))
+	a.AssembleWithContext(netFlow, &c2sACK, testCustomContext(-1))
+	a.AssembleWithContext(netFlow, &c2s1, testCustomContext(1))
+	a.AssembleWithContext(netFlow, &c2s2, testCustomContext(2))
+	a.AssembleWithContext(netFlow.Reverse(), &s2c, testCustomContext(100))
+
+	if len(tf.streams) != 1 {
+		t.Errorf("expected only 1 stream, got %d", len(tf.streams))
+		return
+	}
+	stream := tf.streams[0]
+
+	expectedCtxs := map[TCPFlowDirection]map[testCustomContext]int{
+		TCPDirClientToServer: map[testCustomContext]int{
+			testCustomContext(1): 0,
+			testCustomContext(2): 10,
+		},
+		TCPDirServerToClient: map[testCustomContext]int{
+			testCustomContext(100): 0,
+		},
+	}
+	if !reflect.DeepEqual(expectedCtxs, stream.ctxs) {
+		t.Errorf("want: %v\n got: %v\n", expectedCtxs, stream.ctxs)
+	}
+}
