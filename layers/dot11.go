@@ -1842,6 +1842,10 @@ func (m *Dot11MgmtProbeReq) CanDecode() gopacket.LayerClass { return LayerTypeDo
 func (m *Dot11MgmtProbeReq) NextLayerType() gopacket.LayerType {
 	return LayerTypeDot11InformationElement
 }
+func (m *Dot11MgmtProbeReq) DecodeFromBytes(data []byte, df gopacket.DecodeFeedback) error {
+    m.Payload = data
+    return m.Dot11Mgmt.DecodeFromBytes(data, df)
+}
 
 type Dot11MgmtProbeResp struct {
 	Dot11Mgmt
