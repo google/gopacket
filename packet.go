@@ -21,6 +21,23 @@ import (
 	"time"
 )
 
+// PacketCustomData holds custom data attached to a packet.
+type PacketCustomData struct {
+	// Data is the custom data, can be a byte slice or a string.
+	Data []byte
+
+	// IsString indicates this custom data is a string.
+	IsString bool
+
+	// IgnoreOnWrite determines whether this data is written out. This will be
+	// set to true by readers if the data has been marked unsafe to copy.
+	IgnoreOnWrite bool
+
+	// UnsafeToCopy determines whether this custom data should be marked as
+	// unsafe to copy, e. g. after manipulation by another tool.
+	UnsafeToCopy bool
+}
+
 // CaptureInfo provides standardized information about a packet captured off
 // the wire or read from a file.
 type CaptureInfo struct {
@@ -33,6 +50,12 @@ type CaptureInfo struct {
 	Length int
 	// InterfaceIndex
 	InterfaceIndex int
+	// OptionsBytes
+	OptionsBytes []byte
+	// Comments are comments attached to this packet.
+	Comments []string
+	// CustomData
+	CustomData []PacketCustomData
 	// The packet source can place ancillary data of various types here.
 	// For example, the afpacket source can report the VLAN of captured
 	// packets this way.

@@ -23,6 +23,8 @@ type NgReaderOptions struct {
 	// WantMixedLinkType enables reading a pcapng file containing multiple interfaces with varying link types. If false all link types must match, which is the libpcap behaviour and LinkType returns the link type of the first interface.
 	// If true the link type of the packet is also exposed via ci.AncillaryData[0].
 	WantMixedLinkType bool
+	// WantPacketOptions enables reading the options contained in each packet. This is computationally expensive.
+	WantPacketOptions bool
 	// ErrorOnMismatchingLinkType enables returning an error if a packet with a link type not matching the first interface is encountered and WantMixedLinkType == false.
 	// If false packets those packets are just silently ignored, which is the libpcap behaviour.
 	ErrorOnMismatchingLinkType bool
@@ -535,12 +537,45 @@ func (r *NgReader) ReadPacketData() (data []byte, ci gopacket.CaptureInfo, err e
 		ci.AncillaryData = make([]interface{}, 1)
 		ci.AncillaryData[0] = r.ancil[0]
 	}
-	data = make([]byte, r.ci.CaptureLength)
+
+	// data is padded to a 32-bit boundary
+	paddedLength := (r.ci.CaptureLength/4 + 1) * 4
+	data = make([]byte, paddedLength)
 	if err = r.readBytes(data); err != nil {
 		return
 	}
+	data = data[0:r.ci.CaptureLength]
+
 	// handle options somehow - this would be expensive
-	_, err = r.r.Discard(int(r.currentBlock.length) - r.ci.CaptureLength)
+	if r.options.WantPacketOptions {
+		r.currentBlock.length -= uint32(paddedLength)
+		customData := []gopacket.PacketCustomData{}
+	OPTIONS:
+		for {
+			if err = r.readOption(); err != nil {
+				return
+			}
+			switch r.currentOption.code {
+			case ngOptionCodeEndOfOptions:
+				break OPTIONS
+			case ngOptionCodeComment:
+				ci.Comments = append(ci.Comments, string(r.currentOption.value))
+			case ngOptionCodeCustomString, ngOptionCodeCustomBinary,
+				ngOptionCodeCustomString | ngOptionCodeNotCopySafe, ngOptionCodeCustomBinary | ngOptionCodeNotCopySafe:
+				notCopySafe := r.currentOption.code&ngOptionCodeNotCopySafe > 0
+				isString := (r.currentOption.code ^ ngOptionCodeNotCopySafe) == ngOptionCodeCustomString
+				customData = append(customData, gopacket.PacketCustomData{
+					Data:          r.currentOption.value,
+					IsString:      isString,
+					IgnoreOnWrite: notCopySafe,
+					UnsafeToCopy:  notCopySafe,
+				})
+			}
+		}
+		_, err = r.r.Discard(int(r.currentBlock.length))
+	} else {
+		_, err = r.r.Discard(int(r.currentBlock.length) - r.ci.CaptureLength)
+	}
 	return
 }
 
@@ -558,19 +593,51 @@ func (r *NgReader) ZeroCopyReadPacketData() (data []byte, ci gopacket.CaptureInf
 	if r.options.WantMixedLinkType {
 		ci.AncillaryData = r.ancil[:]
 	}
-	if cap(r.packetBuf) < ci.CaptureLength {
+
+	// data is padded to a 32-bit boundary
+	paddedLength := (r.ci.CaptureLength/4 + 1) * 4
+	if cap(r.packetBuf) < paddedLength {
 		snaplen := int(r.ifaces[ci.InterfaceIndex].SnapLength)
-		if snaplen < ci.CaptureLength {
-			snaplen = ci.CaptureLength
+		if snaplen < paddedLength {
+			snaplen = paddedLength
 		}
 		r.packetBuf = make([]byte, snaplen)
 	}
-	data = r.packetBuf[:ci.CaptureLength]
-	if err = r.readBytes(data); err != nil {
+	if err = r.readBytes(r.packetBuf[:paddedLength]); err != nil {
 		return
 	}
+	data = r.packetBuf[:r.ci.CaptureLength]
+
 	// handle options somehow - this would be expensive
-	_, err = r.r.Discard(int(r.currentBlock.length) - ci.CaptureLength)
+	if r.options.WantPacketOptions {
+		r.currentBlock.length -= uint32(paddedLength)
+		customData := []gopacket.PacketCustomData{}
+	OPTIONS:
+		for {
+			if err = r.readOption(); err != nil {
+				return
+			}
+			switch r.currentOption.code {
+			case ngOptionCodeEndOfOptions:
+				break OPTIONS
+			case ngOptionCodeComment:
+				ci.Comments = append(ci.Comments, string(r.currentOption.value))
+			case ngOptionCodeCustomString, ngOptionCodeCustomBinary,
+				ngOptionCodeCustomString | ngOptionCodeNotCopySafe, ngOptionCodeCustomBinary | ngOptionCodeNotCopySafe:
+				notCopySafe := r.currentOption.code&ngOptionCodeNotCopySafe > 0
+				isString := (r.currentOption.code ^ ngOptionCodeNotCopySafe) == ngOptionCodeCustomString
+				customData = append(customData, gopacket.PacketCustomData{
+					Data:          r.currentOption.value,
+					IsString:      isString,
+					IgnoreOnWrite: notCopySafe,
+					UnsafeToCopy:  notCopySafe,
+				})
+			}
+		}
+		_, err = r.r.Discard(int(r.currentBlock.length))
+	} else {
+		_, err = r.r.Discard(int(r.currentBlock.length) - r.ci.CaptureLength)
+	}
 	return
 }
 
