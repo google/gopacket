@@ -76,12 +76,93 @@ const (
 	ngOptionCodeInterfaceStatisticsDelivered                                 // Packets delivered to user
 )
 
-// ngOption is a pcapng option
-type ngOption struct {
-	code   ngOptionCode
+const (
+	ngOptionCodeEnhancedPacketFlags     ngOptionCode = iota + 2 // Flags
+	ngOptionCodeEnhancedPacketHash                              // Hash of the packet
+	ngOptionCodeEnhancedPacketDropCount                         // Number of packets lost
+)
+
+// EnhancedPacketFlag specify flag option for Enhanced Packet Block
+type EnhancedPacketFlag uint32
+
+// Packet direction. Bits 0-1 of EnhancedPacketFlag option
+const (
+	FlagEnhancedPacketDirectionUnknown  EnhancedPacketFlag = 0x00000000 // 00 = information not available
+	FlagEnhancedPacketDirectionInbound                     = 0x00000001 // 01 = inbound
+	FlagEnhancedPacketDirectionOutbound                    = 0x00000002 // 10 = outbound
+	FlagEnhancedPacketDirectionMask                        = 0x00000003 // Packet direction mask
+)
+
+// Reception type. Bits 2-4 of EnhancedPacketFlag option
+const (
+	FlagEnhancedPacketReceptionTypeNotSpecified EnhancedPacketFlag = 0x00000000 // 000 = not specified
+	FlagEnhancedPacketReceptionTypeUnicast                         = 0x00000004 // 001 = unicast
+	FlagEnhancedPacketReceptionTypeMulticast                       = 0x00000008 // 010 = multicast
+	FlagEnhancedPacketReceptionTypeBroadcast                       = 0x0000000C // 011 = broadcast
+	FlagEnhancedPacketReceptionTypePromiscuous                     = 0x00000010 // 100 = promiscuous
+	FlagEnhancedPacketReceptionTypeMask                            = 0x0000001C // Reception type mask
+)
+
+// Packet FCS. Bits 5-8 of EnhancedPacketFlag
+const (
+	FlagEnhancedPacketFCSLengthMask EnhancedPacketFlag = 0x000001E0 // Packet FCS length mask
+)
+
+// Packet link-layer-dependent errors. Bits 16-31 of EnhancedPacketFlag option
+const (
+	FlagEnhancedPacketErrorCRC            EnhancedPacketFlag = 0x01 << (iota + 24) // Bit 24 = CRC error
+	FlagEnhancedPacketErrorLongPacket                                              // Bit 25 = packet too long error
+	FlagEnhancedPacketErrorShortPacket                                             // Bit 26 = packet too short error
+	FlagEnhancedPacketErrorFrameGap                                                // Bit 27 = wrong Inter Frame Gap error
+	FlagEnhancedPacketErrorUnalignedFrame                                          // Bit 28 = unaligned frame error
+	FlagEnhancedPacketErrorFrameDelimiter                                          // Bit 29 = Start Frame Delimiter error
+	FlagEnhancedPacketErrorPreamble                                                // Bit 30 = preamble error
+	FlagEnhancedPacketErrorSymbol                                                  // Bit 31 = symbol error
+	FlagEnhancedPacketErrorMask           = 0xFFFF0000                             // Error mask
+)
+
+// NgOption is a common structure for all options for pcapng
+type NgOption struct {
+	Code   ngOptionCode
 	value  []byte
-	raw    interface{}
+	Raw    interface{}
 	length uint16
+}
+
+// OptionComment returns NgOption containing comment for Enahanced Packet Block
+func OptionComment(comment string) NgOption {
+	return NgOption{
+		Code:   ngOptionCodeComment,
+		Raw:    comment,
+		length: uint16(len(comment)),
+	}
+}
+
+// OptionEnhancedPacketFlags returns NgOption containing flags option for Enahanced Packet Block
+func OptionEnhancedPacketFlags(flag EnhancedPacketFlag) NgOption {
+	return NgOption{
+		Code:   ngOptionCodeEnhancedPacketFlags,
+		Raw:    uint32(flag), // convert to uint32 for correct processing in ngOptionLength
+		length: 4,
+	}
+}
+
+// OptionEnhancedPacketHash returns NgOption containing a hash of the packet for Enahanced Packet Block
+func OptionEnhancedPacketHash(hash []byte) NgOption {
+	return NgOption{
+		Code:   ngOptionCodeEnhancedPacketHash,
+		Raw:    hash,
+		length: uint16(len(hash)),
+	}
+}
+
+// OptionEnhancedPacketDropCount returns NgOption containing 64-bit unsigned integer value specifying the number of packets lost
+func OptionEnhancedPacketDropCount(count uint64) NgOption {
+	return NgOption{
+		Code:   ngOptionCodeEnhancedPacketDropCount,
+		Raw:    count,
+		length: 8,
+	}
 }
 
 // ngBlock is a pcapng block header

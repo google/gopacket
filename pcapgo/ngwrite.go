@@ -79,8 +79,8 @@ func NewNgWriterInterface(w io.Writer, intf NgInterface, options NgWriterOptions
 }
 
 // ngOptionLength returns the needed length for one option value (without padding)
-func ngOptionLength(option ngOption) int {
-	switch val := option.raw.(type) {
+func ngOptionLength(option NgOption) int {
+	switch val := option.Raw.(type) {
 	case []byte:
 		return len(val)
 	case string:
@@ -99,7 +99,7 @@ func ngOptionLength(option ngOption) int {
 }
 
 // prepareNgOptions fills out the length value of the given options and returns the number of octets needed for all the given options including padding.
-func prepareNgOptions(options []ngOption) uint32 {
+func prepareNgOptions(options []NgOption) uint32 {
 	var ret uint32
 	for i, option := range options {
 		length := ngOptionLength(option)
@@ -115,19 +115,19 @@ func prepareNgOptions(options []ngOption) uint32 {
 }
 
 // writeOptions writes the given options to the file. prepareOptions must be called beforehand.
-func (w *NgWriter) writeOptions(options []ngOption) error {
+func (w *NgWriter) writeOptions(options []NgOption) error {
 	if len(options) == 0 {
 		return nil
 	}
 
 	var zero [4]byte
 	for _, option := range options {
-		binary.LittleEndian.PutUint16(w.buf[0:2], uint16(option.code))
+		binary.LittleEndian.PutUint16(w.buf[0:2], uint16(option.Code))
 		binary.LittleEndian.PutUint16(w.buf[2:4], option.length)
 		if _, err := w.w.Write(w.buf[:4]); err != nil {
 			return err
 		}
-		switch val := option.raw.(type) {
+		switch val := option.Raw.(type) {
 		case []byte:
 			if _, err := w.w.Write(val); err != nil {
 				return err
@@ -185,27 +185,27 @@ func (w *NgWriter) writeOptions(options []ngOption) error {
 
 // writeSectionHeader writes a section header to the file
 func (w *NgWriter) writeSectionHeader() error {
-	var scratch [4]ngOption
+	var scratch [4]NgOption
 	i := 0
 	info := w.options.SectionInfo
 	if info.Application != "" {
-		scratch[i].code = ngOptionCodeUserApplication
-		scratch[i].raw = info.Application
+		scratch[i].Code = ngOptionCodeUserApplication
+		scratch[i].Raw = info.Application
 		i++
 	}
 	if info.Comment != "" {
-		scratch[i].code = ngOptionCodeComment
-		scratch[i].raw = info.Comment
+		scratch[i].Code = ngOptionCodeComment
+		scratch[i].Raw = info.Comment
 		i++
 	}
 	if info.Hardware != "" {
-		scratch[i].code = ngOptionCodeHardware
-		scratch[i].raw = info.Hardware
+		scratch[i].Code = ngOptionCodeHardware
+		scratch[i].Raw = info.Hardware
 		i++
 	}
 	if info.OS != "" {
-		scratch[i].code = ngOptionCodeOS
-		scratch[i].raw = info.OS
+		scratch[i].Code = ngOptionCodeOS
+		scratch[i].Raw = info.OS
 		i++
 	}
 	options := scratch[:i]
@@ -238,40 +238,40 @@ func (w *NgWriter) AddInterface(intf NgInterface) (id int, err error) {
 	id = int(w.intf)
 	w.intf++
 
-	var scratch [7]ngOption
+	var scratch [7]NgOption
 	i := 0
 	if intf.Name != "" {
-		scratch[i].code = ngOptionCodeInterfaceName
-		scratch[i].raw = intf.Name
+		scratch[i].Code = ngOptionCodeInterfaceName
+		scratch[i].Raw = intf.Name
 		i++
 	}
 	if intf.Comment != "" {
-		scratch[i].code = ngOptionCodeComment
-		scratch[i].raw = intf.Comment
+		scratch[i].Code = ngOptionCodeComment
+		scratch[i].Raw = intf.Comment
 		i++
 	}
 	if intf.Description != "" {
-		scratch[i].code = ngOptionCodeInterfaceDescription
-		scratch[i].raw = intf.Description
+		scratch[i].Code = ngOptionCodeInterfaceDescription
+		scratch[i].Raw = intf.Description
 		i++
 	}
 	if intf.Filter != "" {
-		scratch[i].code = ngOptionCodeInterfaceFilter
-		scratch[i].raw = append([]byte{0}, []byte(intf.Filter)...)
+		scratch[i].Code = ngOptionCodeInterfaceFilter
+		scratch[i].Raw = append([]byte{0}, []byte(intf.Filter)...)
 		i++
 	}
 	if intf.OS != "" {
-		scratch[i].code = ngOptionCodeInterfaceOS
-		scratch[i].raw = intf.OS
+		scratch[i].Code = ngOptionCodeInterfaceOS
+		scratch[i].Raw = intf.OS
 		i++
 	}
 	if intf.TimestampOffset != 0 {
-		scratch[i].code = ngOptionCodeInterfaceTimestampOffset
-		scratch[i].raw = intf.TimestampOffset
+		scratch[i].Code = ngOptionCodeInterfaceTimestampOffset
+		scratch[i].Raw = intf.TimestampOffset
 		i++
 	}
-	scratch[i].code = ngOptionCodeInterfaceTimestampResolution
-	scratch[i].raw = uint8(9) // fix resolution to nanoseconds (time.Time) in decimal
+	scratch[i].Code = ngOptionCodeInterfaceTimestampResolution
+	scratch[i].Raw = uint8(9) // fix resolution to nanoseconds (time.Time) in decimal
 	i++
 	options := scratch[:i]
 
@@ -303,26 +303,26 @@ func (w *NgWriter) WriteInterfaceStats(intf int, stats NgInterfaceStatistics) er
 		return fmt.Errorf("Can't send statistics for non existent interface %d; have only %d interfaces", intf, w.intf)
 	}
 
-	var scratch [4]ngOption
+	var scratch [4]NgOption
 	i := 0
 	if !stats.StartTime.IsZero() {
-		scratch[i].code = ngOptionCodeInterfaceStatisticsStartTime
-		scratch[i].raw = stats.StartTime
+		scratch[i].Code = ngOptionCodeInterfaceStatisticsStartTime
+		scratch[i].Raw = stats.StartTime
 		i++
 	}
 	if !stats.EndTime.IsZero() {
-		scratch[i].code = ngOptionCodeInterfaceStatisticsEndTime
-		scratch[i].raw = stats.EndTime
+		scratch[i].Code = ngOptionCodeInterfaceStatisticsEndTime
+		scratch[i].Raw = stats.EndTime
 		i++
 	}
 	if stats.PacketsDropped != NgNoValue64 {
-		scratch[i].code = ngOptionCodeInterfaceStatisticsInterfaceDropped
-		scratch[i].raw = stats.PacketsDropped
+		scratch[i].Code = ngOptionCodeInterfaceStatisticsInterfaceDropped
+		scratch[i].Raw = stats.PacketsDropped
 		i++
 	}
 	if stats.PacketsReceived != NgNoValue64 {
-		scratch[i].code = ngOptionCodeInterfaceStatisticsInterfaceReceived
-		scratch[i].raw = stats.PacketsReceived
+		scratch[i].Code = ngOptionCodeInterfaceStatisticsInterfaceReceived
+		scratch[i].Raw = stats.PacketsReceived
 		i++
 	}
 	options := scratch[:i]
@@ -353,7 +353,7 @@ func (w *NgWriter) WriteInterfaceStats(intf int, stats NgInterfaceStatistics) er
 }
 
 // WritePacket writes out packet with the given data and capture info. The given InterfaceIndex must already be added to the file. InterfaceIndex 0 is automatically added by the NewWriter* methods.
-func (w *NgWriter) WritePacket(ci gopacket.CaptureInfo, data []byte) error {
+func (w *NgWriter) WritePacket(ci gopacket.CaptureInfo, data []byte, options ...NgOption) error {
 	if ci.InterfaceIndex >= int(w.intf) || ci.InterfaceIndex < 0 {
 		return fmt.Errorf("Can't send statistics for non existent interface %d; have only %d interfaces", ci.InterfaceIndex, w.intf)
 	}
@@ -367,6 +367,7 @@ func (w *NgWriter) WritePacket(ci gopacket.CaptureInfo, data []byte) error {
 	length := uint32(len(data)) + 32
 	padding := (4 - length&3) & 3
 	length += padding
+	length += prepareNgOptions(options)
 
 	ts := ci.Timestamp.UnixNano()
 
@@ -387,7 +388,15 @@ func (w *NgWriter) WritePacket(ci gopacket.CaptureInfo, data []byte) error {
 	}
 
 	binary.LittleEndian.PutUint32(w.buf[:4], 0)
-	_, err := w.w.Write(w.buf[4-padding : 8]) // padding + length
+	if _, err := w.w.Write(w.buf[4-padding : 4]); err != nil { // padding
+		return err
+	}
+
+	if err := w.writeOptions(options); err != nil {
+		return err
+	}
+
+	_, err := w.w.Write(w.buf[4:8])
 	return err
 }
 
