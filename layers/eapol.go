@@ -9,6 +9,7 @@ package layers
 import (
 	"encoding/binary"
 	"fmt"
+
 	"github.com/google/gopacket"
 )
 
@@ -166,7 +167,7 @@ func (ek *EAPOLKey) LayerType() gopacket.LayerType {
 }
 
 // CanDecode returns the set of layer types that this DecodingLayer can decode.
-func (ek *EAPOLKey) CanDecode() gopacket.LayerType {
+func (ek *EAPOLKey) CanDecode() gopacket.LayerClass {
 	return LayerTypeEAPOLKey
 }
 
