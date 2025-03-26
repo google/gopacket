@@ -89,6 +89,12 @@ func (u *UDP) SerializeTo(b gopacket.SerializeBuffer, opts gopacket.SerializeOpt
 		if err != nil {
 			return err
 		}
+		// RFC768: If the computed checksum is zero, it is transmitted as all ones (the
+		// equivalent in one's complement arithmetic). An all zero transmitted
+		// checksum  value means that the transmitter generated no checksum.
+		if csum == 0 {
+			csum = 0xFFFF
+		}
 		u.Checksum = csum
 	}
 	binary.BigEndian.PutUint16(bytes[6:], u.Checksum)
