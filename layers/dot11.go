@@ -412,6 +412,7 @@ const (
 	Dot11InformationElementIDWhiteSpaceMap             Dot11InformationElementID = 205
 	Dot11InformationElementIDFineTuningMeasureParams   Dot11InformationElementID = 206
 	Dot11InformationElementIDVendor                    Dot11InformationElementID = 221
+	Dot11InformationElementIDExtension                 Dot11InformationElementID = 255
 )
 
 // String provides a human readable string for Dot11InformationElementID.
@@ -762,6 +763,8 @@ func (a Dot11InformationElementID) String() string {
 		return "Fine Tuning Measure Parameters"
 	case Dot11InformationElementIDVendor:
 		return "Vendor"
+	case Dot11InformationElementIDExtension:
+		return "Element ID Extension"
 	default:
 		return "Unknown information element id"
 	}
