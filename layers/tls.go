@@ -9,6 +9,7 @@ package layers
 import (
 	"encoding/binary"
 	"errors"
+	"fmt"
 
 	"github.com/google/gopacket"
 )
@@ -124,10 +125,10 @@ func (t *TLS) DecodeFromBytes(data []byte, df gopacket.DecodeFeedback) error {
 	t.AppData = t.AppData[:0]
 	t.Alert = t.Alert[:0]
 
-	return t.decodeTLSRecords(data, df)
+	return t.decodeTLSRecords(data, false, df)
 }
 
-func (t *TLS) decodeTLSRecords(data []byte, df gopacket.DecodeFeedback) error {
+func (t *TLS) decodeTLSRecords(data []byte, encrypted bool, df gopacket.DecodeFeedback) error {
 	if len(data) < 5 {
 		df.SetTruncated()
 		return errors.New("TLS record too short")
@@ -151,7 +152,7 @@ func (t *TLS) decodeTLSRecords(data []byte, df gopacket.DecodeFeedback) error {
 	tl := hl + int(h.Length)
 	if len(data) < tl {
 		df.SetTruncated()
-		return errors.New("TLS packet length mismatch")
+		return fmt.Errorf("TLS packet length mismatch. %d is less than %d", len(data), tl)
 	}
 
 	switch h.ContentType {
@@ -164,6 +165,7 @@ func (t *TLS) decodeTLSRecords(data []byte, df gopacket.DecodeFeedback) error {
 			return e
 		}
 		t.ChangeCipherSpec = append(t.ChangeCipherSpec, r)
+		encrypted = true
 	case TLSAlert:
 		var r TLSAlertRecord
 		e := r.decodeFromBytes(h, data[hl:tl], df)
@@ -173,7 +175,7 @@ func (t *TLS) decodeTLSRecords(data []byte, df gopacket.DecodeFeedback) error {
 		t.Alert = append(t.Alert, r)
 	case TLSHandshake:
 		var r TLSHandshakeRecord
-		e := r.decodeFromBytes(h, data[hl:tl], df)
+		e := r.decodeFromBytes(h, encrypted, data[hl:tl], df)
 		if e != nil {
 			return e
 		}
@@ -190,7 +192,7 @@ func (t *TLS) decodeTLSRecords(data []byte, df gopacket.DecodeFeedback) error {
 	if len(data) == tl {
 		return nil
 	}
-	return t.decodeTLSRecords(data[tl:len(data)], df)
+	return t.decodeTLSRecords(data[tl:len(data)], encrypted, df)
 }
 
 // CanDecode implements gopacket.DecodingLayer.
