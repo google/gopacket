@@ -112,7 +112,13 @@ func (ip *IPv4) SerializeTo(b gopacket.SerializeBuffer, opts gopacket.SerializeO
 	}
 	bytes[0] = (ip.Version << 4) | ip.IHL
 	bytes[1] = ip.TOS
-	binary.BigEndian.PutUint16(bytes[2:], ip.Length)
+
+	if opts.IPLengthHostByteOrder {
+		endian.PutUint16(bytes[2:], ip.Length)
+	} else {
+		binary.BigEndian.PutUint16(bytes[2:], ip.Length)
+	}
+
 	binary.BigEndian.PutUint16(bytes[4:], ip.Id)
 	binary.BigEndian.PutUint16(bytes[6:], ip.flagsfrags())
 	bytes[8] = ip.TTL

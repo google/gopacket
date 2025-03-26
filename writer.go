@@ -46,6 +46,10 @@ type SerializeOptions struct {
 	// FixLengths determines whether, during serialization, layers should fix
 	// the values for any length field that depends on the payload.
 	FixLengths bool
+	// IPLengthHostByteOrder determines whether, during serialization, the network
+	// layer containing the IPv4/v6 header length field should be serialized in
+	// host byte order.
+	IPLengthHostByteOrder bool
 	// ComputeChecksums determines whether, during serialization, layers
 	// should recompute checksums based on their payloads.
 	ComputeChecksums bool
@@ -69,9 +73,9 @@ type SerializeOptions struct {
 // byte slices returned by any previous Bytes() call (the same buffer is
 // reused).
 //
-//  1) Reusing a write buffer is generally much faster than creating a new one,
+//  1. Reusing a write buffer is generally much faster than creating a new one,
 //     and with the default implementation it avoids additional memory allocations.
-//  2) If a byte slice from a previous Bytes() call will continue to be used,
+//  2. If a byte slice from a previous Bytes() call will continue to be used,
 //     it's better to create a new SerializeBuffer.
 //
 // The Clear method is specifically designed to minimize memory allocations for
@@ -197,12 +201,13 @@ func (w *serializeBuffer) PushLayer(l LayerType) {
 // invalidates all slices previously returned by w.Bytes()
 //
 // Example:
-//   buf := gopacket.NewSerializeBuffer()
-//   opts := gopacket.SerializeOptions{}
-//   gopacket.SerializeLayers(buf, opts, a, b, c)
-//   firstPayload := buf.Bytes()  // contains byte representation of a(b(c))
-//   gopacket.SerializeLayers(buf, opts, d, e, f)
-//   secondPayload := buf.Bytes()  // contains byte representation of d(e(f)). firstPayload is now invalidated, since the SerializeLayers call Clears buf.
+//
+//	buf := gopacket.NewSerializeBuffer()
+//	opts := gopacket.SerializeOptions{}
+//	gopacket.SerializeLayers(buf, opts, a, b, c)
+//	firstPayload := buf.Bytes()  // contains byte representation of a(b(c))
+//	gopacket.SerializeLayers(buf, opts, d, e, f)
+//	secondPayload := buf.Bytes()  // contains byte representation of d(e(f)). firstPayload is now invalidated, since the SerializeLayers call Clears buf.
 func SerializeLayers(w SerializeBuffer, opts SerializeOptions, layers ...SerializableLayer) error {
 	w.Clear()
 	for i := len(layers) - 1; i >= 0; i-- {
