@@ -87,7 +87,7 @@ type DHCPv4 struct {
 	Operation    DHCPOp
 	HardwareType LinkType
 	HardwareLen  uint8
-	HardwareOpts uint8
+	RelayHops    uint8
 	Xid          uint32
 	Secs         uint16
 	Flags        uint16
@@ -132,7 +132,7 @@ func (d *DHCPv4) DecodeFromBytes(data []byte, df gopacket.DecodeFeedback) error 
 	d.Operation = DHCPOp(data[0])
 	d.HardwareType = LinkType(data[1])
 	d.HardwareLen = data[2]
-	d.HardwareOpts = data[3]
+	d.RelayHops = data[3]
 	d.Xid = binary.BigEndian.Uint32(data[4:8])
 	d.Secs = binary.BigEndian.Uint16(data[8:10])
 	d.Flags = binary.BigEndian.Uint16(data[10:12])
@@ -209,7 +209,7 @@ func (d *DHCPv4) SerializeTo(b gopacket.SerializeBuffer, opts gopacket.Serialize
 		d.HardwareLen = uint8(len(d.ClientHWAddr))
 	}
 	data[2] = d.HardwareLen
-	data[3] = d.HardwareOpts
+	data[3] = d.RelayHops
 	binary.BigEndian.PutUint32(data[4:8], d.Xid)
 	binary.BigEndian.PutUint16(data[8:10], d.Secs)
 	binary.BigEndian.PutUint16(data[10:12], d.Flags)
