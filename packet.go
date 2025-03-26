@@ -838,9 +838,6 @@ func (p *PacketSource) packetsToChannel() {
 			strings.Contains(err.Error(), "use of closed file") {
 			break
 		}
-
-		// Sleep briefly and try again
-		time.Sleep(time.Millisecond * time.Duration(5))
 	}
 }
 

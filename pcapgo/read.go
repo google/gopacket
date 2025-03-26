@@ -120,15 +120,11 @@ func (r *Reader) readHeader() error {
 
 // ReadPacketData reads next packet from file.
 func (r *Reader) ReadPacketData() (data []byte, ci gopacket.CaptureInfo, err error) {
-	if ci, err = r.readPacketHeader(); err != nil {
+	if ci, err = r.ReadPacketHeader(); err != nil {
 		return
 	}
 	if ci.CaptureLength > int(r.snaplen) {
 		err = fmt.Errorf("capture length exceeds snap length: %d > %d", ci.CaptureLength, r.snaplen)
-		return
-	}
-	if ci.CaptureLength > ci.Length {
-		err = fmt.Errorf("capture length exceeds original packet length: %d > %d", ci.CaptureLength, ci.Length)
 		return
 	}
 	data = make([]byte, ci.CaptureLength)
@@ -142,15 +138,11 @@ func (r *Reader) ReadPacketData() (data []byte, ci gopacket.CaptureInfo, err err
 // It is not true zero copy, as data is still copied from the underlying reader. However,
 // this method avoids allocating heap memory for every packet.
 func (r *Reader) ZeroCopyReadPacketData() (data []byte, ci gopacket.CaptureInfo, err error) {
-	if ci, err = r.readPacketHeader(); err != nil {
+	if ci, err = r.ReadPacketHeader(); err != nil {
 		return
 	}
 	if ci.CaptureLength > int(r.snaplen) {
 		err = fmt.Errorf("capture length exceeds snap length: %d > %d", ci.CaptureLength, r.snaplen)
-		return
-	}
-	if ci.CaptureLength > ci.Length {
-		err = fmt.Errorf("capture length exceeds original packet length: %d > %d", ci.CaptureLength, ci.Length)
 		return
 	}
 
@@ -166,7 +158,8 @@ func (r *Reader) ZeroCopyReadPacketData() (data []byte, ci gopacket.CaptureInfo,
 	return data, ci, err
 }
 
-func (r *Reader) readPacketHeader() (ci gopacket.CaptureInfo, err error) {
+// ReadPacketHeader reads next packet header (16 bytes) from file.
+func (r *Reader) ReadPacketHeader() (ci gopacket.CaptureInfo, err error) {
 	if _, err = io.ReadFull(r.r, r.buf[:]); err != nil {
 		return
 	}
