@@ -43,3 +43,19 @@ func decodeEtherIP(data []byte, p gopacket.PacketBuilder) error {
 	e := &EtherIP{}
 	return decodingLayerDecoder(e, data, p)
 }
+
+// SerializeTo writes the serialized form of this layer into the
+// SerializationBuffer, implementing gopacket.SerializableLayer.
+// See the docs for gopacket.SerializableLayer for more info.
+func (e *EtherIP) SerializeTo(b gopacket.SerializeBuffer, opts gopacket.SerializeOptions) error {
+	bytes, err := b.PrependBytes(2)
+	if err != nil {
+		return err
+	}
+	u := uint16(0)
+	// Version Field in EtherIP packet is supposed to be 4 bits with Reserved bits taking 12 bits
+	u = (uint16(e.Version) << 12) | u
+	u = (uint16(e.Reserved) << 4) | u
+	binary.BigEndian.PutUint16(bytes, u)
+	return nil
+}
