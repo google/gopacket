@@ -4,6 +4,7 @@
 // that can be found in the LICENSE file in the root of the source
 // tree.
 
+//go:build linux
 // +build linux
 
 package routing
@@ -533,6 +534,8 @@ func init() {
 	testRouter.addrs[2] = ipAddrs{v4: net.IPv4(192, 168, 1, 2)}
 	defaultRoute := &rtInfo{Gateway: net.IPv4(192, 168, 1, 1), InputIface: 0, OutputIface: 2, Priority: 600}
 	testRouter.v4 = append(testRouter.v4, defaultRoute)
+	defaultRouteWithHighPriority := &rtInfo{Gateway: net.IPv4(172, 0, 0, 1), InputIface: 0, OutputIface: 2, Priority: 1000}
+	testRouter.v4 = append(testRouter.v4, defaultRouteWithHighPriority)
 	// Configure local route
 	localHW, _ := net.ParseMAC("01:23:45:67:89:ac")
 	localInterface := net.Interface{Index: 1, MTU: 1500, Name: "Local", HardwareAddr: localHW, Flags: 1}
