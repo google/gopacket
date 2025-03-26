@@ -99,7 +99,7 @@ func NewRing(device string, snaplen uint32, flags Flag) (ring *Ring, _ error) {
 	defer C.free(unsafe.Pointer(dev))
 
 	cptr, err := C.pfring_open(dev, C.u_int32_t(snaplen), C.u_int32_t(flags))
-	if cptr == nil || err != nil {
+	if cptr == nil {
 		return nil, fmt.Errorf("pfring NewRing error: %v", err)
 	}
 	ring = &Ring{cptr: cptr}
