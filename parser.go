@@ -304,6 +304,14 @@ func (l *DecodingLayerParser) DecodeLayers(data []byte, decoded *[]LayerType) (e
 	if !l.IgnorePanic {
 		defer panicToError(&err)
 	}
+	if len(data) == 0 {
+		*decoded = (*decoded)[:0] // Truncated decoded layers.
+
+		// For compatibility with pre 1.1.18 behavior where an empty
+		// slice didn't cause an error. See
+		// https://github.com/google/gopacket/issues/846
+		return nil
+	}
 	typ, err := l.decodeFunc(data, decoded)
 	if typ != LayerTypeZero {
 		// no decoder
