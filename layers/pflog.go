@@ -57,10 +57,11 @@ func (pf *PFLog) DecodeFromBytes(data []byte, df gopacket.DecodeFeedback) error 
 	pf.RuleUID = binary.BigEndian.Uint32(data[52:56])
 	pf.RulePID = int32(binary.BigEndian.Uint32(data[56:60]))
 	pf.Direction = PFDirection(data[60])
-	if pf.Length%4 != 1 {
-		return errors.New("PFLog header length should be 3 less than multiple of 4")
+	actualLength := int(pf.Length)
+	if pf.Length%4 == 1 {
+		// Adding padding for FreeBSD
+		actualLength += 3
 	}
-	actualLength := int(pf.Length) + 3
 	if len(data) < actualLength {
 		return fmt.Errorf("PFLog data size < %d", actualLength)
 	}
