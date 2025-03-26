@@ -389,7 +389,10 @@ func initActualTypeData() {
 	FDDIFrameControlMetadata[FDDIFrameControlLLC] = EnumMetadata{DecodeWith: gopacket.DecodeFunc(decodeLLC), Name: "LLC"}
 
 	EAPOLTypeMetadata[EAPOLTypeEAP] = EnumMetadata{DecodeWith: gopacket.DecodeFunc(decodeEAP), Name: "EAP", LayerType: LayerTypeEAP}
+	EAPOLTypeMetadata[EAPOLTypeStart] = EnumMetadata{DecodeWith: gopacket.DecodeFunc(decodeEAP), Name: "EAPOLStart"}
+	EAPOLTypeMetadata[EAPOLTypeLogOff] = EnumMetadata{DecodeWith: gopacket.DecodeFunc(decodeEAP), Name: "EAPOLLogOff"}
 	EAPOLTypeMetadata[EAPOLTypeKey] = EnumMetadata{DecodeWith: gopacket.DecodeFunc(decodeEAPOLKey), Name: "EAPOLKey", LayerType: LayerTypeEAPOLKey}
+	EAPOLTypeMetadata[EAPOLTypeASFAlert] = EnumMetadata{DecodeWith: gopacket.DecodeFunc(decodeEAP), Name: "EAPOLASFAlert"}
 
 	ProtocolFamilyMetadata[ProtocolFamilyIPv4] = EnumMetadata{DecodeWith: gopacket.DecodeFunc(decodeIPv4), Name: "IPv4", LayerType: LayerTypeIPv4}
 	ProtocolFamilyMetadata[ProtocolFamilyIPv6BSD] = EnumMetadata{DecodeWith: gopacket.DecodeFunc(decodeIPv6), Name: "IPv6", LayerType: LayerTypeIPv6}
