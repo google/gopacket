@@ -42,8 +42,6 @@ import (
 */
 import "C"
 
-var pageSize = unix.Getpagesize()
-
 // ErrPoll returned by poll
 var ErrPoll = errors.New("packet poll failed")
 

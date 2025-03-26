@@ -29,6 +29,7 @@ type ERSPANII struct {
 	Index                               uint32
 }
 
+// LayerType returns the ERSPANII type
 func (erspan2 *ERSPANII) LayerType() gopacket.LayerType { return LayerTypeERSPANII }
 
 // DecodeFromBytes decodes the given bytes into this layer.

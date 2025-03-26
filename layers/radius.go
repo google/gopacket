@@ -109,7 +109,7 @@ const (
 	RADIUSAttributeTypeFramedIPAddress        RADIUSAttributeType = 8  // RFC2865  5.8.  Framed-IP-Address
 	RADIUSAttributeTypeFramedIPNetmask        RADIUSAttributeType = 9  // RFC2865  5.9.  Framed-IP-Netmask
 	RADIUSAttributeTypeFramedRouting          RADIUSAttributeType = 10 // RFC2865 5.10.  Framed-Routing
-	RADIUSAttributeTypeFilterId               RADIUSAttributeType = 11 // RFC2865 5.11.  Filter-Id
+	RADIUSAttributeTypeFilterID               RADIUSAttributeType = 11 // RFC2865 5.11.  Filter-Id
 	RADIUSAttributeTypeFramedMTU              RADIUSAttributeType = 12 // RFC2865 5.12.  Framed-MTU
 	RADIUSAttributeTypeFramedCompression      RADIUSAttributeType = 13 // RFC2865 5.13.  Framed-Compression
 	RADIUSAttributeTypeLoginIPHost            RADIUSAttributeType = 14 // RFC2865 5.14.  Login-IP-Host
@@ -117,7 +117,7 @@ const (
 	RADIUSAttributeTypeLoginTCPPort           RADIUSAttributeType = 16 // RFC2865 5.16.  Login-TCP-Port
 	RADIUSAttributeTypeReplyMessage           RADIUSAttributeType = 18 // RFC2865 5.18.  Reply-Message
 	RADIUSAttributeTypeCallbackNumber         RADIUSAttributeType = 19 // RFC2865 5.19.  Callback-Number
-	RADIUSAttributeTypeCallbackId             RADIUSAttributeType = 20 // RFC2865 5.20.  Callback-Id
+	RADIUSAttributeTypeCallbackID             RADIUSAttributeType = 20 // RFC2865 5.20.  Callback-Id
 	RADIUSAttributeTypeFramedRoute            RADIUSAttributeType = 22 // RFC2865 5.22.  Framed-Route
 	RADIUSAttributeTypeFramedIPXNetwork       RADIUSAttributeType = 23 // RFC2865 5.23.  Framed-IPX-Network
 	RADIUSAttributeTypeState                  RADIUSAttributeType = 24 // RFC2865 5.24.  State
@@ -126,8 +126,8 @@ const (
 	RADIUSAttributeTypeSessionTimeout         RADIUSAttributeType = 27 // RFC2865 5.27.  Session-Timeout
 	RADIUSAttributeTypeIdleTimeout            RADIUSAttributeType = 28 // RFC2865 5.28.  Idle-Timeout
 	RADIUSAttributeTypeTerminationAction      RADIUSAttributeType = 29 // RFC2865 5.29.  Termination-Action
-	RADIUSAttributeTypeCalledStationId        RADIUSAttributeType = 30 // RFC2865 5.30.  Called-Station-Id
-	RADIUSAttributeTypeCallingStationId       RADIUSAttributeType = 31 // RFC2865 5.31.  Calling-Station-Id
+	RADIUSAttributeTypeCalledStationID        RADIUSAttributeType = 30 // RFC2865 5.30.  Called-Station-Id
+	RADIUSAttributeTypeCallingStationID       RADIUSAttributeType = 31 // RFC2865 5.31.  Calling-Station-Id
 	RADIUSAttributeTypeNASIdentifier          RADIUSAttributeType = 32 // RFC2865 5.32.  NAS-Identifier
 	RADIUSAttributeTypeProxyState             RADIUSAttributeType = 33 // RFC2865 5.33.  Proxy-State
 	RADIUSAttributeTypeLoginLATService        RADIUSAttributeType = 34 // RFC2865 5.34.  Login-LAT-Service
@@ -140,13 +140,13 @@ const (
 	RADIUSAttributeTypeAcctDelayTime          RADIUSAttributeType = 41 // RFC2866  5.2.  Acct-Delay-Time
 	RADIUSAttributeTypeAcctInputOctets        RADIUSAttributeType = 42 // RFC2866  5.3.  Acct-Input-Octets
 	RADIUSAttributeTypeAcctOutputOctets       RADIUSAttributeType = 43 // RFC2866  5.4.  Acct-Output-Octets
-	RADIUSAttributeTypeAcctSessionId          RADIUSAttributeType = 44 // RFC2866  5.5.  Acct-Session-Id
+	RADIUSAttributeTypeAcctSessionID          RADIUSAttributeType = 44 // RFC2866  5.5.  Acct-Session-Id
 	RADIUSAttributeTypeAcctAuthentic          RADIUSAttributeType = 45 // RFC2866  5.6.  Acct-Authentic
 	RADIUSAttributeTypeAcctSessionTime        RADIUSAttributeType = 46 // RFC2866  5.7.  Acct-Session-Time
 	RADIUSAttributeTypeAcctInputPackets       RADIUSAttributeType = 47 // RFC2866  5.8.  Acct-Input-Packets
 	RADIUSAttributeTypeAcctOutputPackets      RADIUSAttributeType = 48 // RFC2866  5.9.  Acct-Output-Packets
 	RADIUSAttributeTypeAcctTerminateCause     RADIUSAttributeType = 49 // RFC2866 5.10.  Acct-Terminate-Cause
-	RADIUSAttributeTypeAcctMultiSessionId     RADIUSAttributeType = 50 // RFC2866 5.11.  Acct-Multi-Session-Id
+	RADIUSAttributeTypeAcctMultiSessionID     RADIUSAttributeType = 50 // RFC2866 5.11.  Acct-Multi-Session-Id
 	RADIUSAttributeTypeAcctLinkCount          RADIUSAttributeType = 51 // RFC2866 5.12.  Acct-Link-Count
 	RADIUSAttributeTypeAcctInputGigawords     RADIUSAttributeType = 52 // RFC2869  5.1.  Acct-Input-Gigawords
 	RADIUSAttributeTypeAcctOutputGigawords    RADIUSAttributeType = 53 // RFC2869  5.2.  Acct-Output-Gigawords
@@ -178,16 +178,16 @@ const (
 	RADIUSAttributeTypeARAPChallengeResponse  RADIUSAttributeType = 84 // RFC2869 5.15.  ARAP-Challenge-Response
 	RADIUSAttributeTypeAcctInterimInterval    RADIUSAttributeType = 85 // RFC2869 5.16.  Acct-Interim-Interval
 	RADIUSAttributeTypeAcctTunnelPacketsLost  RADIUSAttributeType = 86 // RFC2867  4.2.  Acct-Tunnel-Packets-Lost
-	RADIUSAttributeTypeNASPortId              RADIUSAttributeType = 87 // RFC2869 5.17.  NAS-Port-Id
+	RADIUSAttributeTypeNASPortID              RADIUSAttributeType = 87 // RFC2869 5.17.  NAS-Port-Id
 	RADIUSAttributeTypeFramedPool             RADIUSAttributeType = 88 // RFC2869 5.18.  Framed-Pool
 	RADIUSAttributeTypeTunnelClientAuthID     RADIUSAttributeType = 90 // RFC2868  3.9.  Tunnel-Client-Auth-ID
 	RADIUSAttributeTypeTunnelServerAuthID     RADIUSAttributeType = 91 // RFC2868 3.10.  Tunnel-Server-Auth-ID
 )
 
-// RADIUSAttributeType represents attribute length.
+// RADIUSAttributeLength represents attribute length.
 type RADIUSAttributeLength uint8
 
-// RADIUSAttributeType represents attribute value.
+// RADIUSAttributeValue represents attribute value.
 type RADIUSAttributeValue []byte
 
 // String returns a string version of a RADIUSAttributeType.
@@ -213,7 +213,7 @@ func (t RADIUSAttributeType) String() (s string) {
 		s = "Framed-IP-Netmask"
 	case RADIUSAttributeTypeFramedRouting:
 		s = "Framed-Routing"
-	case RADIUSAttributeTypeFilterId:
+	case RADIUSAttributeTypeFilterID:
 		s = "Filter-Id"
 	case RADIUSAttributeTypeFramedMTU:
 		s = "Framed-MTU"
@@ -229,7 +229,7 @@ func (t RADIUSAttributeType) String() (s string) {
 		s = "Reply-Message"
 	case RADIUSAttributeTypeCallbackNumber:
 		s = "Callback-Number"
-	case RADIUSAttributeTypeCallbackId:
+	case RADIUSAttributeTypeCallbackID:
 		s = "Callback-Id"
 	case RADIUSAttributeTypeFramedRoute:
 		s = "Framed-Route"
@@ -247,9 +247,9 @@ func (t RADIUSAttributeType) String() (s string) {
 		s = "Idle-Timeout"
 	case RADIUSAttributeTypeTerminationAction:
 		s = "Termination-Action"
-	case RADIUSAttributeTypeCalledStationId:
+	case RADIUSAttributeTypeCalledStationID:
 		s = "Called-Station-Id"
-	case RADIUSAttributeTypeCallingStationId:
+	case RADIUSAttributeTypeCallingStationID:
 		s = "Calling-Station-Id"
 	case RADIUSAttributeTypeNASIdentifier:
 		s = "NAS-Identifier"
@@ -275,7 +275,7 @@ func (t RADIUSAttributeType) String() (s string) {
 		s = "Acct-Input-Octets"
 	case RADIUSAttributeTypeAcctOutputOctets:
 		s = "Acct-Output-Octets"
-	case RADIUSAttributeTypeAcctSessionId:
+	case RADIUSAttributeTypeAcctSessionID:
 		s = "Acct-Session-Id"
 	case RADIUSAttributeTypeAcctAuthentic:
 		s = "Acct-Authentic"
@@ -287,7 +287,7 @@ func (t RADIUSAttributeType) String() (s string) {
 		s = "Acct-Output-Packets"
 	case RADIUSAttributeTypeAcctTerminateCause:
 		s = "Acct-Terminate-Cause"
-	case RADIUSAttributeTypeAcctMultiSessionId:
+	case RADIUSAttributeTypeAcctMultiSessionID:
 		s = "Acct-Multi-Session-Id"
 	case RADIUSAttributeTypeAcctLinkCount:
 		s = "Acct-Link-Count"
@@ -351,7 +351,7 @@ func (t RADIUSAttributeType) String() (s string) {
 		s = "Acct-Interim-Interval"
 	case RADIUSAttributeTypeAcctTunnelPacketsLost:
 		s = "Acct-Tunnel-Packets-Lost"
-	case RADIUSAttributeTypeNASPortId:
+	case RADIUSAttributeTypeNASPortID:
 		s = "NAS-Port-Id"
 	case RADIUSAttributeTypeFramedPool:
 		s = "Framed-Pool"
@@ -525,9 +525,10 @@ func (radius *RADIUS) CanDecode() gopacket.LayerClass {
 func (radius *RADIUS) NextLayerType() gopacket.LayerType {
 	if len(radius.BaseLayer.Payload) > 0 {
 		return LayerTypeEAP
-	} else {
-		return gopacket.LayerTypeZero
 	}
+
+	return gopacket.LayerTypeZero
+
 }
 
 // Payload returns the EAP Type-Data for EAP-Message attributes.
@@ -554,7 +555,7 @@ func attributeValueLength(v []byte) (RADIUSAttributeLength, error) {
 	n := len(v)
 	if n > 255 {
 		return 0, fmt.Errorf("RADIUS attribute value length %d too long", n)
-	} else {
-		return RADIUSAttributeLength(n), nil
 	}
+
+	return RADIUSAttributeLength(n), nil
 }
