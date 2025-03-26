@@ -123,14 +123,14 @@ func (r *NgReader) getUint64(buffer []byte) uint64 {
 
 // Now the pcapng implementation
 
-// readBlock reads a the blocktype and length from the file. If the type is a section header, endianess is also read.
+// readBlock reads a the blocktype and length from the file. If the type is a section header, endianness is also read.
 func (r *NgReader) readBlock() error {
 	if err := r.readBytes(r.buf[0:8]); err != nil {
 		return err
 	}
 	r.currentBlock.typ = ngBlockType(r.getUint32(r.buf[0:4]))
-	// The next part is a bit fucked up since a section header could change the endianess...
-	// So first read then length just into a buffer, check if its a section header and then do the endianess part...
+	// The next part is a bit fucked up since a section header could change the endianness...
+	// So first read then length just into a buffer, check if its a section header and then do the endianness part...
 	if r.currentBlock.typ == ngBlockTypeSectionHeader {
 		if err := r.readBytes(r.buf[8:12]); err != nil {
 			return err
