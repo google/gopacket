@@ -222,8 +222,8 @@ func (d *DHCPv4) SerializeTo(b gopacket.SerializeBuffer, opts gopacket.Serialize
 	copy(data[108:236], d.File)
 	binary.BigEndian.PutUint32(data[236:240], DHCPMagic)
 
+	offset := 240
 	if len(d.Options) > 0 {
-		offset := 240
 		for _, o := range d.Options {
 			if err := o.encode(data[offset:]); err != nil {
 				return err
@@ -235,10 +235,10 @@ func (d *DHCPv4) SerializeTo(b gopacket.SerializeBuffer, opts gopacket.Serialize
 				offset += 2 + len(o.Data)
 			}
 		}
-		optend := NewDHCPOption(DHCPOptEnd, nil)
-		if err := optend.encode(data[offset:]); err != nil {
-			return err
-		}
+	}
+	optend := NewDHCPOption(DHCPOptEnd, nil)
+	if err := optend.encode(data[offset:]); err != nil {
+		return err
 	}
 	return nil
 }
