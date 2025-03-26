@@ -37,6 +37,7 @@ const (
 	ngBlockTypeSimplePacket        ngBlockType = 3          // Simple packet block
 	ngBlockTypeInterfaceStatistics ngBlockType = 5          // Interface statistics block
 	ngBlockTypeEnhancedPacket      ngBlockType = 6          // Enhanced packet block
+	ngBlockTypeDecryptionSecrets   ngBlockType = 10         // Decryption secrets block
 	ngBlockTypeSectionHeader       ngBlockType = 0x0A0D0D0A // Section header block (same in both endians)
 )
 

@@ -7,6 +7,7 @@
 package pcapgo
 
 import (
+	"bufio"
 	"bytes"
 	"testing"
 	"time"
@@ -212,6 +213,118 @@ func TestNgWriteComplex(t *testing.T) {
 	test.testContents = bytes.NewReader(buffer.Bytes())
 
 	ngRunFileReadTest(test, "", false, t)
+}
+
+func TestWriteTLSKeyLog(t *testing.T) {
+	// Create a buffer to capture the output
+	buffer := new(bytes.Buffer)
+
+	// Create a new NgWriter with the buffer
+	w := &NgWriter{
+		w: bufio.NewWriter(buffer),
+	}
+
+	// Call the WriteTLSKeyLog function with some test data
+	kl := []byte("test key log!")
+	w.WriteTLSKeyLog(kl)
+
+	// Flush the buffer and capture the result
+	w.Flush()
+	result := buffer.Bytes()
+
+	if len(result) != 36 {
+		t.Fatalf("Expected 36 bytes, got %d", len(result))
+	}
+	if !bytes.Equal(result[0:4], []byte{0x0A, 0x00, 0x00, 0x00}) {
+		t.Fatalf("Unexpected block type %x", result[0:4])
+	}
+	if !bytes.Equal(result[4:8], []byte{36, 0, 0, 0}) {
+		t.Fatalf("Unexpected value in 1st length field %v", result[4:8])
+	}
+	if !bytes.Equal(result[8:12], []byte{0x4b, 0x53, 0x4c, 0x54}) {
+		t.Fatalf("Unexpected key log format %x", result[8:12])
+	}
+	if !bytes.Equal(result[12:16], []byte{13, 0, 0, 0}) {
+		t.Fatalf("Unexpected value in key log length field %x", result[12:16])
+	}
+	if !bytes.Equal(result[16:29], []byte("test key log!")) {
+		t.Fatalf(`Unexpected key log data "%s"`, result[16:29])
+	}
+	if !bytes.Equal(result[29:32], []byte{0, 0, 0}) {
+		t.Fatalf("Expected zero-padding, got %x", result[29:32])
+	}
+	if !bytes.Equal(result[32:36], []byte{36, 0, 0, 0}) {
+		t.Fatalf("Unexpected value in 2nd length field %v", result[32:36])
+	}
+}
+
+func TestWriteCustomBlock(t *testing.T) {
+	// Create a buffer to capture the output
+	buffer := new(bytes.Buffer)
+
+	// Create a new NgWriter with the buffer
+	w := &NgWriter{
+		w: bufio.NewWriter(buffer),
+	}
+
+	// Write a custom block
+	blockType := uint32(0xDEADBEEF)
+	body := []byte("test body")
+	w.WriteCustomBlock(blockType, body)
+
+	// Flush the buffer and capture the result
+	w.Flush()
+	result := buffer.Bytes()
+
+	if len(result) != 24 {
+		t.Fatalf("Expected 24 bytes, got %d", len(result))
+	}
+	if !bytes.Equal(result[0:4], []byte{0xEF, 0xBE, 0xAD, 0xDE}) {
+		t.Fatalf("Unexpected block type %x", result[0:4])
+	}
+	if !bytes.Equal(result[4:8], []byte{24, 0, 0, 0}) {
+		t.Fatalf("Unexpected value in 1st length field %v", result[4:8])
+	}
+	if !bytes.Equal(result[8:17], []byte("test body")) {
+		t.Fatalf(`Unexpected body "%s"`, result[8:17])
+	}
+	if !bytes.Equal(result[17:20], []byte{0, 0, 0}) {
+		t.Fatalf("Expected zero-padding, got %x", result[17:20])
+	}
+	if !bytes.Equal(result[20:24], []byte{24, 0, 0, 0}) {
+		t.Fatalf("Unexpected value in 2nd length field %v", result[20:24])
+	}
+}
+
+func TestWriteCustomBlock_EmptyBody(t *testing.T) {
+	// Create a buffer to capture the output
+	buffer := new(bytes.Buffer)
+
+	// Create a new NgWriter with the buffer
+	w := &NgWriter{
+		w: bufio.NewWriter(buffer),
+	}
+
+	// Write a custom block with an empty body
+	blockType := uint32(0xABADFACE)
+	w.WriteCustomBlock(blockType, nil)
+
+	// Flush the buffer and capture the result
+	w.Flush()
+	result := buffer.Bytes()
+
+	if len(result) != 12 {
+		t.Fatalf("Expected 16 bytes, got %d", len(result))
+	}
+	if !bytes.Equal(result[0:4], []byte{0xCE, 0xFA, 0xAD, 0xAB}) {
+		t.Fatalf("Unexpected block type %x", result[0:4])
+	}
+	if !bytes.Equal(result[4:8], []byte{12, 0, 0, 0}) {
+		t.Fatalf("Unexpected value in 1st length field %v", result[4:8])
+	}
+	if !bytes.Equal(result[8:12], []byte{12, 0, 0, 0}) {
+		t.Fatalf("Unexpected value in 2nd length field %v", result[12:16])
+	}
 }
 
 type ngDevNull struct{}
