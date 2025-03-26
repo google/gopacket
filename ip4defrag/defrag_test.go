@@ -165,12 +165,31 @@ func TestDefragTooSmall(t *testing.T) {
 		Flags:      layers.IPv4MoreFragments,
 	}
 	if _, err := defrag.DefragIPv4(&ip1); err == nil {
-		t.Fatal("defrag: Minimum fragment size is supposed to be 8")
+		t.Fatal("defrag: Minimum fragment size is supposed to be 8, except for the final fragment")
 	}
 
 	ip1.Length++
 	if _, err := defrag.DefragIPv4(&ip1); err != nil {
-		t.Fatalf("defrag: Minimum fragment size is supposed to be 8, %s", err)
+		t.Fatalf("defrag: Minimum fragment size is supposed to be 8, except for the final fragment, %s", err)
+	}
+}
+
+func TestDefragSmallFinalFragment(t *testing.T) {
+	defrag := NewIPv4Defragmenter()
+
+	ip1 := layers.IPv4{
+		Version:    4,
+		IHL:        5,
+		TTL:        15,
+		SrcIP:      net.IPv4(1, 1, 1, 1),
+		DstIP:      net.IPv4(2, 2, 2, 2),
+		Id:         0xcc,
+		FragOffset: 0,
+		Length:     27, // Minimum fragment size -1 + header (20)
+		Flags:      0,  // Indicate final fragment
+	}
+	if _, err := defrag.DefragIPv4(&ip1); err != nil {
+		t.Fatal("defrag: Fragment size smaller than 8 should be allowed for the final fragment")
 	}
 }
 
