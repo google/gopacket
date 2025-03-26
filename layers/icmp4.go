@@ -245,7 +245,8 @@ func (i *ICMPv4) SerializeTo(b gopacket.SerializeBuffer, opts gopacket.Serialize
 	if opts.ComputeChecksums {
 		bytes[2] = 0
 		bytes[3] = 0
-		i.Checksum = tcpipChecksum(b.Bytes(), 0)
+		csum := gopacket.ComputeChecksum(b.Bytes(), 0)
+		i.Checksum = gopacket.FoldChecksum(csum)
 	}
 	binary.BigEndian.PutUint16(bytes[2:], i.Checksum)
 	return nil
@@ -259,6 +260,19 @@ func (i *ICMPv4) CanDecode() gopacket.LayerClass {
 // NextLayerType returns the layer type contained by this DecodingLayer.
 func (i *ICMPv4) NextLayerType() gopacket.LayerType {
 	return gopacket.LayerTypePayload
+}
+
+func (i *ICMPv4) VerifyChecksum() (error, gopacket.ChecksumVerificationResult) {
+	bytes := append(i.Contents, i.Payload...)
+
+	existing := i.Checksum
+	verification := gopacket.ComputeChecksum(bytes, 0)
+	correct := gopacket.FoldChecksum(verification - uint32(existing))
+	return nil, gopacket.ChecksumVerificationResult{
+		Valid:   correct == existing,
+		Correct: uint32(correct),
+		Actual:  uint32(existing),
+	}
 }
 
 func decodeICMPv4(data []byte, p gopacket.PacketBuilder) error {

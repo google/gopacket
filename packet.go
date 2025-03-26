@@ -54,8 +54,8 @@ type PacketMetadata struct {
 // Decoder's Decode call.  A packet is made up of a set of Data, which
 // is broken into a number of Layers as it is decoded.
 type Packet interface {
-	//// Functions for outputting the packet as a human-readable string:
-	//// ------------------------------------------------------------------
+	// // Functions for outputting the packet as a human-readable string:
+	// // ------------------------------------------------------------------
 	// String returns a human-readable string representation of the packet.
 	// It uses LayerString on each layer to output the layer.
 	String() string
@@ -64,8 +64,8 @@ type Packet interface {
 	// output the layer.
 	Dump() string
 
-	//// Functions for accessing arbitrary packet layers:
-	//// ------------------------------------------------------------------
+	// // Functions for accessing arbitrary packet layers:
+	// // ------------------------------------------------------------------
 	// Layers returns all layers in this packet, computing them as necessary
 	Layers() []Layer
 	// Layer returns the first layer in this packet of the given type, or nil
@@ -74,9 +74,9 @@ type Packet interface {
 	// or nil.
 	LayerClass(LayerClass) Layer
 
-	//// Functions for accessing specific types of packet layers.  These functions
-	//// return the first layer of each type found within the packet.
-	//// ------------------------------------------------------------------
+	// // Functions for accessing specific types of packet layers.  These functions
+	// // return the first layer of each type found within the packet.
+	// // ------------------------------------------------------------------
 	// LinkLayer returns the first link layer in the packet
 	LinkLayer() LinkLayer
 	// NetworkLayer returns the first network layer in the packet
@@ -91,12 +91,18 @@ type Packet interface {
 	// can be used to determine if the entire packet was able to be decoded.
 	ErrorLayer() ErrorLayer
 
-	//// Functions for accessing data specific to the packet:
-	//// ------------------------------------------------------------------
+	// // Functions for accessing data specific to the packet:
+	// // ------------------------------------------------------------------
 	// Data returns the set of bytes that make up this entire packet.
 	Data() []byte
 	// Metadata returns packet metadata associated with this packet.
 	Metadata() *PacketMetadata
+
+	// // Functions for verifying specific aspects of the packet:
+	// // ------------------------------------------------------------------
+	// VerifyChecksums verifies the checksums of all layers in this packet,
+	// that have one, and returns all found checksum mismatches.
+	VerifyChecksums() (error, []ChecksumMismatch)
 }
 
 // packet contains all the information we need to fulfill the Packet interface,
@@ -182,6 +188,30 @@ func (p *packet) DecodeOptions() *DecodeOptions {
 	return &p.decodeOptions
 }
 
+func (p *packet) VerifyChecksums() (error, []ChecksumMismatch) {
+	mismatches := make([]ChecksumMismatch, 0)
+	for i, l := range p.layers {
+		if lwc, ok := l.(LayerWithChecksum); ok {
+			// Verify checksum for that layer
+			err, res := lwc.VerifyChecksum()
+			if err != nil {
+				return fmt.Errorf("couldn't verify checksum for layer %d (%s): %w",
+					i+1, l.LayerType(), err), nil
+			}
+
+			if !res.Valid {
+				mismatches = append(mismatches, ChecksumMismatch{
+					ChecksumVerificationResult: res,
+					Layer:                      l,
+					LayerIndex:                 i,
+				})
+			}
+		}
+	}
+
+	return nil, mismatches
+}
+
 func (p *packet) addFinalDecodeError(err error, stack []byte) {
 	fail := &DecodeFailure{err: err, stack: stack}
 	if p.last == nil {
@@ -205,9 +235,10 @@ func (p *packet) recoverDecodeError() {
 // in a single line, with no trailing newline.  This function is specifically
 // designed to do the right thing for most layers... it follows the following
 // rules:
-//  * If the Layer has a String function, just output that.
-//  * Otherwise, output all exported fields in the layer, recursing into
-//    exported slices and structs.
+//   - If the Layer has a String function, just output that.
+//   - Otherwise, output all exported fields in the layer, recursing into
+//     exported slices and structs.
+//
 // NOTE:  This is NOT THE SAME AS fmt's "%#v".  %#v will output both exported
 // and unexported fields... many times packet layers contain unexported stuff
 // that would just mess up the output of the layer, see for example the
@@ -247,11 +278,12 @@ func LayerDump(l Layer) string {
 // LayerString for more details.
 //
 // Params:
-//   i - value to write out
-//   anonymous:  if we're currently recursing an anonymous member of a struct
-//   writeSpace:  if we've already written a value in a struct, and need to
-//     write a space before writing more.  This happens when we write various
-//     anonymous values, and need to keep writing more.
+//
+//	i - value to write out
+//	anonymous:  if we're currently recursing an anonymous member of a struct
+//	writeSpace:  if we've already written a value in a struct, and need to
+//	  write a space before writing more.  This happens when we write various
+//	  anonymous values, and need to keep writing more.
 func layerString(v reflect.Value, anonymous bool, writeSpace bool) string {
 	// Let String() functions take precedence.
 	if v.CanInterface() {
@@ -748,18 +780,19 @@ type ZeroCopyPacketDataSource interface {
 // There are currently two different methods for reading packets in through
 // a PacketSource:
 //
-// Reading With Packets Function
+// # Reading With Packets Function
 //
 // This method is the most convenient and easiest to code, but lacks
 // flexibility.  Packets returns a 'chan Packet', then asynchronously writes
 // packets into that channel.  Packets uses a blocking channel, and closes
 // it if an io.EOF is returned by the underlying PacketDataSource.  All other
 // PacketDataSource errors are ignored and discarded.
-//  for packet := range packetSource.Packets() {
-//    ...
-//  }
 //
-// Reading With NextPacket Function
+//	for packet := range packetSource.Packets() {
+//	  ...
+//	}
+//
+// # Reading With NextPacket Function
 //
 // This method is the most flexible, and exposes errors that may be
 // encountered by the underlying PacketDataSource.  It's also the fastest
@@ -767,16 +800,17 @@ type ZeroCopyPacketDataSource interface {
 // read/write.  However, it requires the user to handle errors, most
 // importantly the io.EOF error in cases where packets are being read from
 // a file.
-//  for {
-//    packet, err := packetSource.NextPacket()
-//    if err == io.EOF {
-//      break
-//    } else if err != nil {
-//      log.Println("Error:", err)
-//      continue
-//    }
-//    handlePacket(packet)  // Do something with each packet.
-//  }
+//
+//	for {
+//	  packet, err := packetSource.NextPacket()
+//	  if err == io.EOF {
+//	    break
+//	  } else if err != nil {
+//	    log.Println("Error:", err)
+//	    continue
+//	  }
+//	  handlePacket(packet)  // Do something with each packet.
+//	}
 type PacketSource struct {
 	source  PacketDataSource
 	decoder Decoder
@@ -850,9 +884,9 @@ func (p *PacketSource) packetsToChannel() {
 // PacketDataSource returns an io.EOF error, the channel will be closed.
 // If any other error is encountered, it is ignored.
 //
-//  for packet := range packetSource.Packets() {
-//    handlePacket(packet)  // Do something with each packet.
-//  }
+//	for packet := range packetSource.Packets() {
+//	  handlePacket(packet)  // Do something with each packet.
+//	}
 //
 // If called more than once, returns the same channel.
 func (p *PacketSource) Packets() chan Packet {
