@@ -23,12 +23,13 @@ func FuzzDecodeFromBytes(f *testing.F) {
 }
 
 // it have a layer like that:
-//    name: xxx.com
-//    type: CNAME
-//    class: 254 (QCLASS None)   # [RFC 2136]
-//    ttl: 0
-//    data-length: 0
-//    data: nil
+//
+//	name: xxx.com
+//	type: CNAME
+//	class: 254 (QCLASS None)   # [RFC 2136]
+//	ttl: 0
+//	data-length: 0
+//	data: nil
 var testPacketDNSNilRdata = []byte{
 	0x96, 0x99, 0x28, 0x00, 0x00, 0x01, 0x00, 0x01, 0x00, 0x03, 0x00, 0x00, 0x02, 0x6a, 0x79, 0x09,
 	0x61, 0x62, 0x63, 0x64, 0x65, 0x66, 0x67, 0x68, 0x69, 0x03, 0x63, 0x6f, 0x6d, 0x00, 0x00, 0x06,
@@ -49,13 +50,14 @@ func TestPacketDNSNilRdata(t *testing.T) {
 }
 
 // testPacketDNSRegression is the packet:
-//   11:08:05.708342 IP 109.194.160.4.57766 > 95.211.92.14.53: 63000% [1au] A? picslife.ru. (40)
-//      0x0000:  0022 19b6 7e22 000f 35bb 0b40 0800 4500  ."..~"..5..@..E.
-//      0x0010:  0044 89c4 0000 3811 2f3d 6dc2 a004 5fd3  .D....8./=m..._.
-//      0x0020:  5c0e e1a6 0035 0030 a597 f618 0010 0001  \....5.0........
-//      0x0030:  0000 0000 0001 0870 6963 736c 6966 6502  .......picslife.
-//      0x0040:  7275 0000 0100 0100 0029 1000 0000 8000  ru.......)......
-//      0x0050:  0000                                     ..
+//
+//	11:08:05.708342 IP 109.194.160.4.57766 > 95.211.92.14.53: 63000% [1au] A? picslife.ru. (40)
+//	   0x0000:  0022 19b6 7e22 000f 35bb 0b40 0800 4500  ."..~"..5..@..E.
+//	   0x0010:  0044 89c4 0000 3811 2f3d 6dc2 a004 5fd3  .D....8./=m..._.
+//	   0x0020:  5c0e e1a6 0035 0030 a597 f618 0010 0001  \....5.0........
+//	   0x0030:  0000 0000 0001 0870 6963 736c 6966 6502  .......picslife.
+//	   0x0040:  7275 0000 0100 0100 0029 1000 0000 8000  ru.......)......
+//	   0x0050:  0000                                     ..
 var testPacketDNSRegression = []byte{
 	0x00, 0x22, 0x19, 0xb6, 0x7e, 0x22, 0x00, 0x0f, 0x35, 0xbb, 0x0b, 0x40, 0x08, 0x00, 0x45, 0x00,
 	0x00, 0x44, 0x89, 0xc4, 0x00, 0x00, 0x38, 0x11, 0x2f, 0x3d, 0x6d, 0xc2, 0xa0, 0x04, 0x5f, 0xd3,
@@ -269,6 +271,105 @@ func TestParseDNSTypeOPT(t *testing.T) {
 	}
 	if !bytes.Equal(additionals[0].OPT[0].Data[7:], []byte{0x01, 0x23, 0x45, 0x67, 0x89, 0xAB, 0xCD, 0xEF}) {
 		t.Error("Failed to parse the Data Part 2")
+	}
+}
+
+var testParseDNSTypeSVCB = [][]byte{
+	{
+		0xf1, 0x0e, 0x81, 0x80, 0x00, 0x01, 0x00, 0x03,
+		0x00, 0x00, 0x00, 0x00, 0x09, 0x65, 0x64, 0x67,
+		0x65, 0x2d, 0x63, 0x68, 0x61, 0x74, 0x08, 0x66,
+		0x61, 0x63, 0x65, 0x62, 0x6f, 0x6f, 0x6b, 0x03,
+		0x63, 0x6f, 0x6d, 0x00, 0x00, 0x41, 0x00, 0x01,
+		0xc0, 0x0c, 0x00, 0x05, 0x00, 0x01, 0x00, 0x00,
+		0x0a, 0xfd, 0x00, 0x0c, 0x04, 0x73, 0x74, 0x61,
+		0x72, 0x04, 0x63, 0x31, 0x30, 0x72, 0xc0, 0x16,
+		0xc0, 0x34, 0x00, 0x41, 0x00, 0x01, 0x00, 0x00,
+		0x0d, 0xbd, 0x00, 0x0d, 0x00, 0x01, 0x00, 0x00,
+		0x01, 0x00, 0x06, 0x02, 0x68, 0x32, 0x02, 0x68,
+		0x33, 0xc0, 0x34, 0x00, 0x41, 0x00, 0x01, 0x00,
+		0x00, 0x0d, 0xbd, 0x00, 0x2d, 0x00, 0x02, 0x04,
+		0x73, 0x74, 0x61, 0x72, 0x08, 0x66, 0x61, 0x6c,
+		0x6c, 0x62, 0x61, 0x63, 0x6b, 0x04, 0x63, 0x31,
+		0x30, 0x72, 0x08, 0x66, 0x61, 0x63, 0x65, 0x62,
+		0x6f, 0x6f, 0x6b, 0x03, 0x63, 0x6f, 0x6d, 0x00,
+		0x00, 0x01, 0x00, 0x06, 0x02, 0x68, 0x32, 0x02,
+		0x68, 0x33,
+	},
+	{
+		0x25, 0xd4, 0x81, 0x80, 0x00, 0x01, 0x00, 0x03,
+		0x00, 0x00, 0x00, 0x00, 0x14, 0x61, 0x70, 0x70,
+		0x2d, 0x73, 0x69, 0x74, 0x65, 0x2d, 0x61, 0x73,
+		0x73, 0x6f, 0x63, 0x69, 0x61, 0x74, 0x69, 0x6f,
+		0x6e, 0x09, 0x63, 0x64, 0x6e, 0x2d, 0x61, 0x70,
+		0x70, 0x6c, 0x65, 0x03, 0x63, 0x6f, 0x6d, 0x00,
+		0x00, 0x41, 0x00, 0x01, 0xc0, 0x0c, 0x00, 0x05,
+		0x00, 0x01, 0x00, 0x00, 0x02, 0x5e, 0x00, 0x2f,
+		0x14, 0x61, 0x70, 0x70, 0x2d, 0x73, 0x69, 0x74,
+		0x65, 0x2d, 0x61, 0x73, 0x73, 0x6f, 0x63, 0x69,
+		0x61, 0x74, 0x69, 0x6f, 0x6e, 0x09, 0x63, 0x64,
+		0x6e, 0x2d, 0x61, 0x70, 0x70, 0x6c, 0x65, 0x03,
+		0x63, 0x6f, 0x6d, 0x06, 0x61, 0x6b, 0x61, 0x64,
+		0x6e, 0x73, 0x03, 0x6e, 0x65, 0x74, 0x00, 0xc0,
+		0x40, 0x00, 0x05, 0x00, 0x01, 0x00, 0x00, 0x02,
+		0x5e, 0x00, 0x21, 0x14, 0x61, 0x70, 0x70, 0x2d,
+		0x73, 0x69, 0x74, 0x65, 0x2d, 0x61, 0x73, 0x73,
+		0x6f, 0x63, 0x69, 0x61, 0x74, 0x69, 0x6f, 0x6e,
+		0x01, 0x67, 0x07, 0x61, 0x61, 0x70, 0x6c, 0x69,
+		0x6d, 0x67, 0xc0, 0x2b, 0xc0, 0x7b, 0x00, 0x41,
+		0x00, 0x01, 0x00, 0x00, 0x01, 0x01, 0x00, 0x2a,
+		0x00, 0x01, 0x00, 0x80, 0x00, 0x00, 0x23, 0x68,
+		0x74, 0x74, 0x70, 0x73, 0x3a, 0x2f, 0x2f, 0x64,
+		0x6f, 0x68, 0x2e, 0x64, 0x6e, 0x73, 0x2e, 0x61,
+		0x70, 0x70, 0x6c, 0x65, 0x2e, 0x63, 0x6f, 0x6d,
+		0x2f, 0x64, 0x6e, 0x73, 0x2d, 0x71, 0x75, 0x65,
+		0x72, 0x79,
+	},
+}
+
+func TestParseDNSTypeSVCB(t *testing.T) {
+	decodeOptions := gopacket.DecodeOptions{
+		Lazy:   true,
+		NoCopy: true,
+	}
+	serializeOptions := gopacket.SerializeOptions{
+		FixLengths:       true,
+		ComputeChecksums: true,
+	}
+
+	for idx, data := range testParseDNSTypeSVCB {
+		packet := gopacket.NewPacket(data, LayerTypeDNS, decodeOptions)
+		layer := packet.Layer(LayerTypeDNS)
+		if layer == nil {
+			t.Errorf("test-%v: no DNS layer", idx)
+			continue
+		}
+		dns, ok := layer.(*DNS)
+		if !ok {
+			t.Errorf("test-%v: LayerTypeDNS is not of type *DNS", idx)
+			continue
+		}
+
+		buffer := gopacket.NewSerializeBuffer()
+		err := gopacket.SerializeLayers(buffer, serializeOptions, dns)
+		if err != nil {
+			t.Errorf("test-%v: %v\n", idx, err)
+			continue
+		}
+		encoded := buffer.Bytes()
+
+		// Check that we can still decode it.
+		p2 := gopacket.NewPacket(encoded, LayerTypeDNS, decodeOptions)
+		l2 := p2.Layer(LayerTypeDNS)
+		if l2 == nil {
+			t.Errorf("test-%v: p2: no DNS layer", idx)
+			continue
+		}
+		_, ok = l2.(*DNS)
+		if !ok {
+			t.Errorf("test-%v: p2: LayerTypeDNS is not of type *DNS", idx)
+			continue
+		}
 	}
 }
 
@@ -619,12 +720,13 @@ func TestDNSEncodeResponse(t *testing.T) {
 }
 
 // testDNSMalformedPacket is the packet:
-//   10:30:00.389666 IP 10.77.43.131.60718 > 10.1.0.17.53: 18245 updateD [b2&3=0x5420] [18516a] [12064q] [21584n] [12081au][|domain]
-//   	0x0000:  0000 0101 0000 4e96 1476 afa1 0800 4500  ......N..v....E.
-//   	0x0010:  0039 d431 0000 f311 b3a0 0a4d 2b83 0a01  .9.1.......M+...
-//   	0x0020:  0011 ed2e 0035 0025 0832 4745 5420 2f20  .....5.%.2GET./.
-//   	0x0030:  4854 5450 2f31 2e31 0d0a 486f 7374 3a20  HTTP/1.1..Host:.
-//   	0x0040:  7777 770d 0a0d 0a                        www....
+//
+//	10:30:00.389666 IP 10.77.43.131.60718 > 10.1.0.17.53: 18245 updateD [b2&3=0x5420] [18516a] [12064q] [21584n] [12081au][|domain]
+//		0x0000:  0000 0101 0000 4e96 1476 afa1 0800 4500  ......N..v....E.
+//		0x0010:  0039 d431 0000 f311 b3a0 0a4d 2b83 0a01  .9.1.......M+...
+//		0x0020:  0011 ed2e 0035 0025 0832 4745 5420 2f20  .....5.%.2GET./.
+//		0x0030:  4854 5450 2f31 2e31 0d0a 486f 7374 3a20  HTTP/1.1..Host:.
+//		0x0040:  7777 770d 0a0d 0a                        www....
 var testDNSMalformedPacket = []byte{
 	0x00, 0x00, 0x01, 0x01, 0x00, 0x00, 0x4e, 0x96, 0x14, 0x76, 0xaf, 0xa1, 0x08, 0x00, 0x45, 0x00,
 	0x00, 0x39, 0xd4, 0x31, 0x00, 0x00, 0xf3, 0x11, 0xb3, 0xa0, 0x0a, 0x4d, 0x2b, 0x83, 0x0a, 0x01,
@@ -643,16 +745,17 @@ func TestDNSMalformedPacket(t *testing.T) {
 }
 
 // testDNSMalformedPacket2 is the packet:
-//   15:14:42.056054 IP 10.77.0.245.53 > 10.1.0.45.38769: 12625 zoneInit YXRRSet- [49833q],[|domain]
-//   	0x0000:  0055 22af c637 0022 55ac deac 0800 4500  .U"..7."U.....E.
-//   	0x0010:  0079 3767 4000 3911 f49d 0a4d 00f5 0a01  .y7g@.9....M....
-//   	0x0020:  002d 0035 9771 0065 6377 3151 f057 c2a9  .-.5.q.ecw1Q.W..
-//   	0x0030:  fc6e e86a beb0 f7d4 8599 373e b5f8 9db2  .n.j......7>....
-//   	0x0040:  a399 21a1 9762 def1 def4 f5ab 5675 023e  ..!..b......Vu.>
-//   	0x0050:  c9ca 304f 178a c2ad f2fc 677a 0e4c b892  ..0O......gz.L..
-//   	0x0060:  ab71 09bb 1ea4 f7c4 fe47 7a39 868b 29a0  .q.......Gz9..).
-//   	0x0070:  62c4 d184 5b4e 8817 4cc0 d1d0 d430 11d3  b...[N..L....0..
-//   	0x0080:  d147 543f afc7 1a                        .GT?...
+//
+//	15:14:42.056054 IP 10.77.0.245.53 > 10.1.0.45.38769: 12625 zoneInit YXRRSet- [49833q],[|domain]
+//		0x0000:  0055 22af c637 0022 55ac deac 0800 4500  .U"..7."U.....E.
+//		0x0010:  0079 3767 4000 3911 f49d 0a4d 00f5 0a01  .y7g@.9....M....
+//		0x0020:  002d 0035 9771 0065 6377 3151 f057 c2a9  .-.5.q.ecw1Q.W..
+//		0x0030:  fc6e e86a beb0 f7d4 8599 373e b5f8 9db2  .n.j......7>....
+//		0x0040:  a399 21a1 9762 def1 def4 f5ab 5675 023e  ..!..b......Vu.>
+//		0x0050:  c9ca 304f 178a c2ad f2fc 677a 0e4c b892  ..0O......gz.L..
+//		0x0060:  ab71 09bb 1ea4 f7c4 fe47 7a39 868b 29a0  .q.......Gz9..).
+//		0x0070:  62c4 d184 5b4e 8817 4cc0 d1d0 d430 11d3  b...[N..L....0..
+//		0x0080:  d147 543f afc7 1a                        .GT?...
 var testDNSMalformedPacket2 = []byte{
 	0x00, 0x55, 0x22, 0xaf, 0xc6, 0x37, 0x00, 0x22, 0x55, 0xac, 0xde, 0xac, 0x08, 0x00, 0x45, 0x00,
 	0x00, 0x79, 0x37, 0x67, 0x40, 0x00, 0x39, 0x11, 0xf4, 0x9d, 0x0a, 0x4d, 0x00, 0xf5, 0x0a, 0x01,
@@ -675,42 +778,43 @@ func TestDNSMalformedPacket2(t *testing.T) {
 }
 
 // testBlankNameRootQuery is the packet:
-//   08:31:18.143065 IP 10.77.0.26.53 > 10.1.0.233.65071: 59508- 0/13/3 (508)
-//   	0x0000:  0055 22af c637 0022 55ac deac 0800 4500  .U"..7."U.....E.
-//   	0x0010:  0218 76b2 4000 7211 7ad2 0a4d 001a 0a01  ..v.@.r.z..M....
-//   	0x0020:  00e9 0035 fe2f 0204 b8f5 e874 8100 0001  ...5./.....t....
-//   	0x0030:  0000 000d 0003 0c61 786b 7663 6863 7063  .......axkvchcpc
-//   	0x0040:  7073 6c0a 7878 7878 7878 7878 7878 036e  psl.xxxxxxxxxx.n
-//   	0x0050:  6574 0000 0100 0100 0002 0001 0000 0e10  et..............
-//   	0x0060:  0014 016d 0c72 6f6f 742d 7365 7276 6572  ...m.root-server
-//   	0x0070:  7303 6e65 7400 c02d 0002 0001 0000 0e10  s.net..-........
-//   	0x0080:  0014 0161 0c72 6f6f 742d 7365 7276 6572  ...a.root-server
-//   	0x0090:  7303 6e65 7400 c02d 0002 0001 0000 0e10  s.net..-........
-//   	0x00a0:  0014 0169 0c72 6f6f 742d 7365 7276 6572  ...i.root-server
-//   	0x00b0:  7303 6e65 7400 c02d 0002 0001 0000 0e10  s.net..-........
-//   	0x00c0:  0014 0162 0c72 6f6f 742d 7365 7276 6572  ...b.root-server
-//   	0x00d0:  7303 6e65 7400 c02d 0002 0001 0000 0e10  s.net..-........
-//   	0x00e0:  0014 016c 0c72 6f6f 742d 7365 7276 6572  ...l.root-server
-//   	0x00f0:  7303 6e65 7400 c02d 0002 0001 0000 0e10  s.net..-........
-//   	0x0100:  0014 0166 0c72 6f6f 742d 7365 7276 6572  ...f.root-server
-//   	0x0110:  7303 6e65 7400 c02d 0002 0001 0000 0e10  s.net..-........
-//   	0x0120:  0014 0167 0c72 6f6f 742d 7365 7276 6572  ...g.root-server
-//   	0x0130:  7303 6e65 7400 c02d 0002 0001 0000 0e10  s.net..-........
-//   	0x0140:  0014 0164 0c72 6f6f 742d 7365 7276 6572  ...d.root-server
-//   	0x0150:  7303 6e65 7400 c02d 0002 0001 0000 0e10  s.net..-........
-//   	0x0160:  0014 0168 0c72 6f6f 742d 7365 7276 6572  ...h.root-server
-//   	0x0170:  7303 6e65 7400 c02d 0002 0001 0000 0e10  s.net..-........
-//   	0x0180:  0014 0165 0c72 6f6f 742d 7365 7276 6572  ...e.root-server
-//   	0x0190:  7303 6e65 7400 c02d 0002 0001 0000 0e10  s.net..-........
-//   	0x01a0:  0014 016a 0c72 6f6f 742d 7365 7276 6572  ...j.root-server
-//   	0x01b0:  7303 6e65 7400 c02d 0002 0001 0000 0e10  s.net..-........
-//   	0x01c0:  0014 016b 0c72 6f6f 742d 7365 7276 6572  ...k.root-server
-//   	0x01d0:  7303 6e65 7400 c02d 0002 0001 0000 0e10  s.net..-........
-//   	0x01e0:  0014 0163 0c72 6f6f 742d 7365 7276 6572  ...c.root-server
-//   	0x01f0:  7303 6e65 7400 c038 0001 0001 0000 0e10  s.net..8........
-//   	0x0200:  0004 ca0c 1b21 c058 0001 0001 0000 0e10  .....!.X........
-//   	0x0210:  0004 c629 0004 c078 0001 0001 0000 0e10  ...)...x........
-//   	0x0220:  0004 c024 9411                           ...$..
+//
+//	08:31:18.143065 IP 10.77.0.26.53 > 10.1.0.233.65071: 59508- 0/13/3 (508)
+//		0x0000:  0055 22af c637 0022 55ac deac 0800 4500  .U"..7."U.....E.
+//		0x0010:  0218 76b2 4000 7211 7ad2 0a4d 001a 0a01  ..v.@.r.z..M....
+//		0x0020:  00e9 0035 fe2f 0204 b8f5 e874 8100 0001  ...5./.....t....
+//		0x0030:  0000 000d 0003 0c61 786b 7663 6863 7063  .......axkvchcpc
+//		0x0040:  7073 6c0a 7878 7878 7878 7878 7878 036e  psl.xxxxxxxxxx.n
+//		0x0050:  6574 0000 0100 0100 0002 0001 0000 0e10  et..............
+//		0x0060:  0014 016d 0c72 6f6f 742d 7365 7276 6572  ...m.root-server
+//		0x0070:  7303 6e65 7400 c02d 0002 0001 0000 0e10  s.net..-........
+//		0x0080:  0014 0161 0c72 6f6f 742d 7365 7276 6572  ...a.root-server
+//		0x0090:  7303 6e65 7400 c02d 0002 0001 0000 0e10  s.net..-........
+//		0x00a0:  0014 0169 0c72 6f6f 742d 7365 7276 6572  ...i.root-server
+//		0x00b0:  7303 6e65 7400 c02d 0002 0001 0000 0e10  s.net..-........
+//		0x00c0:  0014 0162 0c72 6f6f 742d 7365 7276 6572  ...b.root-server
+//		0x00d0:  7303 6e65 7400 c02d 0002 0001 0000 0e10  s.net..-........
+//		0x00e0:  0014 016c 0c72 6f6f 742d 7365 7276 6572  ...l.root-server
+//		0x00f0:  7303 6e65 7400 c02d 0002 0001 0000 0e10  s.net..-........
+//		0x0100:  0014 0166 0c72 6f6f 742d 7365 7276 6572  ...f.root-server
+//		0x0110:  7303 6e65 7400 c02d 0002 0001 0000 0e10  s.net..-........
+//		0x0120:  0014 0167 0c72 6f6f 742d 7365 7276 6572  ...g.root-server
+//		0x0130:  7303 6e65 7400 c02d 0002 0001 0000 0e10  s.net..-........
+//		0x0140:  0014 0164 0c72 6f6f 742d 7365 7276 6572  ...d.root-server
+//		0x0150:  7303 6e65 7400 c02d 0002 0001 0000 0e10  s.net..-........
+//		0x0160:  0014 0168 0c72 6f6f 742d 7365 7276 6572  ...h.root-server
+//		0x0170:  7303 6e65 7400 c02d 0002 0001 0000 0e10  s.net..-........
+//		0x0180:  0014 0165 0c72 6f6f 742d 7365 7276 6572  ...e.root-server
+//		0x0190:  7303 6e65 7400 c02d 0002 0001 0000 0e10  s.net..-........
+//		0x01a0:  0014 016a 0c72 6f6f 742d 7365 7276 6572  ...j.root-server
+//		0x01b0:  7303 6e65 7400 c02d 0002 0001 0000 0e10  s.net..-........
+//		0x01c0:  0014 016b 0c72 6f6f 742d 7365 7276 6572  ...k.root-server
+//		0x01d0:  7303 6e65 7400 c02d 0002 0001 0000 0e10  s.net..-........
+//		0x01e0:  0014 0163 0c72 6f6f 742d 7365 7276 6572  ...c.root-server
+//		0x01f0:  7303 6e65 7400 c038 0001 0001 0000 0e10  s.net..8........
+//		0x0200:  0004 ca0c 1b21 c058 0001 0001 0000 0e10  .....!.X........
+//		0x0210:  0004 c629 0004 c078 0001 0001 0000 0e10  ...)...x........
+//		0x0220:  0004 c024 9411                           ...$..
 var testBlankNameRootQuery = []byte{
 	0x00, 0x55, 0x22, 0xaf, 0xc6, 0x37, 0x00, 0x22, 0x55, 0xac, 0xde, 0xac, 0x08, 0x00, 0x45, 0x00,
 	0x02, 0x18, 0x76, 0xb2, 0x40, 0x00, 0x72, 0x11, 0x7a, 0xd2, 0x0a, 0x4d, 0x00, 0x1a, 0x0a, 0x01,
@@ -757,100 +861,101 @@ func TestBlankNameRootQuery(t *testing.T) {
 }
 
 // testAnotherMalformedDNS is the packet:
-//   10:52:13.690904 IP 10.77.0.29.53 > 10.1.0.6.42280: 13491 op6+% [b2&3=0x3313] [11720a] [23583q] [29742n] [52087au] Type22277 (Class 43688)? M- M-<.VM-^KM-wQM-s"M-^E^]M-+^Wx^P^@M-^\^\M-oM-FM-U^F^E7M-tM-^VM-^[M-F^H>G^FM-uM-^KM-_6GM-[M-jM-bM-^H]hM-^J.[|domain]
-//   	0x0000:  0055 22af c637 0022 55ac deac 0800 4500  .U"..7."U.....E.
-//   	0x0010:  05c1 2eea 4000 3611 fbd1 0a4d 001d 0a01  ....@.6....M....
-//   	0x0020:  0006 0035 a528 05ad 00a2 34b3 3313 5c1f  ...5.(....4.3.\.
-//   	0x0030:  2dc8 742e cb77 2da0 bc2e 568b f751 f322  -.t..w-...V..Q."
-//   	0x0040:  851d ab17 7810 009c 1cef c6d5 0605 37f4  ....x.........7.
-//   	0x0050:  969b c65e 483e 4706 f58b df36 47db eae2  ...^H>G....6G...
-//   	0x0060:  885d 688a c5a5 5705 aaa8 95eb 93a4 d85a  .]h...W........Z
-//   	0x0070:  c9af 261f 7816 a354 2d23 d84a 579c 4876  ..&.x..T-#.JW.Hv
-//   	0x0080:  a391 43db 5c41 191a 92b8 dcdd 6839 eef5  ..C.\A......h9..
-//   	0x0090:  728e 13e0 0679 6f47 88a0 25b9 44d8 f8e7  r....yoG..%.D...
-//   	0x00a0:  8afe 0bfa f811 8da5 f8a3 1f8e d23b fe12  .............;..
-//   	0x00b0:  d943 9327 92ad 4410 183e 688d b06d 5391  .C.'..D..>h..mS.
-//   	0x00c0:  695b e49f 8f1e c075 d043 afe0 1174 9db0  i[.....u.C...t..
-//   	0x00d0:  06b0 f01e b85b 3c84 945e 06d0 b20f 9eaa  .....[<..^......
-//   	0x00e0:  123d 0ab0 2a55 309c 0ee9 3e5e db2f f377  .=..*U0...>^./.w
-//   	0x00f0:  d7f1 9bae 373d 3316 0796 b80e dd18 5173  ....7=3.......Qs
-//   	0x0100:  b28d 84fd 1812 d87b 42c8 5f11 4db6 b269  .......{B._.M..i
-//   	0x0110:  1c42 4aea d5a4 644b 6c00 f0c0 fcee 71a7  .BJ...dKl.....q.
-//   	0x0120:  e7f0 719c a207 dc5c a6fa f005 a338 7ff0  ..q....\.....8..
-//   	0x0130:  5beb 3b4d 8952 2a46 d47b a5a2 e1fb 9e76  [.;M.R*F.{.....v
-//   	0x0140:  c815 6258 50f4 6997 bad5 b479 2d06 ebbb  ..bXP.i....y-...
-//   	0x0150:  2cac 2ecc e4f0 1f94 ce9f 186c 61da 9681  ,..........la...
-//   	0x0160:  345c 4d88 efc7 037b fbe3 4402 ea06 2e5d  4\M....{..D....]
-//   	0x0170:  2e6e 4860 e180 3ef7 c006 0ad1 ebb9 c4ff  .nH`..>.........
-//   	0x0180:  dee2 f21c 02c2 751a ded8 ae2e 13a9 3fa2  ......u.......?.
-//   	0x0190:  392a 8b54 11b2 2b4e 2bf1 4780 db9f 8c10  9*.T..+N+.G.....
-//   	0x01a0:  ac6f 61b0 7b19 423f 07e5 4628 b870 f75d  .oa.{.B?..F(.p.]
-//   	0x01b0:  09a3 63b2 77af 5985 a0ae 51d8 243f a7c8  ..c.w.Y...Q.$?..
-//   	0x01c0:  ab08 7fc6 0217 c09f c412 0c45 e6aa 96bf  ...........E....
-//   	0x01d0:  184c 4307 1f1f c4f4 7734 da31 2088 662b  .LC.....w4.1..f+
-//   	0x01e0:  44c5 096f 1d1d 2dc5 ffd6 867d 9fc5 7b45  D..o..-....}..{E
-//   	0x01f0:  f949 7dd9 38de 0d51 ac2a 32fc f50b 1bbe  .I}.8..Q.*2.....
-//   	0x0200:  1c4b 5441 fbf3 0821 6c28 4530 5676 1d27  .KTA...!l(E0Vv.'
-//   	0x0210:  5087 466c 3d5b 45a6 af7f 917a 6d43 66c2  P.Fl=[E....zmCf.
-//   	0x0220:  036a 8bef ca60 9b13 8d29 9fda 82fa 01b1  .j...`...)......
-//   	0x0230:  df8f 1f83 c71d 630f 349e 508c 9f7a e3da  ......c.4.P..z..
-//   	0x0240:  a114 3622 9df8 9926 4dac 4150 d505 7b3a  ..6"...&M.AP..{:
-//   	0x0250:  6fed fc75 6b4f 2d60 8a89 767d 9af0 896e  o..ukO-`..v}...n
-//   	0x0260:  907d 1ada def3 345c 0d81 283c a24f fcbb  .}....4\..(<.O..
-//   	0x0270:  bbdd b7b3 e3bb 9f1b d966 51b7 8217 7fa0  .........fQ.....
-//   	0x0280:  e828 d3ca a6f1 532f 164e e405 bb3b 0de3  .(....S/.N...;..
-//   	0x0290:  985d 6e89 d825 ebc6 d8ba 5190 a114 c6a3  .]n..%....Q.....
-//   	0x02a0:  18b4 8aa7 181a 01ac cdc0 8048 ea72 a5e3  ...........H.r..
-//   	0x02b0:  e37a dc57 65cd b787 39e6 c39e 317b 45d8  .z.We...9...1{E.
-//   	0x02c0:  475c 05ba e8f8 8224 5a85 27b8 1584 8d78  G\.....$Z.'....x
-//   	0x02d0:  62b6 6495 ac10 338f 1122 f2ff 043e 9e2a  b.d...3.."...>.*
-//   	0x02e0:  1058 a910 5792 6fcd 9a96 6183 6708 8f70  .X..W.o...a.g..p
-//   	0x02f0:  edc6 a67c 64ff 50fa 520b de94 c82c c4d6  ...|d.P.R....,..
-//   	0x0300:  7d8f 0fd5 2f0d 9833 7c6c be10 a4e5 dc99  }.../..3|l......
-//   	0x0310:  a467 ef5f b35b c11c e23c 131a 48b2 9cef  .g._.[...<..H...
-//   	0x0320:  5a2f fece dd9e 2aea 0db9 faf3 a6ef b29d  Z/....*.........
-//   	0x0330:  e85d a410 dd6a 6806 3fc6 1694 179f cb4b  .]...jh.?......K
-//   	0x0340:  08c4 86b2 0713 cddb b257 d56b fe82 7d82  .........W.k..}.
-//   	0x0350:  0d1f 6dc9 67b2 d2a1 6791 4f38 edf9 491f  ..m.g...g.O8..I.
-//   	0x0360:  2c02 35f5 8165 ecc3 bc6a b631 3c7e 1ad4  ,.5..e...j.1<~..
-//   	0x0370:  8e27 f962 f942 11b5 1b45 9bac b474 3c6e  .'.b.B...E...t<n
-//   	0x0380:  6832 3075 be6d ac0d a8a0 7d47 a6ef 4e43  h20u.m....}G..NC
-//   	0x0390:  6b9a 3097 8a8b 82a3 9515 362c f7d6 a37f  k.0.......6,....
-//   	0x03a0:  7313 1199 a5f3 03dc bcc9 fb10 c23d eeb9  s............=..
-//   	0x03b0:  78ff c8f3 0d38 9f74 ceec b7ae 63e3 3424  x....8.t....c.4$
-//   	0x03c0:  b783 f106 011f 666b bf2d abc8 ea10 57a1  ......fk.-....W.
-//   	0x03d0:  7cf2 4a3f 57ca 1386 bfba 27e5 4662 81c8  |.J?W.....'.Fb..
-//   	0x03e0:  041e 1820 b3d5 c399 cd4d 222f 29f0 b994  .........M"/)...
-//   	0x03f0:  865a e6e2 1686 3261 b0cd caaf 07ec d0bc  .Z....2a........
-//   	0x0400:  afb8 3cf0 51c1 6c7a 6383 6b3a ff47 9551  ..<.Q.lzc.k:.G.Q
-//   	0x0410:  1099 525f 355e 4684 bd34 ec12 88c9 dcc2  ..R_5^F..4......
-//   	0x0420:  d11c 826d f1df 37e6 f08f 6ce8 817d bdc3  ...m..7...l..}..
-//   	0x0430:  20b9 a274 c645 c67d f299 fef9 287f 09ee  ...t.E.}....(...
-//   	0x0440:  ac67 6872 a126 b1d3 922c 4c2a 0ec9 b6d4  .ghr.&...,L*....
-//   	0x0450:  fb59 6163 d1c4 1708 8d94 bc3d be5e ae29  .Yac.......=.^.)
-//   	0x0460:  51ff a765 9df6 ae35 ed6b 0555 933f 3ed6  Q..e...5.k.U.?>.
-//   	0x0470:  259b d93e f86f 6088 0c4e 357b 5c67 7d93  %..>.o`..N5{\g}.
-//   	0x0480:  a695 1a42 e1e1 ef91 14d7 b7b7 0ca4 2dda  ...B..........-.
-//   	0x0490:  6ac1 771e 25c1 a578 4ca8 6fd8 de04 1c09  j.w.%..xL.o.....
-//   	0x04a0:  df49 f179 6a58 2b45 7231 307f bc67 e5e7  .I.yjX+Er10..g..
-//   	0x04b0:  c5cd fec0 b021 508e 4fc5 f821 f734 90bc  .....!P.O..!.4..
-//   	0x04c0:  c87f 14f1 2e5c d17b 1818 5b4a 6b68 0212  .....\.{..[Jkh..
-//   	0x04d0:  1791 4a30 8518 99a9 b516 67e7 ed56 d1d1  ..J0......g..V..
-//   	0x04e0:  239d dfda 11c5 0afe e58a b6e0 fb66 ab5c  #............f.\
-//   	0x04f0:  f590 dcd6 457d 01d1 83f5 a9f0 cdb2 9c14  ....E}..........
-//   	0x0500:  ff66 f10c d428 a07b 34e3 d600 91f2 aca7  .f...(.{4.......
-//   	0x0510:  4e1f f3ac a96e 2aa3 ec9b 448c 748d f858  N....n*...D.t..X
-//   	0x0520:  131c d496 af9b f5f0 d2f5 57ac 0b64 55a1  ..........W..dU.
-//   	0x0530:  860e 5ad0 3e62 26b5 9e17 f51f 88c1 02e3  ..Z.>b&.........
-//   	0x0540:  4a38 de70 3216 6f88 5d1e f429 ee19 4121  J8.p2.o.]..)..A!
-//   	0x0550:  f571 84ac 3789 141f 1798 90b1 8373 2499  .q..7........s$.
-//   	0x0560:  c131 b13f f3a3 9a07 aef1 bfe8 8cd7 8c2e  .1.?............
-//   	0x0570:  ba35 dfc5 eb07 013c 7621 6481 bdfb 6233  .5.....<v!d...b3
-//   	0x0580:  22e2 0f05 7e15 0417 67e4 2632 5207 28a6  "...~...g.&2R.(.
-//   	0x0590:  8e88 9423 de54 5412 b53e fd8d d47a de58  ...#.TT..>...z.X
-//   	0x05a0:  a1b2 6e08 d06d dc21 1eda 14a0 a2f7 1701  ..n..m.!........
-//   	0x05b0:  a5e0 dfd7 871f 595d db43 70f5 bab3 b732  ......Y].Cp....2
-//   	0x05c0:  6275 da15 b203 dac7 321f 8d61 11bd 30    bu......2..a..0
+//
+//	10:52:13.690904 IP 10.77.0.29.53 > 10.1.0.6.42280: 13491 op6+% [b2&3=0x3313] [11720a] [23583q] [29742n] [52087au] Type22277 (Class 43688)? M- M-<.VM-^KM-wQM-s"M-^E^]M-+^Wx^P^@M-^\^\M-oM-FM-U^F^E7M-tM-^VM-^[M-F^H>G^FM-uM-^KM-_6GM-[M-jM-bM-^H]hM-^J.[|domain]
+//		0x0000:  0055 22af c637 0022 55ac deac 0800 4500  .U"..7."U.....E.
+//		0x0010:  05c1 2eea 4000 3611 fbd1 0a4d 001d 0a01  ....@.6....M....
+//		0x0020:  0006 0035 a528 05ad 00a2 34b3 3313 5c1f  ...5.(....4.3.\.
+//		0x0030:  2dc8 742e cb77 2da0 bc2e 568b f751 f322  -.t..w-...V..Q."
+//		0x0040:  851d ab17 7810 009c 1cef c6d5 0605 37f4  ....x.........7.
+//		0x0050:  969b c65e 483e 4706 f58b df36 47db eae2  ...^H>G....6G...
+//		0x0060:  885d 688a c5a5 5705 aaa8 95eb 93a4 d85a  .]h...W........Z
+//		0x0070:  c9af 261f 7816 a354 2d23 d84a 579c 4876  ..&.x..T-#.JW.Hv
+//		0x0080:  a391 43db 5c41 191a 92b8 dcdd 6839 eef5  ..C.\A......h9..
+//		0x0090:  728e 13e0 0679 6f47 88a0 25b9 44d8 f8e7  r....yoG..%.D...
+//		0x00a0:  8afe 0bfa f811 8da5 f8a3 1f8e d23b fe12  .............;..
+//		0x00b0:  d943 9327 92ad 4410 183e 688d b06d 5391  .C.'..D..>h..mS.
+//		0x00c0:  695b e49f 8f1e c075 d043 afe0 1174 9db0  i[.....u.C...t..
+//		0x00d0:  06b0 f01e b85b 3c84 945e 06d0 b20f 9eaa  .....[<..^......
+//		0x00e0:  123d 0ab0 2a55 309c 0ee9 3e5e db2f f377  .=..*U0...>^./.w
+//		0x00f0:  d7f1 9bae 373d 3316 0796 b80e dd18 5173  ....7=3.......Qs
+//		0x0100:  b28d 84fd 1812 d87b 42c8 5f11 4db6 b269  .......{B._.M..i
+//		0x0110:  1c42 4aea d5a4 644b 6c00 f0c0 fcee 71a7  .BJ...dKl.....q.
+//		0x0120:  e7f0 719c a207 dc5c a6fa f005 a338 7ff0  ..q....\.....8..
+//		0x0130:  5beb 3b4d 8952 2a46 d47b a5a2 e1fb 9e76  [.;M.R*F.{.....v
+//		0x0140:  c815 6258 50f4 6997 bad5 b479 2d06 ebbb  ..bXP.i....y-...
+//		0x0150:  2cac 2ecc e4f0 1f94 ce9f 186c 61da 9681  ,..........la...
+//		0x0160:  345c 4d88 efc7 037b fbe3 4402 ea06 2e5d  4\M....{..D....]
+//		0x0170:  2e6e 4860 e180 3ef7 c006 0ad1 ebb9 c4ff  .nH`..>.........
+//		0x0180:  dee2 f21c 02c2 751a ded8 ae2e 13a9 3fa2  ......u.......?.
+//		0x0190:  392a 8b54 11b2 2b4e 2bf1 4780 db9f 8c10  9*.T..+N+.G.....
+//		0x01a0:  ac6f 61b0 7b19 423f 07e5 4628 b870 f75d  .oa.{.B?..F(.p.]
+//		0x01b0:  09a3 63b2 77af 5985 a0ae 51d8 243f a7c8  ..c.w.Y...Q.$?..
+//		0x01c0:  ab08 7fc6 0217 c09f c412 0c45 e6aa 96bf  ...........E....
+//		0x01d0:  184c 4307 1f1f c4f4 7734 da31 2088 662b  .LC.....w4.1..f+
+//		0x01e0:  44c5 096f 1d1d 2dc5 ffd6 867d 9fc5 7b45  D..o..-....}..{E
+//		0x01f0:  f949 7dd9 38de 0d51 ac2a 32fc f50b 1bbe  .I}.8..Q.*2.....
+//		0x0200:  1c4b 5441 fbf3 0821 6c28 4530 5676 1d27  .KTA...!l(E0Vv.'
+//		0x0210:  5087 466c 3d5b 45a6 af7f 917a 6d43 66c2  P.Fl=[E....zmCf.
+//		0x0220:  036a 8bef ca60 9b13 8d29 9fda 82fa 01b1  .j...`...)......
+//		0x0230:  df8f 1f83 c71d 630f 349e 508c 9f7a e3da  ......c.4.P..z..
+//		0x0240:  a114 3622 9df8 9926 4dac 4150 d505 7b3a  ..6"...&M.AP..{:
+//		0x0250:  6fed fc75 6b4f 2d60 8a89 767d 9af0 896e  o..ukO-`..v}...n
+//		0x0260:  907d 1ada def3 345c 0d81 283c a24f fcbb  .}....4\..(<.O..
+//		0x0270:  bbdd b7b3 e3bb 9f1b d966 51b7 8217 7fa0  .........fQ.....
+//		0x0280:  e828 d3ca a6f1 532f 164e e405 bb3b 0de3  .(....S/.N...;..
+//		0x0290:  985d 6e89 d825 ebc6 d8ba 5190 a114 c6a3  .]n..%....Q.....
+//		0x02a0:  18b4 8aa7 181a 01ac cdc0 8048 ea72 a5e3  ...........H.r..
+//		0x02b0:  e37a dc57 65cd b787 39e6 c39e 317b 45d8  .z.We...9...1{E.
+//		0x02c0:  475c 05ba e8f8 8224 5a85 27b8 1584 8d78  G\.....$Z.'....x
+//		0x02d0:  62b6 6495 ac10 338f 1122 f2ff 043e 9e2a  b.d...3.."...>.*
+//		0x02e0:  1058 a910 5792 6fcd 9a96 6183 6708 8f70  .X..W.o...a.g..p
+//		0x02f0:  edc6 a67c 64ff 50fa 520b de94 c82c c4d6  ...|d.P.R....,..
+//		0x0300:  7d8f 0fd5 2f0d 9833 7c6c be10 a4e5 dc99  }.../..3|l......
+//		0x0310:  a467 ef5f b35b c11c e23c 131a 48b2 9cef  .g._.[...<..H...
+//		0x0320:  5a2f fece dd9e 2aea 0db9 faf3 a6ef b29d  Z/....*.........
+//		0x0330:  e85d a410 dd6a 6806 3fc6 1694 179f cb4b  .]...jh.?......K
+//		0x0340:  08c4 86b2 0713 cddb b257 d56b fe82 7d82  .........W.k..}.
+//		0x0350:  0d1f 6dc9 67b2 d2a1 6791 4f38 edf9 491f  ..m.g...g.O8..I.
+//		0x0360:  2c02 35f5 8165 ecc3 bc6a b631 3c7e 1ad4  ,.5..e...j.1<~..
+//		0x0370:  8e27 f962 f942 11b5 1b45 9bac b474 3c6e  .'.b.B...E...t<n
+//		0x0380:  6832 3075 be6d ac0d a8a0 7d47 a6ef 4e43  h20u.m....}G..NC
+//		0x0390:  6b9a 3097 8a8b 82a3 9515 362c f7d6 a37f  k.0.......6,....
+//		0x03a0:  7313 1199 a5f3 03dc bcc9 fb10 c23d eeb9  s............=..
+//		0x03b0:  78ff c8f3 0d38 9f74 ceec b7ae 63e3 3424  x....8.t....c.4$
+//		0x03c0:  b783 f106 011f 666b bf2d abc8 ea10 57a1  ......fk.-....W.
+//		0x03d0:  7cf2 4a3f 57ca 1386 bfba 27e5 4662 81c8  |.J?W.....'.Fb..
+//		0x03e0:  041e 1820 b3d5 c399 cd4d 222f 29f0 b994  .........M"/)...
+//		0x03f0:  865a e6e2 1686 3261 b0cd caaf 07ec d0bc  .Z....2a........
+//		0x0400:  afb8 3cf0 51c1 6c7a 6383 6b3a ff47 9551  ..<.Q.lzc.k:.G.Q
+//		0x0410:  1099 525f 355e 4684 bd34 ec12 88c9 dcc2  ..R_5^F..4......
+//		0x0420:  d11c 826d f1df 37e6 f08f 6ce8 817d bdc3  ...m..7...l..}..
+//		0x0430:  20b9 a274 c645 c67d f299 fef9 287f 09ee  ...t.E.}....(...
+//		0x0440:  ac67 6872 a126 b1d3 922c 4c2a 0ec9 b6d4  .ghr.&...,L*....
+//		0x0450:  fb59 6163 d1c4 1708 8d94 bc3d be5e ae29  .Yac.......=.^.)
+//		0x0460:  51ff a765 9df6 ae35 ed6b 0555 933f 3ed6  Q..e...5.k.U.?>.
+//		0x0470:  259b d93e f86f 6088 0c4e 357b 5c67 7d93  %..>.o`..N5{\g}.
+//		0x0480:  a695 1a42 e1e1 ef91 14d7 b7b7 0ca4 2dda  ...B..........-.
+//		0x0490:  6ac1 771e 25c1 a578 4ca8 6fd8 de04 1c09  j.w.%..xL.o.....
+//		0x04a0:  df49 f179 6a58 2b45 7231 307f bc67 e5e7  .I.yjX+Er10..g..
+//		0x04b0:  c5cd fec0 b021 508e 4fc5 f821 f734 90bc  .....!P.O..!.4..
+//		0x04c0:  c87f 14f1 2e5c d17b 1818 5b4a 6b68 0212  .....\.{..[Jkh..
+//		0x04d0:  1791 4a30 8518 99a9 b516 67e7 ed56 d1d1  ..J0......g..V..
+//		0x04e0:  239d dfda 11c5 0afe e58a b6e0 fb66 ab5c  #............f.\
+//		0x04f0:  f590 dcd6 457d 01d1 83f5 a9f0 cdb2 9c14  ....E}..........
+//		0x0500:  ff66 f10c d428 a07b 34e3 d600 91f2 aca7  .f...(.{4.......
+//		0x0510:  4e1f f3ac a96e 2aa3 ec9b 448c 748d f858  N....n*...D.t..X
+//		0x0520:  131c d496 af9b f5f0 d2f5 57ac 0b64 55a1  ..........W..dU.
+//		0x0530:  860e 5ad0 3e62 26b5 9e17 f51f 88c1 02e3  ..Z.>b&.........
+//		0x0540:  4a38 de70 3216 6f88 5d1e f429 ee19 4121  J8.p2.o.]..)..A!
+//		0x0550:  f571 84ac 3789 141f 1798 90b1 8373 2499  .q..7........s$.
+//		0x0560:  c131 b13f f3a3 9a07 aef1 bfe8 8cd7 8c2e  .1.?............
+//		0x0570:  ba35 dfc5 eb07 013c 7621 6481 bdfb 6233  .5.....<v!d...b3
+//		0x0580:  22e2 0f05 7e15 0417 67e4 2632 5207 28a6  "...~...g.&2R.(.
+//		0x0590:  8e88 9423 de54 5412 b53e fd8d d47a de58  ...#.TT..>...z.X
+//		0x05a0:  a1b2 6e08 d06d dc21 1eda 14a0 a2f7 1701  ..n..m.!........
+//		0x05b0:  a5e0 dfd7 871f 595d db43 70f5 bab3 b732  ......Y].Cp....2
+//		0x05c0:  6275 da15 b203 dac7 321f 8d61 11bd 30    bu......2..a..0
 var testAnotherMalformedDNS = []byte{
 	0x00, 0x55, 0x22, 0xaf, 0xc6, 0x37, 0x00, 0x22, 0x55, 0xac, 0xde, 0xac, 0x08, 0x00, 0x45, 0x00,
 	0x05, 0xc1, 0x2e, 0xea, 0x40, 0x00, 0x36, 0x11, 0xfb, 0xd1, 0x0a, 0x4d, 0x00, 0x1d, 0x0a, 0x01,
@@ -957,17 +1062,18 @@ func TestAnotherMalformedDNS(t *testing.T) {
 }
 
 // testMalformedDNSAgain is the packet:
-//   12:14:52.702061 IP 10.77.0.4.53 > 10.1.0.41.61610: 12529 updateDA [b2&3=0x5cad] [38274a] [61303q] [1718n] [14913au][|domain]
-//   	0x0000:  0055 22af c637 0022 55ac deac 0800 4500  .U"..7."U.....E.
-//   	0x0010:  0091 2dff 0000 7811 ffe2 0a4d 0004 0a01  ..-...x....M....
-//   	0x0020:  0029 0035 f0aa 007d 5b53 30f1 5cad ef77  .).5...}[S0.\..w
-//   	0x0030:  9582 06b6 3a41 357a 8cef cdc0 a732 b800  ....:A5z.....2..
-//   	0x0040:  466e 1c30 2e75 95ac c03d 1ed4 8635 2d09  Fn.0.u...=...5-.
-//   	0x0050:  2fee 3a82 b4f0 427e 2b6b f870 cc7f c9a1  /.:...B~+k.p....
-//   	0x0060:  e6f1 a761 97ec 2ff7 d248 4d95 321c 6e4e  ...a../..HM.2.nN
-//   	0x0070:  57fa 6d3d 9ec0 fe3a 6f1e e634 4396 b494  W.m=...:o..4C...
-//   	0x0080:  8b7a a929 d7e1 da7c c346 ca77 4890 6bf3  .z.)...|.F.wH.k.
-//   	0x0090:  5ecb 7e97 c49d 3564 984f bf7c 8ac1 dd    ^.~...5d.O.|...
+//
+//	12:14:52.702061 IP 10.77.0.4.53 > 10.1.0.41.61610: 12529 updateDA [b2&3=0x5cad] [38274a] [61303q] [1718n] [14913au][|domain]
+//		0x0000:  0055 22af c637 0022 55ac deac 0800 4500  .U"..7."U.....E.
+//		0x0010:  0091 2dff 0000 7811 ffe2 0a4d 0004 0a01  ..-...x....M....
+//		0x0020:  0029 0035 f0aa 007d 5b53 30f1 5cad ef77  .).5...}[S0.\..w
+//		0x0030:  9582 06b6 3a41 357a 8cef cdc0 a732 b800  ....:A5z.....2..
+//		0x0040:  466e 1c30 2e75 95ac c03d 1ed4 8635 2d09  Fn.0.u...=...5-.
+//		0x0050:  2fee 3a82 b4f0 427e 2b6b f870 cc7f c9a1  /.:...B~+k.p....
+//		0x0060:  e6f1 a761 97ec 2ff7 d248 4d95 321c 6e4e  ...a../..HM.2.nN
+//		0x0070:  57fa 6d3d 9ec0 fe3a 6f1e e634 4396 b494  W.m=...:o..4C...
+//		0x0080:  8b7a a929 d7e1 da7c c346 ca77 4890 6bf3  .z.)...|.F.wH.k.
+//		0x0090:  5ecb 7e97 c49d 3564 984f bf7c 8ac1 dd    ^.~...5d.O.|...
 var testMalformedDNSAgain = []byte{
 	0x00, 0x55, 0x22, 0xaf, 0xc6, 0x37, 0x00, 0x22, 0x55, 0xac, 0xde, 0xac, 0x08, 0x00, 0x45, 0x00,
 	0x00, 0x91, 0x2d, 0xff, 0x00, 0x00, 0x78, 0x11, 0xff, 0xe2, 0x0a, 0x4d, 0x00, 0x04, 0x0a, 0x01,
@@ -991,16 +1097,17 @@ func TestMalformedDNSAgain(t *testing.T) {
 }
 
 // testMalformedDNSOhGodMakeItStop is the packet:
-//   15:08:24.430906 IP 10.77.0.19.53 > 10.1.0.19.50635: 12397 zoneInit% [b2&3=0x7232] [47729a] [46283q] [60247n] [61718au][|domain]
-//   	0x0000:  0055 22af c637 0022 55ac deac 0800 4500  .U"..7."U.....E.
-//   	0x0010:  0079 c51c 4000 3511 6be4 0a4d 0013 0a01  .y..@.5.k..M....
-//   	0x0020:  0013 0035 c5cb 0065 ef45 306d 7232 b4cb  ...5...e.E0mr2..
-//   	0x0030:  ba71 eb57 f116 3994 e000 4626 0534 66cc  .q.W..9...F&.4f.
-//   	0x0040:  7b32 24f2 eece bca7 20e2 9a2a e1ce e737  {2$........*...7
-//   	0x0050:  ac39 5fae 72ec c3ec 284f ca4a 171f 466d  .9_.r...(O.J..Fm
-//   	0x0060:  f6c6 84d7 e795 310f 26df 9b59 6db9 21cf  ......1.&..Ym.!.
-//   	0x0070:  15cb 30a3 c4cf df23 805a ed1a 0584 4fc3  ..0....#.Z....O.
-//   	0x0080:  7fa3 3cb4 e04f e9                        ..<..O.
+//
+//	15:08:24.430906 IP 10.77.0.19.53 > 10.1.0.19.50635: 12397 zoneInit% [b2&3=0x7232] [47729a] [46283q] [60247n] [61718au][|domain]
+//		0x0000:  0055 22af c637 0022 55ac deac 0800 4500  .U"..7."U.....E.
+//		0x0010:  0079 c51c 4000 3511 6be4 0a4d 0013 0a01  .y..@.5.k..M....
+//		0x0020:  0013 0035 c5cb 0065 ef45 306d 7232 b4cb  ...5...e.E0mr2..
+//		0x0030:  ba71 eb57 f116 3994 e000 4626 0534 66cc  .q.W..9...F&.4f.
+//		0x0040:  7b32 24f2 eece bca7 20e2 9a2a e1ce e737  {2$........*...7
+//		0x0050:  ac39 5fae 72ec c3ec 284f ca4a 171f 466d  .9_.r...(O.J..Fm
+//		0x0060:  f6c6 84d7 e795 310f 26df 9b59 6db9 21cf  ......1.&..Ym.!.
+//		0x0070:  15cb 30a3 c4cf df23 805a ed1a 0584 4fc3  ..0....#.Z....O.
+//		0x0080:  7fa3 3cb4 e04f e9                        ..<..O.
 var testMalformedDNSOhGodMakeItStop = []byte{
 	0x00, 0x55, 0x22, 0xaf, 0xc6, 0x37, 0x00, 0x22, 0x55, 0xac, 0xde, 0xac, 0x08, 0x00, 0x45, 0x00,
 	0x00, 0x79, 0xc5, 0x1c, 0x40, 0x00, 0x35, 0x11, 0x6b, 0xe4, 0x0a, 0x4d, 0x00, 0x13, 0x0a, 0x01,
@@ -1042,42 +1149,43 @@ func TestMalformedDNSOPT(t *testing.T) {
 }
 
 // testPacketDNSPanic7 is the packet:
-//   07:56:25.174747 IP 10.77.0.11.53 > 10.1.0.67.55777: 41808*-| 3/7/0 TXT "google-site-verification=DC2uC-T8kD33lINhNzfo0bNBrw-vrCXs5BPF5BXY56g", TXT "v=spf1 include:spf-a.outlook.com include:spf-b.outlook.com ip4:157.55.9.128/25 include:spf.protection.outlook.com include:spf-a.hotmail.com include:_spf-ssg-b.microsoft.com include:_spf-ssg-c.microsoft.com ~all", TXT "google-site-verification=0iLWhIMhXEkeWwWfFU4ursTn-_OvoOjaA0Lr7Pg1sEM" (512)
-//   	0x0000:  0055 22af c637 0022 55ac deac 0800 4500  .U"..7."U.....E.
-//   	0x0010:  021c b5ca 4000 fa11 b46a 0a4d 000b 0a01  ....@....j.M....
-//   	0x0020:  0043 0035 d9e1 0208 afd6 a350 8600 0001  .C.5.......P....
-//   	0x0030:  0003 0007 0000 076f 7574 6c6f 6f6b 0363  .......outlook.c
-//   	0x0040:  6f6d 0000 1000 01c0 0c00 1000 0100 0001  om..............
-//   	0x0050:  2c00 4544 676f 6f67 6c65 2d73 6974 652d  ,.EDgoogle-site-
-//   	0x0060:  7665 7269 6669 6361 7469 6f6e 3d44 4332  verification=DC2
-//   	0x0070:  7543 2d54 386b 4433 336c 494e 684e 7a66  uC-T8kD33lINhNzf
-//   	0x0080:  6f30 624e 4272 772d 7672 4358 7335 4250  o0bNBrw-vrCXs5BP
-//   	0x0090:  4635 4258 5935 3667 c00c 0010 0001 0000  F5BXY56g........
-//   	0x00a0:  012c 00d3 d276 3d73 7066 3120 696e 636c  .,...v=spf1.incl
-//   	0x00b0:  7564 653a 7370 662d 612e 6f75 746c 6f6f  ude:spf-a.outloo
-//   	0x00c0:  6b2e 636f 6d20 696e 636c 7564 653a 7370  k.com.include:sp
-//   	0x00d0:  662d 622e 6f75 746c 6f6f 6b2e 636f 6d20  f-b.outlook.com.
-//   	0x00e0:  6970 343a 3135 372e 3535 2e39 2e31 3238  ip4:157.55.9.128
-//   	0x00f0:  2f32 3520 696e 636c 7564 653a 7370 662e  /25.include:spf.
-//   	0x0100:  7072 6f74 6563 7469 6f6e 2e6f 7574 6c6f  protection.outlo
-//   	0x0110:  6f6b 2e63 6f6d 2069 6e63 6c75 6465 3a73  ok.com.include:s
-//   	0x0120:  7066 2d61 2e68 6f74 6d61 696c 2e63 6f6d  pf-a.hotmail.com
-//   	0x0130:  2069 6e63 6c75 6465 3a5f 7370 662d 7373  .include:_spf-ss
-//   	0x0140:  672d 622e 6d69 6372 6f73 6f66 742e 636f  g-b.microsoft.co
-//   	0x0150:  6d20 696e 636c 7564 653a 5f73 7066 2d73  m.include:_spf-s
-//   	0x0160:  7367 2d63 2e6d 6963 726f 736f 6674 2e63  sg-c.microsoft.c
-//   	0x0170:  6f6d 207e 616c 6cc0 0c00 1000 0100 0001  om.~all.........
-//   	0x0180:  2c00 4544 676f 6f67 6c65 2d73 6974 652d  ,.EDgoogle-site-
-//   	0x0190:  7665 7269 6669 6361 7469 6f6e 3d30 694c  verification=0iL
-//   	0x01a0:  5768 494d 6858 456b 6557 7757 6646 5534  WhIMhXEkeWwWfFU4
-//   	0x01b0:  7572 7354 6e2d 5f4f 766f 4f6a 6141 304c  ursTn-_OvoOjaA0L
-//   	0x01c0:  7237 5067 3173 454d c00c 0002 0001 0002  r7Pg1sEM........
-//   	0x01d0:  a300 000e 036e 7332 046d 7366 7403 6e65  .....ns2.msft.ne
-//   	0x01e0:  7400 c00c 0002 0001 0002 a300 0006 036e  t..............n
-//   	0x01f0:  7334 c1ae c00c 0002 0001 0002 a300 0006  s4..............
-//   	0x0200:  036e 7331 c1ae c00c 0002 0001 0002 a300  .ns1............
-//   	0x0210:  0006 036e 7333 c1ae c00c 0002 0001 0002  ...ns3..........
-//   	0x0220:  a300 0015 046e 7331 610d                 .....ns1a.
+//
+//	07:56:25.174747 IP 10.77.0.11.53 > 10.1.0.67.55777: 41808*-| 3/7/0 TXT "google-site-verification=DC2uC-T8kD33lINhNzfo0bNBrw-vrCXs5BPF5BXY56g", TXT "v=spf1 include:spf-a.outlook.com include:spf-b.outlook.com ip4:157.55.9.128/25 include:spf.protection.outlook.com include:spf-a.hotmail.com include:_spf-ssg-b.microsoft.com include:_spf-ssg-c.microsoft.com ~all", TXT "google-site-verification=0iLWhIMhXEkeWwWfFU4ursTn-_OvoOjaA0Lr7Pg1sEM" (512)
+//		0x0000:  0055 22af c637 0022 55ac deac 0800 4500  .U"..7."U.....E.
+//		0x0010:  021c b5ca 4000 fa11 b46a 0a4d 000b 0a01  ....@....j.M....
+//		0x0020:  0043 0035 d9e1 0208 afd6 a350 8600 0001  .C.5.......P....
+//		0x0030:  0003 0007 0000 076f 7574 6c6f 6f6b 0363  .......outlook.c
+//		0x0040:  6f6d 0000 1000 01c0 0c00 1000 0100 0001  om..............
+//		0x0050:  2c00 4544 676f 6f67 6c65 2d73 6974 652d  ,.EDgoogle-site-
+//		0x0060:  7665 7269 6669 6361 7469 6f6e 3d44 4332  verification=DC2
+//		0x0070:  7543 2d54 386b 4433 336c 494e 684e 7a66  uC-T8kD33lINhNzf
+//		0x0080:  6f30 624e 4272 772d 7672 4358 7335 4250  o0bNBrw-vrCXs5BP
+//		0x0090:  4635 4258 5935 3667 c00c 0010 0001 0000  F5BXY56g........
+//		0x00a0:  012c 00d3 d276 3d73 7066 3120 696e 636c  .,...v=spf1.incl
+//		0x00b0:  7564 653a 7370 662d 612e 6f75 746c 6f6f  ude:spf-a.outloo
+//		0x00c0:  6b2e 636f 6d20 696e 636c 7564 653a 7370  k.com.include:sp
+//		0x00d0:  662d 622e 6f75 746c 6f6f 6b2e 636f 6d20  f-b.outlook.com.
+//		0x00e0:  6970 343a 3135 372e 3535 2e39 2e31 3238  ip4:157.55.9.128
+//		0x00f0:  2f32 3520 696e 636c 7564 653a 7370 662e  /25.include:spf.
+//		0x0100:  7072 6f74 6563 7469 6f6e 2e6f 7574 6c6f  protection.outlo
+//		0x0110:  6f6b 2e63 6f6d 2069 6e63 6c75 6465 3a73  ok.com.include:s
+//		0x0120:  7066 2d61 2e68 6f74 6d61 696c 2e63 6f6d  pf-a.hotmail.com
+//		0x0130:  2069 6e63 6c75 6465 3a5f 7370 662d 7373  .include:_spf-ss
+//		0x0140:  672d 622e 6d69 6372 6f73 6f66 742e 636f  g-b.microsoft.co
+//		0x0150:  6d20 696e 636c 7564 653a 5f73 7066 2d73  m.include:_spf-s
+//		0x0160:  7367 2d63 2e6d 6963 726f 736f 6674 2e63  sg-c.microsoft.c
+//		0x0170:  6f6d 207e 616c 6cc0 0c00 1000 0100 0001  om.~all.........
+//		0x0180:  2c00 4544 676f 6f67 6c65 2d73 6974 652d  ,.EDgoogle-site-
+//		0x0190:  7665 7269 6669 6361 7469 6f6e 3d30 694c  verification=0iL
+//		0x01a0:  5768 494d 6858 456b 6557 7757 6646 5534  WhIMhXEkeWwWfFU4
+//		0x01b0:  7572 7354 6e2d 5f4f 766f 4f6a 6141 304c  ursTn-_OvoOjaA0L
+//		0x01c0:  7237 5067 3173 454d c00c 0002 0001 0002  r7Pg1sEM........
+//		0x01d0:  a300 000e 036e 7332 046d 7366 7403 6e65  .....ns2.msft.ne
+//		0x01e0:  7400 c00c 0002 0001 0002 a300 0006 036e  t..............n
+//		0x01f0:  7334 c1ae c00c 0002 0001 0002 a300 0006  s4..............
+//		0x0200:  036e 7331 c1ae c00c 0002 0001 0002 a300  .ns1............
+//		0x0210:  0006 036e 7333 c1ae c00c 0002 0001 0002  ...ns3..........
+//		0x0220:  a300 0015 046e 7331 610d                 .....ns1a.
 var testPacketDNSPanic7 = []byte{
 	0x00, 0x55, 0x22, 0xaf, 0xc6, 0x37, 0x00, 0x22, 0x55, 0xac, 0xde, 0xac, 0x08, 0x00, 0x45, 0x00,
 	0x02, 0x1c, 0xb5, 0xca, 0x40, 0x00, 0xfa, 0x11, 0xb4, 0x6a, 0x0a, 0x4d, 0x00, 0x0b, 0x0a, 0x01,
