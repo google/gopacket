@@ -156,3 +156,25 @@ func TestGTPPacketWithEH(t *testing.T) {
 	}
 
 }
+
+func TestGTPExtensionHeadersAppend(t *testing.T) {
+	var layer GTPv1U
+
+	pkt := testGTPPacketWithEH[42:]
+	if err := layer.DecodeFromBytes(pkt, gopacket.NilDecodeFeedback); err != nil {
+		t.Fatal("error decoding packet:", err, pkt)
+	}
+
+	if len(layer.GTPExtensionHeaders) != 1 {
+		t.Fatal("expected one extension header")
+	}
+
+	// second time decoding the layer
+	if err := layer.DecodeFromBytes(pkt, gopacket.NilDecodeFeedback); err != nil {
+		t.Fatal("error decoding packet:", err, pkt)
+	}
+
+	if len(layer.GTPExtensionHeaders) != 1 {
+		t.Fatal("expected one extension header")
+	}
+}

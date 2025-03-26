@@ -58,6 +58,7 @@ func (g *GTPv1U) DecodeFromBytes(data []byte, df gopacket.DecodeFeedback) error 
 	g.ExtensionHeaderFlag = ((data[0] >> 2) & 0x01) == 1
 	g.MessageType = data[1]
 	g.MessageLength = binary.BigEndian.Uint16(data[2:4])
+	g.GTPExtensionHeaders = g.GTPExtensionHeaders[:0]
 	pLen := 8 + g.MessageLength
 	if uint16(dLen) < pLen {
 		return fmt.Errorf("GTP packet too small: %d bytes", dLen)
