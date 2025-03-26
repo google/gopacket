@@ -8,7 +8,8 @@ package layers
 
 import (
 	"encoding/binary"
-	"errors"
+	"fmt"
+
 	"github.com/google/gopacket"
 )
 
@@ -32,31 +33,61 @@ var PPPFlow = gopacket.NewFlow(EndpointPPP, nil, nil)
 // LayerType returns LayerTypePPP
 func (p *PPP) LayerType() gopacket.LayerType { return LayerTypePPP }
 
+// CanDecode returns the set of layer types that this DecodingLayer can decode.
+func (d *PPP) CanDecode() gopacket.LayerClass {
+	return LayerTypePPP
+}
+
+// // NextLayerType returns the layer type contained by this DecodingLayer.
+func (d *PPP) NextLayerType() gopacket.LayerType {
+	if d.PPPType == PPPTypeIPv4 {
+		return LayerTypeIPv4
+	}
+	if d.PPPType == PPPTypeIPv6 {
+		return LayerTypeIPv6
+	}
+
+	return gopacket.LayerTypeZero
+}
+
 // LinkFlow returns PPPFlow.
 func (p *PPP) LinkFlow() gopacket.Flow { return PPPFlow }
 
-func decodePPP(data []byte, p gopacket.PacketBuilder) error {
-	ppp := &PPP{}
+// DecodeFromBytes decodes the given bytes into this layer.
+func (d *PPP) DecodeFromBytes(data []byte, df gopacket.DecodeFeedback) error {
+	if len(data) < 2 {
+		df.SetTruncated()
+		return fmt.Errorf("PPP header with length %d too short", len(data))
+	}
+
 	offset := 0
 	if data[0] == 0xff && data[1] == 0x03 {
 		offset = 2
-		ppp.HasPPTPHeader = true
+		d.HasPPTPHeader = true
 	}
+
+	if len(data) < offset+2 {
+		df.SetTruncated()
+		return fmt.Errorf("PPP header with length %d too short", len(data))
+	}
+
 	if data[offset]&0x1 == 0 {
 		if data[offset+1]&0x1 == 0 {
-			return errors.New("PPP has invalid type")
+			return fmt.Errorf("PPP has invalid type")
 		}
-		ppp.PPPType = PPPType(binary.BigEndian.Uint16(data[offset : offset+2]))
-		ppp.Contents = data[offset : offset+2]
-		ppp.Payload = data[offset+2:]
+		d.PPPType = PPPType(binary.BigEndian.Uint16(data[offset : offset+2]))
+		d.BaseLayer = BaseLayer{Contents: data[offset : offset+2], Payload: data[offset+2:]}
 	} else {
-		ppp.PPPType = PPPType(data[offset])
-		ppp.Contents = data[offset : offset+1]
-		ppp.Payload = data[offset+1:]
+		d.PPPType = PPPType(data[offset])
+		d.BaseLayer = BaseLayer{Contents: data[offset : offset+1], Payload: data[offset+1:]}
 	}
-	p.AddLayer(ppp)
-	p.SetLinkLayer(ppp)
-	return p.NextDecoder(ppp.PPPType)
+
+	return nil
+}
+
+func decodePPP(data []byte, p gopacket.PacketBuilder) error {
+	d := &PPP{}
+	return decodingLayerDecoder(d, data, p)
 }
 
 // SerializeTo writes the serialized form of this layer into the
