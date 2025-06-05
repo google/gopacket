@@ -12,12 +12,14 @@ package pcap
 
 import (
 	"errors"
-	"github.com/NozomiNetworks/gopacket-fork-nozomi"
 	"os"
 	"sync"
 	"syscall"
 	"time"
 	"unsafe"
+
+	"github.com/NozomiNetworks/go-logger"
+	"github.com/NozomiNetworks/gopacket-fork-nozomi"
 
 	"github.com/NozomiNetworks/gopacket-fork-nozomi/layers"
 )
@@ -236,7 +238,7 @@ func statusError(status C.int) error {
 	return errors.New(C.GoString(C.pcap_statustostr(status)))
 }
 
-func pcapOpenLive(device string, snaplen int, pro int, timeout int) (*Handle, error) {
+func pcapOpenLive(device string, snaplen int, pro int, timeout int, log logger.Log) (*Handle, error) {
 	buf := (*C.char)(C.calloc(errorBufferSize, 1))
 	defer C.free(unsafe.Pointer(buf))
 
@@ -250,7 +252,7 @@ func pcapOpenLive(device string, snaplen int, pro int, timeout int) (*Handle, er
 	return &Handle{cptr: cptr}, nil
 }
 
-func openOffline(file string) (handle *Handle, err error) {
+func openOffline(file string, log logger.Log) (handle *Handle, err error) {
 	buf := (*C.char)(C.calloc(errorBufferSize, 1))
 	defer C.free(unsafe.Pointer(buf))
 	cf := C.CString(file)
@@ -336,7 +338,7 @@ func pcapBpfProgramFromInstructions(bpfInstructions []BPFInstruction) pcapBpfPro
 	return bpf
 }
 
-func pcapLookupnet(device string) (netp, maskp uint32, err error) {
+func pcapLookupnet(device string, log logger.Log) (netp, maskp uint32, err error) {
 	errorBuf := (*C.char)(C.calloc(errorBufferSize, 1))
 	defer C.free(unsafe.Pointer(errorBuf))
 	dev := C.CString(device)
@@ -376,14 +378,14 @@ func (p *Handle) pcapListDatalinks() (datalinks []Datalink, err error) {
 	dltArray := (*[1 << 28]C.int)(unsafe.Pointer(dltbuf))
 
 	for i := 0; i < n; i++ {
-		datalinks[i].Name = pcapDatalinkValToName(int((*dltArray)[i]))
-		datalinks[i].Description = pcapDatalinkValToDescription(int((*dltArray)[i]))
+		datalinks[i].Name = pcapDatalinkValToName(int((*dltArray)[i]), p.log)
+		datalinks[i].Description = pcapDatalinkValToDescription(int((*dltArray)[i]), p.log)
 	}
 
 	return datalinks, nil
 }
 
-func pcapOpenDead(linkType layers.LinkType, captureLength int) (*Handle, error) {
+func pcapOpenDead(linkType layers.LinkType, captureLength int, log logger.Log) (*Handle, error) {
 	cptr := C.pcap_open_dead(C.int(linkType), C.int(captureLength))
 	if cptr == nil {
 		return nil, errors.New("error opening dead capture")
@@ -412,21 +414,21 @@ func (p *Handle) pcapSetDatalink(dlt layers.LinkType) error {
 	return nil
 }
 
-func pcapDatalinkValToName(dlt int) string {
+func pcapDatalinkValToName(dlt int, log logger.Log) string {
 	return C.GoString(C.pcap_datalink_val_to_name(C.int(dlt)))
 }
 
-func pcapDatalinkValToDescription(dlt int) string {
+func pcapDatalinkValToDescription(dlt int, log logger.Log) string {
 	return C.GoString(C.pcap_datalink_val_to_description(C.int(dlt)))
 }
 
-func pcapDatalinkNameToVal(name string) int {
+func pcapDatalinkNameToVal(name string, log logger.Log) int {
 	cptr := C.CString(name)
 	defer C.free(unsafe.Pointer(cptr))
 	return int(C.pcap_datalink_name_to_val(cptr))
 }
 
-func pcapLibVersion() string {
+func pcapLibVersion(logger.Log) string {
 	return C.GoString(C.pcap_lib_version())
 }
 
@@ -508,7 +510,7 @@ func (p pcapDevices) addresses() pcapAddresses {
 	return pcapAddresses{all: p.cur.addresses}
 }
 
-func pcapFindAllDevs() (pcapDevices, error) {
+func pcapFindAllDevs(log logger.Log) (pcapDevices, error) {
 	var buf *C.char
 	buf = (*C.char)(C.calloc(errorBufferSize, 1))
 	defer C.free(unsafe.Pointer(buf))
@@ -538,11 +540,11 @@ func (p *Handle) pcapSnapshot() int {
 	return int(C.pcap_snapshot(p.cptr))
 }
 
-func (t TimestampSource) pcapTstampTypeValToName() string {
+func (t TimestampSource) pcapTstampTypeValToName(log logger.Log) string {
 	return C.GoString(C.pcap_tstamp_type_val_to_name(C.int(t)))
 }
 
-func pcapTstampTypeNameToVal(s string) (TimestampSource, error) {
+func pcapTstampTypeNameToVal(s string, log logger.Log) (TimestampSource, error) {
 	cs := C.CString(s)
 	defer C.free(unsafe.Pointer(cs))
 	t := C.pcap_tstamp_type_name_to_val(cs)
@@ -574,7 +576,7 @@ func (p *InactiveHandle) pcapClose() {
 	}
 }
 
-func pcapCreate(device string) (*InactiveHandle, error) {
+func pcapCreate(device string, log logger.Log) (*InactiveHandle, error) {
 	buf := (*C.char)(C.calloc(errorBufferSize, 1))
 	defer C.free(unsafe.Pointer(buf))
 	dev := C.CString(device)
@@ -695,7 +697,7 @@ func (p *Handle) waitForPacket() {
 }
 
 // openOfflineFile returns contents of input file as a *Handle.
-func openOfflineFile(file *os.File) (handle *Handle, err error) {
+func openOfflineFile(file *os.File, log logger.Log) (handle *Handle, err error) {
 	buf := (*C.char)(C.calloc(errorBufferSize, 1))
 	defer C.free(unsafe.Pointer(buf))
 	cmode := C.CString("rb")
