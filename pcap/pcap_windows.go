@@ -19,6 +19,7 @@ import (
 	"time"
 	"unsafe"
 
+	"github.com/NozomiNetworks/go-logger"
 	gosignature "github.com/NozomiNetworks/go-signature"
 	"github.com/NozomiNetworks/gopacket-fork-nozomi"
 	"github.com/NozomiNetworks/gopacket-fork-nozomi/layers"
@@ -36,11 +37,12 @@ var DigiCertAutCert []byte
 const LOAD_LIBRARY_SEARCH_SYSTEM32 = 0x00000800
 const LOAD_WITH_ALTERED_SEARCH_PATH = 0x00000008
 
-func hasDllAValidSignature(path string) error {
-	return gosignature.CheckExeSignature(path, [][]byte{DigiCertAutCert})
+func hasDllAValidSignature(path string, log logger.Log) error {
+	gosig := gosignature.NewSignatureCheck(log)
+	return gosig.CheckExeSignature(path, [][]byte{DigiCertAutCert})
 }
 
-func resolveNpcapDllPath(kernel32 windows.Handle) (string, error) {
+func resolveNpcapDllPath(kernel32 windows.Handle, log logger.Log) (string, error) {
 	// We load SetDllDirectoryA, used to add a path to dll search path
 	setDllDirectory, err := windows.GetProcAddress(kernel32, "SetDllDirectoryA")
 	if err != nil {
@@ -79,14 +81,14 @@ func resolveNpcapDllPath(kernel32 windows.Handle) (string, error) {
 		return "", fmt.Errorf("%s doesn't exist in %s", wpcapDllName, wpcapPath)
 	}
 
-	err = hasDllAValidSignature(wpcapPath)
+	err = hasDllAValidSignature(wpcapPath, log)
 	if err != nil {
 		return "", err
 	}
 	return wpcapPath, nil
 }
 
-func initLoadedDllPath(kernel32 windows.Handle) error {
+func initLoadedDllPath(kernel32 windows.Handle, log logger.Log) error {
 	getModuleFileName, err := windows.GetProcAddress(kernel32, "GetModuleFileNameA")
 	if err != nil {
 		return err
@@ -98,7 +100,7 @@ func initLoadedDllPath(kernel32 windows.Handle) error {
 		return err
 	}
 	loadedDllPath := string(buf[:int(r)])
-	return hasDllAValidSignature(loadedDllPath)
+	return hasDllAValidSignature(loadedDllPath, log)
 }
 
 func mustLoad(fun string) (uintptr, error) {
@@ -211,7 +213,7 @@ func isLoadLibraryExWithSearchFlagsSupported(kernel32 windows.Handle) bool {
 }
 
 // LoadNPCAP attempts to dynamically load the wpcap DLL and resolve necessary functions
-func LoadNPCAP() error {
+func LoadNPCAP(log logger.Log) error {
 	if pcapLoaded {
 		return nil
 	}
@@ -222,7 +224,7 @@ func LoadNPCAP() error {
 	}
 	defer windows.FreeLibrary(kernel32)
 
-	npcapDllPath, err := resolveNpcapDllPath(kernel32)
+	npcapDllPath, err := resolveNpcapDllPath(kernel32, log)
 	if isLoadLibraryExWithSearchFlagsSupported(kernel32) {
 		// if AddDllDirectory is present, we can use LOAD_LIBRARY_* stuff with LoadLibraryEx to avoid wpcap.dll hijacking
 		// see: https://msdn.microsoft.com/en-us/library/ff919712%28VS.85%29.aspx
@@ -243,7 +245,7 @@ func LoadNPCAP() error {
 			return fmt.Errorf("couldn't load %s", wpcapDllName)
 		}
 	}
-	err = initLoadedDllPath(kernel32)
+	err = initLoadedDllPath(kernel32, log)
 	if err != nil {
 		defer windows.FreeLibrary(wpcapHandle)
 		return err
@@ -470,8 +472,8 @@ func pcapSetTstampPrecision(cptr pcapTPtr, precision int) error {
 	return nil
 }
 
-func pcapOpenLive(device string, snaplen int, pro int, timeout int) (*Handle, error) {
-	err := LoadNPCAP()
+func pcapOpenLive(device string, snaplen int, pro int, timeout int, log logger.Log) (*Handle, error) {
+	err := LoadNPCAP(log)
 	if err != nil {
 		return nil, err
 	}
@@ -487,11 +489,11 @@ func pcapOpenLive(device string, snaplen int, pro int, timeout int) (*Handle, er
 	if cptr == 0 {
 		return nil, errors.New(byteSliceToString(buf))
 	}
-	return &Handle{cptr: pcapTPtr(cptr)}, nil
+	return &Handle{cptr: pcapTPtr(cptr), log: log}, nil
 }
 
-func openOffline(file string) (handle *Handle, err error) {
-	err = LoadNPCAP()
+func openOffline(file string, log logger.Log) (handle *Handle, err error) {
+	err = LoadNPCAP(log)
 	if err != nil {
 		return nil, err
 	}
@@ -513,7 +515,7 @@ func openOffline(file string) (handle *Handle, err error) {
 		return nil, errors.New(byteSliceToString(buf))
 	}
 
-	h := &Handle{cptr: pcapTPtr(cptr)}
+	h := &Handle{cptr: pcapTPtr(cptr), log: log}
 	return h, nil
 }
 
@@ -594,8 +596,8 @@ func pcapBpfProgramFromInstructions(bpfInstructions []BPFInstruction) pcapBpfPro
 	return bpf
 }
 
-func pcapLookupnet(device string) (netp, maskp uint32, err error) {
-	err = LoadNPCAP()
+func pcapLookupnet(device string, log logger.Log) (netp, maskp uint32, err error) {
+	err = LoadNPCAP(log)
 	if err != nil {
 		return 0, 0, err
 	}
@@ -646,15 +648,15 @@ func (p *Handle) pcapListDatalinks() (datalinks []Datalink, err error) {
 	dltArray := (*[1 << 28]pcapCint)(unsafe.Pointer(dltbuf))
 
 	for i := 0; i < n; i++ {
-		datalinks[i].Name = pcapDatalinkValToName(int((*dltArray)[i]))
-		datalinks[i].Description = pcapDatalinkValToDescription(int((*dltArray)[i]))
+		datalinks[i].Name = pcapDatalinkValToName(int((*dltArray)[i]), p.log)
+		datalinks[i].Description = pcapDatalinkValToDescription(int((*dltArray)[i]), p.log)
 	}
 
 	return datalinks, nil
 }
 
-func pcapOpenDead(linkType layers.LinkType, captureLength int) (*Handle, error) {
-	err := LoadNPCAP()
+func pcapOpenDead(linkType layers.LinkType, captureLength int, log logger.Log) (*Handle, error) {
+	err := LoadNPCAP(log)
 	if err != nil {
 		return nil, err
 	}
@@ -664,7 +666,7 @@ func pcapOpenDead(linkType layers.LinkType, captureLength int) (*Handle, error) 
 		return nil, errors.New("error opening dead capture")
 	}
 
-	return &Handle{cptr: pcapTPtr(cptr)}, nil
+	return &Handle{cptr: pcapTPtr(cptr), log: log}, nil
 }
 
 func (p *Handle) pcapNextPacketEx() NextError {
@@ -692,20 +694,20 @@ func (p *Handle) pcapSetDatalink(dlt layers.LinkType) error {
 	return nil
 }
 
-func pcapDatalinkValToName(dlt int) string {
-	_ = LoadNPCAP()
+func pcapDatalinkValToName(dlt int, log logger.Log) string {
+	_ = LoadNPCAP(log)
 	ret, _, _ := syscall.SyscallN(pcapDatalinkValToNamePtr, uintptr(dlt))
 	return bytePtrToString(ret)
 }
 
-func pcapDatalinkValToDescription(dlt int) string {
-	_ = LoadNPCAP()
+func pcapDatalinkValToDescription(dlt int, log logger.Log) string {
+	_ = LoadNPCAP(log)
 	ret, _, _ := syscall.SyscallN(pcapDatalinkValToDescriptionPtr, uintptr(dlt))
 	return bytePtrToString(ret)
 }
 
-func pcapDatalinkNameToVal(name string) int {
-	_ = LoadNPCAP()
+func pcapDatalinkNameToVal(name string, log logger.Log) int {
+	_ = LoadNPCAP(log)
 	cptr, err := syscall.BytePtrFromString(name)
 	if err != nil {
 		return 0
@@ -714,8 +716,8 @@ func pcapDatalinkNameToVal(name string) int {
 	return int(pcapCint(ret))
 }
 
-func pcapLibVersion() string {
-	_ = LoadNPCAP()
+func pcapLibVersion(log logger.Log) string {
+	_ = LoadNPCAP(log)
 	ret, _, _ := syscall.SyscallN(pcapLibVersionPtr)
 	return bytePtrToString(ret)
 }
@@ -798,9 +800,9 @@ func (p pcapDevices) addresses() pcapAddresses {
 	return pcapAddresses{all: p.cur.Addresses}
 }
 
-func pcapFindAllDevs() (pcapDevices, error) {
+func pcapFindAllDevs(log logger.Log) (pcapDevices, error) {
 	var alldevsp pcapDevices
-	err := LoadNPCAP()
+	err := LoadNPCAP(log)
 	if err != nil {
 		return alldevsp, err
 	}
@@ -836,8 +838,8 @@ func (p *Handle) pcapSnapshot() int {
 	return int(pcapCint(ret))
 }
 
-func (t TimestampSource) pcapTstampTypeValToName() string {
-	err := LoadNPCAP()
+func (t TimestampSource) pcapTstampTypeValToName(log logger.Log) string {
+	err := LoadNPCAP(log)
 	if err != nil {
 		return err.Error()
 	}
@@ -850,8 +852,8 @@ func (t TimestampSource) pcapTstampTypeValToName() string {
 	return bytePtrToString(ret)
 }
 
-func pcapTstampTypeNameToVal(s string) (TimestampSource, error) {
-	err := LoadNPCAP()
+func pcapTstampTypeNameToVal(s string, log logger.Log) (TimestampSource, error) {
+	err := LoadNPCAP(log)
 	if err != nil {
 		return 0, err
 	}
@@ -897,8 +899,8 @@ func (p *InactiveHandle) pcapClose() {
 	p.cptr = 0
 }
 
-func pcapCreate(device string) (*InactiveHandle, error) {
-	err := LoadNPCAP()
+func pcapCreate(device string, log logger.Log) (*InactiveHandle, error) {
+	err := LoadNPCAP(log)
 	if err != nil {
 		return nil, err
 	}
@@ -1036,8 +1038,8 @@ func (p *Handle) waitForPacket() {
 }
 
 // openOfflineFile returns contents of input file as a *Handle.
-func openOfflineFile(file *os.File) (handle *Handle, err error) {
-	err = LoadNPCAP()
+func openOfflineFile(file *os.File, log logger.Log) (handle *Handle, err error) {
+	err = LoadNPCAP(log)
 	if err != nil {
 		return nil, err
 	}
@@ -1055,5 +1057,5 @@ func openOfflineFile(file *os.File) (handle *Handle, err error) {
 	if cptr == 0 {
 		return nil, errors.New(byteSliceToString(buf))
 	}
-	return &Handle{cptr: pcapTPtr(cptr)}, nil
+	return &Handle{cptr: pcapTPtr(cptr), log: log}, nil
 }

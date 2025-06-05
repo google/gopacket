@@ -22,10 +22,6 @@ import (
 	"encoding/hex"
 	"flag"
 	"fmt"
-	"github.com/NozomiNetworks/gopacket-fork-nozomi"
-	"github.com/NozomiNetworks/gopacket-fork-nozomi/layers"
-	"github.com/NozomiNetworks/gopacket-fork-nozomi/pcap"
-	"github.com/NozomiNetworks/gopacket-fork-nozomi/tcpassembly"
 	"io"
 	"io/ioutil"
 	"net/http"
@@ -33,6 +29,12 @@ import (
 	"runtime"
 	"runtime/pprof"
 	"time"
+
+	"github.com/NozomiNetworks/go-logger"
+	"github.com/NozomiNetworks/gopacket-fork-nozomi"
+	"github.com/NozomiNetworks/gopacket-fork-nozomi/layers"
+	"github.com/NozomiNetworks/gopacket-fork-nozomi/pcap"
+	"github.com/NozomiNetworks/gopacket-fork-nozomi/tcpassembly"
 )
 
 var decodeLazy *bool = flag.Bool("lazy", false, "If true, use lazy decoding")
@@ -131,7 +133,7 @@ func main() {
 	var packetDataSource *BufferPacketSource
 	var packetSource *gopacket.PacketSource
 	fmt.Printf("Opening file %q for read\n", filename)
-	if h, err := pcap.OpenOffline(filename); err != nil {
+	if h, err := pcap.OpenOffline(filename, &logger.Discard{}); err != nil {
 		panic(err)
 	} else {
 		fmt.Println("Reading all packets into memory with BufferPacketSource.")
@@ -139,7 +141,7 @@ func main() {
 		packetDataSource = NewBufferPacketSource(h)
 		duration := time.Since(start)
 		fmt.Printf("Time to read packet data into memory from file: %v\n", duration)
-		packetSource = gopacket.NewPacketSource(packetDataSource, h.LinkType())
+		packetSource = gopacket.NewPacketSource(packetDataSource, h.LinkType(&logger.Discard{}))
 		packetSource.DecodeOptions.Lazy = *decodeLazy
 		packetSource.DecodeOptions.NoCopy = *decodeNoCopy
 	}

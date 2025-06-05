@@ -9,6 +9,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/NozomiNetworks/go-logger"
 	"github.com/NozomiNetworks/gopacket-fork-nozomi"
 	"github.com/NozomiNetworks/gopacket-fork-nozomi/layers"
 )
@@ -30,7 +31,7 @@ var (
 )
 
 func BenchmarkPcapNonmatchingBPFFilter(b *testing.B) {
-	bpf, err := NewBPF(layers.LinkTypeEthernet, snaplen, nonmatchingBPFFilter)
+	bpf, err := NewBPF(layers.LinkTypeEthernet, snaplen, nonmatchingBPFFilter, &logger.Discard{})
 	if err != nil {
 		b.Fatal("incorrect filter")
 	}
@@ -50,7 +51,7 @@ func BenchmarkPcapNonmatchingBPFFilter(b *testing.B) {
 }
 
 func BenchmarkPcapMatchingBPFFilter(b *testing.B) {
-	bpf, err := NewBPF(layers.LinkTypeEthernet, snaplen, matchingBPFFilter)
+	bpf, err := NewBPF(layers.LinkTypeEthernet, snaplen, matchingBPFFilter, &logger.Discard{})
 	if err != nil {
 		b.Fatal("incorrect filter")
 	}

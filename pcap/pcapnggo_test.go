@@ -13,6 +13,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/NozomiNetworks/go-logger"
 	"github.com/NozomiNetworks/gopacket-fork-nozomi"
 	"github.com/NozomiNetworks/gopacket-fork-nozomi/layers"
 	"github.com/NozomiNetworks/gopacket-fork-nozomi/pcapgo"
@@ -42,7 +43,7 @@ func TestPCAPGoNgWrite(t *testing.T) {
 			t.Fatal(err)
 		}
 	}()
-	h, err := OpenOffline(f.Name())
+	h, err := OpenOffline(f.Name(), &logger.Discard{})
 	if err != nil {
 		t.Fatal(err)
 	}

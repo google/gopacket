@@ -1,9 +1,13 @@
 package pcap
 
-import "testing"
+import (
+	"testing"
+
+	"github.com/NozomiNetworks/go-logger"
+)
 
 func TestLoadAndFreeNpcap(t *testing.T) {
-	err := LoadNPCAP()
+	err := LoadNPCAP(&logger.Discard{})
 	if err != nil {
 		t.Fatal("load should not give error")
 	}
@@ -15,7 +19,7 @@ func TestLoadAndFreeNpcap(t *testing.T) {
 	if loaded {
 		t.Fatal("npcap should not be loaded after free")
 	}
-	err = LoadNPCAP()
+	err = LoadNPCAP(&logger.Discard{})
 	if err != nil {
 		t.Fatal("failed to realod npcap")
 	}

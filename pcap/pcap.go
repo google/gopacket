@@ -22,6 +22,7 @@ import (
 	"time"
 	"unsafe"
 
+	"github.com/NozomiNetworks/go-logger"
 	"github.com/NozomiNetworks/gopacket-fork-nozomi"
 	"github.com/NozomiNetworks/gopacket-fork-nozomi/layers"
 )
@@ -63,6 +64,7 @@ type Handle struct {
 	// huge memory hit, so to handle that we store them here instead.
 	pkthdr *pcapPkthdr
 	bufptr *uint8
+	log    logger.Log
 }
 
 // Stats contains statistics on how many packets were handled by a pcap handle,
@@ -142,13 +144,13 @@ func timeoutMillis(timeout time.Duration) int {
 // For nanosecond resolution use an InactiveHandle.
 //
 // See the package documentation for important details regarding 'timeout'.
-func OpenLive(device string, snaplen int32, promisc bool, timeout time.Duration) (handle *Handle, _ error) {
+func OpenLive(device string, snaplen int32, promisc bool, timeout time.Duration, log logger.Log) (handle *Handle, _ error) {
 	var pro int
 	if promisc {
 		pro = 1
 	}
 
-	p, err := pcapOpenLive(device, int(snaplen), pro, timeoutMillis(timeout))
+	p, err := pcapOpenLive(device, int(snaplen), pro, timeoutMillis(timeout), log)
 	if err != nil {
 		return nil, err
 	}
@@ -183,8 +185,8 @@ func OpenLive(device string, snaplen int32, promisc bool, timeout time.Duration)
 // on the timestamp resolution used in the file, nanosecond or microsecond resolution is used
 // internally. All returned timestamps are scaled to nanosecond resolution. Resolution() can be used
 // to query the actual resolution used.
-func OpenOffline(file string) (handle *Handle, err error) {
-	handle, err = openOffline(file)
+func OpenOffline(file string, log logger.Log) (handle *Handle, err error) {
+	handle, err = openOffline(file, log)
 	if err != nil {
 		return
 	}
@@ -200,8 +202,8 @@ func OpenOffline(file string) (handle *Handle, err error) {
 // on the timestamp resolution used in the file, nanosecond or microsecond resolution is used
 // internally. All returned timestamps are scaled to nanosecond resolution. Resolution() can be used
 // to query the actual resolution used.
-func OpenOfflineFile(file *os.File) (handle *Handle, err error) {
-	handle, err = openOfflineFile(file)
+func OpenOfflineFile(file *os.File, log logger.Log) (handle *Handle, err error) {
+	handle, err = openOfflineFile(file, log)
 	if err != nil {
 		return
 	}
@@ -412,14 +414,14 @@ func (p *Handle) ListDataLinks() (datalinks []Datalink, err error) {
 // It is the callers responsibility to free the memory again, e.g.
 //
 //	C.pcap_freecode(&bpf)
-func (p *Handle) compileBPFFilter(expr string) (pcapBpfProgram, error) {
+func (p *Handle) compileBPFFilter(expr string, log logger.Log) (pcapBpfProgram, error) {
 	var maskp = uint32(pcapNetmaskUnknown)
 
 	// Only do the lookup on network interfaces.
 	// No device indicates we're handling a pcap file.
 	if len(p.device) > 0 {
 		var err error
-		_, maskp, err = pcapLookupnet(p.device)
+		_, maskp, err = pcapLookupnet(p.device, log)
 		if err != nil {
 			// We can't lookup the network, but that could be because the interface
 			// doesn't have an IPv4.
@@ -431,18 +433,18 @@ func (p *Handle) compileBPFFilter(expr string) (pcapBpfProgram, error) {
 }
 
 // CompileBPFFilter compiles and returns a BPF filter with given a link type and capture length.
-func CompileBPFFilter(linkType layers.LinkType, captureLength int, expr string) ([]BPFInstruction, error) {
-	h, err := pcapOpenDead(linkType, captureLength)
+func CompileBPFFilter(linkType layers.LinkType, captureLength int, expr string, log logger.Log) ([]BPFInstruction, error) {
+	h, err := pcapOpenDead(linkType, captureLength, log)
 	if err != nil {
 		return nil, err
 	}
 	defer h.Close()
-	return h.CompileBPFFilter(expr)
+	return h.CompileBPFFilter(expr, log)
 }
 
 // CompileBPFFilter compiles and returns a BPF filter for the pcap handle.
-func (p *Handle) CompileBPFFilter(expr string) ([]BPFInstruction, error) {
-	bpf, err := p.compileBPFFilter(expr)
+func (p *Handle) CompileBPFFilter(expr string, log logger.Log) ([]BPFInstruction, error) {
+	bpf, err := p.compileBPFFilter(expr, log)
 	defer bpf.free()
 	if err != nil {
 		return nil, err
@@ -452,8 +454,8 @@ func (p *Handle) CompileBPFFilter(expr string) ([]BPFInstruction, error) {
 }
 
 // SetBPFFilter compiles and sets a BPF filter for the pcap handle.
-func (p *Handle) SetBPFFilter(expr string) (err error) {
-	bpf, err := p.compileBPFFilter(expr)
+func (p *Handle) SetBPFFilter(expr string, log logger.Log) (err error) {
+	bpf, err := p.compileBPFFilter(expr, log)
 	defer bpf.free()
 	if err != nil {
 		return err
@@ -543,8 +545,8 @@ func (p *Handle) NewBPF(expr string) (*BPF, error) {
 //	if bpfi.Matches(ci, buf) {
 //		doSomething()
 //	}
-func NewBPF(linkType layers.LinkType, captureLength int, expr string) (*BPF, error) {
-	h, err := pcapOpenDead(linkType, captureLength)
+func NewBPF(linkType layers.LinkType, captureLength int, expr string, log logger.Log) (*BPF, error) {
+	h, err := pcapOpenDead(linkType, captureLength, log)
 	if err != nil {
 		return nil, err
 	}
@@ -585,12 +587,12 @@ func (b *BPF) Matches(ci gopacket.CaptureInfo, data []byte) bool {
 }
 
 // Version returns pcap_lib_version.
-func Version() string {
-	return pcapLibVersion()
+func Version(log logger.Log) string {
+	return pcapLibVersion(log)
 }
 
 // LinkType returns pcap_datalink, as a layers.LinkType.
-func (p *Handle) LinkType() layers.LinkType {
+func (p *Handle) LinkType(log logger.Log) layers.LinkType {
 	return p.pcapDatalink()
 }
 
@@ -600,23 +602,23 @@ func (p *Handle) SetLinkType(dlt layers.LinkType) error {
 }
 
 // DatalinkValToName returns pcap_datalink_val_to_name as string
-func DatalinkValToName(dlt int) string {
-	return pcapDatalinkValToName(dlt)
+func DatalinkValToName(dlt int, log logger.Log) string {
+	return pcapDatalinkValToName(dlt, log)
 }
 
 // DatalinkValToDescription returns pcap_datalink_val_to_description as string
-func DatalinkValToDescription(dlt int) string {
-	return pcapDatalinkValToDescription(dlt)
+func DatalinkValToDescription(dlt int, log logger.Log) string {
+	return pcapDatalinkValToDescription(dlt, log)
 }
 
 // DatalinkNameToVal returns pcap_datalink_name_to_val as int
-func DatalinkNameToVal(name string) int {
-	return pcapDatalinkNameToVal(name)
+func DatalinkNameToVal(name string, log logger.Log) int {
+	return pcapDatalinkNameToVal(name, log)
 }
 
 // FindAllDevs attempts to enumerate all interfaces on the current machine.
-func FindAllDevs() (ifs []Interface, err error) {
-	alldevsp, err := pcapFindAllDevs()
+func FindAllDevs(log logger.Log) (ifs []Interface, err error) {
+	alldevsp, err := pcapFindAllDevs(log)
 	if err != nil {
 		return nil, err
 	}
@@ -733,14 +735,14 @@ func (p *Handle) Resolution() gopacket.TimestampResolution {
 type TimestampSource int
 
 // String returns the timestamp type as a human-readable string.
-func (t TimestampSource) String() string {
-	return t.pcapTstampTypeValToName()
+func (t TimestampSource) String(log logger.Log) string {
+	return t.pcapTstampTypeValToName(log)
 }
 
 // TimestampSourceFromString translates a string into a timestamp type, case
 // insensitive.
-func TimestampSourceFromString(s string) (TimestampSource, error) {
-	return pcapTstampTypeNameToVal(s)
+func TimestampSourceFromString(s string, log logger.Log) (TimestampSource, error) {
+	return pcapTstampTypeNameToVal(s, log)
 }
 
 // InactiveHandle allows you to call pre-pcap_activate functions on your pcap
@@ -801,7 +803,7 @@ func (p *InactiveHandle) CleanUp() {
 //
 //	inactive := NewInactiveHandle("eth0")
 //	defer inactive.CleanUp()
-func NewInactiveHandle(device string) (*InactiveHandle, error) {
+func NewInactiveHandle(device string, log logger.Log) (*InactiveHandle, error) {
 	// Try to get the interface index, but iy could be something like "any"
 	// in which case use 0, which doesn't exist in nature
 	deviceIndex := 0
@@ -811,7 +813,7 @@ func NewInactiveHandle(device string) (*InactiveHandle, error) {
 	}
 
 	// This copies a bunch of the pcap_open_live implementation from pcap.c:
-	handle, err := pcapCreate(device)
+	handle, err := pcapCreate(device, log)
 	if err != nil {
 		return nil, err
 	}

@@ -8,13 +8,15 @@ package pcap
 
 import (
 	"bytes"
-	"github.com/NozomiNetworks/gopacket-fork-nozomi"
-	"github.com/NozomiNetworks/gopacket-fork-nozomi/layers"
-	"github.com/NozomiNetworks/gopacket-fork-nozomi/pcapgo"
 	"io/ioutil"
 	"reflect"
 	"testing"
 	"time"
+
+	"github.com/NozomiNetworks/go-logger"
+	"github.com/NozomiNetworks/gopacket-fork-nozomi"
+	"github.com/NozomiNetworks/gopacket-fork-nozomi/layers"
+	"github.com/NozomiNetworks/gopacket-fork-nozomi/pcapgo"
 )
 
 func TestPCAPGoWrite(t *testing.T) {
@@ -38,7 +40,7 @@ func TestPCAPGoWrite(t *testing.T) {
 			t.Fatal(err)
 		}
 	}()
-	h, err := OpenOffline(f.Name())
+	h, err := OpenOffline(f.Name(), &logger.Discard{})
 	if err != nil {
 		t.Fatal(err)
 	}

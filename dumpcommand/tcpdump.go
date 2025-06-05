@@ -10,10 +10,12 @@
 package dumpcommand
 
 import (
+	"context"
 	"flag"
 	"fmt"
 	"log"
 	"os"
+	"sync"
 	"time"
 
 	"github.com/NozomiNetworks/gopacket-fork-nozomi"
@@ -53,8 +55,19 @@ func Run(src gopacket.PacketDataSource) {
 	truncated := 0
 	layertypes := map[gopacket.LayerType]int{}
 	defragger := ip4defrag.NewIPv4Defragmenter()
+	packets := make(chan gopacket.Packet, 1000)
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+	wg := &sync.WaitGroup{}
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+		source.Packets(ctx, wg, packets)
+	}()
 
-	for packet := range source.Packets() {
+	defer wg.Wait()
+
+	for packet := range packets {
 		count++
 		bytes += int64(len(packet.Data()))
 
@@ -113,6 +126,7 @@ func Run(src gopacket.PacketDataSource) {
 			}
 		}
 		if done {
+			cancel()
 			break
 		}
 	}

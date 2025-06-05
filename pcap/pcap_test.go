@@ -15,12 +15,13 @@ import (
 	"sync"
 	"testing"
 
+	"github.com/NozomiNetworks/go-logger"
 	"github.com/NozomiNetworks/gopacket-fork-nozomi"
 	"github.com/NozomiNetworks/gopacket-fork-nozomi/layers"
 )
 
 func TestPcapNonexistentFile(t *testing.T) {
-	handle, err := OpenOffline("/path/to/nonexistent/file")
+	handle, err := OpenOffline("/path/to/nonexistent/file", &logger.Discard{})
 	if err == nil {
 		t.Error("No error returned for nonexistent file open")
 	} else {
@@ -87,7 +88,7 @@ func TestPcapFileRead(t *testing.T) {
 		t.Logf("\n\n\n\nProcessing file %s\n\n\n\n", file.filename)
 
 		packets := []gopacket.Packet{}
-		if handle, err := OpenOffline(file.filename); err != nil {
+		if handle, err := OpenOffline(file.filename, &logger.Discard{}); err != nil {
 			if file.err != "" {
 				if err.Error() != file.err {
 					t.Errorf("expected message %q; got %q", file.err, err.Error())
@@ -100,7 +101,7 @@ func TestPcapFileRead(t *testing.T) {
 				t.Fatalf("Expected error, got none")
 			}
 
-			packetSource := gopacket.NewPacketSource(handle, handle.LinkType())
+			packetSource := gopacket.NewPacketSource(handle, handle.LinkType(&logger.Discard{}))
 			captureBarrier := sync.WaitGroup{}
 			captureCtx := context.Background()
 			packetChan := make(chan gopacket.Packet, 1000)
@@ -127,7 +128,7 @@ func TestPcapFileRead(t *testing.T) {
 }
 
 func TestBPF(t *testing.T) {
-	handle, err := OpenOffline("test_ethernet.pcap")
+	handle, err := OpenOffline("test_ethernet.pcap", &logger.Discard{})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -162,7 +163,7 @@ func TestBPF(t *testing.T) {
 
 func TestBPFInstruction(t *testing.T) {
 	t.Skip("this test is broken") //TODO: fix test
-	handle, err := OpenOffline("test_ethernet.pcap")
+	handle, err := OpenOffline("test_ethernet.pcap", &logger.Discard{})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -251,7 +252,7 @@ func TestBPFInstruction(t *testing.T) {
 
 		if expected.Filter != "" {
 			t.Log("Testing dead bpf filter", cntr)
-			if bpf, err := CompileBPFFilter(layers.LinkTypeEthernet, 65535, expected.Filter); err != nil {
+			if bpf, err := CompileBPFFilter(layers.LinkTypeEthernet, 65535, expected.Filter, &logger.Discard{}); err != nil {
 				if !expected.Error {
 					t.Error(err, "while compiling filter was unexpected")
 				}
@@ -272,7 +273,7 @@ func TestBPFInstruction(t *testing.T) {
 }
 
 func ExampleBPF() {
-	handle, err := OpenOffline("test_ethernet.pcap")
+	handle, err := OpenOffline("test_ethernet.pcap", &logger.Discard{})
 	if err != nil {
 		log.Fatal(err)
 	}
