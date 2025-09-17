@@ -1736,6 +1736,8 @@ type SFlowIpv4Record struct {
 func decodeSFlowIpv4Record(data *[]byte) (SFlowIpv4Record, error) {
 	si := SFlowIpv4Record{}
 
+	// ignore EnterpriseID and Format (4 byte), and flow data length (4 byte)
+	*data = (*data)[8:]
 	*data, si.Length = (*data)[4:], binary.BigEndian.Uint32((*data)[:4])
 	*data, si.Protocol = (*data)[4:], binary.BigEndian.Uint32((*data)[:4])
 	*data, si.IPSrc = (*data)[4:], net.IP((*data)[:4])
@@ -1792,6 +1794,8 @@ type SFlowIpv6Record struct {
 func decodeSFlowIpv6Record(data *[]byte) (SFlowIpv6Record, error) {
 	si := SFlowIpv6Record{}
 
+	// ignore EnterpriseID and Format (4 byte), and flow data length (4 byte)
+	*data = (*data)[8:]
 	*data, si.Length = (*data)[4:], binary.BigEndian.Uint32((*data)[:4])
 	*data, si.Protocol = (*data)[4:], binary.BigEndian.Uint32((*data)[:4])
 	*data, si.IPSrc = (*data)[16:], net.IP((*data)[:16])
