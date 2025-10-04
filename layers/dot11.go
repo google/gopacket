@@ -1160,9 +1160,20 @@ func decodeDot11Ctrl(data []byte, p gopacket.PacketBuilder) error {
 	return decodingLayerDecoder(d, data, p)
 }
 
-// Dot11WEP contains WEP encrpted IEEE 802.11 data.
+// Dot11WEP is the header for WEP-encrypted 802.11 frames.
+//
+// It contains a 24-bit IV and a Key ID stored in the top two bits of
+// the fourth byte.
+//
+// Layout:
+//
+//	0–2: IV
+//	3:   Key ID (bits 7–6) | Reserved (bits 5–0)
 type Dot11WEP struct {
 	BaseLayer
+
+	IV    [3]byte
+	KeyID uint8
 }
 
 func (m *Dot11WEP) NextLayerType() gopacket.LayerType { return gopacket.LayerTypePayload }
@@ -1170,6 +1181,9 @@ func (m *Dot11WEP) NextLayerType() gopacket.LayerType { return gopacket.LayerTyp
 func (m *Dot11WEP) LayerType() gopacket.LayerType  { return LayerTypeDot11WEP }
 func (m *Dot11WEP) CanDecode() gopacket.LayerClass { return LayerTypeDot11WEP }
 func (m *Dot11WEP) DecodeFromBytes(data []byte, df gopacket.DecodeFeedback) error {
+	copy(m.IV[:], data[:3])
+	m.KeyID = (data[3] >> 6) & 0x3
+
 	m.Contents = data
 	return nil
 }

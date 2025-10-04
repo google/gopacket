@@ -473,6 +473,52 @@ func BenchmarkDecodePacketP6196(b *testing.B) {
 	}
 }
 
+// testPacketDot11DataQOSDataWEP is the packet:
+// 0000   88 41 2c 00 84 16 f9 bf 91 8c 6e 0d 61 c1 fd fa   .A,.......n.a...
+// 0010   84 16 f9 bf 91 8c c0 48 00 00 46 3a c7 00 62 e2   .......H..F:..b.
+// 0020   69 ec a6 78 d2 2a 9d 9c 7e cb 94 28 a3 ba 12 15   i..x.*..~..(....
+// 0030   ea e0 fe 46 4b f6 88 67 06 98 5b 54 35 22 f7 ef   ...FK..g..[T5"..
+// 0040   fc 70 2e 33 af 89 46 11 e2 2c 05 18 c6 e8 7a 95   .p.3..F..,....z.
+// 0050   54 d2                                             T.
+var testPacketDot11DataQOSDataWEP = []byte{
+	0x88, 0x41, 0x2c, 0x00, 0x84, 0x16, 0xf9, 0xbf, 0x91, 0x8c, 0x6e, 0x0d, 0x61, 0xc1, 0xfd, 0xfa,
+	0x84, 0x16, 0xf9, 0xbf, 0x91, 0x8c, 0xc0, 0x48, 0x00, 0x00, 0x46, 0x3a, 0xc7, 0x00, 0x62, 0xe2,
+	0x69, 0xec, 0xa6, 0x78, 0xd2, 0x2a, 0x9d, 0x9c, 0x7e, 0xcb, 0x94, 0x28, 0xa3, 0xba, 0x12, 0x15,
+	0xea, 0xe0, 0xfe, 0x46, 0x4b, 0xf6, 0x88, 0x67, 0x06, 0x98, 0x5b, 0x54, 0x35, 0x22, 0xf7, 0xef,
+	0xfc, 0x70, 0x2e, 0x33, 0xaf, 0x89, 0x46, 0x11, 0xe2, 0x2c, 0x05, 0x18, 0xc6, 0xe8, 0x7a, 0x95,
+	0x54, 0xd2,
+}
+
+func TestPacketDot11DataQOSDataWEP(t *testing.T) {
+	p := gopacket.NewPacket(testPacketDot11DataQOSDataWEP, LinkTypeIEEE802_11, gopacket.Default)
+	if p.ErrorLayer() != nil {
+		t.Error("Failed to decode packet:", p.ErrorLayer().Error())
+	}
+
+	checkLayers(p, []gopacket.LayerType{LayerTypeDot11, LayerTypeDot11DataQOSData, LayerTypeDot11WEP}, t)
+
+	l := p.Layer(LayerTypeDot11WEP)
+	if l == nil {
+		t.Fatal("Dot11WEP layer not found")
+	}
+
+	w := l.(*Dot11WEP)
+	wantIV, wantKeyID := [3]byte{0x46, 0x3a, 0xc7}, uint8(0)
+
+	if w.IV != wantIV {
+		t.Errorf("IV mismatch: got=%v want=%v", w.IV, wantIV)
+	}
+	if w.KeyID != wantKeyID {
+		t.Errorf("KeyID mismatch: got=%d want=%d", w.KeyID, wantKeyID)
+	}
+}
+
+func BenchmarkDecodePacketDot11DataQOSDataWEP(b *testing.B) {
+	for i := 0; i < b.N; i++ {
+		gopacket.NewPacket(testPacketDot11DataQOSDataWEP, LinkTypeIEEE802_11, gopacket.NoCopy)
+	}
+}
+
 // testPacketDot11HTControl is the packet:
 // 0000   00 00 26 00 2b 48 20 00 bf 70 06 02 00 00 00 00   ..&.+H .¿p......
 // 0010   40 00 78 14 40 01 b8 00 00 00 44 00 00 01 73 00   @.x.@.¸...D...s.
