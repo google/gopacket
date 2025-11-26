@@ -13,6 +13,7 @@ import (
 	"log"
 	"os"
 	"testing"
+	"time"
 
 	"github.com/google/gopacket"
 	"github.com/google/gopacket/layers"
@@ -258,6 +259,45 @@ func TestBPFInstruction(t *testing.T) {
 				}
 			}
 		}
+	}
+}
+
+func TestHandleResolution(t *testing.T) {
+	tests := []struct {
+		name               string
+		nanoSecsFactor     int64
+		expectedResolution gopacket.TimestampResolution
+	}{
+		{
+			name:               "Nanosecond Resolution (Factor 1)",
+			nanoSecsFactor:     1,
+			expectedResolution: gopacket.TimestampResolutionNanosecond,
+		},
+		{
+			name:               "Microsecond Resolution (Factor 1000)",
+			nanoSecsFactor:     1000,
+			expectedResolution: gopacket.TimestampResolutionMicrosecond,
+		},
+		{
+			name:               "Other Factor",
+			nanoSecsFactor:     500,
+			expectedResolution: gopacket.TimestampResolutionMicrosecond,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			p := &Handle{
+				nanoSecsFactor: tt.nanoSecsFactor,
+				timeout:        time.Second,
+			}
+
+			got := p.Resolution()
+
+			if got != tt.expectedResolution {
+				t.Errorf("Resolution() got = %v, want %v", got, tt.expectedResolution)
+			}
+		})
 	}
 }
 
