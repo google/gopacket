@@ -48,6 +48,9 @@ const (
 	ngOptionCodeHardware                            // description of the hardware
 	ngOptionCodeOS                                  // name of the operating system
 	ngOptionCodeUserApplication                     // name of the application
+	ngOptionCodeCustomString    = 2988              // custom utf-8 string
+	ngOptionCodeCustomBinary    = 2989              // custom binary octets
+	ngOptionCodeNotCopySafe     = 0x4000            // combine with ngOptionCodeCustomString or ngOptionCodeCustomBinary to mark as unsafe to copy
 )
 
 const (
