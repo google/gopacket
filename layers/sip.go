@@ -203,6 +203,103 @@ type SIP struct {
 	lastHeaderParsed string
 }
 
+// SerializeTo serializes the SIP layer into the given buffer, implementing gopacket.SerializableLayer.
+func (s *SIP) SerializeTo(b gopacket.SerializeBuffer, opts gopacket.SerializeOptions) error {
+	var buf bytes.Buffer
+
+	// --- First line ---
+	if s.IsResponse {
+		// Response: SIP/2.0 200 OK
+		if s.Version == 0 {
+			s.Version = SIPVersion2 // default
+		}
+		if s.ResponseCode == 0 || s.ResponseStatus == "" {
+			return fmt.Errorf("SIP SerializeTo: missing response code or status")
+		}
+		fmt.Fprintf(&buf, "%s %d %s\r\n", s.Version.String(), s.ResponseCode, s.ResponseStatus)
+	} else {
+		// Request: INVITE space@example.com SIP/2.0
+		if s.Method == 0 || s.RequestURI == "" {
+			return fmt.Errorf("SIP SerializeTo: missing method or RequestURI")
+		}
+		version := s.Version.String()
+		if version == "" {
+			version = "SIP/2.0"
+		}
+		fmt.Fprintf(&buf, "%s %s %s\r\n", s.Method.String(), s.RequestURI, version)
+	}
+
+	// --- Headers ---
+	// Canonical SIP header order (common important headers first)
+	canonicalOrder := []string{
+		"via", "from", "to", "call-id", "cseq", "contact", "max-forwards", "content-type", "content-length",
+	}
+	written := make(map[string]bool)
+
+	// Write canonical headers first if present
+	for _, h := range canonicalOrder {
+		vals := s.GetHeader(h)
+		if len(vals) > 0 {
+			for _, v := range vals {
+				fmt.Fprintf(&buf, "%s: %s\r\n", canonicalHeaderName(h), v)
+			}
+			written[strings.ToLower(h)] = true
+		}
+	}
+	// Write remaining headers
+	for h, vals := range s.Headers {
+		lh := strings.ToLower(h)
+		if written[lh] {
+			continue
+		}
+		for _, v := range vals {
+			fmt.Fprintf(&buf, "%s: %s\r\n", canonicalHeaderName(h), v)
+		}
+	}
+
+	// --- Content-Length ---
+	payload := s.Payload()
+	if opts.FixLengths {
+		// Always set Content-Length if FixLengths is requested
+		plen := len(payload)
+		// Remove any existing content-length header
+		delete(s.Headers, "content-length")
+		fmt.Fprintf(&buf, "Content-Length: %d\r\n", plen)
+	}
+
+	// --- End headers ---
+	buf.WriteString("\r\n")
+
+	// --- Payload (body) ---
+	if len(payload) > 0 {
+		buf.Write(payload)
+	}
+
+	// Write to gopacket buffer
+	out, err := b.PrependBytes(buf.Len())
+	if err != nil {
+		return err
+	}
+	copy(out, buf.Bytes())
+	return nil
+}
+
+// canonicalHeaderName returns the compact or canonical SIP header name.
+func canonicalHeaderName(h string) string {
+	lh := strings.ToLower(h)
+	if short, ok := compactSipHeadersCorrespondance[lh]; ok {
+		return short
+	}
+	// Capitalize first letter and after dashes (standard SIP style)
+	parts := strings.Split(lh, "-")
+	for i, p := range parts {
+		if len(p) > 0 {
+			parts[i] = strings.ToUpper(p[:1]) + p[1:]
+		}
+	}
+	return strings.Join(parts, "-")
+}
+
 // decodeSIP decodes the byte slice into a SIP type. It also
 // setups the application Layer in PacketBuilder.
 func decodeSIP(data []byte, p gopacket.PacketBuilder) error {

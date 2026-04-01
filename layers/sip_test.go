@@ -158,15 +158,14 @@ func TestSIPMain(t *testing.T) {
 	_TestPacketSIP(t, testPacketSIPCompactInvite, SIPMethodInvite, false, 1, expectedHeaders, "sip:sip.provider.com")
 }
 
-func _TestPacketSIP(t *testing.T, packetData []byte, methodWanted SIPMethod, isResponse bool, wantedCseq int64, expectedHeaders map[string]string, expectedRequestURI string) {
 
+func _TestPacketSIP(t *testing.T, packetData []byte, methodWanted SIPMethod, isResponse bool, wantedCseq int64, expectedHeaders map[string]string, expectedRequestURI string) {
 	p := gopacket.NewPacket(packetData, LinkTypeEthernet, gopacket.Default)
 	if p.ErrorLayer() != nil {
 		t.Error("Failed to decode packet:", p.ErrorLayer().Error())
 	}
 
 	if got, ok := p.Layer(LayerTypeSIP).(*SIP); ok {
-
 		// Check method
 		if got.Method != methodWanted {
 			t.Errorf("SIP Packet should be a %s method, got : %s", methodWanted, got.Method)
@@ -195,5 +194,80 @@ func _TestPacketSIP(t *testing.T, packetData []byte, methodWanted SIPMethod, isR
 		if got.GetCSeq() != wantedCseq {
 			t.Errorf("SIP Packet should be %d. Got : %d", wantedCseq, got.GetCSeq())
 		}
+	}
+}
+
+func TestSIPSerializeTo_Request(t *testing.T) {
+	sip := &SIP{
+		Method:      SIPMethodInvite,
+		RequestURI:  "sip:alice@example.com",
+		Version:     SIPVersion2,
+		Headers: map[string][]string{
+			"Via":        {"SIP/2.0/UDP host:5060;branch=z9hG4bK"},
+			"From":       {"\"Bob\" <sip:bob@example.com>;tag=123"},
+			"To":         {"\"Alice\" <sip:alice@example.com>"},
+			"Call-ID":    {"callid123"},
+			"CSeq":       {"1 INVITE"},
+			"Contact":    {"<sip:bob@host:5060>"},
+			"Max-Forwards": {"70"},
+			"Content-Type": {"application/sdp"},
+		},
+		BaseLayer: BaseLayer{Payload: []byte("body")},
+	}
+	buf := gopacket.NewSerializeBuffer()
+	opts := gopacket.SerializeOptions{FixLengths: true}
+	if err := sip.SerializeTo(buf, opts); err != nil {
+		t.Fatalf("SerializeTo failed: %v", err)
+	}
+	serialized := buf.Bytes()
+
+	// Parse back
+	parsed := NewSIP()
+	if err := parsed.DecodeFromBytes(serialized, nil); err != nil {
+		t.Fatalf("DecodeFromBytes failed: %v", err)
+	}
+	if parsed.Method != SIPMethodInvite || parsed.RequestURI != "sip:alice@example.com" {
+		t.Errorf("Round-trip method/URI mismatch: got %v %v", parsed.Method, parsed.RequestURI)
+	}
+	if parsed.GetFirstHeader("Call-ID") != "callid123" {
+		t.Errorf("Header mismatch: got %v", parsed.GetFirstHeader("Call-ID"))
+	}
+	if string(parsed.Payload()) != "body" {
+		t.Errorf("Payload mismatch: got %q", string(parsed.Payload()))
+	}
+}
+
+func TestSIPSerializeTo_Response(t *testing.T) {
+	sip := &SIP{
+		IsResponse:     true,
+		Version:        SIPVersion2,
+		ResponseCode:   200,
+		ResponseStatus: "OK",
+		Headers: map[string][]string{
+			"Via":      {"SIP/2.0/UDP host:5060;branch=z9hG4bK"},
+			"From":     {"\"Bob\" <sip:bob@example.com>;tag=123"},
+			"To":       {"\"Alice\" <sip:alice@example.com>"},
+			"Call-ID":  {"callid123"},
+			"CSeq":     {"1 INVITE"},
+			"Contact":  {"<sip:bob@host:5060>"},
+		},
+		BaseLayer: BaseLayer{Payload: nil},
+	}
+	buf := gopacket.NewSerializeBuffer()
+	opts := gopacket.SerializeOptions{FixLengths: true}
+	if err := sip.SerializeTo(buf, opts); err != nil {
+		t.Fatalf("SerializeTo failed: %v", err)
+	}
+	serialized := buf.Bytes()
+
+	parsed := NewSIP()
+	if err := parsed.DecodeFromBytes(serialized, nil); err != nil {
+		t.Fatalf("DecodeFromBytes failed: %v", err)
+	}
+	if !parsed.IsResponse || parsed.ResponseCode != 200 || parsed.ResponseStatus != "OK" {
+		t.Errorf("Round-trip response mismatch: got %v %v %v", parsed.IsResponse, parsed.ResponseCode, parsed.ResponseStatus)
+	}
+	if parsed.GetFirstHeader("Call-ID") != "callid123" {
+		t.Errorf("Header mismatch: got %v", parsed.GetFirstHeader("Call-ID"))
 	}
 }
