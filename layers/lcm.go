@@ -133,6 +133,10 @@ func (lcm *LCM) DecodeFromBytes(data []byte, df gopacket.DecodeFeedback) error {
 	offset += 4
 
 	if lcm.Magic == LCMFragmentedHeaderMagic {
+		if len(data) < 20 {
+			df.SetTruncated()
+			return errors.New("LCM fragmented header too short")
+		}
 		lcm.Fragmented = true
 
 		lcm.PayloadSize = binary.BigEndian.Uint32(data[offset : offset+4])
@@ -165,6 +169,10 @@ func (lcm *LCM) DecodeFromBytes(data []byte, df gopacket.DecodeFeedback) error {
 		lcm.ChannelName = string(buffer)
 	}
 
+	if offset+8 > len(data) {
+		df.SetTruncated()
+		return errors.New("LCM too short for fingerprint")
+	}
 	lcm.fingerprint = LCMFingerprint(
 		binary.BigEndian.Uint64(data[offset : offset+8]))
 
