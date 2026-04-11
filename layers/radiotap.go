@@ -740,7 +740,14 @@ func (m *RadioTap) DecodeFromBytes(data []byte, df gopacket.DecodeFeedback) erro
 
 	offset := uint16(4)
 
-	for (binary.LittleEndian.Uint32(data[offset:offset+4]) & 0x80000000) != 0 {
+	for {
+		if int(offset+4) > len(data) {
+			df.SetTruncated()
+			return fmt.Errorf("RadioTap too short for bitmap at offset %d", offset)
+		}
+		if (binary.LittleEndian.Uint32(data[offset:offset+4]) & 0x80000000) == 0 {
+			break
+		}
 		// This parser only handles standard radiotap namespace,
 		// and expects all fields are packed in the first it_present.
 		// Extended bitmap will be just ignored.
@@ -748,88 +755,166 @@ func (m *RadioTap) DecodeFromBytes(data []byte, df gopacket.DecodeFeedback) erro
 	}
 	offset += 4 // skip the bitmap
 
+	dataLen := uint16(len(data))
+
 	if m.Present.TSFT() {
 		offset += align(offset, 8)
+		if offset+8 > dataLen {
+			df.SetTruncated()
+			return errors.New("RadioTap too short for TSFT")
+		}
 		m.TSFT = binary.LittleEndian.Uint64(data[offset : offset+8])
 		offset += 8
 	}
 	if m.Present.Flags() {
+		if offset+1 > dataLen {
+			df.SetTruncated()
+			return errors.New("RadioTap too short for Flags")
+		}
 		m.Flags = RadioTapFlags(data[offset])
 		offset++
 	}
 	if m.Present.Rate() {
+		if offset+1 > dataLen {
+			df.SetTruncated()
+			return errors.New("RadioTap too short for Rate")
+		}
 		m.Rate = RadioTapRate(data[offset])
 		offset++
 	}
 	if m.Present.Channel() {
 		offset += align(offset, 2)
+		if offset+4 > dataLen {
+			df.SetTruncated()
+			return errors.New("RadioTap too short for Channel")
+		}
 		m.ChannelFrequency = RadioTapChannelFrequency(binary.LittleEndian.Uint16(data[offset : offset+2]))
 		offset += 2
 		m.ChannelFlags = RadioTapChannelFlags(binary.LittleEndian.Uint16(data[offset : offset+2]))
 		offset += 2
 	}
 	if m.Present.FHSS() {
+		if offset+2 > dataLen {
+			df.SetTruncated()
+			return errors.New("RadioTap too short for FHSS")
+		}
 		m.FHSS = binary.LittleEndian.Uint16(data[offset : offset+2])
 		offset += 2
 	}
 	if m.Present.DBMAntennaSignal() {
+		if offset+1 > dataLen {
+			df.SetTruncated()
+			return errors.New("RadioTap too short for DBMAntennaSignal")
+		}
 		m.DBMAntennaSignal = int8(data[offset])
 		offset++
 	}
 	if m.Present.DBMAntennaNoise() {
+		if offset+1 > dataLen {
+			df.SetTruncated()
+			return errors.New("RadioTap too short for DBMAntennaNoise")
+		}
 		m.DBMAntennaNoise = int8(data[offset])
 		offset++
 	}
 	if m.Present.LockQuality() {
 		offset += align(offset, 2)
+		if offset+2 > dataLen {
+			df.SetTruncated()
+			return errors.New("RadioTap too short for LockQuality")
+		}
 		m.LockQuality = binary.LittleEndian.Uint16(data[offset : offset+2])
 		offset += 2
 	}
 	if m.Present.TxAttenuation() {
 		offset += align(offset, 2)
+		if offset+2 > dataLen {
+			df.SetTruncated()
+			return errors.New("RadioTap too short for TxAttenuation")
+		}
 		m.TxAttenuation = binary.LittleEndian.Uint16(data[offset : offset+2])
 		offset += 2
 	}
 	if m.Present.DBTxAttenuation() {
 		offset += align(offset, 2)
+		if offset+2 > dataLen {
+			df.SetTruncated()
+			return errors.New("RadioTap too short for DBTxAttenuation")
+		}
 		m.DBTxAttenuation = binary.LittleEndian.Uint16(data[offset : offset+2])
 		offset += 2
 	}
 	if m.Present.DBMTxPower() {
+		if offset+1 > dataLen {
+			df.SetTruncated()
+			return errors.New("RadioTap too short for DBMTxPower")
+		}
 		m.DBMTxPower = int8(data[offset])
 		offset++
 	}
 	if m.Present.Antenna() {
+		if offset+1 > dataLen {
+			df.SetTruncated()
+			return errors.New("RadioTap too short for Antenna")
+		}
 		m.Antenna = uint8(data[offset])
 		offset++
 	}
 	if m.Present.DBAntennaSignal() {
+		if offset+1 > dataLen {
+			df.SetTruncated()
+			return errors.New("RadioTap too short for DBAntennaSignal")
+		}
 		m.DBAntennaSignal = uint8(data[offset])
 		offset++
 	}
 	if m.Present.DBAntennaNoise() {
+		if offset+1 > dataLen {
+			df.SetTruncated()
+			return errors.New("RadioTap too short for DBAntennaNoise")
+		}
 		m.DBAntennaNoise = uint8(data[offset])
 		offset++
 	}
 	if m.Present.RxFlags() {
 		offset += align(offset, 2)
+		if offset+2 > dataLen {
+			df.SetTruncated()
+			return errors.New("RadioTap too short for RxFlags")
+		}
 		m.RxFlags = RadioTapRxFlags(binary.LittleEndian.Uint16(data[offset:]))
 		offset += 2
 	}
 	if m.Present.TxFlags() {
 		offset += align(offset, 2)
+		if offset+2 > dataLen {
+			df.SetTruncated()
+			return errors.New("RadioTap too short for TxFlags")
+		}
 		m.TxFlags = RadioTapTxFlags(binary.LittleEndian.Uint16(data[offset:]))
 		offset += 2
 	}
 	if m.Present.RtsRetries() {
+		if offset+1 > dataLen {
+			df.SetTruncated()
+			return errors.New("RadioTap too short for RtsRetries")
+		}
 		m.RtsRetries = uint8(data[offset])
 		offset++
 	}
 	if m.Present.DataRetries() {
+		if offset+1 > dataLen {
+			df.SetTruncated()
+			return errors.New("RadioTap too short for DataRetries")
+		}
 		m.DataRetries = uint8(data[offset])
 		offset++
 	}
 	if m.Present.MCS() {
+		if offset+3 > dataLen {
+			df.SetTruncated()
+			return errors.New("RadioTap too short for MCS")
+		}
 		m.MCS = RadioTapMCS{
 			RadioTapMCSKnown(data[offset]),
 			RadioTapMCSFlags(data[offset+1]),
@@ -839,6 +924,10 @@ func (m *RadioTap) DecodeFromBytes(data []byte, df gopacket.DecodeFeedback) erro
 	}
 	if m.Present.AMPDUStatus() {
 		offset += align(offset, 4)
+		if offset+8 > dataLen {
+			df.SetTruncated()
+			return errors.New("RadioTap too short for AMPDUStatus")
+		}
 		m.AMPDUStatus = RadioTapAMPDUStatus{
 			Reference: binary.LittleEndian.Uint32(data[offset:]),
 			Flags:     RadioTapAMPDUStatusFlags(binary.LittleEndian.Uint16(data[offset+4:])),
@@ -848,6 +937,10 @@ func (m *RadioTap) DecodeFromBytes(data []byte, df gopacket.DecodeFeedback) erro
 	}
 	if m.Present.VHT() {
 		offset += align(offset, 2)
+		if offset+12 > dataLen {
+			df.SetTruncated()
+			return errors.New("RadioTap too short for VHT")
+		}
 		m.VHT = RadioTapVHT{
 			Known:     RadioTapVHTKnown(binary.LittleEndian.Uint16(data[offset:])),
 			Flags:     RadioTapVHTFlags(data[offset+2]),
@@ -865,6 +958,10 @@ func (m *RadioTap) DecodeFromBytes(data []byte, df gopacket.DecodeFeedback) erro
 		offset += 12
 	}
 
+	if int(m.Length) > len(data) {
+		df.SetTruncated()
+		return fmt.Errorf("RadioTap length %d exceeds data length %d", m.Length, len(data))
+	}
 	payload := data[m.Length:]
 
 	// Remove non standard padding used by some Wi-Fi drivers
