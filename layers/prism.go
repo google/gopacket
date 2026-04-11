@@ -11,6 +11,7 @@ package layers
 import (
 	"encoding/binary"
 	"errors"
+	"fmt"
 
 	"github.com/google/gopacket"
 )
@@ -113,8 +114,16 @@ type PrismHeader struct {
 func (m *PrismHeader) LayerType() gopacket.LayerType { return LayerTypePrismHeader }
 
 func (m *PrismHeader) DecodeFromBytes(data []byte, df gopacket.DecodeFeedback) error {
+	if len(data) < 24 {
+		df.SetTruncated()
+		return errors.New("PrismHeader too short")
+	}
 	m.Code = binary.LittleEndian.Uint16(data[0:4])
 	m.Length = binary.LittleEndian.Uint16(data[4:8])
+	if int(m.Length) > len(data) {
+		df.SetTruncated()
+		return fmt.Errorf("PrismHeader length %d exceeds data length %d", m.Length, len(data))
+	}
 	m.DeviceName = string(data[8:24])
 	m.BaseLayer = BaseLayer{Contents: data[:m.Length], Payload: data[m.Length:len(data)]}
 
