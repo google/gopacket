@@ -259,6 +259,9 @@ func getLSAsv2(num uint32, data []byte) ([]LSA, error) {
 	var i uint32 = 0
 	var offset uint32 = 0
 	for ; i < num; i++ {
+		if int(offset+20) > len(data) {
+			return nil, fmt.Errorf("LSAv2 too short at offset %d for LSA header", offset)
+		}
 		lstype := uint16(data[offset+3])
 		lsalength := binary.BigEndian.Uint16(data[offset+18 : offset+20])
 		content, err := extractLSAInformation(lstype, lsalength, data[offset:])
@@ -454,6 +457,9 @@ func getLSAs(num uint32, data []byte) ([]LSA, error) {
 	var i uint32 = 0
 	var offset uint32 = 0
 	for ; i < num; i++ {
+		if int(offset+20) > len(data) {
+			return nil, fmt.Errorf("LSA too short at offset %d for LSA header", offset)
+		}
 		var content interface{}
 		lstype := binary.BigEndian.Uint16(data[offset+2 : offset+4])
 		lsalength := binary.BigEndian.Uint16(data[offset+18 : offset+20])
@@ -494,6 +500,10 @@ func (ospf *OSPFv2) DecodeFromBytes(data []byte, df gopacket.DecodeFeedback) err
 	ospf.Checksum = binary.BigEndian.Uint16(data[12:14])
 	ospf.AuType = binary.BigEndian.Uint16(data[14:16])
 	ospf.Authentication = binary.BigEndian.Uint64(data[16:24])
+
+	if int(ospf.PacketLength) > len(data) {
+		return fmt.Errorf("OSPF packet length %d exceeds data length %d", ospf.PacketLength, len(data))
+	}
 
 	switch ospf.Type {
 	case OSPFHello:
@@ -591,6 +601,10 @@ func (ospf *OSPFv3) DecodeFromBytes(data []byte, df gopacket.DecodeFeedback) err
 	ospf.Checksum = binary.BigEndian.Uint16(data[12:14])
 	ospf.Instance = uint8(data[14])
 	ospf.Reserved = uint8(data[15])
+
+	if int(ospf.PacketLength) > len(data) {
+		return fmt.Errorf("OSPF packet length %d exceeds data length %d", ospf.PacketLength, len(data))
+	}
 
 	switch ospf.Type {
 	case OSPFHello:
