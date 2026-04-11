@@ -300,9 +300,16 @@ func (s SFlowIPType) Length() int {
 func (s *SFlowDatagram) DecodeFromBytes(data []byte, df gopacket.DecodeFeedback) error {
 	var agentAddressType SFlowIPType
 
+	if len(data) < 8 {
+		return fmt.Errorf("SFlow Datagram too short: %d bytes", len(data))
+	}
 	data, s.DatagramVersion = data[4:], binary.BigEndian.Uint32(data[:4])
 	data, agentAddressType = data[4:], SFlowIPType(binary.BigEndian.Uint32(data[:4]))
-	data, s.AgentAddress = data[agentAddressType.Length():], data[:agentAddressType.Length()]
+	agentLen := agentAddressType.Length()
+	if len(data) < int(agentLen)+16 {
+		return fmt.Errorf("SFlow Datagram too short for agent address and header fields")
+	}
+	data, s.AgentAddress = data[agentLen:], data[:agentLen]
 	data, s.SubAgentID = data[4:], binary.BigEndian.Uint32(data[:4])
 	data, s.SequenceNumber = data[4:], binary.BigEndian.Uint32(data[:4])
 	data, s.AgentUptime = data[4:], binary.BigEndian.Uint32(data[:4])
@@ -312,6 +319,9 @@ func (s *SFlowDatagram) DecodeFromBytes(data []byte, df gopacket.DecodeFeedback)
 		return fmt.Errorf("SFlow Datagram has invalid sample length: %d", s.SampleCount)
 	}
 	for i := uint32(0); i < s.SampleCount; i++ {
+		if len(data) < 4 {
+			return fmt.Errorf("SFlow Datagram too short for sample %d header", i)
+		}
 		sdf := SFlowDataFormat(binary.BigEndian.Uint32(data[:4]))
 		_, sampleType := sdf.decode()
 		switch sampleType {
