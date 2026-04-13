@@ -122,7 +122,7 @@ func (w *Writer) WritePacket(ci gopacket.CaptureInfo, data []byte) error {
 		return fmt.Errorf("invalid capture info %+v:  capture length > length", ci)
 	}
 	if err := w.writePacketHeader(ci); err != nil {
-		return fmt.Errorf("error writing packet header: %v", err)
+		return fmt.Errorf("error writing packet header: %w", err)
 	}
 	_, err := w.w.Write(data)
 	return err
