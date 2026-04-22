@@ -4,6 +4,7 @@
 // that can be found in the LICENSE file in the root of the source
 // tree.
 
+//go:build linux
 // +build linux
 
 // Package afpacket provides Go bindings for MMap'd AF_PACKET socket reading.
@@ -271,6 +272,11 @@ func (h *TPacket) SetBPF(filter []bpf.RawInstruction) error {
 	p.Filter = (*unix.SockFilter)(unsafe.Pointer(&filter[0]))
 
 	return setsockopt(h.fd, unix.SOL_SOCKET, unix.SO_ATTACH_FILTER, unsafe.Pointer(&p), unix.SizeofSockFprog)
+}
+
+// attach ebpf filter to af-packet
+func (h *TPacket) SetEBPF(progFd int32) error {
+	return setsockopt(h.fd, unix.SOL_SOCKET, unix.SO_ATTACH_BPF, unsafe.Pointer(&progFd), 4)
 }
 
 func (h *TPacket) releaseCurrentPacket() error {
