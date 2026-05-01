@@ -1920,3 +1920,77 @@ func BenchmarkNgZeroCopyReadPacketData(b *testing.B) {
 		_, _, _ = r.ZeroCopyReadPacketData()
 	}
 }
+
+// TestNgEPBOversizeCaptureLength verifies that a crafted pcapng containing an
+// Enhanced Packet Block whose CaptureLength exceeds the block's remaining bytes
+// is rejected without allocating the claimed amount of memory.
+// Regression test for: EPB/PB CaptureLength unchecked OOM (CVE candidate).
+func TestNgEPBOversizeCaptureLength(t *testing.T) {
+	buf := craftEPBWithCaptureLength(t, 0x20000000) // 512 MB claim in a 32-byte block
+	r, err := NewNgReader(buf, DefaultNgReaderOptions)
+	if err != nil {
+		t.Fatalf("NewNgReader: %v", err)
+	}
+	_, _, err = r.ReadPacketData()
+	if err == nil {
+		t.Fatal("ReadPacketData should have returned an error for oversize CaptureLength")
+	}
+}
+
+func TestNgEPBOversizeCaptureLengthZeroCopy(t *testing.T) {
+	buf := craftEPBWithCaptureLength(t, 0x20000000)
+	r, err := NewNgReader(buf, DefaultNgReaderOptions)
+	if err != nil {
+		t.Fatalf("NewNgReader: %v", err)
+	}
+	_, _, err = r.ZeroCopyReadPacketData()
+	if err == nil {
+		t.Fatal("ZeroCopyReadPacketData should have returned an error for oversize CaptureLength")
+	}
+}
+
+// craftEPBWithCaptureLength builds a minimal pcapng (SHB + IDB + EPB) where the
+// EPB CaptureLength field is set to captureLen regardless of the actual block size.
+func craftEPBWithCaptureLength(t *testing.T, captureLen uint32) *bytes.Buffer {
+	t.Helper()
+	var buf bytes.Buffer
+
+	put32 := func(v uint32) {
+		b := [4]byte{byte(v), byte(v >> 8), byte(v >> 16), byte(v >> 24)}
+		buf.Write(b[:])
+	}
+	put16 := func(v uint16) {
+		b := [2]byte{byte(v), byte(v >> 8)}
+		buf.Write(b[:])
+	}
+
+	// Section Header Block (28 bytes)
+	put32(0x0A0D0D0A) // block type
+	put32(28)         // total length
+	put32(0x1A2B3C4D) // byte-order magic (little-endian)
+	put16(1)          // major version
+	put16(0)          // minor version
+	put32(0xFFFFFFFF) // section length unknown (lo)
+	put32(0xFFFFFFFF) // section length unknown (hi)
+	put32(28)         // trailing length
+
+	// Interface Description Block (20 bytes), SnapLength=0 (unlimited)
+	put32(0x00000001) // block type
+	put32(20)         // total length
+	put16(1)          // link type Ethernet
+	put16(0)          // reserved
+	put32(0)          // snap length = 0
+	put32(20)         // trailing length
+
+	// Enhanced Packet Block (32 bytes), CaptureLength = captureLen (malicious)
+	put32(0x00000006) // block type
+	put32(32)         // block total length = 32 bytes only
+	put32(0)          // interface ID
+	put32(0)          // timestamp hi
+	put32(0)          // timestamp lo
+	put32(captureLen) // captured packet length — WEAPONIZED (exceeds block)
+	put32(captureLen) // original packet length
+	put32(32)         // trailing length
+
+	return &buf
+}
