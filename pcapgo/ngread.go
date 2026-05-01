@@ -460,6 +460,12 @@ FIND_PACKET:
 			r.ci.Timestamp = time.Unix(r.convertTime(r.ci.InterfaceIndex, uint64(r.getUint32(r.buf[4:8]))<<32|uint64(r.getUint32(r.buf[8:12])))).UTC()
 			r.ci.CaptureLength = int(r.getUint32(r.buf[12:16]))
 			r.ci.Length = int(r.getUint32(r.buf[16:20]))
+			if uint32(r.ci.CaptureLength) > r.currentBlock.length {
+				return errors.New("malformed EPB: capture length exceeds block length")
+			}
+			if snaplen := r.ifaces[r.ci.InterfaceIndex].SnapLength; snaplen != 0 && uint32(r.ci.CaptureLength) > snaplen {
+				r.ci.CaptureLength = int(snaplen)
+			}
 			break FIND_PACKET
 		case ngBlockTypeSimplePacket:
 			if err := r.readBytes(r.buf[:4]); err != nil {
@@ -501,6 +507,12 @@ FIND_PACKET:
 			r.ci.Timestamp = time.Unix(r.convertTime(r.ci.InterfaceIndex, uint64(r.getUint32(r.buf[4:8]))<<32|uint64(r.getUint32(r.buf[8:12])))).UTC()
 			r.ci.CaptureLength = int(r.getUint32(r.buf[12:16]))
 			r.ci.Length = int(r.getUint32(r.buf[16:20]))
+			if uint32(r.ci.CaptureLength) > r.currentBlock.length {
+				return errors.New("malformed Packet Block: capture length exceeds block length")
+			}
+			if snaplen := r.ifaces[r.ci.InterfaceIndex].SnapLength; snaplen != 0 && uint32(r.ci.CaptureLength) > snaplen {
+				r.ci.CaptureLength = int(snaplen)
+			}
 			break FIND_PACKET
 		default:
 			if _, err := r.r.Discard(int(r.currentBlock.length)); err != nil {
