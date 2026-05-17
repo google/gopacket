@@ -7,9 +7,11 @@
 package gopacket
 
 import (
+	"errors"
 	"io"
 	"reflect"
 	"testing"
+	"time"
 )
 
 type embedded struct {
@@ -37,6 +39,28 @@ func (s *singlePacketSource) ReadPacketData() ([]byte, CaptureInfo, error) {
 	out := (*s)[0]
 	(*s)[0] = nil
 	return out, CaptureInfo{}, nil
+}
+
+func TestPacketSourcePacketsClosesOnNonTemporaryError(t *testing.T) {
+	source := errorPacketSource{errors.New("fatal read error")}
+	packetSource := NewPacketSource(source, DecodePayload)
+
+	select {
+	case packet, ok := <-packetSource.Packets():
+		if ok {
+			t.Fatalf("Packets returned unexpected packet for non-temporary error: %v", packet)
+		}
+	case <-time.After(250 * time.Millisecond):
+		t.Fatal("Packets did not close after a non-temporary read error")
+	}
+}
+
+type errorPacketSource struct {
+	err error
+}
+
+func (s errorPacketSource) ReadPacketData() ([]byte, CaptureInfo, error) {
+	return nil, CaptureInfo{}, s.err
 }
 
 func TestConcatPacketSources(t *testing.T) {
