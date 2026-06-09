@@ -22,6 +22,22 @@ func FuzzDecodeFromBytes(f *testing.F) {
 	})
 }
 
+// FuzzDecodeSerializeDNS fuzzes the decode -> serialize round trip: any input
+// that decodes without error must re-serialize without panicking. This guards
+// the name encoder's buffer sizing, which sizes the output with one routine
+// and writes it with another, against ever disagreeing.
+func FuzzDecodeSerializeDNS(f *testing.F) {
+	f.Add(testPacketDNSNilRdata)
+	f.Fuzz(func(t *testing.T, data []byte) {
+		var dns DNS
+		if err := dns.DecodeFromBytes(data, gopacket.NilDecodeFeedback); err != nil {
+			return
+		}
+		buf := gopacket.NewSerializeBuffer()
+		_ = dns.SerializeTo(buf, gopacket.SerializeOptions{FixLengths: true})
+	})
+}
+
 // it have a layer like that:
 //    name: xxx.com
 //    type: CNAME
@@ -463,6 +479,526 @@ func testDNSEqual(t *testing.T, exp, got *DNS) {
 	}
 	for i := range exp.Additionals {
 		testResourceEqual(t, i, "Additionals", exp.Additionals[i], got.Additionals[i])
+	}
+}
+
+func mustSerializeDNS(t *testing.T, dns *DNS) []byte {
+	t.Helper()
+	buf := gopacket.NewSerializeBuffer()
+	opts := gopacket.SerializeOptions{FixLengths: true}
+	if err := gopacket.SerializeLayers(buf, opts, dns); err != nil {
+		t.Fatal(err)
+	}
+	return buf.Bytes()
+}
+
+func serializeDNSError(dns *DNS) error {
+	buf := gopacket.NewSerializeBuffer()
+	opts := gopacket.SerializeOptions{FixLengths: true}
+	return gopacket.SerializeLayers(buf, opts, dns)
+}
+
+func dnsWireName(labels ...[]byte) []byte {
+	var out []byte
+	for _, label := range labels {
+		out = append(out, byte(len(label)))
+		out = append(out, label...)
+	}
+	return append(out, 0)
+}
+
+func TestDNSEncodeNamePresentationForm(t *testing.T) {
+	tests := []struct {
+		name       string
+		input      []byte
+		qtype      DNSType
+		want       []byte
+		mustNotSee []byte
+		exact      bool
+	}{
+		{
+			name:       "plain dot separates labels",
+			input:      []byte("foo.bar"),
+			qtype:      DNSTypeA,
+			want:       dnsWireName([]byte("foo"), []byte("bar")),
+			mustNotSee: dnsWireName([]byte("foo.bar")),
+		},
+		{
+			name:  "root name",
+			input: []byte("."),
+			qtype: DNSTypeNS,
+			want: []byte{
+				0x04, 0xd2, 0x01, 0x00,
+				0x00, 0x01, 0x00, 0x00,
+				0x00, 0x00, 0x00, 0x00,
+				0x00,
+				0x00, 0x02,
+				0x00, 0x01,
+			},
+			exact: true,
+		},
+		{
+			name:       "escaped dot is label data",
+			input:      []byte(`foo\.bar`),
+			qtype:      DNSTypeA,
+			want:       dnsWireName([]byte("foo.bar")),
+			mustNotSee: dnsWireName([]byte(`foo\`), []byte("bar")),
+		},
+		{
+			name:  "trailing escaped dot is label data",
+			input: []byte(`foo\.`),
+			qtype: DNSTypeA,
+			want:  dnsWireName([]byte("foo.")),
+		},
+		{
+			name:  "escaped backslash is label data",
+			input: []byte(`foo\\bar.example`),
+			qtype: DNSTypeA,
+			want:  dnsWireName([]byte(`foo\bar`), []byte("example")),
+		},
+		{
+			name:  "unknown escape remains literal",
+			input: []byte(`foo\qbar.example`),
+			qtype: DNSTypeA,
+			want:  dnsWireName([]byte(`foo\qbar`), []byte("example")),
+		},
+		{
+			name:  "decimal escape sequence",
+			input: []byte(`foo\065bar`),
+			qtype: DNSTypeA,
+			want:  dnsWireName([]byte("fooAbar")),
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			dns := &DNS{ID: 1234, OpCode: DNSOpCodeQuery, RD: true}
+			dns.Questions = []DNSQuestion{{
+				Name:  tt.input,
+				Type:  tt.qtype,
+				Class: DNSClassIN,
+			}}
+
+			got := mustSerializeDNS(t, dns)
+			if tt.exact {
+				if !bytes.Equal(got, tt.want) {
+					t.Fatalf("serialized DNS = %x, want exactly %x", got, tt.want)
+				}
+			} else if !bytes.Contains(got, tt.want) {
+				t.Fatalf("serialized DNS did not contain name %x in %x", tt.want, got)
+			}
+			if len(tt.mustNotSee) > 0 && bytes.Contains(got, tt.mustNotSee) {
+				t.Fatalf("serialized DNS contained unwanted name %x in %x", tt.mustNotSee, got)
+			}
+		})
+	}
+}
+
+func TestDNSDecodeSerializePreservesLiteralDotLabel(t *testing.T) {
+	instance := []byte("foo.bar")
+	wireName := dnsWireName(instance, []byte("_googlecast"), []byte("_tcp"), []byte("local"))
+	msg := append([]byte{
+		0x12, 0x34, // ID
+		0x84, 0x00, // response
+		0x00, 0x00, // QDCOUNT
+		0x00, 0x01, // ANCOUNT
+		0x00, 0x00, // NSCOUNT
+		0x00, 0x00, // ARCOUNT
+	}, wireName...)
+	msg = append(msg,
+		0x00, 0x0c, // PTR
+		0x00, 0x01, // IN
+		0x00, 0x00, 0x00, 0x78, // TTL
+	)
+	ptrTarget := dnsWireName(instance, []byte("_googlecast"), []byte("_tcp"), []byte("local"))
+	msg = append(msg, byte(len(ptrTarget)>>8), byte(len(ptrTarget)))
+	msg = append(msg, ptrTarget...)
+
+	packet := gopacket.NewPacket(msg, LayerTypeDNS, testDecodeOptions)
+	if errLayer := packet.ErrorLayer(); errLayer != nil {
+		t.Fatal(errLayer.Error())
+	}
+	decoded := packet.Layer(LayerTypeDNS).(*DNS)
+	if got := string(decoded.Answers[0].Name); got != "foo.bar._googlecast._tcp.local" {
+		t.Fatalf("legacy decoded owner name changed: %q", got)
+	}
+	if got := string(decoded.Answers[0].PTR); got != "foo.bar._googlecast._tcp.local" {
+		t.Fatalf("legacy decoded PTR name changed: %q", got)
+	}
+
+	out := mustSerializeDNS(t, decoded)
+	if !bytes.Contains(out, wireName) {
+		t.Fatalf("serialized DNS did not preserve owner literal-dot label %x in %x", wireName, out)
+	}
+	if !bytes.Contains(out, ptrTarget) {
+		t.Fatalf("serialized DNS did not preserve PTR literal-dot label %x in %x", ptrTarget, out)
+	}
+	if bytes.Contains(out, dnsWireName([]byte("foo"), []byte("bar"), []byte("_googlecast"), []byte("_tcp"), []byte("local"))) {
+		t.Fatalf("serialized DNS split literal-dot label: %x", out)
+	}
+}
+
+func TestDNSDecodeSerializePreservesLiteralDotLabelWithCompression(t *testing.T) {
+	instance := []byte("foo.bar")
+	qName := dnsWireName(instance, []byte("_googlecast"), []byte("_tcp"), []byte("local"))
+
+	msg := append([]byte{
+		0x12, 0x34, // ID
+		0x84, 0x00, // response
+		0x00, 0x01, // QDCOUNT
+		0x00, 0x01, // ANCOUNT
+		0x00, 0x00, // NSCOUNT
+		0x00, 0x00, // ARCOUNT
+	}, qName...)
+	msg = append(msg,
+		0x00, 0x01, // A
+		0x00, 0x01, // IN
+	)
+
+	instanceWire := dnsWireName(instance)
+	ansName := append(append([]byte(nil), instanceWire[:len(instanceWire)-1]...), 0xc0, 20)
+	msg = append(msg, ansName...)
+	msg = append(msg,
+		0x00, 0x01, // A
+		0x00, 0x01, // IN
+		0x00, 0x00, 0x00, 0x78, // TTL
+		0x00, 0x04, // DataLength
+		192, 0, 2, 1, // IP
+	)
+
+	packet := gopacket.NewPacket(msg, LayerTypeDNS, testDecodeOptions)
+	if errLayer := packet.ErrorLayer(); errLayer != nil {
+		t.Fatal(errLayer.Error())
+	}
+	decoded := packet.Layer(LayerTypeDNS).(*DNS)
+	if got := string(decoded.Questions[0].Name); got != "foo.bar._googlecast._tcp.local" {
+		t.Fatalf("decoded question name changed: %q", got)
+	}
+	if got := string(decoded.Answers[0].Name); got != "foo.bar._googlecast._tcp.local" {
+		t.Fatalf("decoded answer name changed: %q", got)
+	}
+
+	out := mustSerializeDNS(t, decoded)
+	wantUncompressed := dnsWireName(instance, []byte("_googlecast"), []byte("_tcp"), []byte("local"))
+	count := bytes.Count(out, wantUncompressed)
+	if count != 2 {
+		t.Fatalf("expected 2 copies of uncompressed name %x in serialized bytes %x, got %d", wantUncompressed, out, count)
+	}
+	if bytes.Contains(out, dnsWireName([]byte("foo"), []byte("bar"), []byte("_googlecast"), []byte("_tcp"), []byte("local"))) {
+		t.Fatalf("serialized DNS split literal-dot label in compression test: %x", out)
+	}
+}
+
+func TestDNSDecodeMutateRDataNameKeepsOwnerLabels(t *testing.T) {
+	owner := dnsWireName([]byte("foo.bar"), []byte("local"))
+	rdata := dnsWireName([]byte("baz.qux"), []byte("local"))
+	msg := append([]byte{
+		0x12, 0x34, // ID
+		0x84, 0x00, // response
+		0x00, 0x00, // QDCOUNT
+		0x00, 0x01, // ANCOUNT
+		0x00, 0x00, // NSCOUNT
+		0x00, 0x00, // ARCOUNT
+	}, owner...)
+	msg = append(msg,
+		0x00, 0x05, // CNAME
+		0x00, 0x01, // IN
+		0x00, 0x00, 0x00, 0x78, // TTL
+		byte(len(rdata)>>8), byte(len(rdata)),
+	)
+	msg = append(msg, rdata...)
+
+	packet := gopacket.NewPacket(msg, LayerTypeDNS, testDecodeOptions)
+	if errLayer := packet.ErrorLayer(); errLayer != nil {
+		t.Fatal(errLayer.Error())
+	}
+	decoded := packet.Layer(LayerTypeDNS).(*DNS)
+	decoded.Answers[0].CNAME = []byte("new.target.local")
+
+	out := mustSerializeDNS(t, decoded)
+	if !bytes.Contains(out, owner) {
+		t.Fatalf("serialized DNS did not preserve unchanged owner literal-dot label %x in %x", owner, out)
+	}
+	wantCNAME := dnsWireName([]byte("new"), []byte("target"), []byte("local"))
+	if !bytes.Contains(out, wantCNAME) {
+		t.Fatalf("changed CNAME did not use presentation fallback %x in %x", wantCNAME, out)
+	}
+}
+
+func TestDNSDecodeMutateNameUsesPresentationFallback(t *testing.T) {
+	wireName := dnsWireName([]byte("foo.bar"), []byte("_tcp"), []byte("local"))
+	msg := append([]byte{
+		0x12, 0x34,
+		0x01, 0x00,
+		0x00, 0x01,
+		0x00, 0x00,
+		0x00, 0x00,
+		0x00, 0x00,
+	}, wireName...)
+	msg = append(msg,
+		0x00, 0x01,
+		0x00, 0x01,
+	)
+
+	packet := gopacket.NewPacket(msg, LayerTypeDNS, testDecodeOptions)
+	if errLayer := packet.ErrorLayer(); errLayer != nil {
+		t.Fatal(errLayer.Error())
+	}
+	decoded := packet.Layer(LayerTypeDNS).(*DNS)
+	decoded.Questions[0].Name = []byte("bar.baz._tcp.local")
+
+	out := mustSerializeDNS(t, decoded)
+	wantName := dnsWireName([]byte("bar"), []byte("baz"), []byte("_tcp"), []byte("local"))
+	if !bytes.Contains(out, wantName) {
+		t.Fatalf("changed public name did not use presentation fallback %x in %x", wantName, out)
+	}
+	if bytes.Contains(out, wireName) {
+		t.Fatalf("stale decoded labels were used after public name mutation: %x", out)
+	}
+}
+
+func TestDNSEncodeNameValidation(t *testing.T) {
+	var name []byte
+	for i := 0; i < 4; i++ {
+		if i > 0 {
+			name = append(name, '.')
+		}
+		name = append(name, bytes.Repeat([]byte{'a'}, 63)...)
+	}
+
+	tests := []struct {
+		name    string
+		input   []byte
+		wantErr bool
+	}{
+		{name: "max length label", input: bytes.Repeat([]byte{'a'}, 63)},
+		{name: "long label", input: bytes.Repeat([]byte{'a'}, 64), wantErr: true},
+		{name: "long name", input: name, wantErr: true},
+		{name: "invalid decimal escape", input: []byte(`foo\999`), wantErr: true},
+		{name: "truncated decimal escape", input: []byte(`foo\12`), wantErr: true},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			dns := &DNS{ID: 1234, OpCode: DNSOpCodeQuery, RD: true}
+			dns.Questions = []DNSQuestion{{
+				Name:  tt.input,
+				Type:  DNSTypeA,
+				Class: DNSClassIN,
+			}}
+
+			err := serializeDNSError(dns)
+			if tt.wantErr && err == nil {
+				t.Fatal("expected error")
+			}
+			if !tt.wantErr && err != nil {
+				t.Fatalf("expected no error, got %v", err)
+			}
+		})
+	}
+}
+
+func TestDNSDecodeSerializePreservesLiteralDotRDATA(t *testing.T) {
+	owner := dnsWireName([]byte("example"), []byte("local"))
+	literalName := dnsWireName([]byte("foo.bar"), []byte("example"), []byte("local"))
+	splitName := dnsWireName([]byte("foo"), []byte("bar"), []byte("example"), []byte("local"))
+
+	buildMessage := func(dnsType DNSType, rdata []byte) []byte {
+		msg := append([]byte{
+			0x12, 0x34,
+			0x84, 0x00,
+			0x00, 0x00,
+			0x00, 0x01,
+			0x00, 0x00,
+			0x00, 0x00,
+		}, owner...)
+		msg = append(msg,
+			byte(uint16(dnsType)>>8), byte(uint16(dnsType)),
+			0x00, 0x01,
+			0x00, 0x00, 0x00, 0x78,
+			byte(len(rdata)>>8), byte(len(rdata)),
+		)
+		msg = append(msg, rdata...)
+		return msg
+	}
+
+	soaRData := append([]byte{}, literalName...)
+	soaRData = append(soaRData, literalName...)
+	soaRData = append(soaRData,
+		0x00, 0x00, 0x00, 0x01,
+		0x00, 0x00, 0x00, 0x02,
+		0x00, 0x00, 0x00, 0x03,
+		0x00, 0x00, 0x00, 0x04,
+		0x00, 0x00, 0x00, 0x05,
+	)
+
+	tests := []struct {
+		name    string
+		dnsType DNSType
+		rdata   []byte
+	}{
+		{name: "NS", dnsType: DNSTypeNS, rdata: literalName},
+		{name: "CNAME", dnsType: DNSTypeCNAME, rdata: literalName},
+		{name: "PTR", dnsType: DNSTypePTR, rdata: literalName},
+		{name: "MX", dnsType: DNSTypeMX, rdata: append([]byte{0x00, 0x0a}, literalName...)},
+		{name: "SRV", dnsType: DNSTypeSRV, rdata: append([]byte{0x00, 0x01, 0x00, 0x02, 0x1f, 0x90}, literalName...)},
+		{name: "SOA", dnsType: DNSTypeSOA, rdata: soaRData},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			packet := gopacket.NewPacket(buildMessage(tt.dnsType, tt.rdata), LayerTypeDNS, testDecodeOptions)
+			if errLayer := packet.ErrorLayer(); errLayer != nil {
+				t.Fatal(errLayer.Error())
+			}
+			decoded := packet.Layer(LayerTypeDNS).(*DNS)
+			out := mustSerializeDNS(t, decoded)
+			if !bytes.Contains(out, literalName) {
+				t.Fatalf("serialized DNS did not preserve literal-dot RDATA name %x in %x", literalName, out)
+			}
+			if bytes.Contains(out, splitName) {
+				t.Fatalf("serialized DNS split literal-dot RDATA name: %x", out)
+			}
+		})
+	}
+}
+
+func TestDNSDecodeSerializePreservesLabelsAfterInputReuse(t *testing.T) {
+	// Regression: preserved labels must own their bytes, not alias the caller's
+	// input buffer. gopacket's DecodingLayerParser and zero-copy readers reuse
+	// the input slice across packets; decoded names are copied into the layer's
+	// own buffer, so the preserved label metadata must be copied too. A label
+	// after the first literal-dot label exercises the incremental append path.
+	owner := dnsWireName([]byte("plain"), []byte("foo.bar"), []byte("tail"))
+	msg := append([]byte{
+		0x12, 0x34, // ID
+		0x84, 0x00, // response
+		0x00, 0x00, // QDCOUNT
+		0x00, 0x01, // ANCOUNT
+		0x00, 0x00, // NSCOUNT
+		0x00, 0x00, // ARCOUNT
+	}, owner...)
+	msg = append(msg,
+		0x00, 0x01, // A
+		0x00, 0x01, // IN
+		0x00, 0x00, 0x00, 0x78, // TTL
+		0x00, 0x04, // DataLength
+		192, 0, 2, 1, // IP
+	)
+
+	var decoded DNS
+	if err := decoded.DecodeFromBytes(msg, gopacket.NilDecodeFeedback); err != nil {
+		t.Fatal(err)
+	}
+	if got := string(decoded.Answers[0].Name); got != "plain.foo.bar.tail" {
+		t.Fatalf("decoded owner name changed: %q", got)
+	}
+
+	// Simulate buffer reuse: scribble over the input region holding the name.
+	for i := 12; i < 12+len(owner); i++ {
+		msg[i] = 0xff
+	}
+
+	out := mustSerializeDNS(t, &decoded)
+	if !bytes.Contains(out, owner) {
+		t.Fatalf("preserved labels aliased the input buffer; serialized name corrupted: %x", out)
+	}
+}
+
+func TestDNSDecodeReuseClearsStaleNameMeta(t *testing.T) {
+	// Decoding into a reused DNS layer (the DecodingLayerParser pattern) must not
+	// leak preserved label metadata from a previous packet. The decode loop
+	// overwrites each record slot with a zero DNSResourceRecord, which resets the
+	// lazily-allocated names pointer; this test guards that invariant.
+	header := []byte{0x00, 0x00, 0x84, 0x00, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x00}
+	aRecord := []byte{0x00, 0x01, 0x00, 0x01, 0x00, 0x00, 0x00, 0x78, 0x00, 0x04, 192, 0, 2, 1}
+
+	withDot := append(append([]byte{}, header...), dnsWireName([]byte("foo.bar"), []byte("local"))...)
+	withDot = append(withDot, aRecord...)
+	plain := append(append([]byte{}, header...), dnsWireName([]byte("plain"), []byte("local"))...)
+	plain = append(plain, aRecord...)
+
+	var d DNS
+	if err := d.DecodeFromBytes(withDot, gopacket.NilDecodeFeedback); err != nil {
+		t.Fatal(err)
+	}
+	if d.Answers[0].names == nil {
+		t.Fatal("expected preserved label metadata for a literal-dot owner name")
+	}
+
+	// Reuse the same layer for a name that needs no preservation.
+	if err := d.DecodeFromBytes(plain, gopacket.NilDecodeFeedback); err != nil {
+		t.Fatal(err)
+	}
+	if d.Answers[0].names != nil {
+		t.Fatalf("stale name metadata leaked across decode reuse: %+v", d.Answers[0].names)
+	}
+	out := mustSerializeDNS(t, &d)
+	if !bytes.Contains(out, dnsWireName([]byte("plain"), []byte("local"))) {
+		t.Fatalf("reused decode did not serialize the plain name as split labels: %x", out)
+	}
+}
+
+func TestDNSDecodePreservedLabelsDoNotAliasDecodeBuffer(t *testing.T) {
+	// Internal invariant: preserved label metadata must not alias the layer's
+	// decode buffer, so a decoded name survives buffer/layer reuse. The
+	// compression path reconstructs the pointed-to labels by splitting the
+	// resolved name; those slices must be copied, not left pointing into the
+	// decode buffer.
+	//
+	// This is a white-box check. It is not observable through serialization
+	// alone: the public Name field also aliases the decode buffer, and the
+	// encode path falls back to presentation parsing whenever Name differs from
+	// its decode snapshot, so the labels are never read once stale. The black-box
+	// input-reuse and compression tests therefore cannot catch this; the labels
+	// being independent metadata is what makes it matter.
+	header := []byte{
+		0x12, 0x34,
+		0x84, 0x00,
+		0x00, 0x01, // QDCOUNT
+		0x00, 0x01, // ANCOUNT
+		0x00, 0x00,
+		0x00, 0x00,
+	}
+	// Question name "aaa.bbb.local" sits at offset 12 and is the pointer target.
+	msg := append(append([]byte{}, header...), dnsWireName([]byte("aaa"), []byte("bbb"), []byte("local"))...)
+	msg = append(msg, 0x00, 0x01, 0x00, 0x01) // QTYPE A, QCLASS IN
+	// Answer name: literal-dot label "foo.bar" followed by a pointer to offset 12.
+	msg = append(msg, 0x07)
+	msg = append(msg, []byte("foo.bar")...)
+	msg = append(msg, 0xc0, 0x0c)
+	msg = append(msg,
+		0x00, 0x01, 0x00, 0x01, // A, IN
+		0x00, 0x00, 0x00, 0x78, // TTL
+		0x00, 0x04, // RDLENGTH
+		192, 0, 2, 1,
+	)
+
+	var d DNS
+	if err := d.DecodeFromBytes(msg, gopacket.NilDecodeFeedback); err != nil {
+		t.Fatal(err)
+	}
+	if got := string(d.Answers[0].Name); got != "foo.bar.aaa.bbb.local" {
+		t.Fatalf("decoded name = %q, want foo.bar.aaa.bbb.local", got)
+	}
+	want := []string{"foo.bar", "aaa", "bbb", "local"}
+	labels := d.Answers[0].names.name.labels
+	if len(labels) != len(want) {
+		t.Fatalf("decoded %d labels, want %d: %q", len(labels), len(want), labels)
+	}
+	for i := range want {
+		if string(labels[i]) != want[i] {
+			t.Fatalf("label %d = %q, want %q", i, labels[i], want[i])
+		}
+	}
+	// Corrupt the decode buffer in place; preserved labels must be unaffected.
+	for i := range d.buffer {
+		d.buffer[i] = '?'
+	}
+	for i := range want {
+		if string(labels[i]) != want[i] {
+			t.Fatalf("preserved label %d aliased the decode buffer: got %q after reuse, want %q", i, labels[i], want[i])
+		}
 	}
 }
 
