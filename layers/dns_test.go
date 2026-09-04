@@ -15,6 +15,30 @@ import (
 	"github.com/google/gopacket"
 )
 
+func TestDNSADCDFlags(t *testing.T) {
+	d := &DNS{
+		ID: 0x1234,
+		QR: true,
+		RA: true,
+		AD: true,
+		CD: true,
+	}
+	buf := gopacket.NewSerializeBuffer()
+	if err := d.SerializeTo(buf, gopacket.SerializeOptions{}); err != nil {
+		t.Fatal(err)
+	}
+	var got DNS
+	if err := got.DecodeFromBytes(buf.Bytes(), gopacket.NilDecodeFeedback); err != nil {
+		t.Fatal(err)
+	}
+	if !got.AD || !got.CD {
+		t.Fatalf("AD=%v CD=%v, want true, true", got.AD, got.CD)
+	}
+	if got.Z != 0 {
+		t.Fatalf("Z=%d, want 0", got.Z)
+	}
+}
+
 func FuzzDecodeFromBytes(f *testing.F) {
 	f.Fuzz(func(t *testing.T, bytes []byte) {
 		dns := DNS{}
@@ -417,6 +441,12 @@ func testDNSEqual(t *testing.T, exp, got *DNS) {
 	}
 	if exp.Z != got.Z {
 		t.Errorf("expected Z = %v, got %v", exp.Z, got.Z)
+	}
+	if exp.AD != got.AD {
+		t.Errorf("expected AD = %v, got %v", exp.AD, got.AD)
+	}
+	if exp.CD != got.CD {
+		t.Errorf("expected CD = %v, got %v", exp.CD, got.CD)
 	}
 	if exp.ResponseCode != got.ResponseCode {
 		t.Errorf("expected ResponseCode = %v, got %v", exp.ResponseCode, got.ResponseCode)

@@ -240,7 +240,7 @@ func (doc DNSOpCode) String() string {
 //  +--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+
 //  |                      ID                       |
 //  +--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+
-//  |QR|   Opcode  |AA|TC|RD|RA|   Z    |   RCODE   |
+//  |QR|   Opcode  |AA|TC|RD|RA|Z |AD|CD|   RCODE   |
 //  +--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+
 //  |                    QDCOUNT                    |
 //  +--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+
@@ -264,7 +264,9 @@ type DNS struct {
 	TC bool  // Truncated
 	RD bool  // Recursion desired
 	RA bool  // Recursion available
-	Z  uint8 // Reserved for future use
+	Z  uint8 // Reserved (1 bit; RFC 4035)
+	AD bool  // Authentic Data (DNSSEC)
+	CD bool  // Checking Disabled (DNSSEC)
 
 	ResponseCode DNSResponseCode
 	QDCount      uint16 // Number of questions to expect
@@ -319,7 +321,9 @@ func (d *DNS) DecodeFromBytes(data []byte, df gopacket.DecodeFeedback) error {
 	d.TC = data[2]&0x02 != 0
 	d.RD = data[2]&0x01 != 0
 	d.RA = data[3]&0x80 != 0
-	d.Z = uint8(data[3]>>4) & 0x7
+	d.Z = uint8(data[3]>>6) & 0x1
+	d.AD = data[3]&0x20 != 0
+	d.CD = data[3]&0x10 != 0
 	d.ResponseCode = DNSResponseCode(data[3] & 0xF)
 	d.QDCount = binary.BigEndian.Uint16(data[4:6])
 	d.ANCount = binary.BigEndian.Uint16(data[6:8])
@@ -483,7 +487,7 @@ func (d *DNS) SerializeTo(b gopacket.SerializeBuffer, opts gopacket.SerializeOpt
 	}
 	binary.BigEndian.PutUint16(bytes, d.ID)
 	bytes[2] = byte((b2i(d.QR) << 7) | (int(d.OpCode) << 3) | (b2i(d.AA) << 2) | (b2i(d.TC) << 1) | b2i(d.RD))
-	bytes[3] = byte((b2i(d.RA) << 7) | (int(d.Z) << 4) | int(d.ResponseCode))
+	bytes[3] = byte((b2i(d.RA) << 7) | (int(d.Z&1) << 6) | (b2i(d.AD) << 5) | (b2i(d.CD) << 4) | int(d.ResponseCode))
 
 	if opts.FixLengths {
 		d.QDCount = uint16(len(d.Questions))
