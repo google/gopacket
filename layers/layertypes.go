@@ -151,6 +151,7 @@ var (
 	LayerTypeAGUEVar0                     = gopacket.RegisterLayerType(147, gopacket.LayerTypeMetadata{Name: "AGUEVar0", Decoder: gopacket.DecodeFunc(decodeAGUE)})
 	LayerTypeAGUEVar1                     = gopacket.RegisterLayerType(148, gopacket.LayerTypeMetadata{Name: "AGUEVar1", Decoder: gopacket.DecodeFunc(decodeAGUE)})
 	LayerTypeAPSP                         = gopacket.RegisterLayerType(149, gopacket.LayerTypeMetadata{Name: "APSP", Decoder: gopacket.DecodeFunc(decodeAPSP)})
+	LayerTypePPI                          = gopacket.RegisterLayerType(150, gopacket.LayerTypeMetadata{Name: "PPI", Decoder: gopacket.DecodeFunc(decodePPI)})
 )
 
 var (
